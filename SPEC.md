@@ -17,7 +17,7 @@ JSON, pero cabe en una pantalla. Los contratos se fijan con el caso chico.
 la edad del protagonista en el capítulo 12; un script no. El modelo escribe, el
 código verifica.
 
-**Versión 6.1** · 2026-09-15 · historial completo en §15.
+**Versión 6.2** · 2026-09-15 · historial completo en §15.
 
 **Stack:** Claude Code hace todo el trabajo de modelo — orquesta, planifica,
 escribe y critica con subagentes y skills · scripts Python validan.
@@ -267,6 +267,7 @@ escenas:
     estado: aprobada            # planificada | escrita | aprobada
     cierra: []                  # qué hilos de premise.yaml cierra esta escena
     flashback: false            # única forma de saltar hacia atrás sin romper V2
+    hito: "la final"            # ancla en calendario.yaml; lo comprueba V20
     palabras: 940               # recuento real; lo escribe el ciclo al aprobar
     beats:                      # lo que produce PLANIFICAR y consume ESCRIBIR
       - "Llega tarde al entrenamiento"
@@ -300,16 +301,23 @@ nacimiento: 1962-03-14       # única fuente de la edad. NO existe el campo "eda
 club: Newells
 
 estados:                     # el estado tiene vigencia, no es "el actual"
-  - { desde: 1990-01-01, hasta: 1990-02-19, lesion: null }
-  - { desde: 1990-02-20, hasta: 1990-04-05, lesion: rotura_fibrilar }
+  - { desde: 1990-01-01, hasta: 1990-08-18, que: sano }
+  - { desde: 1990-08-19, hasta: 1990-11-24, que: lesionado,
+      prohibe: [jugo, entreno, corrio, pateo] }   # lo que V6 no deja hacer en este tramo
 
 eventos_unicos:              # no pueden repetirse nunca
-  - { fecha: 1990-02-20, que: lesion }
-  - { fecha: 1990-04-12, que: boda }
+  - { fecha: 1990-08-19, que: "la lesion en el clasico",
+      marcadores: [se rompio, la rotura, se desgarro] }
 
 sabe:                        # qué conoce y desde cuándo
-  - { que: "el fichaje", desde: 1990-03-14 }
+  - { que: "el fichaje", desde: 1990-03-14,
+      marcadores: [el fichaje, la oferta] }
 ```
+
+**`prohibe` y `marcadores` son lo que hace comprobables a V5, V6 y V7.** Sin
+ellos, esas tres reglas necesitarían criterio y dejarían de ser script: son las
+palabras que, si aparecen en la prosa fuera de su tramo, delatan el error. Las
+escribe el planificador junto al resto de la derivación.
 
 El cumpleaños **no se declara**: se deriva de `nacimiento`. Por eso no puede
 ocurrir dos veces en el mismo año.
@@ -863,45 +871,51 @@ repetición.
 ```
 Story-Maker/
 ├── SPEC.md
+├── requirements.txt           PyYAML y pytest; nada mas
 │
 ├── .claude/                   EL HARNESS — vale para todos los libros
 │   ├── agents/                    quién opina (contexto aislado)
-│   │   ├── interviewer.md          hace las 12 preguntas (§3)
-│   │   ├── researcher.md
-│   │   ├── planner.md
-│   │   ├── critic-continuity.md
-│   │   └── critic-quality.md
+│   │   ├── interviewer.md             hace las 12 preguntas (§3)
+│   │   ├── researcher.md              época y calendario, una pasada
+│   │   ├── planner.md                 deriva el canon y planifica
+│   │   ├── critic-continuity.md       veta
+│   │   └── critic-quality.md          puntúa la rúbrica
 │   ├── skills/                    la forma, idéntica en cada invocación
-│   │   ├── entrevistar/SKILL.md        el cuestionario fijo
-│   │   ├── escribir-escena/SKILL.md
+│   │   ├── entrevistar/SKILL.md       el cuestionario fijo
 │   │   ├── resolver-canon/SKILL.md
+│   │   ├── escribir-escena/SKILL.md
 │   │   ├── corregir-escena/SKILL.md
 │   │   ├── epoca/SKILL.md
-│   │   └── formato-critica/SKILL.md
+│   │   └── formato-critica/SKILL.md   el contrato de G2
 │   └── settings.json              permisos para los scripts
 │
 ├── harness/
 │   ├── config.yaml                los catorce números (§1)
 │   ├── voz-base.md                el registro del género
 │   └── scripts/
-│       ├── validate_canon.py      G0: V21, V13
+│       ├── common.py              canon, derivaciones, prosa
+│       ├── validate_canon.py      G0: V21, V13, V16, ¿cabe el plan?
 │       ├── validate_scene.py      G1: V1-V9, V14-V16, V20
-│       ├── gate_scene.py          G2: lee la rúbrica y decide (§6)
-│       ├── validate_book.py       G4: V17-V19 + las tres condiciones (§11)
+│       ├── gate_scene.py          G2: lee la rúbrica y decide (§5)
+│       ├── validate_book.py       G4: V10-V12, V17-V19 + las tres condiciones
+│       ├── resolver_canon.py      el canon resuelto, en prosa
 │       ├── compilar.py            concatena las escenas en novela.md
 │       └── run_scene.py           conduce el ciclo y mantiene state.json
+│
+├── tests/
+│   └── test_reglas.py             una escena-trampa por regla
 │
 └── books/                     LAS INSTANCIAS — una carpeta por novela
     └── marco-1990/
         ├── context/
-        │   ├── intake.json         las 12 respuestas, tal cual
-        │   ├── premise.yaml        derivado del intake
+        │   ├── intake.json        las 12 respuestas, tal cual
+        │   ├── premise.yaml       derivado del intake
         │   ├── epoca.yaml
         │   ├── calendario.yaml
         │   ├── relacion.yaml
         │   ├── timeline.yaml
         │   ├── voz.md             muestra fija, deriva de voz-base.md
-        │   ├── characters/marco.yaml
+        │   ├── characters/*.yaml
         │   └── real-figures.yaml
         ├── manuscript/
         │   ├── ch01/
@@ -1169,6 +1183,10 @@ Versionado: `MAYOR.MENOR`. Sube **MENOR** al añadir o precisar contenido; sube
 
 | Versión | Fecha | Commit | Cambio | Por qué |
 |---|---|---|---|---|
+| **6.2** | 2026-09-15 | `cdb067d`+ | **El spec se implementa entero.** 8 scripts en `harness/scripts/`, 5 agentes, 6 skills, el libro de ejemplo `books/marco-1990` con su documento v1, `tests/test_reglas.py` con 47 escenas-trampa y un README. El ciclo corre de punta a punta: G0 -> escribir -> G1 -> G2 -> aprobar -> G4 -> `novela.md`, 142 palabras bajo un techo de 144. | Un spec que nadie ejecuto es una hipotesis. Al implementarlo aparecieron tres cosas que el documento daba por supuestas y no lo estaban. |
+| **6.2** | 2026-09-15 | `cdb067d`+ | `characters/*.yaml` gana `prohibe` en los tramos de `estados` y `marcadores` en `eventos_unicos` y `sabe`; `timeline.yaml` gana `hito`. | V5, V6 y V7 necesitan leer prosa, y sin esas listas de palabras exigian criterio: habrian dejado de ser script, que es justo lo que el proyecto no quiere. Son las palabras que, fuera de su tramo, delatan el error. |
+| **6.2** | 2026-09-15 | `cdb067d`+ | `resolver-canon` se implementa como **script** (`resolver_canon.py`), no como paso de modelo. | Resolver el canon a una fecha tiene una respuesta correcta — la edad sale de `nacimiento`, el estado del tramo vigente, la etapa del arco — y la regla de reparto del propio spec dice que eso es un script. La skill queda como el instructivo de como consumirlo. |
+| **6.2** | 2026-09-15 | `cdb067d`+ | `validate.py` se parte de verdad en cuatro entradas con una `common.py` compartida, y `run_scene.py` expone subcomandos (`next`, `contexto`, `validar`, `puerta`, `aprobar`, `estado`) en vez de ser un bucle cerrado. | El script no puede llamar a un subagente: Claude Code hace las partes de modelo entre paso y paso. Partirlo en subcomandos es lo que deja que el ciclo lo conduzca el codigo y no el modelo, que era el requisito. |
 | **6.1** | 2026-09-15 | _sin commitear_ | **Nueva §3 La entrevista.** El canon deja de rellenarse a mano: el agente `interviewer` hace **doce preguntas fijas**, una por vez y cerradas donde se puede, valida cada respuesta contra el tipo del campo al recibirla, y escribe `context/intake.json`; el `planner` deriva de ahí los YAML. Nueva regla V21 y G0 pasa a exigirla. El cuestionario vive en la skill `entrevistar`, no en el agente. | Un YAML en blanco produce datos malos de tres formas — campos vacíos que no se notan hasta la escena 20, fechas en cuatro formatos, y datos inventados que debían investigarse — y el canon es la única fuente de verdad: si entra sucio, todo valida contra basura. El cuestionario es fijo porque un agente que improvisa preguntas da un canon de forma distinta por libro, la misma deriva que ya tenía la voz. |
 | **6.1** | 2026-09-15 | _sin commitear_ | Se fija el corte de qué se pregunta: solo decisiones tuyas. Los hechos verificables van al `researcher` («no sé» es respuesta válida en las 4 primeras) y las derivaciones mecánicas al `planner`. El `interviewer` no propone contenido. | Preguntar algo que el researcher puede averiguar es pedir que inventes; preguntar algo que el planner deriva es pedir que te equivoques. Y en cuanto el agente sugiere un obstáculo o un nombre, estás aprobando su idea en vez de dando la tuya: el canon deja de ser tuyo. |
 | **6.1** | 2026-09-15 | _sin commitear_ | `intake.json` se guarda aparte de los YAML que genera, y es inmutable. | Si cambia cómo se derivan los archivos de canon, se regeneran sin volver a entrevistarte. La entrevista se hace una vez por libro. |

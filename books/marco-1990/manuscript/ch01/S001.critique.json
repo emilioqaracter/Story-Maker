@@ -1,0 +1,30 @@
+{
+  "escena": "S001",
+  "intento": 1,
+  "continuidad": {
+    "veto": false,
+    "hallazgos": []
+  },
+  "calidad": {
+    "conflicto": {
+      "nota": 2,
+      "cita": null
+    },
+    "dialogo": {
+      "nota": 2,
+      "cita": null
+    },
+    "concrecion": {
+      "nota": 2,
+      "cita": null
+    },
+    "frescura": {
+      "nota": 1,
+      "cita": "hombro con hombro"
+    },
+    "quimica": {
+      "nota": 2,
+      "cita": null
+    }
+  }
+}

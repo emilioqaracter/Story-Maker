@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python harness/scripts/validate_canon.py:*)",
+      "Bash(python harness/scripts/validate_scene.py:*)",
+      "Bash(python harness/scripts/validate_book.py:*)",
+      "Bash(python harness/scripts/gate_scene.py:*)",
+      "Bash(python harness/scripts/resolver_canon.py:*)",
+      "Bash(python harness/scripts/run_scene.py:*)",
+      "Bash(python harness/scripts/compilar.py:*)",
+      "Bash(python -m pytest:*)"
+    ]
+  }
+}
