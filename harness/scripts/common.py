@@ -67,7 +67,16 @@ class Libro:
     def __init__(self, dir_libro: str | Path, raiz: Path = RAIZ):
         self.dir = Path(dir_libro).resolve()
         self.ctx = self.dir / "context"
+        # El harness trae los valores por defecto; el libro puede sobreescribir
+        # su forma (cuantos parrafos, cuantas escenas) sin tocar el harness.
         self.config = cargar_config(raiz)
+        propio = _yaml(self.dir / "config.yaml")
+        if propio:
+            for seccion, valores in propio.items():
+                if isinstance(valores, dict) and isinstance(self.config.get(seccion), dict):
+                    self.config[seccion].update(valores)
+                else:
+                    self.config[seccion] = valores
         self.intake = json.loads((self.ctx / "intake.json").read_text(encoding="utf-8")) \
             if (self.ctx / "intake.json").exists() else None
         self.premise = _yaml(self.ctx / "premise.yaml") or {}

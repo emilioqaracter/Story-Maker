@@ -23,7 +23,19 @@ pero cabe en una pantalla. Los contratos se fijan con el caso chico.
 
 Para subir la escala se tocan cuatro números en `harness/config.yaml`. Nada más.
 
-## Arrancar un libro
+## Empezar
+
+```bash
+python nuevo_libro.py     # te pregunta todo y crea el libro
+python demo.py            # corre el harness entero sobre los libros de ejemplo
+```
+
+`nuevo_libro.py` te pide primero la forma del documento (perfil, o los cinco
+numeros a mano) y despues las doce preguntas de la historia. Escribe el canon
+entero y corre G0. Lo que no puede hacer, y te lo dice al terminar: investigar la
+epoca y escribir la prosa, que necesitan agentes.
+
+## Arrancar un libro a mano
 
 ```
 1. interviewer   12 preguntas fijas          -> context/intake.json

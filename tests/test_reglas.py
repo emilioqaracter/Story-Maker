@@ -35,8 +35,16 @@ SID = "S001"
 # --------------------------------------------------------------------------- #
 @pytest.fixture
 def dir_libro(tmp_path):
+    """Una copia del libro de ejemplo, en estado conocido.
+
+    Normaliza la escena a 'aprobada': los tests no pueden depender de si
+    alguien corrio el ciclo antes, o pasan segun el dia."""
     destino = tmp_path / "libro"
     shutil.copytree(ORIGEN, destino)
+    p = destino / "context" / "timeline.yaml"
+    t = yaml.safe_load(p.read_text(encoding="utf-8"))
+    t["escenas"][0]["estado"] = "aprobada"
+    p.write_text(yaml.safe_dump(t, allow_unicode=True, sort_keys=False), encoding="utf-8")
     return destino
 
 

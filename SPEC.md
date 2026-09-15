@@ -17,7 +17,7 @@ JSON, pero cabe en una pantalla. Los contratos se fijan con el caso chico.
 la edad del protagonista en el capítulo 12; un script no. El modelo escribe, el
 código verifica.
 
-**Versión 6.2** · 2026-09-15 · historial completo en §15.
+**Versión 7.0** · 2026-09-15 · historial completo en §15.
 
 **Stack:** Claude Code hace todo el trabajo de modelo — orquesta, planifica,
 escribe y critica con subagentes y skills · scripts Python validan.
@@ -152,6 +152,20 @@ techo_palabras      = escenas_totales × palabras_por_escena
 Por eso `premise.yaml` ya no lleva `limite`: el techo sale de la forma. Cambiar
 la escala del libro es cambiar cuatro números aquí, y todo lo demás se recalcula
 solo.
+
+### El harness propone, el libro dispone
+
+`harness/config.yaml` son los valores por defecto. Un libro puede traer su propio
+`books/<slug>/config.yaml` con solo lo que cambia:
+
+```yaml
+estructura:                    # pisa al del harness, seccion por seccion
+  capitulos: 1
+  escenas_por_capitulo: 2
+```
+
+Es lo que permite que dos novelas del mismo harness tengan tamaños distintos. El
+perfil v1 sigue siendo el defecto; el override es por libro, nunca al reves.
 
 ### Todas las variables
 
@@ -407,10 +421,28 @@ personas reales que **pueden** aparecer, no las que aparecerán.
 
 ## 3. La entrevista
 
-Los archivos de §2 no los rellenas tú a mano. Los rellena el agente `interviewer`
-preguntándote, una pregunta por vez, y escribiendo él las respuestas.
+Los archivos de §2 no los rellenas tú a mano. Los rellena **un programa**,
+`nuevo_libro.py`, preguntándote una cosa por vez y escribiendo él las respuestas:
 
-**Por qué.** Un formulario YAML en blanco produce datos malos de tres formas
+```bash
+python nuevo_libro.py
+```
+
+**Por qué un script y no un agente.** Las doce preguntas son fijas, cerradas y de
+tipo conocido: una fecha es una fecha, el nivel es uno de tres, los hilos son dos.
+No hay nada que decidir ahí, y la regla de reparto de §9 es clara — si el paso
+tiene una respuesta correcta, es un script. Un modelo en el medio solo añadiría
+formas distintas de preguntar lo mismo en cada libro.
+
+Queda también el agente `interviewer` con el mismo cuestionario, para cuando
+prefieras hacerlo conversando dentro de Claude Code. Los dos escriben el mismo
+`intake.json` y ninguno abre G0.
+
+Antes de las doce preguntas te pide **la forma del documento** (§1): un perfil, o
+los cinco números a mano. Eso se guarda en `books/<slug>/config.yaml` y pisa al
+del harness, así que cada novela elige su tamaño sin tocar nada compartido.
+
+**Por qué preguntar.** Un formulario YAML en blanco produce datos malos de tres formas
 distintas, y las tres son fatales aquí: campos vacíos que nadie nota hasta la
 escena 20, fechas escritas en cuatro formatos, y el peor — inventarse un dato que
 debería haberse investigado. El canon es la única fuente de verdad del sistema; si
@@ -871,7 +903,10 @@ repetición.
 ```
 Story-Maker/
 ├── SPEC.md
+├── README.md
 ├── requirements.txt           PyYAML y pytest; nada mas
+├── nuevo_libro.py             te pregunta todo y crea un libro (§3)
+├── demo.py                    corre el harness entero y lo explica
 │
 ├── .claude/                   EL HARNESS — vale para todos los libros
 │   ├── agents/                    quién opina (contexto aislado)
@@ -907,6 +942,7 @@ Story-Maker/
 │
 └── books/                     LAS INSTANCIAS — una carpeta por novela
     └── marco-1990/
+        ├── config.yaml         opcional: la forma de ESTE libro (§1)
         ├── context/
         │   ├── intake.json        las 12 respuestas, tal cual
         │   ├── premise.yaml       derivado del intake
@@ -1183,6 +1219,9 @@ Versionado: `MAYOR.MENOR`. Sube **MENOR** al añadir o precisar contenido; sube
 
 | Versión | Fecha | Commit | Cambio | Por qué |
 |---|---|---|---|---|
+| **7.0** | 2026-09-15 | _sin commitear_ | **La entrevista pasa de agente a script**: `nuevo_libro.py` pregunta la forma del documento y las doce preguntas en la terminal, valida cada respuesta al recibirla, deriva el canon entero y corre G0. El agente `interviewer` se queda para cuando prefieras conversarlo; los dos escriben el mismo `intake.json`. | Las doce preguntas son fijas, cerradas y de tipo conocido: una fecha es una fecha, el nivel es uno de tres, los hilos son dos. No hay nada que decidir, y la regla de reparto dice que eso es un script. Un modelo en el medio solo agregaba formas distintas de preguntar lo mismo en cada libro. |
+| **7.0** | 2026-09-15 | _sin commitear_ | **La configuracion admite override por libro**: `books/<slug>/config.yaml` pisa seccion por seccion al del harness. | Sin esto, elegir el tamano de una novela obligaba a editar el archivo compartido por todos los libros, que es justo lo que la division harness/books existe para evitar. |
+| **7.0** | 2026-09-15 | _sin commitear_ | Nuevos `demo.py` (corre el harness entero y lo explica) y `README.md`. Los tests dejan de depender del estado guardado del libro: la copia de prueba se normaliza sola. | No habia un solo comando que mostrara el sistema funcionando. Y los tests pasaban o fallaban segun si alguien habia corrido el ciclo antes — al montar `demo.py`, que resetea el estado primero, se cayeron cinco. |
 | **6.2** | 2026-09-15 | `cdb067d`+ | **El spec se implementa entero.** 8 scripts en `harness/scripts/`, 5 agentes, 6 skills, el libro de ejemplo `books/marco-1990` con su documento v1, `tests/test_reglas.py` con 47 escenas-trampa y un README. El ciclo corre de punta a punta: G0 -> escribir -> G1 -> G2 -> aprobar -> G4 -> `novela.md`, 142 palabras bajo un techo de 144. | Un spec que nadie ejecuto es una hipotesis. Al implementarlo aparecieron tres cosas que el documento daba por supuestas y no lo estaban. |
 | **6.2** | 2026-09-15 | `cdb067d`+ | `characters/*.yaml` gana `prohibe` en los tramos de `estados` y `marcadores` en `eventos_unicos` y `sabe`; `timeline.yaml` gana `hito`. | V5, V6 y V7 necesitan leer prosa, y sin esas listas de palabras exigian criterio: habrian dejado de ser script, que es justo lo que el proyecto no quiere. Son las palabras que, fuera de su tramo, delatan el error. |
 | **6.2** | 2026-09-15 | `cdb067d`+ | `resolver-canon` se implementa como **script** (`resolver_canon.py`), no como paso de modelo. | Resolver el canon a una fecha tiene una respuesta correcta — la edad sale de `nacimiento`, el estado del tramo vigente, la etapa del arco — y la regla de reparto del propio spec dice que eso es un script. La skill queda como el instructivo de como consumirlo. |
