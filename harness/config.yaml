@@ -1,0 +1,34 @@
+# Story-Maker — configuración del harness.
+# Los catorce números del sistema. Nada los repite (SPEC §1).
+# Perfil v1: FIJO. Un documento de 3 párrafos de 4 líneas.
+
+version: 1
+perfil: smoke
+
+estructura:
+  capitulos: 1
+  escenas_por_capitulo: 1
+  parrafos_por_escena: 3
+  lineas_por_parrafo: 4
+  palabras_por_linea: 12
+
+tolerancia:
+  lineas_por_parrafo: 0        # exacto: 4 líneas, ni 3 ni 5
+  palabras_por_linea: 3        # 12 ± 3  ->  9..15
+
+rubrica:
+  dimensiones: [conflicto, dialogo, concrecion, frescura, quimica]
+  niveles: [0, 1, 2]
+  umbral: 6                    # sobre 10; 5 sobre 8 si quimica es null
+  umbral_sin_quimica: 5
+  cero_prohibido: true
+
+ciclo:
+  intentos_max: 3
+  contracciones_max: 2
+  escenas_sin_coincidir_max: 10
+
+genero:
+  nombre: romance-deportivo
+  etapas_relacion: [desconocidos, atraccion, intimidad, ruptura, union]
+  etapa_final_obligatoria: union
