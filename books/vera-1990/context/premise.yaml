@@ -1,0 +1,15 @@
+eje: base de la seleccion, la mas veterana del plantel en 1998
+titulo: Vera 1990
+deporte: basquetbol
+lugar: Montevideo, Uruguay
+epoca:
+  desde: '1998-01-01'
+  hasta: '1998-12-31'
+estilo: Tercera persona, pasado.
+pregunta_dramatica: 'Que renuncia Vera: el ultimo mundial que le queda. Y Ruben: el
+  puesto que le costo veinte anos.'
+hilos:
+- id: H1
+  que: la lista de doce que hay que cerrar
+- id: H2
+  que: el gimnasio del barrio que van a demoler

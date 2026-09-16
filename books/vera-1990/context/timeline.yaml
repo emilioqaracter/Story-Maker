@@ -1,0 +1,27 @@
+escenas:
+- id: S001
+  capitulo: 1
+  fecha: '1998-12-13'
+  lugar: Montevideo, Uruguay
+  presentes:
+  - vera
+  - ruben
+  resumen: Ruben presenta la lista de doce con Vera dentro y renuncia al puesto en
+    el mismo acto, y ambos firman la cesion del gimnasio del barrio para que no lo
+    demuelan.
+  estado: aprobada
+  cierra:
+  - H1
+  - H2
+  flashback: false
+  beats:
+  - 'En la sala de prensa Ruben lee los doce nombres, dice el de Vera en ultimo lugar
+    y deja su carta de renuncia sobre la mesa: si la convoca no puede seguir siendo
+    el que decide.'
+  - Vera lo alcanza en el pasillo y le reprocha que se haya sacrificado sin consultarla;
+    el le responde que no eligio por ella, eligio por el, y que la lista ya no depende
+    de nadie que la quiera.
+  - 'De noche vuelven al gimnasio vacio con el acta de la cooperativa: firman la compra
+    del local frente a la topadora detenida y Vera cuelga su primera camiseta en la
+    pared que se salva.'
+  palabras: 142
