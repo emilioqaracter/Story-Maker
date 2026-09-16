@@ -1,0 +1,16 @@
+entre:
+- vera
+- ruben
+encuentro: El la corta de la lista y se la cruza esa misma noche en el gimnasio vacio
+obstaculo: Si el la convoca lo acusan de favoritismo; si no la convoca, ella se retira
+etapas:
+- etapa: desconocidos
+  desde: '1998-01-01'
+- etapa: atraccion
+  desde: '1998-03-15'
+- etapa: intimidad
+  desde: '1998-06-14'
+- etapa: ruptura
+  desde: '1998-08-26'
+- etapa: union
+  desde: '1998-11-06'

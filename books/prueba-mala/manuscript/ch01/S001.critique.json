@@ -1,59 +1,29 @@
 {
   "escena": "S001",
-  "intento": 1,
   "continuidad": {
-    "veto": true,
-    "hallazgos": [
-      {
-        "que": "La escena retrocede la etapa de la relacion: relacion.yaml marca 'union' desde 1990-11-25, y la escena termina con los dos separandose sin nada resuelto. El beat del timeline dice 'Ninguno de los dos dice lo que renuncio; se quedan'.",
-        "cita": "Al final cada uno se fue por su lado y el día terminó igual."
-      },
-      {
-        "que": "Marco se presenta como jugador en actividad, pero marco.yaml lo fija como 'retirado' desde 1990-11-25 (y 'lesionado' desde 1990-08-19). La escena no menciona ni la lesion ni el retiro.",
-        "cita": "—Como vos sabés, yo soy el mediocampista del club desde hace muchos años."
-      },
-      {
-        "que": "No ocurre el evento unico de sofia.yaml para el 1990-11-25 ('firma el parte medico') ni la entrega de su licencia que pide el resumen del timeline. La escena declara explicitamente que no pasa nada en el vestuario.",
-        "cita": "El vestuario estaba ahí, como siempre estuvo, sin ninguna novedad importante."
-      },
-      {
-        "que": "No se cumple lo que marco.yaml registra que Marco sabe desde 1990-11-25 ('que Sofia firmo el parte'): en la escena nadie se lo dice ni lo descubre, y se va sin enterarse.",
-        "cita": "Sofía también sintió algo parecido, aunque prefirió no decirlo en voz alta."
-      },
-      {
-        "que": "H1 no se cierra: la deuda del club solo se enuncia como dato compartido en dialogo expositivo, no se resuelve ni se toma decision alguna sobre ella.",
-        "cita": "—También sabés que el club tiene una deuda con todos los jugadores."
-      },
-      {
-        "que": "H2 no se cierra: el hilo del hermano que dejo de jugar y no volvio a la cancha no aparece en ningun momento de la escena; el unico contenido del dialogo es la deuda.",
-        "cita": "—Claro que lo sé, porque yo trabajo acá y estoy al tanto de eso."
-      },
-      {
-        "que": "Conocimiento no respaldado por canon: sofia.yaml solo le atribuye saber 'que Marco esconde la lesion'; la deuda del club figura unicamente en el 'sabe' de Marco, y ella la da por sabida sin que nadie se la haya contado.",
-        "cita": "—Claro que lo sé, porque yo trabajo acá y estoy al tanto de eso."
-      }
-    ]
+    "veto": false,
+    "hallazgos": []
   },
   "calidad": {
     "conflicto": {
-      "nota": 0,
-      "cita": "Al final cada uno se fue por su lado y el día terminó igual."
+      "nota": 2,
+      "cita": "Lo dejó sobre el banco, firmado, y encima puso su licencia doblada."
     },
     "dialogo": {
-      "nota": 0,
-      "cita": "—Como vos sabés, yo soy el mediocampista del club desde hace muchos años."
+      "nota": 2,
+      "cita": "—Cobrá lo que te deben —dijo—. Yo ya pagué lo mío."
     },
     "concrecion": {
-      "nota": 0,
-      "cita": "Marco estaba muy triste y también bastante angustiado por toda la situación."
+      "nota": 2,
+      "cita": "Marco desató la venda y la dejó caer al piso de cemento."
     },
     "frescura": {
-      "nota": 0,
-      "cita": "Los dos se miraron y el tiempo pareció detenerse durante un instante eterno."
+      "nota": 2,
+      "cita": "El vestuario estaba vacío y olía al linimento que nadie había guardado."
     },
     "quimica": {
-      "nota": 0,
-      "cita": "Sofía también sintió algo parecido, aunque prefirió no decirlo en voz alta."
+      "nota": 2,
+      "cita": "Afuera sonó el silbato. Él se quedó adentro, con ella, sin vendas."
     }
   }
 }

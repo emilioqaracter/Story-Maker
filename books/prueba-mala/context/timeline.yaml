@@ -7,7 +7,7 @@ escenas:
   - marco
   - sofia
   resumen: Sofia le entrega su licencia; Marco entiende lo que ella pago por el.
-  estado: planificada
+  estado: aprobada
   cierra:
   - H1
   - H2
@@ -17,3 +17,4 @@ escenas:
   - Marco se ata los botines sabiendo que no va a jugar
   - Sofia le deja el parte firmado y su propia licencia encima
   - Ninguno de los dos dice lo que renuncio; se quedan
+  palabras: 144

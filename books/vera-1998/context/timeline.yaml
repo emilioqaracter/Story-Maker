@@ -1,0 +1,28 @@
+escenas:
+- id: S001
+  capitulo: 1
+  fecha: '1998-12-13'
+  lugar: Montevideo, Uruguay
+  presentes:
+  - vera
+  - ruben
+  resumen: En el gimnasio del barrio marcado para demolicion, Ruben entrega a Vera
+    la lista de doce cerrada sin su nombre y renuncia al puesto para poder acompanarla,
+    mientras ella acepta que el mundial no sera suyo y que el gimnasio sobrevive con
+    los dos dentro.
+  estado: aprobada
+  cierra:
+  - H1
+  - H2
+  flashback: false
+  beats:
+  - 'Ruben llega con la lista de doce firmada y se la deja leer a Vera sobre el banco
+    de suplentes: su nombre no esta, y el explica que lo saco el mismo para que nadie
+    pudiera decir que la convoco por lo que hay entre ellos.'
+  - Vera le devuelve la hoja sin discutirla y dice en voz alta que se retira del mundial;
+    Ruben responde poniendo su renuncia al puesto encima de la lista, veinte anos
+    a cambio de no tener que elegir nunca mas entre la planilla y ella.
+  - Con la orden de demolicion todavia pegada en la puerta, los dos firman el papel
+    que pone el gimnasio a nombre de ellos y encienden las luces del pabellon vacio
+    para la primera clase del lunes.
+  palabras: 148
