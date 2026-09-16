@@ -1,0 +1,29 @@
+{
+  "escena": "S003",
+  "continuidad": {
+    "veto": false,
+    "hallazgos": []
+  },
+  "calidad": {
+    "conflicto": {
+      "nota": 2,
+      "cita": "Seleccionó los tres mil caracteres, los borró y guardó el archivo vacío."
+    },
+    "dialogo": {
+      "nota": 2,
+      "cita": "Ella le preguntó qué estaba haciendo. Él dijo que nada."
+    },
+    "concrecion": {
+      "nota": 2,
+      "cita": "Irene se pasó la venda vieja entre los dedos y la dejó ahí."
+    },
+    "frescura": {
+      "nota": 2,
+      "cita": "Ella firmó el papel un martes y el miércoles ya trabajaba en una farmacia."
+    },
+    "quimica": {
+      "nota": 2,
+      "cita": "Damián escuchó hasta el final con las manos abiertas sobre el teclado."
+    }
+  }
+}

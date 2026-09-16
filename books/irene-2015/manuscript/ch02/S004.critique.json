@@ -1,0 +1,29 @@
+{
+  "escena": "S004",
+  "continuidad": {
+    "veto": false,
+    "hallazgos": []
+  },
+  "calidad": {
+    "conflicto": {
+      "nota": 2,
+      "cita": "Borró el borrador con el pulgar y guardó el teléfono sin mirarlo."
+    },
+    "dialogo": {
+      "nota": 1,
+      "cita": "—Se cayó la venta, lo dice Twitter —leyó el hombre del termo."
+    },
+    "concrecion": {
+      "nota": 2,
+      "cita": "Irene ataba los cordones dos veces, como hacía desde los dieciocho años."
+    },
+    "frescura": {
+      "nota": 2,
+      "cita": "El teléfono le pesaba en el bolsillo con el borrador sin enviar."
+    },
+    "quimica": {
+      "nota": 2,
+      "cita": "Irene levantó la cabeza, buscó el palco vacío y lo vio de pie."
+    }
+  }
+}

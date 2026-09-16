@@ -25,7 +25,7 @@ escenas:
   - damian
   resumen: El clasico. El le suelta lo de la plaza para que ella se entere por el
     y no por el diario.
-  estado: planificada
+  estado: aprobada
   cierra: []
   flashback: false
   hito: el clasico del femenino
@@ -33,6 +33,7 @@ escenas:
   - Irene todavia con el pelo mojado, el vestuario vaciandose
   - Damian le dice lo de la venta sin libreta y sin grabador
   - Ella entiende que el lo sabia desde marzo y no dice nada
+  palabras: 138
 - id: S003
   capitulo: 2
   fecha: 2015-08-16
@@ -42,7 +43,7 @@ escenas:
   - damian
   resumen: Despues de la asamblea. El tiene la nota escrita; ella le cuenta lo de
     su hermana y el la borra.
-  estado: planificada
+  estado: aprobada
   cierra:
   - H2
   flashback: false
@@ -51,6 +52,7 @@ escenas:
   - Irene le cuenta que su hermana dejo el futbol a los diecinueve y nadie escribio
     una linea
   - El borra el archivo delante de ella y no se lo presenta como un favor
+  palabras: 152
 - id: S004
   capitulo: 2
   fecha: 2015-11-21
@@ -60,7 +62,7 @@ escenas:
   - damian
   resumen: La final. La plaza queda; ella juega su ultimo partido y el la mira desde
     la tribuna, sin credencial.
-  estado: planificada
+  estado: aprobada
   cierra:
   - H1
   flashback: false
@@ -69,3 +71,4 @@ escenas:
   - 'La plaza no se vendio: el club retrocedio cuando la asamblea se hizo publica'
   - Irene se ata los guantes sabiendo que es la ultima vez
   - Damian esta en la tribuna, sin credencial, y ella lo ubica antes del pitazo
+  palabras: 147
