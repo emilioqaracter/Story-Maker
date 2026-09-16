@@ -1,63 +1,67 @@
 import { useEffect, useState } from 'react'
 import { api } from './api.js'
 import Entregable from './Entregable.jsx'
+import Traza from './Traza.jsx'
 
 export default function Libros({ libros, refrescar }) {
   const [abierto, setAbierto] = useState(null)
 
-  if (!libros.length) {
-    return (
-      <section className="bloque">
-        <div className="bloque-cabecera">
-          <div>
-            <span className="paso">3</span>
-            <h2>Los libros</h2>
-            <p className="ayuda">Todavia no hay ninguno. Llena el pedido de arriba.</p>
-          </div>
-        </div>
-      </section>
-    )
-  }
+  const cabecera = (
+    <div className="bloque-cabecera">
+      <div>
+        <span className="paso">3</span>
+        <h2>Los libros</h2>
+        <p className="ayuda">
+          {libros.length
+            ? 'El ciclo escribe, valida, critica y corrige cada escena. Aca se ve en que orden trabajo cada agente, cuanto tardo y donde se trabo.'
+            : 'Todavia no hay ninguno. Llena el pedido de arriba.'}
+        </p>
+      </div>
+    </div>
+  )
 
   return (
     <section className="bloque">
-      <div className="bloque-cabecera">
-        <div>
-          <span className="paso">3</span>
-          <h2>Los libros</h2>
-          <p className="ayuda">
-            El ciclo escribe, valida, critica y corrige cada escena. Las puertas
-            son de los scripts: esta pantalla solo mira.
-          </p>
+      {cabecera}
+      {libros.length > 0 && (
+        <div className="libros">
+          {libros.map((l) => (
+            <Libro
+              key={l.slug}
+              libro={l}
+              abierto={abierto === l.slug}
+              alternar={() => setAbierto(abierto === l.slug ? null : l.slug)}
+              refrescar={refrescar}
+            />
+          ))}
         </div>
-      </div>
-      <div className="libros">
-        {libros.map((l) => (
-          <Libro
-            key={l.slug}
-            libro={l}
-            abierto={abierto === l.slug}
-            alternar={() => setAbierto(abierto === l.slug ? null : l.slug)}
-            refrescar={refrescar}
-          />
-        ))}
-      </div>
+      )}
     </section>
   )
 }
+
+const PESTANAS = [
+  ['traza', 'Como funciono'],
+  ['escenas', 'Escenas'],
+  ['entregable', 'El texto'],
+  ['log', 'Log crudo'],
+]
 
 function Libro({ libro, abierto, alternar, refrescar }) {
   const [log, setLog] = useState('')
   const [corriendo, setCorriendo] = useState(libro.corriendo)
   const [novela, setNovela] = useState('')
+  const [traza, setTraza] = useState({ eventos: [], resumen: null })
+  const [pestana, setPestana] = useState('traza')
 
-  // Mientras corre, el ciclo tarda minutos: se consulta el log en vez de
-  // bloquear. El estado real siempre esta en disco.
+  // Mientras corre, el ciclo tarda minutos: se consulta en vez de bloquear.
+  // El estado real siempre esta en disco, asi que refrescar no puede mentir.
   useEffect(() => {
     if (!corriendo && !abierto) return
     const t = setInterval(async () => {
       const r = await api.log(libro.slug)
       setLog(r.log)
+      api.traza(libro.slug).then(setTraza)
       if (!r.corriendo && corriendo) {
         setCorriendo(false)
         refrescar()
@@ -68,23 +72,30 @@ function Libro({ libro, abierto, alternar, refrescar }) {
   }, [corriendo, abierto, libro.slug])
 
   useEffect(() => {
-    if (abierto) api.novela(libro.slug).then((n) => setNovela(n.texto))
+    if (!abierto) return
+    api.novela(libro.slug).then((n) => setNovela(n.texto))
+    api.traza(libro.slug).then(setTraza)
   }, [abierto, libro.slug, libro.aprobadas])
 
   async function correr() {
     const r = await api.correr(libro.slug)
-    if (r.ok) setCorriendo(true)
+    if (r.ok) {
+      setCorriendo(true)
+      setPestana('traza')
+    }
   }
 
   async function reiniciar() {
     await api.reset(libro.slug)
     setNovela('')
     setLog('')
+    setTraza({ eventos: [], resumen: null })
     refrescar()
   }
 
   const total = libro.escenas.length
   const pct = total ? Math.round((libro.aprobadas / total) * 100) : 0
+  const cerradas = traza.resumen?.puertas_cerradas || 0
 
   return (
     <article className={`libro ${corriendo ? 'activo' : ''}`}>
@@ -93,6 +104,7 @@ function Libro({ libro, abierto, alternar, refrescar }) {
           <h3>{libro.titulo}</h3>
           <p className="meta">
             {libro.deporte} · {libro.epoca?.desde?.slice(0, 4)} · {total} escenas
+            {corriendo && <span className="latido"> corriendo</span>}
           </p>
         </div>
         <div className="progreso">
@@ -100,49 +112,85 @@ function Libro({ libro, abierto, alternar, refrescar }) {
             <span style={{ width: `${pct}%` }} />
           </div>
           <p className="meta">
-            {libro.aprobadas}/{total} aprobadas ·{' '}
-            {libro.palabras_escritas}/{libro.forma.techo_palabras} palabras
+            {libro.aprobadas}/{total} aprobadas · {libro.palabras_escritas}/
+            {libro.forma.techo_palabras} palabras
           </p>
         </div>
       </header>
 
       {abierto && (
         <div className="detalle">
-          <table>
-            <thead>
-              <tr>
-                <th>Escena</th><th>Cap</th><th>Fecha</th><th>Estado</th><th>Cierra</th><th>Palabras</th>
-              </tr>
-            </thead>
-            <tbody>
-              {libro.escenas.map((e) => (
-                <tr key={e.id} className={e.estado}>
-                  <td>{e.id}</td>
-                  <td>{e.capitulo}</td>
-                  <td>{e.fecha}</td>
-                  <td><span className={`pastilla ${e.estado}`}>{e.estado}</span></td>
-                  <td>{e.cierra.join(' ') || '—'}</td>
-                  <td>{e.palabras || '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
           <div className="acciones">
             <button className="primario" onClick={correr} disabled={corriendo}>
               {corriendo ? 'Corriendo…' : 'Correr el ciclo'}
             </button>
             <button onClick={reiniciar} disabled={corriendo}>Reset</button>
             <span className="nota">
-              Reset borra prosa, criticas y estado. No toca el canon.
+              Reset borra prosa, criticas, traza y estado. No toca el canon.
             </span>
           </div>
 
-          {log && (
-            <pre className="log">{log.split('\n').slice(-30).join('\n')}</pre>
+          <nav className="pestanas">
+            {PESTANAS.map(([id, texto]) => (
+              <button
+                key={id}
+                type="button"
+                className={pestana === id ? 'activa' : ''}
+                onClick={() => setPestana(id)}
+              >
+                {texto}
+                {id === 'traza' && cerradas > 0 && <span className="globo">{cerradas}</span>}
+              </button>
+            ))}
+          </nav>
+
+          {pestana === 'traza' &&
+            (traza.resumen ? (
+              <Traza eventos={traza.eventos} resumen={traza.resumen} />
+            ) : (
+              <p className="ayuda">Todavia no hay traza. Se escribe sola al correr el ciclo.</p>
+            ))}
+
+          {pestana === 'escenas' && (
+            <table>
+              <thead>
+                <tr>
+                  <th>Escena</th>
+                  <th>Cap</th>
+                  <th>Fecha</th>
+                  <th>Estado</th>
+                  <th>Cierra</th>
+                  <th>Palabras</th>
+                </tr>
+              </thead>
+              <tbody>
+                {libro.escenas.map((e) => (
+                  <tr key={e.id} className={e.estado}>
+                    <td>{e.id}</td>
+                    <td>{e.capitulo}</td>
+                    <td>{e.fecha}</td>
+                    <td><span className={`pastilla ${e.estado}`}>{e.estado}</span></td>
+                    <td>{e.cierra.join(' ') || '—'}</td>
+                    <td>{e.palabras || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           )}
 
-          <Entregable texto={novela} slug={libro.slug} />
+          {pestana === 'entregable' &&
+            (novela ? (
+              <Entregable texto={novela} slug={libro.slug} />
+            ) : (
+              <p className="ayuda">Todavia no hay entregable: se compila al abrir G4.</p>
+            ))}
+
+          {pestana === 'log' &&
+            (log ? (
+              <pre className="log">{log.split('\n').slice(-40).join('\n')}</pre>
+            ) : (
+              <p className="ayuda">Sin log todavia.</p>
+            ))}
         </div>
       )}
     </article>

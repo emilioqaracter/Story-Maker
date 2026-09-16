@@ -18,12 +18,12 @@ con su primera escena aprobada.
 
 Asi suena este libro. Va con cada llamada a `escribir-escena` y con la lente de calidad.
 
-El túnel olía a cal húmeda y a los botines de otros.
-Damián apoyó la espalda contra el portón y volvió a mirar el reloj.
-Una hora. El grabador ya venía perdiendo pila desde el segundo tiempo.
-Dos preguntas tenía anotadas. La segunda la había escrito con otra letra.
+El pasillo olía a cloro y a goma quemada de los botines.
+Damián apoyó la espalda contra el hormigón y miró otra vez el reloj.
+Llevaba una hora ahí, con la libreta cerrada y dos preguntas escritas.
+Adentro seguían los gritos del vestuario, después el agua, después nada.
 
-Irene salió con el pelo mojado y la bolsa colgando del hombro izquierdo.
-Caminaba despacio, como caminan los que tienen la rodilla cargada y no avisan.
-—Suplemento del lunes —dijo él—. ¿El equipo sigue entrenando en el predio viejo?
-Ella siguió andando tres pasos antes de frenar. No lo miró enseguida.
+La puerta se abrió y salió ella con el bolso al hombro.
+Tenía el pelo mojado y una venda vieja colgando de la muñeca.
+—Vidal, del suplemento del lunes —dijo él, y se enderezó despacio.
+Ella no frenó del todo; aflojó el paso y siguió caminando.

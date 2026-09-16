@@ -87,6 +87,24 @@ Las cuatro formas de manejar el contexto, y para qué sirve cada una acá:
 G1 corre siempre antes que G2: es determinista y gratis, y filtrar ahí antes de
 convocar dos críticos es lo que mantiene el ciclo barato.
 
+## Ver como funciono
+
+`reports/traza.jsonl` guarda un evento por paso: agente, fase, escena, intento,
+duracion, tokens reales y costo, y las puertas con **sus errores**. Se escribe
+en el momento, no al final: si el ciclo se corta, lo que paso hasta ahi queda.
+
+En la UI es la pestana «Como funciono» de cada libro. Los tokens salen de
+`claude -p --output-format json`, no de una estimacion.
+
+## Ver como funciono
+
+`reports/traza.jsonl` guarda un evento por paso: agente, fase, escena, intento,
+duracion, tokens reales y costo, y las puertas con **sus errores**. Se escribe
+en el momento, no al final: si el ciclo se corta, lo que paso hasta ahi queda.
+
+En la UI es la pestana «Como funciono» de cada libro. Los tokens salen de
+`claude -p --output-format json`, no de una estimacion.
+
 ## Estructura
 
 ```

@@ -27,6 +27,7 @@ sys.path.insert(0, str(SCRIPTS))
 sys.path.insert(0, str(RAIZ))
 import yaml  # noqa: E402
 from common import Libro, contar_palabras, cargar_config  # noqa: E402
+import traza as TZ  # noqa: E402
 import nuevo_libro as NL  # noqa: E402
 
 PUERTO = 8770
@@ -207,6 +208,11 @@ class Handler(BaseHTTPRequestHandler):
             texto = log.read_text(encoding="utf-8", errors="replace") if log.exists() else ""
             vivo = partes[2] in _corriendo and _corriendo[partes[2]].poll() is None
             return self._json({"log": texto[-20000:], "corriendo": vivo})
+        if len(partes) == 4 and partes[:2] == ["api", "books"] and partes[3] == "traza":
+            eventos = TZ.leer(LIBROS / partes[2])
+            return self._json({"eventos": eventos, "resumen": TZ.resumen(eventos),
+                               "corriendo": partes[2] in _corriendo
+                               and _corriendo[partes[2]].poll() is None})
         if len(partes) == 4 and partes[:2] == ["api", "books"] and partes[3] == "novela":
             p = LIBROS / partes[2] / "manuscript" / "novela.md"
             return self._json({"texto": p.read_text(encoding="utf-8") if p.exists() else ""})
@@ -242,6 +248,7 @@ class Handler(BaseHTTPRequestHandler):
             if accion == "run":
                 return self._json(lanzar(slug))
             if accion == "reset":
+                TZ.Traza(LIBROS / slug).borrar()
                 return self._json(script("run_scene.py", "books/" + slug, "reset"))
             if accion == "validar":
                 return self._json(script("validate_book.py", "books/" + slug))

@@ -18,6 +18,7 @@ export const api = {
   reset: (slug) => pedir(`/books/${slug}/reset`, { method: 'POST' }),
   log: (slug) => pedir(`/books/${slug}/log`),
   novela: (slug) => pedir(`/books/${slug}/novela`),
+  traza: (slug) => pedir(`/books/${slug}/traza`),
 }
 
 // La misma cuenta que hace harness/scripts/common.py. Se repite aqui solo para

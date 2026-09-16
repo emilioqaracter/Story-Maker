@@ -30,8 +30,10 @@ RAIZ = Path(__file__).resolve().parent
 SCRIPTS = RAIZ / "harness" / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 import yaml  # noqa: E402
+from traza import Traza, uso  # noqa: E402
 
 TIMEOUT = 600
+TRAZA: Traza | None = None      # lo abre main(); cada paso se anota al ocurrir
 
 # En Windows `claude` es un shim .cmd: hay que resolverlo, porque pasar el
 # prompt por shell rompe el comillado en cuanto tiene comillas o saltos.
@@ -56,25 +58,47 @@ def nota(t: str) -> None:
 # --------------------------------------------------------------------------- #
 # Las dos mitades
 # --------------------------------------------------------------------------- #
-def script(nombre: str, *args) -> dict:
-    """Un paso con respuesta correcta. Devuelve su JSON."""
+def script(nombre: str, *args, puerta: str = "", **contexto) -> dict:
+    """Un paso con respuesta correcta. Devuelve su JSON.
+
+    Si es una puerta, queda anotada CON sus errores: saber que G1 cerro no
+    sirve de nada; lo que sirve es saber que regla fallo y con que mensaje."""
+    t0 = time.time()
     r = subprocess.run([sys.executable, str(SCRIPTS / nombre), *args],
                        capture_output=True, text=True, encoding="utf-8",
                        errors="replace", cwd=RAIZ)
     try:
-        return json.loads(r.stdout)
+        res = json.loads(r.stdout)
     except json.JSONDecodeError:
-        return {"ok": False, "errores": [{"regla": nombre,
-                                          "mensaje": (r.stdout or r.stderr or "").strip()[:300],
-                                          "arreglo": "revisa el script a mano"}]}
+        res = {"ok": False, "errores": [{"regla": nombre,
+                                         "mensaje": (r.stdout or r.stderr or "").strip()[:300],
+                                         "arreglo": "revisa el script a mano"}]}
+    if puerta:
+        anotar(puerta, tipo="puerta", agente=nombre, ok=bool(res.get("ok")),
+               ms=int((time.time() - t0) * 1000),
+               errores=res.get("errores") or [],
+               suma=res.get("suma"), umbral=res.get("umbral"),
+               palabras=res.get("palabras"), **contexto)
+    return res
 
 
-def claude(prompt: str, herramientas: str = "Read,Write,Edit") -> str:
+def anotar(paso: str, **campos) -> None:
+    """Un evento de traza. Si no hay traza abierta, no molesta."""
+    if TRAZA is not None:
+        TRAZA.evento(paso, **campos)
+
+
+def claude(prompt: str, herramientas: str = "Read,Write,Edit", agente: str = "?",
+           **contexto) -> str:
     """Un paso que pide criterio. Contexto limpio en cada llamada: por eso los
-    criticos no se ven entre si ni saben en que intento van."""
+    criticos no se ven entre si ni saben en que intento van.
+
+    Pide `--output-format json` para quedarse con los tokens y el costo REALES
+    que reporta el CLI. Estimarlos seria inventar el numero que se quiere medir."""
     t0 = time.time()
     try:
-        cmd = [CLAUDE, "-p", "--permission-mode", "acceptEdits", "--add-dir", str(RAIZ)]
+        cmd = [CLAUDE, "-p", "--output-format", "json",
+               "--permission-mode", "acceptEdits", "--add-dir", str(RAIZ)]
         if herramientas:
             cmd += ["--allowedTools", herramientas]
         # El prompt va por STDIN, nunca como argumento: en Windows `claude` es un
@@ -85,12 +109,29 @@ def claude(prompt: str, herramientas: str = "Read,Write,Edit") -> str:
             cmd, input=prompt, capture_output=True, text=True, encoding="utf-8",
             errors="replace", cwd=RAIZ, timeout=TIMEOUT)
     except subprocess.TimeoutExpired:
+        anotar("modelo", tipo="modelo", agente=agente, ok=False, ms=TIMEOUT * 1000,
+               detalle="se paso de %ds" % TIMEOUT, **contexto)
         nota("    (se paso de %ds)" % TIMEOUT)
         return ""
-    nota("    claude: %s en %.0fs" % ("ok" if r.returncode == 0 else "fallo", time.time() - t0))
-    if r.returncode != 0 and r.stderr:
+
+    ms = int((time.time() - t0) * 1000)
+    texto, datos = "", {}
+    try:
+        datos = json.loads(r.stdout or "{}")
+        texto = str(datos.get("result") or "")
+    except json.JSONDecodeError:
+        texto = r.stdout or ""      # por si el CLI no devolvio el sobre json
+
+    ok = r.returncode == 0 and not datos.get("is_error")
+    tokens = uso(datos)
+    anotar("modelo", tipo="modelo", agente=agente, ok=ok, ms=ms,
+           tokens=tokens, costo=datos.get("total_cost_usd"),
+           turnos=datos.get("num_turns"), **contexto)
+    nota("    %-11s %s en %.0fs · %d tok salida" % (
+        agente, "ok" if ok else "fallo", ms / 1000, tokens["salida"]))
+    if not ok and r.stderr:
         nota("    " + r.stderr.strip()[:200])
-    return r.stdout or ""
+    return texto
 
 
 def limpiar(texto: str) -> str:
@@ -129,14 +170,17 @@ def extraer_json(texto: str) -> dict:
     return {}
 
 
-def claude_json(prompt: str, que: str, intentos: int = 2, herramientas: str = "") -> dict:
+def claude_json(prompt: str, que: str, intentos: int = 2, herramientas: str = "",
+                **contexto) -> dict:
     """El modelo emite evidencia estructurada; si no sale parseable, se repite.
 
     Parseo tolerante y reintento: es mas barato que abrir la puerta a ciegas."""
     for n in range(1, intentos + 1):
-        d = extraer_json(claude(prompt, herramientas=herramientas))
+        d = extraer_json(claude(prompt, herramientas=herramientas, agente=que, **contexto))
         if d:
             return d
+        anotar("json_invalido", tipo="incidente", agente=que,
+               detalle="intento %d de %d sin JSON parseable" % (n, intentos), **contexto)
         nota("    (%s no devolvio JSON valido, intento %d/%d)" % (que, n, intentos))
     return {}
 
@@ -199,7 +243,7 @@ def investigar(slug: str, libro: Path) -> None:
         "RESPONDE CON EL JSON Y NADA MAS."
         % (premise.get("deporte"), anio, premise.get("lugar"), anio,
            premise.get("deporte"), epoca["desde"], epoca["hasta"], anio),
-        "epoca", intentos=2, herramientas="WebSearch,WebFetch")
+        "researcher", intentos=2, herramientas="WebSearch,WebFetch", fase="investigar")
 
     if datos:
         # El YAML lo escribe el script. Un agente escribiendo YAML a mano mete
@@ -259,7 +303,7 @@ def planificar(slug: str, libro: Path) -> None:
            relacion.get("encuentro"), relacion.get("obstaculo"),
            json.dumps(relacion.get("etapas"), ensure_ascii=False, default=str),
            json.dumps(pendientes, ensure_ascii=False, indent=1)),
-        "el plan")
+        "planner", fase="planificar")
 
     # El timeline lo escribe el script, y solo estos dos campos: el resto del
     # canon no se toca desde aqui.
@@ -278,7 +322,8 @@ def planificar(slug: str, libro: Path) -> None:
 # --------------------------------------------------------------------------- #
 # Fase 3: el ciclo, escena por escena
 # --------------------------------------------------------------------------- #
-def escribir_escena(slug: str, sid: str, ctx: str, capitulo: int, correccion: str = "") -> bool:
+def escribir_escena(slug: str, sid: str, ctx: str, capitulo: int, correccion: str = "",
+                    intento: int = 1) -> bool:
     """El modelo devuelve la prosa; el archivo lo escribe ESTE script.
 
     Pedirle que escriba el archivo el mismo funciona a veces y a veces reporta
@@ -311,7 +356,8 @@ def escribir_escena(slug: str, sid: str, ctx: str, capitulo: int, correccion: st
         "RESPONDE CON LA PROSA Y NADA MAS: sin titulo, sin encabezado, sin "
         "comentarios, sin preambulo, sin bloques de codigo. La primera linea de tu "
         "respuesta es la primera linea de la escena." % (orden, voz, ctx),
-        herramientas="")
+        herramientas="", agente="corrector" if correccion else "escritor",
+        fase="producir", escena=sid, intento=intento)
 
     prosa = limpiar(salida)
     if len(prosa.split()) < 20:
@@ -330,7 +376,7 @@ RUBRICA = """| dimension | 0 | 1 | 2 |
 | quimica | los dos estan y no pasa nada entre ellos | hay tension pero la relacion queda igual | algo se mueve, o se frena a proposito y se nota |"""
 
 
-def criticar(slug: str, sid: str, ctx: str, capitulo: int) -> None:
+def criticar(slug: str, sid: str, ctx: str, capitulo: int, intento: int = 1) -> None:
     """Las dos lentes, cada una en su llamada: contexto aislado de verdad.
 
     Ninguna decide si la escena pasa; devuelven evidencia puntuada y el JSON lo
@@ -354,7 +400,8 @@ def criticar(slug: str, sid: str, ctx: str, capitulo: int) -> None:
         "Ojo: un hallazgo cuenta como veto aunque pongas veto false, asi que no "
         "listes como hallazgo algo que no sea una contradiccion real con el canon.\n\n"
         'Formato exacto:\n{"continuidad": {"veto": false, "hallazgos": '
-        '[{"que": "...", "cita": "..."}]}}\n\n' + cierre, "continuidad")
+        '[{"que": "...", "cita": "..."}]}}\n\n' + cierre, "critico-continuidad",
+        fase="producir", escena=sid, intento=intento)
 
     cal = claude_json(
         "Sos la lente de CALIDAD de un harness de novelas. Puntuas una rubrica de "
@@ -367,7 +414,8 @@ def criticar(slug: str, sid: str, ctx: str, capitulo: int) -> None:
         "null entero.\n\n"
         'Formato exacto:\n{"calidad": {"conflicto": {"nota": 2, "cita": "..."}, '
         '"dialogo": {"nota": 1, "cita": "..."}, "concrecion": {...}, '
-        '"frescura": {...}, "quimica": {...}}}\n\n' + cierre, "calidad")
+        '"frescura": {...}, "quimica": {...}}}\n\n' + cierre, "critico-calidad",
+        fase="producir", escena=sid, intento=intento)
 
     critica = {"escena": sid}
     critica.update(cont or {"continuidad": {"veto": False, "hallazgos": []}})
@@ -400,19 +448,21 @@ def producir(slug: str, libro: Path) -> bool:
         correccion = ""
         for intento in range(1, intentos_max + 1):
             nota("  intento %d/%d" % (intento, intentos_max))
-            if not escribir_escena(slug, sid, ctx, capitulo, correccion):
+            if not escribir_escena(slug, sid, ctx, capitulo, correccion, intento):
                 correccion = ""
                 continue
 
-            g1 = script("validate_scene.py", slug, sid)
+            g1 = script("validate_scene.py", slug, sid, puerta="G1",
+                        fase="producir", escena=sid, intento=intento)
             if not g1["ok"]:
                 nota("    G1 cierra: %d errores de hecho" % len(g1["errores"]))
                 correccion = errores_de(g1)
                 continue
             nota("    G1 abre (%s palabras)" % g1.get("palabras"))
 
-            criticar(slug, sid, ctx, capitulo)
-            g2 = script("gate_scene.py", slug, sid)
+            criticar(slug, sid, ctx, capitulo, intento)
+            g2 = script("gate_scene.py", slug, sid, puerta="G2",
+                        fase="producir", escena=sid, intento=intento)
             if not g2["ok"]:
                 nota("    G2 cierra: rubrica %s/%s, veto %s"
                      % (g2.get("suma"), g2.get("maximo"), g2.get("veto_continuidad")))
@@ -420,7 +470,8 @@ def producir(slug: str, libro: Path) -> bool:
                 continue
             nota("    G2 abre: rubrica %s/%s" % (g2.get("suma"), g2.get("maximo")))
 
-            ap = script("run_scene.py", slug, "aprobar", sid)
+            ap = script("run_scene.py", slug, "aprobar", sid, puerta="aprobar",
+                        fase="producir", escena=sid, intento=intento)
             if ap.get("ok"):
                 nota("    APROBADA")
                 if ap.get("puerta_G3"):
@@ -446,6 +497,9 @@ def main(argv: list) -> int:
         slug = "books/" + libros[-1].name
 
     libro = RAIZ / slug
+    global TRAZA
+    TRAZA = Traza(libro)
+    TRAZA.evento("arranque", tipo="hito", fase="arranque", detalle=slug)
     if not (libro / "context" / "intake.json").exists():
         print("No encuentro %s/context/intake.json" % slug)
         return 1
@@ -453,7 +507,7 @@ def main(argv: list) -> int:
     investigar(slug, libro)
 
     titulo("G0  -  el canon")
-    g0 = script("validate_canon.py", slug)
+    g0 = script("validate_canon.py", slug, puerta="G0", fase="arranque")
     if not g0["ok"]:
         nota("NO ABRE. No se escribe una sola linea de prosa:")
         print(errores_de(g0))
@@ -464,7 +518,7 @@ def main(argv: list) -> int:
     termina = producir(slug, libro)
 
     titulo("G4  -  las tres condiciones del final")
-    g4 = script("validate_book.py", slug)
+    g4 = script("validate_book.py", slug, puerta="G4", fase="cierre")
     for k, v in (g4.get("condiciones") or {}).items():
         nota("%-16s %s" % (k, v["ok"]))
     if not g4.get("termina"):
@@ -472,7 +526,7 @@ def main(argv: list) -> int:
         print(errores_de(g4))
         return 1
 
-    comp = script("compilar.py", slug)
+    comp = script("compilar.py", slug, puerta="compilar", fase="cierre")
     titulo("LISTO")
     nota("%s/%s  -  %s palabras" % (slug, comp.get("ruta"), comp.get("palabras")))
     print()

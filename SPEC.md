@@ -43,7 +43,7 @@ JSON, pero cabe en una pantalla. Los contratos se fijan con el caso chico.
 la edad del protagonista en el capítulo 12; un script no. El modelo escribe, el
 código verifica.
 
-**Versión 7.6** · 2026-09-16 · historial completo en §16.
+**Versión 7.7** · 2026-09-17 · historial completo en §16.
 
 **Stack:** Claude Code hace todo el trabajo de modelo — orquesta, planifica,
 escribe y critica con subagentes y skills · scripts Python validan.
@@ -1095,6 +1095,7 @@ Story-Maker/
 │       ├── gate_scene.py          G2: lee la rúbrica y decide (§5)
 │       ├── validate_book.py       G4: V10-V12, V17-V19 + las tres condiciones
 │       ├── resolver_canon.py      el canon resuelto, en prosa
+│       ├── traza.py               el registro de como trabajo el ciclo
 │       ├── compilar.py            concatena las escenas en novela.md
 │       └── run_scene.py           conduce el ciclo y mantiene state.json
 │
@@ -1197,6 +1198,7 @@ no está en esta tabla, no debería existir. Las rutas son relativas a
 | `manuscript/chNN/SNNN.validation.json` | `validate_scene.py`, cada intento | saber por qué falló G1 | se sobrescribe por intento |
 | `manuscript/chNN/SNNN.critique.json` | los dos críticos, cada intento | saber por qué falló G2 | se sobrescribe por intento |
 | un commit de git por escena aprobada | el ciclo | volver atrás con `git revert` | permanente |
+| `reports/traza.jsonl` | `crear_novela.py`, en cada paso | saber **cómo** trabajó el sistema: orden, tiempo, tokens, costo y qué dijo cada puerta al cerrar | append-only; se borra con `reset` |
 
 ### Entregables — lo que te llevas
 
@@ -1381,6 +1383,8 @@ Versionado: `MAYOR.MENOR`. Sube **MENOR** al añadir o precisar contenido; sube
 | Versión | Fecha | Commit | Cambio | Por qué |
 |---|---|---|---|---|
 | **7.4** | 2026-09-16 | _sin commitear_ | Nuevo subcomando `run_scene.py <libro> reset`: vuelve el libro al punto de partida borrando prosa, criticas, estado y entregable, sin tocar `context/`. | Sin el, probar el ciclo dos veces sobre el mismo libro obligaba a borrar archivos a mano o a escribir un libro nuevo. Y el canon no se toca por diseno: reset deshace lo que produjo el ciclo, no lo que decidio una persona. |
+| **7.7** | 2026-09-17 | _sin commitear_ | **Traza del ciclo** (`harness/scripts/traza.py` -> `reports/traza.jsonl`): un evento por paso con agente, fase, escena, intento, duracion, tokens reales y costo; las puertas quedan anotadas **con sus errores**. La UI lo muestra como linea de tiempo agrupada por escena e intento, con totales y reparto por agente. | El log en texto respondia «que paso» y no «por que tardo tanto», «cuanto costo» ni «que fallo en el intento 2». Un sistema que no se puede mirar por dentro se termina depurando a fuerza de reescribir prompts, que es justo el quinto fallo de §8. |
+| **7.7** | 2026-09-17 | _sin commitear_ | Las llamadas usan `claude -p --output-format json`: los tokens y el costo salen del CLI, no de una estimacion. | Estimar tokens es inventar el numero que se quiere medir. El sobre JSON ademas separa entrada, salida y cache, que no cuestan lo mismo: escribir cache es caro y leerla barata, y sumarlas en un solo numero esconde justo eso. |
 | **7.6** | 2026-09-16 | _sin commitear_ | **Interfaz React** (`ui/`) sobre una API local de stdlib (`harness/server.py`): arriba el pedido —las doce respuestas mas la lista de anacronismos—, debajo la forma del documento con las cifras derivadas en vivo, y abajo los libros con su progreso, el log del ciclo y el entregable. | El canon se pedia por terminal o escribiendo YAML, y las cifras derivadas (palabras por escena, techo) solo se veian despues de crear el libro. Verlas mientras se elige la forma es justamente lo que evita pedir un tamano que no cierra. |
 | **7.6** | 2026-09-16 | _sin commitear_ | La API **no reimplementa nada**: llama a `validate_canon.py`, `run_scene.py` y `crear_novela.py`, y crea el canon con las mismas derivaciones de `nuevo_libro.py`. | Dos caminos para lo mismo es como se desincronizan las reglas. La UI puede mostrar la cuenta en vivo, pero la que manda es la del servidor, que es la que ve el validador. |
 | **7.6** | 2026-09-16 | _sin commitear_ | El formulario pide la lista de anacronismos y las fuentes, y no deja crear sin ellas. | Sin investigacion automatica, un libro creado desde la UI nacia con `epoca.yaml` vacio y G0 no abria. Mejor decirlo en el formulario que despues de crear el libro. |
