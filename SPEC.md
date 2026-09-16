@@ -43,7 +43,7 @@ JSON, pero cabe en una pantalla. Los contratos se fijan con el caso chico.
 la edad del protagonista en el capítulo 12; un script no. El modelo escribe, el
 código verifica.
 
-**Versión 7.7** · 2026-09-17 · historial completo en §16.
+**Versión 7.8** · 2026-09-17 · historial completo en §16.
 
 **Stack:** Claude Code hace todo el trabajo de modelo — orquesta, planifica,
 escribe y critica con subagentes y skills · scripts Python validan.
@@ -1087,6 +1087,7 @@ Story-Maker/
 ├── harness/
 │   ├── config.yaml                los catorce números (§1)
 │   ├── server.py                  API local sobre los scripts
+│   ├── flujo.yaml                 el flujo declarado: quién, cuándo, con qué
 │   ├── voz-base.md                el registro del género
 │   └── scripts/
 │       ├── common.py              canon, derivaciones, prosa
@@ -1383,6 +1384,9 @@ Versionado: `MAYOR.MENOR`. Sube **MENOR** al añadir o precisar contenido; sube
 | Versión | Fecha | Commit | Cambio | Por qué |
 |---|---|---|---|---|
 | **7.4** | 2026-09-16 | _sin commitear_ | Nuevo subcomando `run_scene.py <libro> reset`: vuelve el libro al punto de partida borrando prosa, criticas, estado y entregable, sin tocar `context/`. | Sin el, probar el ciclo dos veces sobre el mismo libro obligaba a borrar archivos a mano o a escribir un libro nuevo. Y el canon no se toca por diseno: reset deshace lo que produjo el ciclo, no lo que decidio una persona. |
+| **7.8** | 2026-09-17 | _sin commitear_ | **`harness/flujo.yaml`**: el flujo declarado —quien trabaja, en que orden, con que skill, que herramientas y contra que regla— servido en `/api/flujo`. La UI gana una ventana **Flujo de trabajo** que lo muestra al lado de lo que realmente corrio en un libro. | Un diagrama que no se compara con la ejecucion es documentacion, y la documentacion se desactualiza sola. Poniendolo en un YAML del harness, la pantalla no puede contar una historia distinta de la que corre, y se ve de un vistazo que paso no corrio nunca. |
+| **7.8** | 2026-09-17 | _sin commitear_ | Cada evento de traza guarda ahora el **comando exacto**, las herramientas permitidas, la skill que siguio el agente y las reglas que comprueba el script. | «Que agente trabajo» no alcanza para trazabilidad: hace falta saber con que instrucciones, con que permisos y que codigo se ejecuto. |
+| **7.8** | 2026-09-17 | _sin commitear_ | El servidor publica su `version` y la UI avisa si un endpoint devuelve HTML en vez de JSON. | Un servidor de larga vida corriendo codigo viejo es una trampa silenciosa: la UI pedia `/traza`, recibia el `index.html` del catch-all estatico, y mostraba «todavia no hay traza» cuando el archivo existia con dieciseis eventos. Un fallo de transporte no puede parecer un dato vacio. |
 | **7.7** | 2026-09-17 | _sin commitear_ | **Traza del ciclo** (`harness/scripts/traza.py` -> `reports/traza.jsonl`): un evento por paso con agente, fase, escena, intento, duracion, tokens reales y costo; las puertas quedan anotadas **con sus errores**. La UI lo muestra como linea de tiempo agrupada por escena e intento, con totales y reparto por agente. | El log en texto respondia «que paso» y no «por que tardo tanto», «cuanto costo» ni «que fallo en el intento 2». Un sistema que no se puede mirar por dentro se termina depurando a fuerza de reescribir prompts, que es justo el quinto fallo de §8. |
 | **7.7** | 2026-09-17 | _sin commitear_ | Las llamadas usan `claude -p --output-format json`: los tokens y el costo salen del CLI, no de una estimacion. | Estimar tokens es inventar el numero que se quiere medir. El sobre JSON ademas separa entrada, salida y cache, que no cuestan lo mismo: escribir cache es caro y leerla barata, y sumarlas en un solo numero esconde justo eso. |
 | **7.6** | 2026-09-16 | _sin commitear_ | **Interfaz React** (`ui/`) sobre una API local de stdlib (`harness/server.py`): arriba el pedido —las doce respuestas mas la lista de anacronismos—, debajo la forma del documento con las cifras derivadas en vivo, y abajo los libros con su progreso, el log del ciclo y el entregable. | El canon se pedia por terminal o escribiendo YAML, y las cifras derivadas (palabras por escena, techo) solo se veian despues de crear el libro. Verlas mientras se elige la forma es justamente lo que evita pedir un tamano que no cierra. |

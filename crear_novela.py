@@ -32,6 +32,16 @@ sys.path.insert(0, str(SCRIPTS))
 import yaml  # noqa: E402
 from traza import Traza, uso  # noqa: E402
 
+# Que comprueba cada script. Vive aca y no en la UI para que no se desincronice.
+REGLAS_DE = {
+    "validate_canon.py": ["V21", "V13", "V16", "plan cabe bajo el techo"],
+    "validate_scene.py": ["V1-V9", "V14", "V15", "V16", "V20"],
+    "gate_scene.py": ["veto de continuidad", "rubrica con cita", "critica al dia"],
+    "validate_book.py": ["V10", "V11", "V12", "V17", "V18", "V19", "C1", "C2", "C3"],
+    "run_scene.py": ["marca aprobada", "recuenta", "comprueba que el final quepa"],
+    "compilar.py": ["concatena las escenas aprobadas"],
+}
+
 TIMEOUT = 600
 TRAZA: Traza | None = None      # lo abre main(); cada paso se anota al ocurrir
 
@@ -76,6 +86,8 @@ def script(nombre: str, *args, puerta: str = "", **contexto) -> dict:
     if puerta:
         anotar(puerta, tipo="puerta", agente=nombre, ok=bool(res.get("ok")),
                ms=int((time.time() - t0) * 1000),
+               comando="python harness/scripts/%s %s" % (nombre, " ".join(args)),
+               herramientas=[], reglas=REGLAS_DE.get(nombre, []),
                errores=res.get("errores") or [],
                suma=res.get("suma"), umbral=res.get("umbral"),
                palabras=res.get("palabras"), **contexto)
@@ -89,7 +101,7 @@ def anotar(paso: str, **campos) -> None:
 
 
 def claude(prompt: str, herramientas: str = "Read,Write,Edit", agente: str = "?",
-           **contexto) -> str:
+           skill: str = "", **contexto) -> str:
     """Un paso que pide criterio. Contexto limpio en cada llamada: por eso los
     criticos no se ven entre si ni saben en que intento van.
 
@@ -126,7 +138,11 @@ def claude(prompt: str, herramientas: str = "Read,Write,Edit", agente: str = "?"
     tokens = uso(datos)
     anotar("modelo", tipo="modelo", agente=agente, ok=ok, ms=ms,
            tokens=tokens, costo=datos.get("total_cost_usd"),
-           turnos=datos.get("num_turns"), **contexto)
+           turnos=datos.get("num_turns"), modelo=datos.get("model"),
+           comando="claude -p --output-format json" + (
+               " --allowedTools %s" % herramientas if herramientas else " (sin herramientas)"),
+           herramientas=[h for h in herramientas.split(",") if h],
+           skill=skill, prompt_chars=len(prompt), **contexto)
     nota("    %-11s %s en %.0fs · %d tok salida" % (
         agente, "ok" if ok else "fallo", ms / 1000, tokens["salida"]))
     if not ok and r.stderr:
@@ -171,12 +187,13 @@ def extraer_json(texto: str) -> dict:
 
 
 def claude_json(prompt: str, que: str, intentos: int = 2, herramientas: str = "",
-                **contexto) -> dict:
+                skill: str = "", **contexto) -> dict:
     """El modelo emite evidencia estructurada; si no sale parseable, se repite.
 
     Parseo tolerante y reintento: es mas barato que abrir la puerta a ciegas."""
     for n in range(1, intentos + 1):
-        d = extraer_json(claude(prompt, herramientas=herramientas, agente=que, **contexto))
+        d = extraer_json(claude(prompt, herramientas=herramientas, agente=que,
+                                skill=skill, **contexto))
         if d:
             return d
         anotar("json_invalido", tipo="incidente", agente=que,
@@ -243,7 +260,8 @@ def investigar(slug: str, libro: Path) -> None:
         "RESPONDE CON EL JSON Y NADA MAS."
         % (premise.get("deporte"), anio, premise.get("lugar"), anio,
            premise.get("deporte"), epoca["desde"], epoca["hasta"], anio),
-        "researcher", intentos=2, herramientas="WebSearch,WebFetch", fase="investigar")
+        "researcher", intentos=2, herramientas="WebSearch,WebFetch",
+        skill="epoca", fase="investigar")
 
     if datos:
         # El YAML lo escribe el script. Un agente escribiendo YAML a mano mete
@@ -303,7 +321,7 @@ def planificar(slug: str, libro: Path) -> None:
            relacion.get("encuentro"), relacion.get("obstaculo"),
            json.dumps(relacion.get("etapas"), ensure_ascii=False, default=str),
            json.dumps(pendientes, ensure_ascii=False, indent=1)),
-        "planner", fase="planificar")
+        "planner", skill="resolver-canon", fase="planificar")
 
     # El timeline lo escribe el script, y solo estos dos campos: el resto del
     # canon no se toca desde aqui.
@@ -357,6 +375,7 @@ def escribir_escena(slug: str, sid: str, ctx: str, capitulo: int, correccion: st
         "comentarios, sin preambulo, sin bloques de codigo. La primera linea de tu "
         "respuesta es la primera linea de la escena." % (orden, voz, ctx),
         herramientas="", agente="corrector" if correccion else "escritor",
+        skill="corregir-escena" if correccion else "escribir-escena",
         fase="producir", escena=sid, intento=intento)
 
     prosa = limpiar(salida)
@@ -401,7 +420,7 @@ def criticar(slug: str, sid: str, ctx: str, capitulo: int, intento: int = 1) -> 
         "listes como hallazgo algo que no sea una contradiccion real con el canon.\n\n"
         'Formato exacto:\n{"continuidad": {"veto": false, "hallazgos": '
         '[{"que": "...", "cita": "..."}]}}\n\n' + cierre, "critico-continuidad",
-        fase="producir", escena=sid, intento=intento)
+        skill="formato-critica", fase="producir", escena=sid, intento=intento)
 
     cal = claude_json(
         "Sos la lente de CALIDAD de un harness de novelas. Puntuas una rubrica de "
@@ -415,7 +434,7 @@ def criticar(slug: str, sid: str, ctx: str, capitulo: int, intento: int = 1) -> 
         'Formato exacto:\n{"calidad": {"conflicto": {"nota": 2, "cita": "..."}, '
         '"dialogo": {"nota": 1, "cita": "..."}, "concrecion": {...}, '
         '"frescura": {...}, "quimica": {...}}}\n\n' + cierre, "critico-calidad",
-        fase="producir", escena=sid, intento=intento)
+        skill="formato-critica", fase="producir", escena=sid, intento=intento)
 
     critica = {"escena": sid}
     critica.update(cont or {"continuidad": {"veto": False, "hallazgos": []}})

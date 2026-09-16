@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Pedido, { EJEMPLO } from './Pedido.jsx'
 import Configuracion from './Configuracion.jsx'
 import Libros from './Libros.jsx'
+import Flujo from './Flujo.jsx'
 import { api, derivar } from './api.js'
 
 const RESPUESTAS_VACIAS = {
@@ -25,6 +26,7 @@ export default function App() {
   const [epoca, setEpoca] = useState({ prohibido: '', notas: '', fuentes: '' })
   const [libros, setLibros] = useState([])
   const [aviso, setAviso] = useState(null)
+  const [vista, setVista] = useState('crear')
 
   useEffect(() => {
     api.config().then((c) => {
@@ -81,8 +83,22 @@ export default function App() {
           Lo que escribas abajo es el canon. A partir de ahi el modelo escribe y
           el codigo verifica: cinco puertas deciden que entra y que se rehace.
         </p>
+        <nav className="vistas">
+          <button type="button" className={vista === 'crear' ? 'activa' : ''}
+                  onClick={() => setVista('crear')}>
+            Crear una novela
+          </button>
+          <button type="button" className={vista === 'flujo' ? 'activa' : ''}
+                  onClick={() => setVista('flujo')}>
+            Flujo de trabajo
+          </button>
+        </nav>
       </header>
 
+      {vista === 'flujo' && <Flujo libros={libros} />}
+
+      {vista === 'crear' && (
+      <>
       <Pedido
         slug={slug}
         setSlug={setSlug}
@@ -132,6 +148,8 @@ export default function App() {
       )}
 
       <Libros libros={libros} refrescar={refrescar} />
+      </>
+      )}
 
       <footer>
         <p>

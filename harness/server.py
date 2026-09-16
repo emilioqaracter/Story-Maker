@@ -31,6 +31,10 @@ import traza as TZ  # noqa: E402
 import nuevo_libro as NL  # noqa: E402
 
 PUERTO = 8770
+# Se sirve en /api/config. Un servidor de larga vida corriendo codigo viejo es
+# una trampa: la UI pedia /traza, recibia el index.html y mostraba "no hay
+# traza" cuando el archivo existia. Ahora la UI compara y avisa.
+VERSION = "7.8"
 _corriendo: dict[str, subprocess.Popen] = {}
 
 
@@ -196,9 +200,13 @@ class Handler(BaseHTTPRequestHandler):
 
         if ruta == "/api/config":
             cfg = cargar_config(RAIZ)
-            return self._json({"estructura": cfg["estructura"], "tolerancia": cfg["tolerancia"],
+            return self._json({"version": VERSION,
+                               "estructura": cfg["estructura"], "tolerancia": cfg["tolerancia"],
                                "rubrica": cfg["rubrica"], "ciclo": cfg["ciclo"],
                                "genero": cfg["genero"], "perfiles": NL.PERFILES})
+        if ruta == "/api/flujo":
+            return self._json(yaml.safe_load(
+                (RAIZ / "harness" / "flujo.yaml").read_text(encoding="utf-8")))
         if ruta == "/api/books":
             return self._json(listar())
         if len(partes) == 3 and partes[:2] == ["api", "books"]:
@@ -258,6 +266,7 @@ class Handler(BaseHTTPRequestHandler):
 def main() -> int:
     servidor = ThreadingHTTPServer(("127.0.0.1", PUERTO), Handler)
     print("Story-Maker  ->  http://127.0.0.1:%d" % PUERTO)
+    print("version:", VERSION, " (si la UI dice que falta un endpoint, reinicia esto)")
     print("UI construida:" , "si" if (UI / "index.html").exists() else "no (cd ui && npm run build)")
     try:
         servidor.serve_forever()

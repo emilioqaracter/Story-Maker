@@ -96,6 +96,14 @@ en el momento, no al final: si el ciclo se corta, lo que paso hasta ahi queda.
 En la UI es la pestana «Como funciono» de cada libro. Los tokens salen de
 `claude -p --output-format json`, no de una estimacion.
 
+`harness/flujo.yaml` declara el flujo entero: quien trabaja, en que orden, con
+que skill, que herramientas y contra que regla. La ventana «Flujo de trabajo»
+lo muestra al lado de la traza real. Si agregas o mueves un paso del ciclo,
+actualizalo ahi: es lo que evita que la pantalla cuente otra historia.
+
+**El servidor no recarga codigo.** Si tocas `harness/server.py` o los scripts,
+reinicialo. La UI avisa si detecta un servidor viejo.
+
 ## Ver como funciono
 
 `reports/traza.jsonl` guarda un evento por paso: agente, fase, escena, intento,

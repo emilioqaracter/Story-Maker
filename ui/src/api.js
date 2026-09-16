@@ -1,11 +1,19 @@
 const BASE = '/api'
 
+export const VERSION_ESPERADA = '7.8'
+
 async function pedir(ruta, opciones) {
   const r = await fetch(BASE + ruta, {
     headers: { 'Content-Type': 'application/json' },
     ...opciones,
   })
   if (!r.ok && r.status >= 500) throw new Error('El harness no responde')
+  // Un servidor viejo devuelve el index.html en vez de JSON: sin esto la UI
+  // mostraba "no hay datos" cuando el problema era que faltaba el endpoint.
+  const tipo = r.headers.get('content-type') || ''
+  if (!tipo.includes('json')) {
+    throw new Error(`El servidor no conoce ${ruta}. Reinicia harness/server.py.`)
+  }
   return r.json()
 }
 
@@ -19,6 +27,7 @@ export const api = {
   log: (slug) => pedir(`/books/${slug}/log`),
   novela: (slug) => pedir(`/books/${slug}/novela`),
   traza: (slug) => pedir(`/books/${slug}/traza`),
+  flujo: () => pedir('/flujo'),
 }
 
 // La misma cuenta que hace harness/scripts/common.py. Se repite aqui solo para

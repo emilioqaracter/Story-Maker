@@ -376,3 +376,80 @@ footer p { color: var(--tenue); font-size: 12.5px; margin: 34px 0 0; max-width: 
   .agente-fila { grid-template-columns: 90px 1fr; }
   .agente-cifra { grid-column: 2; text-align: left; }
 }
+
+/* --- vistas --- */
+.vistas { display: flex; gap: 6px; margin: 0 0 32px; }
+.vistas button {
+  border: 1px solid var(--borde); border-radius: 99px; background: var(--panel);
+  padding: 8px 18px; font-size: 13.5px; color: var(--suave);
+}
+.vistas button.activa {
+  background: var(--acento); border-color: var(--acento); color: #fff; font-weight: 650;
+}
+.vistas button:hover:not(.activa) { border-color: var(--acento); color: var(--acento); }
+
+/* --- flujo declarado --- */
+.fase { margin-bottom: 30px; }
+.fase-cabecera { display: flex; align-items: baseline; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+.fase-cabecera h3 { font-family: var(--serif); font-size: 18px; margin: 0; font-weight: 600; }
+.fase-cabecera span { font-size: 12px; color: var(--tenue); }
+
+.pasos-flujo { list-style: none; margin: 0; padding: 0; position: relative; }
+.pasos-flujo::before {
+  content: ''; position: absolute; left: 33px; top: 14px; bottom: 14px;
+  width: 1px; background: var(--borde);
+}
+.paso-flujo { display: flex; gap: 16px; padding: 9px 0; position: relative; }
+.pf-marca { flex: none; width: 68px; display: flex; justify-content: center; padding-top: 2px; }
+.pf-tipo, .pf-puerta {
+  font-size: 9.5px; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 700;
+  padding: 3px 8px; border-radius: 5px; z-index: 1; border: 1px solid var(--fondo);
+}
+.pf-tipo.script { background: var(--ok-claro); color: var(--ok); }
+.pf-tipo.modelo { background: var(--acento-claro); color: var(--acento); }
+.pf-puerta { background: var(--acento); color: #fff; }
+
+.pf-cuerpo { flex: 1; min-width: 0; }
+.pf-titulo { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.pf-titulo code { font-family: var(--mono); font-size: 12.5px; font-weight: 650; color: var(--texto); }
+.pf-chip {
+  font-size: 10px; padding: 2px 8px; border-radius: 99px;
+  background: var(--borde-suave); color: var(--suave);
+}
+.pf-corrida { font-size: 11px; color: var(--ok); font-weight: 600; margin-left: auto; }
+.pf-corrida.con-fallo { color: var(--acento); }
+.pf-corrida.sin { color: var(--tenue); font-weight: 400; }
+.pf-que { font-size: 13px; margin: 3px 0 7px; color: var(--suave); }
+.pf-detalles { display: flex; flex-direction: column; gap: 3px; }
+.pf-detalle { display: flex; gap: 10px; font-size: 11.5px; align-items: baseline; }
+.pf-k {
+  flex: none; width: 92px; color: var(--tenue); font-size: 10px;
+  letter-spacing: 0.06em; text-transform: uppercase; font-weight: 700;
+}
+.pf-v { color: var(--suave); font-family: var(--mono); font-size: 11px; }
+.pf-detalle.alerta .pf-v { color: var(--acento); font-family: inherit; font-size: 11.5px; }
+.pf-nota {
+  font-size: 11.5px; color: var(--tenue); margin: 8px 0 0;
+  padding-left: 11px; border-left: 2px solid var(--borde);
+}
+
+/* --- ejecucion real --- */
+.ejecucion { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.ejecucion > li { display: flex; gap: 14px; padding: 11px 13px; border: 1px solid var(--borde); border-radius: 9px; background: var(--fondo); }
+.ejecucion > li.fallo { border-color: var(--acento); background: var(--acento-claro); }
+.ej-n { font-family: var(--mono); font-size: 11px; color: var(--tenue); flex: none; padding-top: 2px; }
+.ej-cuerpo { flex: 1; min-width: 0; }
+.ej-linea { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.ej-agente { font-family: var(--mono); font-size: 12.5px; font-weight: 650; }
+.ej-escena { font-size: 11.5px; color: var(--suave); }
+.ej-ms { margin-left: auto; font-size: 11.5px; color: var(--tenue); font-variant-numeric: tabular-nums; }
+.ej-comando {
+  display: block; font-family: var(--mono); font-size: 11px; color: var(--suave);
+  background: var(--panel); border: 1px solid var(--borde-suave); border-radius: 6px;
+  padding: 5px 9px; margin: 6px 0; overflow-x: auto; white-space: nowrap;
+}
+.ej-meta { display: flex; gap: 14px; flex-wrap: wrap; font-size: 11px; color: var(--tenue); }
+.ej-meta b { color: var(--suave); font-weight: 600; }
+.ej-error { font-size: 12px; margin-top: 7px; padding: 7px 10px; background: var(--panel); border-radius: 6px; }
+.ej-error strong { font-family: var(--mono); font-size: 10.5px; color: var(--acento); margin-right: 7px; }
+.ej-error em { display: block; color: var(--suave); font-style: normal; margin-top: 3px; font-size: 11.5px; }

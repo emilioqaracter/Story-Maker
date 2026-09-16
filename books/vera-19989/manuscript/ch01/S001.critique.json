@@ -1,0 +1,29 @@
+{
+  "escena": "S001",
+  "continuidad": {
+    "veto": false,
+    "hallazgos": []
+  },
+  "calidad": {
+    "conflicto": {
+      "nota": 2,
+      "cita": "Doce nombres escritos a maquina. El ultimo no era el de ella."
+    },
+    "dialogo": {
+      "nota": 2,
+      "cita": "La firmo yo, dijo. Asi nadie tiene nada que decir de vos."
+    },
+    "concrecion": {
+      "nota": 2,
+      "cita": "Se saco las zapatillas y las dejo debajo del banco, bien juntas."
+    },
+    "frescura": {
+      "nota": 2,
+      "cita": "El tablero seguia torcido desde el invierno del noventa y uno."
+    },
+    "quimica": {
+      "nota": 2,
+      "cita": "Vera leyo la lista entera, dos veces, y despues doblo la planilla."
+    }
+  }
+}

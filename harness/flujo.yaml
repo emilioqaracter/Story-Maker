@@ -1,0 +1,114 @@
+# El flujo declarado: quien trabaja, cuando, con que y contra que regla.
+# Vive aca y no en la UI para que la pantalla no pueda contar una historia
+# distinta de la que corre. La traza real se compara contra esto.
+
+fases:
+  - id: arranque
+    titulo: "Arranque"
+    subtitulo: "una sola vez, antes de escribir una linea"
+    pasos:
+      - agente: interviewer
+        tipo: modelo
+        que: "Hace las doce preguntas fijas y escribe intake.json"
+        skill: entrevistar
+        herramientas: [Read, Write, AskUserQuestion]
+        escribe: [context/intake.json]
+        opcional: true
+        nota: "En la UI lo reemplaza el formulario: las preguntas son fijas y de tipo conocido, asi que son un script."
+
+      - agente: researcher
+        tipo: modelo
+        que: "Averigua la epoca: anacronismos, hitos del calendario y fuentes"
+        skill: epoca
+        herramientas: [WebSearch, WebFetch]
+        escribe: [context/epoca.yaml, context/calendario.yaml]
+        opcional: true
+        nota: "Se salta si epoca.yaml ya trae anacronismos. Es el paso mas lento y el menos determinista."
+
+      - agente: planner
+        tipo: modelo
+        que: "Rellena resumen y beats de cada escena. No escribe prosa"
+        skill: resolver-canon
+        lee: [context/premise.yaml, context/relacion.yaml, context/timeline.yaml]
+        escribe: [context/timeline.yaml]
+
+      - agente: validate_canon.py
+        tipo: script
+        puerta: G0
+        que: "El canon esta completo y el plan cabe bajo el techo"
+        reglas: [V21, V13, V16, "plan cabe"]
+        si_falla: "no se escribe una sola linea de prosa"
+
+  - id: producir
+    titulo: "Produccion"
+    subtitulo: "una vuelta por escena, hasta 3 intentos"
+    pasos:
+      - agente: resolver_canon.py
+        tipo: script
+        que: "Resuelve el canon a la fecha de la escena y lo entrega EN PROSA"
+        nota: "Nadie interpreta YAML. De aca sale todo lo que el escritor sabe."
+
+      - agente: escritor
+        tipo: modelo
+        que: "Escribe la escena con la forma exacta que pide el canon"
+        skill: escribir-escena
+        herramientas: []
+        escribe: [manuscript/chNN/SNNN.md]
+        nota: "Devuelve prosa; el archivo lo escribe el script."
+
+      - agente: validate_scene.py
+        tipo: script
+        puerta: G1
+        que: "Los hechos: fechas, edades, estados, anacronismos y la forma"
+        reglas: ["V1-V9", V14, V15, V16, V20]
+        si_falla: "vuelve al corrector, sin gastar critica"
+
+      - agente: critico-continuidad
+        tipo: modelo
+        que: "Contradicciones con el canon que un script no puede formalizar"
+        skill: formato-critica
+        herramientas: []
+        escribe: [manuscript/chNN/SNNN.critique.json]
+        nota: "Contexto aislado: no ve al otro critico ni sabe en que intento va."
+
+      - agente: critico-calidad
+        tipo: modelo
+        que: "Puntua la rubrica de cinco dimensiones, con cita obligatoria"
+        skill: formato-critica
+        herramientas: []
+        escribe: [manuscript/chNN/SNNN.critique.json]
+
+      - agente: gate_scene.py
+        tipo: script
+        puerta: G2
+        que: "Suma la rubrica y aplica el umbral. El critico no decide"
+        reglas: ["veto de continuidad", "rubrica >= umbral", "cita en toda nota", "critica al dia"]
+        si_falla: "vuelve al corrector con los errores concretos"
+
+      - agente: corrector
+        tipo: modelo
+        que: "Toca SOLO lo que senalan los errores"
+        skill: corregir-escena
+        herramientas: []
+        solo_si: "G1 o G2 cerraron"
+
+      - agente: run_scene.py
+        tipo: script
+        que: "Marca aprobada, recuenta y comprueba que el final siga cabiendo"
+        nota: "Al cerrar capitulo avisa G3: la unica puerta humana."
+
+  - id: cierre
+    titulo: "Cierre"
+    subtitulo: "una sola vez, cuando no queda escena sin aprobar"
+    pasos:
+      - agente: validate_book.py
+        tipo: script
+        puerta: G4
+        que: "Las tres condiciones del final"
+        reglas: [V10, V11, V12, V17, V18, V19, C1, C2, C3]
+        si_falla: "sigue produciendo, o para y pregunta"
+
+      - agente: compilar.py
+        tipo: script
+        que: "Concatena las escenas aprobadas en novela.md"
+        escribe: [manuscript/novela.md]
