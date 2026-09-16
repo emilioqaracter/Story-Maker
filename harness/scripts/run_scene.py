@@ -174,7 +174,8 @@ def aprobar(libro: Libro, sid: str) -> dict:
     ruta_crit = libro.ruta_prosa(esc).with_suffix(".critique.json")
     if not ruta_crit.exists():
         return {"ok": False, "puerta": "G2", "motivo": "Falta %s: convoca las dos lentes." % ruta_crit.name}
-    g2 = evaluar(libro, sid, json.loads(ruta_crit.read_text(encoding="utf-8")))
+    g2 = evaluar(libro, sid, json.loads(ruta_crit.read_text(encoding="utf-8")),
+                 ruta_critica=ruta_crit)
     if not g2["ok"]:
         return {"ok": False, "puerta": "G2", "motivo": "G2 no abre.", "errores": g2["errores"],
                 "suma": g2.get("suma"), "umbral": g2.get("umbral")}
@@ -288,7 +289,8 @@ def main(argv: list) -> int:
             json.dumps(res, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     elif cmd == "puerta":
         ruta = libro.ruta_prosa(libro.escena(arg)).with_suffix(".critique.json")
-        res = evaluar(libro, arg, json.loads(ruta.read_text(encoding="utf-8")))
+        res = evaluar(libro, arg, json.loads(ruta.read_text(encoding="utf-8")),
+                      ruta_critica=ruta)
     elif cmd == "aprobar":
         res = aprobar(libro, arg)
     elif cmd == "intento":

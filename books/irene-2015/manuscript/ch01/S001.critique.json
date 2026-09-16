@@ -1,0 +1,29 @@
+{
+  "escena": "S001",
+  "continuidad": {
+    "veto": false,
+    "hallazgos": []
+  },
+  "calidad": {
+    "conflicto": {
+      "nota": 2,
+      "cita": "Damián abrió la boca para la segunda. Ella ya estaba en la puerta."
+    },
+    "dialogo": {
+      "nota": 2,
+      "cita": "—Sigue entrenando ahí —dijo—. Los lunes hay más barro que en enero."
+    },
+    "concrecion": {
+      "nota": 2,
+      "cita": "Caminaba despacio, como caminan los que tienen la rodilla cargada y no avisan."
+    },
+    "frescura": {
+      "nota": 2,
+      "cita": "El grabador quedó encendido, apuntando al pasillo vacío, hasta que se cansó."
+    },
+    "quimica": {
+      "nota": 2,
+      "cita": "Ella siguió andando tres pasos antes de frenar. No lo miró enseguida."
+    }
+  }
+}

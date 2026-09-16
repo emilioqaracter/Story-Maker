@@ -47,13 +47,40 @@ algo, y está documentada con su fecha en el historial del SPEC.
 6. **Todo error dice qué está mal, cuál es la verdad y cómo se arregla.** Un
    error sin `arreglo` no es accionable y no sirve.
 
+## Políticas de contexto
+
+Los seis fallos típicos y qué hace el harness con cada uno (detalle en §8 del
+SPEC). Un validador no salva a un modelo al que nunca le dijeron lo que
+necesitaba.
+
+| Fallo | Política |
+|---|---|
+| Relleno de contexto | ningún paso recibe un archivo del canon, recibe la resolución a su fecha |
+| Prerrequisitos invisibles | si no está escrito en el canon, no existe |
+| Borradores rancios | contexto limpio por llamada; una crítica más vieja que la prosa no abre G2 |
+| Vaivén de altitud | ante un fallo se cambia la regla o el dato, nunca el nivel del prompt |
+| Depurar solo el prompt | antes de tocar un prompt, comprobar que el dato llegó |
+| Métricas silenciosas | ninguna puerta abre sin evidencia citable |
+
+Las cuatro formas de manejar el contexto, y para qué sirve cada una acá:
+
+- **Escribir** — canon, `state.json`, beats, traza, un commit por escena. Nada
+  vive solo en la conversación.
+- **Aislar** — un proceso nuevo por llamada; las dos lentes no se ven entre sí
+  ni saben en qué intento van.
+- **Seleccionar** — `resolver-canon` manda solo lo que aplica a esa fecha.
+- **Comprimir** — el canon llega en prosa resuelta, nunca en YAML crudo.
+
+> Escribir para no olvidar, aislar para no contaminar, seleccionar para no
+> ahogar, comprimir para no interpretar.
+
 ## Las cinco puertas
 
 | Puerta | Quién la abre | Qué comprueba |
 |---|---|---|
 | G0 canon | `validate_canon.py` | V21, V13, V16, que el plan quepa |
 | G1 hechos | `validate_scene.py` | V1-V9, V14-V16, V20 |
-| G2 criterio | `gate_scene.py` | veto de continuidad + rúbrica con citas |
+| G2 criterio | `gate_scene.py` | veto de continuidad + rúbrica con citas + crítica al día |
 | G3 capítulo | **una persona** | lo lee |
 | G4 obra | `validate_book.py` | V10-V12, V17-V19 + las tres condiciones |
 
@@ -74,7 +101,7 @@ Los scripts reciben la ruta del libro como argumento. **No hay libro «actual».
 ## Comandos
 
 ```bash
-python -m pytest tests -q          # 54 tests, sin red ni tokens
+python -m pytest tests -q          # 56 tests, sin red ni tokens
 python demo.py                     # corre el harness entero y lo explica
 python nuevo_libro.py              # entrevista y crea un libro
 python crear_novela.py books/<slug> # encadena todo: escribe, critica, compila

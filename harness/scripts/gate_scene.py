@@ -16,10 +16,24 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from common import Error, Libro, emitir, salida  # noqa: E402
 
 
-def evaluar(libro: Libro, sid: str, critica: dict) -> dict:
+def evaluar(libro: Libro, sid: str, critica: dict, ruta_critica: Path | None = None) -> dict:
     cfg = libro.config["rubrica"]
     dimensiones = cfg["dimensiones"]
     errores = []
+
+    # --- la critica tiene que hablar del texto que hay ahora --------------- #
+    # Un scratchpad viejo es la forma mas barata de aprobar a ciegas: si la
+    # escena se reescribio despues de que la criticaran, esa critica describe
+    # un texto que ya no existe.
+    esc = libro.escena(sid)
+    if ruta_critica and esc:
+        prosa = libro.ruta_prosa(esc)
+        if prosa.exists() and ruta_critica.exists():
+            if ruta_critica.stat().st_mtime < prosa.stat().st_mtime:
+                errores.append(Error(
+                    "G2/traza",
+                    "La critica es mas vieja que la prosa: habla de un texto que ya cambio.",
+                    "Vuelve a convocar las dos lentes sobre la escena actual."))
 
     # --- continuidad: manda sobre todo lo demas ---------------------------- #
     # Un hallazgo cuenta aunque la lente no haya marcado veto. Encontrar una
@@ -99,7 +113,7 @@ def main(argv: list) -> int:
         return emitir(salida(sid, [Error("G2", "No hay critica en %s." % ruta.name,
                                          "Convoca las dos lentes antes de abrir G2.")]))
     critica = json.loads(ruta.read_text(encoding="utf-8"))
-    return emitir(evaluar(libro, sid, critica))
+    return emitir(evaluar(libro, sid, critica, ruta_critica=ruta))
 
 
 if __name__ == "__main__":

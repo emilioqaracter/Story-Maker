@@ -1,0 +1,29 @@
+{
+  "escena": "S004",
+  "continuidad": {
+    "veto": false,
+    "hallazgos": []
+  },
+  "calidad": {
+    "conflicto": {
+      "nota": 2,
+      "cita": "El portal de la competencia lo habia publicado a las cuatro y diez."
+    },
+    "dialogo": {
+      "nota": 1,
+      "cita": "—¿Y ahora? —dijo ella. —Ahora nada —contesto."
+    },
+    "concrecion": {
+      "nota": 2,
+      "cita": "Abajo, Irene se ataba el pelo y probaba la rodilla contra el cesped."
+    },
+    "frescura": {
+      "nota": 2,
+      "cita": "Doscientas personas, un par de banderas. Nadie del diario habia venido."
+    },
+    "quimica": {
+      "nota": 2,
+      "cita": "Se quedo asi, con la camiseta en la mano, y levanto dos dedos."
+    }
+  }
+}

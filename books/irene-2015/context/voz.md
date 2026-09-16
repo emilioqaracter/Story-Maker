@@ -11,3 +11,19 @@ con su primera escena aprobada.
 - Lo que no se dice pesa más que lo que se dice. Las frases cortas cierran.
 - Nada de metáforas de manual: ni corazones que laten fuerte, ni miradas que
   se cruzan, ni tiempos que se detienen.
+
+---
+
+## Muestra fija
+
+Asi suena este libro. Va con cada llamada a `escribir-escena` y con la lente de calidad.
+
+El túnel olía a cal húmeda y a los botines de otros.
+Damián apoyó la espalda contra el portón y volvió a mirar el reloj.
+Una hora. El grabador ya venía perdiendo pila desde el segundo tiempo.
+Dos preguntas tenía anotadas. La segunda la había escrito con otra letra.
+
+Irene salió con el pelo mojado y la bolsa colgando del hombro izquierdo.
+Caminaba despacio, como caminan los que tienen la rodilla cargada y no avisan.
+—Suplemento del lunes —dijo él—. ¿El equipo sigue entrenando en el predio viejo?
+Ella siguió andando tres pasos antes de frenar. No lo miró enseguida.

@@ -605,3 +605,34 @@ def test_una_escena_en_el_maximo_no_revienta_el_techo(dir_libro):
     por_escena = est["parrafos_por_escena"] * est["lineas_por_parrafo"] * (
         est["palabras_por_linea"] + tol["palabras_por_linea"])
     assert por_escena * L.forma["escenas_totales"] <= L.forma["techo_palabras"]
+
+
+# --------------------------------------------------------------------------- #
+# Scratchpads viejos: una critica de un intento anterior no puede abrir G2
+# --------------------------------------------------------------------------- #
+def test_g2_no_abre_con_una_critica_mas_vieja_que_la_prosa(dir_libro):
+    """Si la escena se reescribio despues de que la criticaran, esa critica
+    habla de un texto que ya no existe. Abrir con ella es aprobar a ciegas."""
+    import os
+    import time
+    d = dir_libro / "manuscript" / "ch01"
+    critica = d / (SID + ".critique.json")
+    critica.write_text(json.dumps(critica_base(), ensure_ascii=False), encoding="utf-8")
+    # El caso real: la escena se corrige DESPUES de que la criticaran.
+    escribir_prosa(dir_libro, prosa(dir_libro))
+    ahora = time.time() + 5
+    os.utime(dir_libro / "manuscript" / "ch01" / (SID + ".md"), (ahora, ahora))
+    res = G.evaluar(libro(dir_libro), SID, json.loads(critica.read_text("utf-8")),
+                    ruta_critica=critica)
+    assert not res["ok"]
+    assert any("mas vieja" in e["mensaje"] or "posterior" in e["mensaje"]
+               for e in res["errores"])
+
+
+def test_g2_abre_si_la_critica_es_posterior_a_la_prosa(dir_libro):
+    d = dir_libro / "manuscript" / "ch01"
+    critica = d / (SID + ".critique.json")
+    critica.write_text(json.dumps(critica_base(), ensure_ascii=False), encoding="utf-8")
+    res = G.evaluar(libro(dir_libro), SID, json.loads(critica.read_text("utf-8")),
+                    ruta_critica=critica)
+    assert res["ok"]

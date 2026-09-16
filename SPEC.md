@@ -20,7 +20,7 @@ Lo que se está construyendo son las capas:
 | **Validadores** | que la prosa respete esos hechos | 21 reglas deterministas, sin LLM (§4) |
 | **Rúbrica con evidencia** | que el criterio no sea una opinión | cinco dimensiones ancladas, cita obligatoria en toda nota (§5) |
 | **Puertas** | que nada avance porque alguien opine que puede | cinco puntos de corte, cada uno con criterio escrito y un script que lo aplica (§6) |
-| **Reguladores** | que el trabajo termine | techo de palabras y comprobación de que el final quepa (§10) |
+| **Reguladores** | que el trabajo termine | techo de palabras y comprobación de que el final quepa (§11) |
 
 La regla que las une es siempre la misma: **el modelo observa, el código
 decide.** Un agente que puede aprobar su propio trabajo no es un control.
@@ -43,7 +43,7 @@ JSON, pero cabe en una pantalla. Los contratos se fijan con el caso chico.
 la edad del protagonista en el capítulo 12; un script no. El modelo escribe, el
 código verifica.
 
-**Versión 7.4** · 2026-09-16 · historial completo en §15.
+**Versión 7.5** · 2026-09-16 · historial completo en §16.
 
 **Stack:** Claude Code hace todo el trabajo de modelo — orquesta, planifica,
 escribe y critica con subagentes y skills · scripts Python validan.
@@ -54,7 +54,7 @@ buscar contexto en internet es la parte más lenta y menos determinista del
 arranque, y no es lo que hay que hacer funcionar primero.
 
 **Reparto:** `harness/` y `.claude/` saben de romance deportiva y valen para
-todos los libros; `books/<slug>/` sabe de una novela concreta (§9).
+todos los libros; `books/<slug>/` sabe de una novela concreta (§10).
 
 ---
 
@@ -74,7 +74,7 @@ flowchart LR
 
 Tres fases y un bucle. Lo que el dibujo no muestra, y está detallado más abajo:
 en **arranque** se comprueba que el plan quepa bajo el techo antes de escribir
-nada (§11); en **producción**, tras cada escena, que el final siga cabiendo (§11);
+nada (§12); en **producción**, tras cada escena, que el final siga cabiendo (§12);
 y al cerrar cada capítulo lo revisas tú (§4).
 
 El bucle pregunta por los hilos, pero en este género hay uno que no es opcional:
@@ -95,7 +95,7 @@ que luego veta el validador.
 **Inicialización:** no arranca hasta que `context/` está completo y pasa G0. El
 canon existe antes que la primera palabra de prosa, no se descubre escribiendo.
 
-**Final:** tiene su propia sección (§11) porque no es obvio. En corto: la longitud
+**Final:** tiene su propia sección (§12) porque no es obvio. En corto: la longitud
 que pides es un **techo**, no una meta — si la historia da para 10.000 palabras y
 pediste 50.000, salen 10.000. Termina cuando no queda escena sin aprobar, el
 recuento no supera el techo y todos los hilos están cerrados. Las tres las
@@ -221,7 +221,7 @@ perfil v1 sigue siendo el defecto; el override es por libro, nunca al reves.
 | `rubrica.umbral` | dónde corta G2 | 6/10 | `gate_scene.py` |
 | `rubrica.cero_prohibido` | si un 0 tumba la escena sola | sí | `gate_scene.py` |
 | `ciclo.intentos_max` | cuántas veces se rehace antes de preguntarte | 3 | `run_scene.py` |
-| `ciclo.contracciones_max` | cuántas veces puede encoger el plan | 2 | regulador (§11) |
+| `ciclo.contracciones_max` | cuántas veces puede encoger el plan | 2 | regulador (§12) |
 | `ciclo.escenas_sin_coincidir_max` | cuánto pueden separarse los protagonistas | 10 | V19 |
 | `genero.etapas_relacion` | el arco válido de la pareja | 5 etapas | V16-V18 |
 | `genero.etapa_final_obligatoria` | la promesa del género | `union` | V18 |
@@ -340,7 +340,7 @@ escenas:
 
 Tres campos que existen por una razón concreta:
 
-- **`cierra`** permite calcular el final (§11). Una escena normal lleva la lista
+- **`cierra`** permite calcular el final (§12). Una escena normal lleva la lista
   vacía; la última del libro cierra la `pregunta_dramatica`.
 - **`flashback`** es lo único que exime de V2. Si no está declarado aquí, una
   fecha hacia atrás es un error, no un recurso narrativo.
@@ -479,7 +479,7 @@ python nuevo_libro.py
 
 **Por qué un script y no un agente.** Las doce preguntas son fijas, cerradas y de
 tipo conocido: una fecha es una fecha, el nivel es uno de tres, los hilos son dos.
-No hay nada que decidir ahí, y la regla de reparto de §9 es clara — si el paso
+No hay nada que decidir ahí, y la regla de reparto de §10 es clara — si el paso
 tiene una respuesta correcta, es un script. Un modelo en el medio solo añadiría
 formas distintas de preguntar lo mismo en cada libro.
 
@@ -635,7 +635,7 @@ VALIDAR y CRITICAR son las puertas **G1** y **G2** (§7). El validador corre ant
 que el crítico porque es instantáneo, determinista y gratis: filtrar ahí antes de
 convocar dos subagentes es lo que mantiene el ciclo barato.
 
-Cada subagente recibe su skill (§8): es lo que hace que la escena 40 suene igual
+Cada subagente recibe su skill (§9): es lo que hace que la escena 40 suene igual
 que la 3 sin que nadie haya visto las dos.
 
 El dibujo se queda en el esqueleto. Lo que pasa alrededor:
@@ -645,7 +645,7 @@ El dibujo se queda en el esqueleto. Lo que pasa alrededor:
 | **El lazo tiene tope** | 3 intentos, contados en `state.json`. A la cuarta para y te pregunta |
 | **PLANIFICAR deja rastro** | los `beats` se guardan en `timeline.yaml`, no se pasan en memoria |
 | **ESCRIBIR marca `escrita`** | hay prosa en disco antes de aprobarse; al reanudar sabes que esa escena ya costó trabajo |
-| **APROBADA hace commit** | un commit de git por escena, y se recalcula si el final sigue cabiendo (§11) |
+| **APROBADA hace commit** | un commit de git por escena, y se recalcula si el final sigue cabiendo (§12) |
 | **Al cerrar capítulo, paras tú** | es la puerta **G3**, la única humana (§7) |
 
 ---
@@ -691,7 +691,7 @@ Por eso no hay un `validate.py`, hay tres entradas, una por puerta (§7):
 |---|---|---|
 | `validate_canon.py` | `context/` | una vez, tras la investigación |
 | `validate_scene.py` | una escena + canon | en cada vuelta del ciclo |
-| `validate_book.py` | `manuscript/` + canon | al comprobar si terminó (§11) |
+| `validate_book.py` | `manuscript/` + canon | al comprobar si terminó (§12) |
 
 **V12 corre dos veces por una razón.** Comprobar el total al final solo sirve para
 enterarse tarde: si te pasaste, el texto ya está escrito. Lo útil es la
@@ -721,7 +721,7 @@ El subagente solo extrae: no juzga si son correctas.
 
 Dos subagentes de Claude Code, en paralelo. **No reescriben: solo diagnostican.**
 Y hay una cosa más que no hacen, que es la importante: **no deciden si la escena
-pasa**. Emiten evidencia puntuada; quien abre la puerta es un script (§8).
+pasa**. Emiten evidencia puntuada; quien abre la puerta es un script (§9).
 
 Preguntarle a un modelo "¿esto está bien?" es pedirle que apruebe su propio
 examen. Preguntarle "¿hay diálogo que informa al lector de algo que ambos
@@ -834,7 +834,7 @@ Aquí la escena no pasa por dos motivos independientes: hay veto de continuidad,
   manada) y **no saben en qué intento van**, así que no aprueban por cansancio en
   la tercera vuelta. Es una garantía estructural, no una instrucción que haya que
   pedirles.
-- La lente de calidad recibe `voz.md` (§9): juzga la escena contra cómo suena el
+- La lente de calidad recibe `voz.md` (§10): juzga la escena contra cómo suena el
   libro, no contra su gusto del momento.
 
 Sobre personas reales, la lente de continuidad veta una sola cosa: atribuirles
@@ -854,7 +854,7 @@ que lo aplica.
 | **G1 — Hechos** | cada vuelta | `validate_scene.py` | V1-V9 sin errores | vuelve a CORREGIR, sin gastar crítica |
 | **G2 — Criterio** | tras G1 | `gate_scene.py` | sin veto de continuidad · rúbrica ≥ `rubrica.umbral` · ninguna dimensión 0 · toda nota < 2 con cita | vuelve a CORREGIR |
 | **G3 — Capítulo** | al cerrar capítulo | **tú** | lo lees | paras y decides: seguir, rehacer o cambiar el canon |
-| **G4 — Obra** | al final | `validate_book.py` | C1 · C2 · C3 (§11) | sigue produciendo, o para y pregunta |
+| **G4 — Obra** | al final | `validate_book.py` | C1 · C2 · C3 (§12) | sigue produciendo, o para y pregunta |
 
 ### La regla que sostiene todo esto
 
@@ -896,7 +896,77 @@ reintenta para siempre.
 
 ---
 
-## 8. Skills
+## 8. Políticas de contexto
+
+Las capas de control del §Panorama existen para que el modelo no se equivoque
+sobre los **hechos**. Esta sección es sobre el otro lado: que no se equivoque
+porque le llegó mal el **contexto**. Son fallos distintos y se arreglan distinto —
+un validador no salva a un modelo al que nunca le dijeron lo que necesitaba.
+
+### Los seis fallos, y qué hace el harness con cada uno
+
+| # | Fallo | Política | Dónde vive |
+|---|---|---|---|
+| 1 | **Relleno de contexto** — pegar archivos enteros «por si acaso» y ahogar la línea que importaba | Ningún paso recibe un archivo del canon. Recibe **la resolución a su fecha**: quién está, con qué edad y qué estado vigente. Lo demás no se manda. | `resolver_canon.py` |
+| 2 | **Prerrequisitos invisibles** — lo que un humano da por sabido, el modelo no lo ve | Si una regla del mundo no está **escrita** en el canon, no existe. Los anacronismos son una lista de datos, no un criterio; el conocimiento de cada personaje lleva fecha y marcadores. | `epoca.yaml`, `characters/*.sabe` |
+| 3 | **Borradores rancios** — planes viejos que contradicen el objetivo de ahora | Cada llamada arranca con **contexto limpio**; el estado se relee de disco, nunca se arrastra. Y una crítica más vieja que la prosa no abre G2: describe un texto que ya no existe. | `claude -p` por llamada · G2/traza |
+| 4 | **Vaivén de altitud** — oscilar entre guion rígido y prompt vago después de cada fallo | El reparto no se toca: respuesta correcta → script, criterio → subagente. Cuando algo falla **se cambia la regla o el dato, no el nivel del prompt**, y el cambio queda en el historial con su porqué. | §10 · §16 |
+| 5 | **Depurar solo el prompt** — reescribir adjetivos mientras a la ventana le sigue faltando el dato | Antes de tocar un prompt hay que **comprobar que el dato llegó**. Una corrección recibe los errores con su `arreglo`, nunca «escribí mejor». | §6 · `corregir-escena` |
+| 6 | **Métricas de éxito silenciosas** — celebrar respuestas fluidas sin comprobar que había evidencia | **Ninguna puerta abre sin evidencia citable.** Toda nota de la rúbrica exige cita, el 2 incluido, y un hallazgo sin cita no es un hallazgo. | G2 (§7) |
+
+Dos de estas políticas están escritas con cicatriz, y conviene decirlo:
+
+- La **5** la aprendí rompiéndola. Cuando el escritor automático no producía nada,
+  culpé al prompt y después a los permisos, y reescribí las dos cosas. El fallo
+  real era que en Windows `claude` es un shim `.cmd` y cmd.exe cortaba el
+  argumento en el primer salto de línea: al modelo le llegaba un prompt vacío.
+  Dos diagnósticos equivocados por no comprobar primero que el dato llegaba.
+- La **6** la rompía el propio harness. La rúbrica solo exigía cita por debajo de
+  2, así que el camino más barato para aprobar era poner 2 en todo y no
+  justificar nada — y la primera corrida completa devolvió un 10 sobre 10 a un
+  primer borrador, con las cinco citas en `null`.
+
+### Las cuatro formas de manejar el contexto
+
+El harness usa las cuatro, y cada una resuelve fallos distintos de la tabla.
+
+**Escribir** *(write)* — lo que se recuerda se olvida; lo que importa se escribe.
+El canon en `context/`, el progreso en `state.json`, los beats en el timeline, la
+traza en los `.validation.json` y `.critique.json`, y un commit por escena
+aprobada. Nada vive solo en la conversación: por eso el contador de intentos está
+en disco, y reanudar mañana no reinicia la cuenta. *Ataca el 3.*
+
+**Aislar** *(isolate)* — cada llamada a `claude -p` es un proceso nuevo con
+contexto limpio. Las dos lentes del crítico **no se ven entre sí** (no hay efecto
+manada) y **no saben en qué intento van** (no aprueban por cansancio). El harness
+y los libros también están aislados: `harness/` no sabe de Irene ni de Marco.
+*Ataca el 3 y el 6.*
+
+**Seleccionar** *(select)* — de todo el canon, a una escena le llega solo lo que
+aplica a su fecha. `resolver-canon` elige; el resto no se manda. Las skills
+funcionan igual: Claude Code ve siempre la `description` de una línea y lee el
+cuerpo **solo** cuando toca. *Ataca el 1 y el 2.*
+
+**Comprimir** *(compress)* — lo que llega, llega resuelto y corto. El canon va en
+prosa —«Irene, 29 años, suspendida hasta el 6 de noviembre, todavía no sabe lo de
+la venta»— y nunca en YAML para que alguien lo interprete. La crítica son cinco
+números con su cita, no un ensayo. La muestra de voz son dos párrafos, no el
+libro. *Ataca el 1.*
+
+> Dicho corto: **escribir** para no olvidar, **aislar** para no contaminar,
+> **seleccionar** para no ahogar, **comprimir** para no interpretar.
+
+### La prueba de que una política sirve
+
+Una política que no se puede comprobar es una intención. Las de arriba tienen
+cada una su forma de fallar visible: si `resolver_canon.py` no incluye un dato,
+el escritor no lo tiene y se nota en la prosa; si una crítica queda rancia, G2 no
+abre; si una nota llega sin cita, la dimensión no cuenta. Cuando una política
+nueva no tenga esa forma, no es una política: es un consejo.
+
+---
+
+## 9. Skills
 
 **El problema que resuelven:** cada subagente arranca con el contexto limpio. El
 que escribe la escena 40 no vio cómo se escribió la 3. Nada garantiza que use la
@@ -986,7 +1056,7 @@ repetición.
 
 ---
 
-## 9. Estructura
+## 10. Estructura
 
 ```
 Story-Maker/
@@ -1069,12 +1139,12 @@ y por eso está dibujado con él.
 
 `harness/voz-base.md` es nuevo y es lo que convierte esto en un producto: el
 registro del género escrito una vez. El `voz.md` de cada libro sale de ahí y se
-fija con su primera escena aprobada (§8). Sin una base común, cada novela
+fija con su primera escena aprobada (§9). Sin una base común, cada novela
 reinventa la voz y el harness no acumula nada.
 
 **Regla de reparto:** si el paso tiene una respuesta correcta, es un script; si
 requiere criterio, es un subagente. Las skills no son un tercer ejecutor: son las
-instrucciones que el subagente recibe (§8). El ciclo lo conduce `run_scene.py`, no
+instrucciones que el subagente recibe (§9). El ciclo lo conduce `run_scene.py`, no
 el modelo — un LLM iterando 45 veces deriva.
 
 Los scripts reciben la ruta del libro como argumento: `run_scene.py books/marco-1990`.
@@ -1085,7 +1155,7 @@ regenera desde ahí.
 
 ---
 
-## 10. Inventario: qué se genera
+## 11. Inventario: qué se genera
 
 Todo lo que este sistema produce, quién lo produce y quién lo lee. Si un archivo
 no está en esta tabla, no debería existir. Las rutas son relativas a
@@ -1109,7 +1179,7 @@ no está en esta tabla, no debería existir. Las rutas son relativas a
 | `context/relacion.yaml` | `planner`, del `encuentro` y el `obstaculo` del intake | `resolver-canon`, V16-V19 | **append-only**: se añaden etapas, no se reescriben |
 | `context/real-figures.yaml` | `researcher` propone, tú apruebas | V9, continuidad | inmutable tras G0 |
 | `context/characters/*.yaml` | `planner` lo deriva del timeline | `resolver-canon`, V3-V7 | **append-only**, y solo por decisión tuya |
-| `context/timeline.yaml` | `planner` | todo el ciclo | muta: `estado`, `palabras`, y se contrae (§11) |
+| `context/timeline.yaml` | `planner` | todo el ciclo | muta: `estado`, `palabras`, y se contrae (§12) |
 
 ### Progreso — muta durante la producción
 
@@ -1149,7 +1219,7 @@ no una carpeta que hay que montar a mano.
 
 ---
 
-## 11. El final
+## 12. El final
 
 **La longitud que pides es un techo, no una meta.** Si pides 50.000 palabras y la
 historia da para 10.000, salen 10.000. Estirar una historia que ya terminó es la
@@ -1236,7 +1306,7 @@ de §5, con el resto.
 
 ---
 
-## 12. Decidido
+## 13. Decidido
 
 | Qué | Valor |
 |---|---|
@@ -1250,15 +1320,15 @@ de §5, con el resto.
 | Realismo | protagonista ficticio, mundo real (instituciones y eventos del año) |
 | Personas reales | permitidas si tienen Wikipedia |
 | Época | la del prompt, **única y común** a todos los dominios; la investigan agentes |
-| Longitud | se deriva de la forma declarada en §1, y es un **techo**: si la historia da menos, se entrega menos (§11) |
-| Voz | una sola para el libro entero, congelada en el arranque (§8) |
-| Fin | tres condiciones calculadas, no un juicio del modelo (§11) |
+| Longitud | se deriva de la forma declarada en §1, y es un **techo**: si la historia da menos, se entrega menos (§12) |
+| Voz | una sola para el libro entero, congelada en el arranque (§9) |
+| Fin | tres condiciones calculadas, no un juicio del modelo (§12) |
 | Crítico | veta continuidad; en calidad puntua una rúbrica de 4×3 con cita obligatoria (§6) |
 | Quién decide | un script en cada puerta; ningún agente abre la suya (§7) |
 | Revisión humana | una sola puerta, G3, al cerrar cada capítulo |
 | Investigación | un solo `researcher`, una pasada, un solo `epoca.yaml` |
 
-## 13. Pendiente
+## 14. Pendiente
 
 Nada que bloquee la implementación. Lo único abierto es calibración, y se
 calibra con el ciclo corriendo, no antes:
@@ -1269,7 +1339,7 @@ calibra con el ciclo corriendo, no antes:
   arquitectura si resulta estar mal: el umbral vive en `gate_scene.py`, en una
   línea.
 
-## 14. Por dónde empezar
+## 15. Por dónde empezar
 
 1. **El documento de la v1, a mano.** Escribí vos los 3 párrafos de 4 líneas y
    los tres JSON que debería producir. Es el contrato: todo lo que sigue se mide
@@ -1297,7 +1367,7 @@ calibra con el ciclo corriendo, no antes:
 
 ---
 
-## 15. Historial de versiones
+## 16. Historial de versiones
 
 Toda modificación del spec se registra aquí, en la misma entrega que la cambia.
 Una entrada dice **qué** cambió y **por qué** — el qué sin el por qué obliga a
@@ -1309,6 +1379,8 @@ Versionado: `MAYOR.MENOR`. Sube **MENOR** al añadir o precisar contenido; sube
 | Versión | Fecha | Commit | Cambio | Por qué |
 |---|---|---|---|---|
 | **7.4** | 2026-09-16 | _sin commitear_ | Nuevo subcomando `run_scene.py <libro> reset`: vuelve el libro al punto de partida borrando prosa, criticas, estado y entregable, sin tocar `context/`. | Sin el, probar el ciclo dos veces sobre el mismo libro obligaba a borrar archivos a mano o a escribir un libro nuevo. Y el canon no se toca por diseno: reset deshace lo que produjo el ciclo, no lo que decidio una persona. |
+| **7.5** | 2026-09-16 | _sin commitear_ | **Nueva §8 Politicas de contexto**: los seis fallos tipicos (relleno, prerrequisitos invisibles, borradores rancios, vaiven de altitud, depurar solo el prompt, metricas silenciosas) con la politica que aplica el harness a cada uno y donde vive en el codigo. Y las cuatro formas de manejar contexto —escribir, aislar, seleccionar, comprimir— mapeadas a mecanismos reales. | Las capas de control cuidaban que el modelo no se equivoque sobre los HECHOS, y no habia nada escrito sobre el otro lado: que no se equivoque porque le llego mal el CONTEXTO. Son fallos distintos y un validador no salva a un modelo al que nunca le dijeron lo que necesitaba. Dos de las politicas van con su cicatriz: la 5 la rompi yo diagnosticando dos veces mal, y la 6 la rompia el propio harness. |
+| **7.5** | 2026-09-16 | _sin commitear_ | **Una critica mas vieja que la prosa no abre G2** (G2/traza). | Es el fallo de los borradores rancios aplicado al ciclo: si la escena se corrige despues de que la criticaran, esa critica describe un texto que ya no existe, y abrir con ella es aprobar a ciegas. No habia nada que lo impidiera. |
 | **7.4** | 2026-09-16 | _sin commitear_ | **El techo se presupuesta con `palabras_por_escena_max`** (nominal + tolerancia), no con el nominal. La proyeccion de V12, el regulador y la comprobacion de G0 usan el mismo numero. | Corriendo el libro de 2015: cuatro escenas que pasaron G1 y G2 sumaron 585 con un techo de 576, y el libro no podia terminar sin que ninguna escena hubiera roto nada. V15 tolera hasta 15 palabras por linea pero el techo contaba 12: dos reglas en desacuerdo sobre el mismo hecho. Ahora no hay combinacion legal de escenas que reviente C2. |
 | **7.3** | 2026-09-16 | _sin commitear_ | **Nuevo encuadre al principio del documento: para que existe esto.** El objetivo no es la novela, son las capas de control sobre un modelo — canon calculado, validadores, rubrica con evidencia, puertas y reguladores — y la novela es el banco de pruebas. | El documento explicaba muy bien COMO funciona cada pieza y en ningun lado PARA QUE. Sin eso, las decisiones que mas cuestan de defender (que el critico no decida, que el canon solo lo cambie una persona) parecen rigidez en vez de lo que son: el punto. |
 | **7.3** | 2026-09-16 | _sin commitear_ | **La investigacion por internet sale del camino critico.** Si `epoca.yaml` ya trae anacronismos, `crear_novela.py` no llama al `researcher` y va derecho al ciclo. Un libro puede traer el canon entero escrito a mano. | Es el paso mas lento y el menos determinista del arranque, y su ruido tapaba lo que hay que mirar: el ciclo de redaccion, correccion y critica. Lo que sigue sin ser opcional es el resultado — G0 no abre con la epoca vacia (V13). |
