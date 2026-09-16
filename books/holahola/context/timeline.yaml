@@ -1,0 +1,178 @@
+escenas:
+- id: S001
+  capitulo: 1
+  fecha: '2010-02-06'
+  lugar: Madrid, España
+  presentes:
+  - alberto
+  - lucia
+  resumen: Alberto y Lucía se cruzan por primera vez en el vestuario vacío de Madrid,
+    sin saber quién es el otro, y la diferencia de edad marca el tono desde la primera
+    frase.
+  estado: aprobada
+  cierra: []
+  flashback: false
+  beats:
+  - Lucía entra al vestuario creyendo que está vacío y encuentra a Alberto vendándose
+    la muñeca en el banco del fondo
+  - Alberto le habla con el paternalismo de quien le lleva años, y ella responde con
+    el nombre de un rival al que él perdió hace una década
+  - Al salir, Lucía deja olvidada una botella sobre el banco y Alberto la guarda en
+    su bolsa sin devolverla
+  palabras: 1060
+- id: S002
+  capitulo: 1
+  fecha: '2010-03-17'
+  lugar: Madrid, España
+  presentes:
+  - alberto
+  - lucia
+  resumen: Dos días después del entrenamiento que los reúne otra vez, Alberto se sorprende
+    buscándola con la mirada en la cancha y ninguno de los dos nombra lo que empieza.
+  estado: planificada
+  cierra: []
+  flashback: false
+  beats:
+  - Alberto llega antes de la hora al pabellón con la excusa de revisar el suelo de
+    la cancha, y en realidad espera el turno de ella
+  - Lucía le pide que le corrija la posición del pie y el contacto dura un segundo
+    más de lo que cualquiera de los dos justificaría
+  - Alberto le devuelve la botella lavada y ella entiende que la guardó un mes entero
+- id: S003
+  capitulo: 1
+  fecha: '2010-04-25'
+  lugar: Madrid, España
+  presentes:
+  - alberto
+  - lucia
+  resumen: Una lesión menor de Lucía obliga a Alberto a acompañarla al fisio y la
+    cercanía forzada saca a la superficie los años que los separan.
+  estado: planificada
+  cierra: []
+  flashback: false
+  beats:
+  - Lucía disimula el dolor del brazo durante el partidillo hasta que Alberto la para
+    en seco delante de todos
+  - En la sala de espera ella le pregunta la edad y él contesta con una cifra que
+    deja la conversación en silencio
+  - Alberto sale al pasillo a llenar la botella de ella y tarda más de lo necesario
+    en volver
+- id: S004
+  capitulo: 2
+  fecha: '2010-06-02'
+  lugar: Madrid, España
+  presentes:
+  - alberto
+  - lucia
+  resumen: 'Una noche de cancha vacía después del último partido de la temporada corta:
+    se dicen casi todo sin tocarse, y el casi es la escena.'
+  estado: planificada
+  cierra: []
+  flashback: false
+  beats:
+  - Lucía apaga las luces del pabellón salvo las del fondo y se sienta en el centro
+    de la cancha a esperarlo
+  - Alberto le confiesa que el club le ha puesto fecha a su retirada y que lleva semanas
+    sin decírselo a nadie
+  - Ella le tiende la botella, él bebe de ella y ninguno de los dos comenta lo que
+    eso significa
+- id: S005
+  capitulo: 2
+  fecha: '2010-07-11'
+  lugar: Madrid, España
+  presentes:
+  - alberto
+  - lucia
+  resumen: La primera mañana juntos en el piso de Alberto, con la intimidad ya establecida
+    y el miedo a que alguien del club lo sepa metido en la habitación.
+  estado: planificada
+  cierra: []
+  flashback: false
+  beats:
+  - Lucía despierta antes y reconoce en la estantería las fotos de una carrera que
+    empezó cuando ella tenía nueve años
+  - Alberto le pide que salga por el garaje y ella acepta sin discutir, y ese acuerdo
+    les duele a los dos
+  - Antes de irse, Lucía deja su botella en la cocina de él, deliberadamente, como
+    quien deja una bandera
+- id: S006
+  capitulo: 2
+  fecha: '2010-08-19'
+  lugar: Madrid, España
+  presentes:
+  - alberto
+  - lucia
+  resumen: El médico confirma que el brazo de Lucía no aguanta otra temporada y Alberto,
+    en vez de sostenerla, se refugia en su propia cuenta atrás.
+  estado: planificada
+  cierra: []
+  flashback: false
+  beats:
+  - El informe llega al móvil de Lucía en mitad de una cena y ella lo lee dos veces
+    antes de pasárselo a Alberto
+  - Alberto responde hablando de su retirada en lugar de la de ella, y Lucía se lo
+    señala con una sola frase
+  - Ella recoge la botella de la cocina y se la lleva sin decir a dónde va
+- id: S007
+  capitulo: 3
+  fecha: '2010-09-26'
+  lugar: Madrid, España
+  presentes:
+  - alberto
+  - lucia
+  resumen: Un mes después de la ruptura coinciden en el pasillo del pabellón como
+    dos profesionales y la cortesía es peor que el grito.
+  estado: planificada
+  cierra: []
+  flashback: false
+  beats:
+  - Alberto la ve entrenar desde la puerta con el brazo inmovilizado y no entra a
+    la cancha
+  - Se cruzan en el pasillo, él le pregunta por la rehabilitación y ella contesta
+    con el parte médico exacto, sin nada más
+  - Un compañero menciona delante de los dos la fiesta de retirada de Alberto y Lucía
+    dice que no irá
+- id: S008
+  capitulo: 3
+  fecha: '2010-11-04'
+  lugar: Madrid, España
+  presentes:
+  - alberto
+  - lucia
+  resumen: 'En el vestuario donde se conocieron, Lucía devuelve la botella y con ese
+    gesto los dos dicen en voz alta lo que cada uno ha entregado: él la vida entera
+    al deporte, ella el brazo.'
+  estado: planificada
+  cierra:
+  - H1
+  flashback: false
+  beats:
+  - Lucía entra al vestuario vacío con la botella en la mano y la deja en el mismo
+    punto del banco donde la olvidó en febrero
+  - 'Alberto la nombra: le dice que él dio la vida y sabía lo que daba, y que ella
+    dio un brazo sin elegirlo, y que por eso llevaba meses sin poder mirarla'
+  - Lucía coge la botella, bebe, y se la devuelve a él para que la guarde otra vez;
+    esta vez él la acepta delante de ella y el objeto deja de ser un secreto entre
+    los dos
+- id: S009
+  capitulo: 3
+  fecha: '2010-12-13'
+  lugar: Madrid, España
+  presentes:
+  - alberto
+  - lucia
+  resumen: 'En la cancha del pabellón, ya sin partido ni club de por medio, los dos
+    cierran lo que la cancha significó: ella no volverá a jugar y él no volverá a
+    entrenar, y eligen quedarse igual.'
+  estado: planificada
+  cierra:
+  - H2
+  flashback: false
+  beats:
+  - 'Lucía pisa la línea de fondo por última vez con el alta médica que le prohíbe
+    competir y lo dice sin adornos: la cancha se acabó para ella'
+  - Alberto firma delante de ella la baja definitiva del club y deja las llaves del
+    pabellón sobre el banquillo
+  - Apagan juntos las luces de la cancha, salen por la puerta principal a la vista
+    de quien quiera verlos, y la diferencia de edad ya no es un argumento que ninguno
+    de los dos use

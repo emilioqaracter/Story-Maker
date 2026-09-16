@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "fecha": "",
+  "respuestas": {
+    "deporte": "Futbol",
+    "epoca": {
+      "desde": "2010-01-01",
+      "hasta": "2010-12-31"
+    },
+    "lugar": "Madrid, España",
+    "nivel": "profesional",
+    "persona_a": {
+      "nombre": "Alberto Cadlas",
+      "nacimiento": "1995-06-06",
+      "rol": "Es futbolista"
+    },
+    "persona_b": {
+      "nombre": "Lucía X",
+      "nacimiento": "1996-06-06",
+      "rol": "Es doctora"
+    },
+    "encuentro": "En el vestuario",
+    "obstaculo": "La edad",
+    "precio": {
+      "a": "La vida",
+      "b": "Un brazo"
+    },
+    "hilos": [
+      "botella",
+      "cancha"
+    ]
+  },
+  "pendiente_investigar": []
+}

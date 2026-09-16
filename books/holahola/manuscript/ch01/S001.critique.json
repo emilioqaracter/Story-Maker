@@ -1,0 +1,29 @@
+{
+  "escena": "S001",
+  "continuidad": {
+    "veto": false,
+    "hallazgos": []
+  },
+  "calidad": {
+    "conflicto": {
+      "nota": 1,
+      "cita": "Alberto dio medio paso atrás sin pensarlo, y el banco le golpeó la pantorrilla."
+    },
+    "dialogo": {
+      "nota": 2,
+      "cita": "—Tengo trece —dijo, sin que él hubiera preguntado, mientras buscaba la puerta con la mano."
+    },
+    "concrecion": {
+      "nota": 2,
+      "cita": "Cortó un trozo con los dientes y se lo pegó encima del nudillo del medio."
+    },
+    "frescura": {
+      "nota": 2,
+      "cita": "El reloj de la pared estaba parado en las cuatro desde hacía por lo menos un año."
+    },
+    "quimica": {
+      "nota": 2,
+      "cita": "—Se pega mejor si te secas la mano primero —dijo Alberto, sin levantar la vista."
+    }
+  }
+}

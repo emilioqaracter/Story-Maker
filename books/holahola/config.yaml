@@ -1,0 +1,6 @@
+estructura:
+  capitulos: 3
+  escenas_por_capitulo: 3
+  parrafos_por_escena: 8
+  lineas_por_parrafo: 9
+  palabras_por_linea: 15

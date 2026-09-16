@@ -1,0 +1,6 @@
+deporte: Futbol
+nivel: profesional
+temporada:
+  desde: '2010-01-01'
+  hasta: '2010-12-31'
+hitos: []

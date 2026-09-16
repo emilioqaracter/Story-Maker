@@ -1,0 +1,14 @@
+eje: Es futbolista en 2010
+titulo: Holahola
+deporte: Futbol
+lugar: Madrid, España
+epoca:
+  desde: '2010-01-01'
+  hasta: '2010-12-31'
+estilo: Tercera persona, pasado.
+pregunta_dramatica: 'Que renuncia Alberto: La vida. Y Lucía: Un brazo.'
+hilos:
+- id: H1
+  que: botella
+- id: H2
+  que: cancha

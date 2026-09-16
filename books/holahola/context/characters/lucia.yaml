@@ -1,0 +1,9 @@
+nombre: Lucía X
+nacimiento: '1996-06-06'
+rol: Es doctora
+estados:
+- desde: '2010-01-01'
+  hasta: '2010-12-31'
+  que: en actividad
+eventos_unicos: []
+sabe: []
