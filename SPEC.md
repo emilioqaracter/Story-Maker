@@ -43,7 +43,7 @@ JSON, pero cabe en una pantalla. Los contratos se fijan con el caso chico.
 la edad del protagonista en el capítulo 12; un script no. El modelo escribe, el
 código verifica.
 
-**Versión 7.5** · 2026-09-16 · historial completo en §16.
+**Versión 7.6** · 2026-09-16 · historial completo en §16.
 
 **Stack:** Claude Code hace todo el trabajo de modelo — orquesta, planifica,
 escribe y critica con subagentes y skills · scripts Python validan.
@@ -1064,6 +1064,7 @@ Story-Maker/
 ├── README.md
 ├── requirements.txt           PyYAML y pytest; nada mas
 ├── nuevo_libro.py             te pregunta todo y crea un libro (§3)
+├── ui/                        interfaz React (Vite)
 ├── crear_novela.py            encadena todo: pregunta, investiga, escribe (§3)
 ├── demo.py                    corre el harness entero y lo explica
 │
@@ -1085,6 +1086,7 @@ Story-Maker/
 │
 ├── harness/
 │   ├── config.yaml                los catorce números (§1)
+│   ├── server.py                  API local sobre los scripts
 │   ├── voz-base.md                el registro del género
 │   └── scripts/
 │       ├── common.py              canon, derivaciones, prosa
@@ -1379,6 +1381,9 @@ Versionado: `MAYOR.MENOR`. Sube **MENOR** al añadir o precisar contenido; sube
 | Versión | Fecha | Commit | Cambio | Por qué |
 |---|---|---|---|---|
 | **7.4** | 2026-09-16 | _sin commitear_ | Nuevo subcomando `run_scene.py <libro> reset`: vuelve el libro al punto de partida borrando prosa, criticas, estado y entregable, sin tocar `context/`. | Sin el, probar el ciclo dos veces sobre el mismo libro obligaba a borrar archivos a mano o a escribir un libro nuevo. Y el canon no se toca por diseno: reset deshace lo que produjo el ciclo, no lo que decidio una persona. |
+| **7.6** | 2026-09-16 | _sin commitear_ | **Interfaz React** (`ui/`) sobre una API local de stdlib (`harness/server.py`): arriba el pedido —las doce respuestas mas la lista de anacronismos—, debajo la forma del documento con las cifras derivadas en vivo, y abajo los libros con su progreso, el log del ciclo y el entregable. | El canon se pedia por terminal o escribiendo YAML, y las cifras derivadas (palabras por escena, techo) solo se veian despues de crear el libro. Verlas mientras se elige la forma es justamente lo que evita pedir un tamano que no cierra. |
+| **7.6** | 2026-09-16 | _sin commitear_ | La API **no reimplementa nada**: llama a `validate_canon.py`, `run_scene.py` y `crear_novela.py`, y crea el canon con las mismas derivaciones de `nuevo_libro.py`. | Dos caminos para lo mismo es como se desincronizan las reglas. La UI puede mostrar la cuenta en vivo, pero la que manda es la del servidor, que es la que ve el validador. |
+| **7.6** | 2026-09-16 | _sin commitear_ | El formulario pide la lista de anacronismos y las fuentes, y no deja crear sin ellas. | Sin investigacion automatica, un libro creado desde la UI nacia con `epoca.yaml` vacio y G0 no abria. Mejor decirlo en el formulario que despues de crear el libro. |
 | **7.5** | 2026-09-16 | _sin commitear_ | **Nueva §8 Politicas de contexto**: los seis fallos tipicos (relleno, prerrequisitos invisibles, borradores rancios, vaiven de altitud, depurar solo el prompt, metricas silenciosas) con la politica que aplica el harness a cada uno y donde vive en el codigo. Y las cuatro formas de manejar contexto —escribir, aislar, seleccionar, comprimir— mapeadas a mecanismos reales. | Las capas de control cuidaban que el modelo no se equivoque sobre los HECHOS, y no habia nada escrito sobre el otro lado: que no se equivoque porque le llego mal el CONTEXTO. Son fallos distintos y un validador no salva a un modelo al que nunca le dijeron lo que necesitaba. Dos de las politicas van con su cicatriz: la 5 la rompi yo diagnosticando dos veces mal, y la 6 la rompia el propio harness. |
 | **7.5** | 2026-09-16 | _sin commitear_ | **Una critica mas vieja que la prosa no abre G2** (G2/traza). | Es el fallo de los borradores rancios aplicado al ciclo: si la escena se corrige despues de que la criticaran, esa critica describe un texto que ya no existe, y abrir con ella es aprobar a ciegas. No habia nada que lo impidiera. |
 | **7.4** | 2026-09-16 | _sin commitear_ | **El techo se presupuesta con `palabras_por_escena_max`** (nominal + tolerancia), no con el nominal. La proyeccion de V12, el regulador y la comprobacion de G0 usan el mismo numero. | Corriendo el libro de 2015: cuatro escenas que pasaron G1 y G2 sumaron 585 con un techo de 576, y el libro no podia terminar sin que ninguna escena hubiera roto nada. V15 tolera hasta 15 palabras por linea pero el techo contaba 12: dos reglas en desacuerdo sobre el mismo hecho. Ahora no hay combinacion legal de escenas que reviente C2. |

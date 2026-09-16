@@ -107,6 +107,20 @@ python nuevo_libro.py              # entrevista y crea un libro
 python crear_novela.py books/<slug> # encadena todo: escribe, critica, compila
 ```
 
+Con interfaz:
+
+```bash
+cd ui && npm install && npm run build     # una vez
+python harness/server.py                  # http://127.0.0.1:8770
+```
+
+En desarrollo, `python harness/server.py` y `cd ui && npm run dev` en paralelo:
+Vite sirve en :5273 y proxea `/api` al servidor.
+
+La UI no decide nada. Crea el canon y lanza los mismos scripts; las puertas
+siguen siendo de ellos. `harness/server.py` es un envoltorio delgado sobre
+`harness/scripts/` y sobre `nuevo_libro.py`: no hay dos caminos para lo mismo.
+
 Del ciclo, por partes:
 
 ```bash
