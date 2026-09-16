@@ -21,10 +21,15 @@ def evaluar(libro: Libro, sid: str, critica: dict) -> dict:
     dimensiones = cfg["dimensiones"]
     errores = []
 
-    # --- veto de continuidad: binario, y manda sobre todo lo demas ---------- #
+    # --- continuidad: manda sobre todo lo demas ---------------------------- #
+    # Un hallazgo cuenta aunque la lente no haya marcado veto. Encontrar una
+    # contradiccion con el canon y no vetarla no es una salida coherente: la
+    # lente existe justo para encontrarlas, y no hay contradicciones menores.
     cont = critica.get("continuidad") or {}
-    if cont.get("veto"):
-        for h in cont.get("hallazgos") or [{"que": "sin detalle"}]:
+    hallazgos = cont.get("hallazgos") or []
+    veto = bool(cont.get("veto")) or bool(hallazgos)
+    if veto:
+        for h in hallazgos or [{"que": "veto sin hallazgo declarado"}]:
             errores.append(Error(
                 "G2/continuidad",
                 "Veto de continuidad: %s" % h.get("que"),
@@ -47,11 +52,15 @@ def evaluar(libro: Libro, sid: str, critica: dict) -> dict:
             errores.append(Error("G2/rubrica", "'%s' trae nota %r, fuera de %s." % (dim, nota, cfg["niveles"]),
                                  "Solo 0, 1 o 2: son tres conductas, no una escala."))
             continue
-        # Sin cita, no hay puntuacion: cuenta como no evaluada.
-        if nota < 2 and not (cita and str(cita).strip()):
+        # Sin cita, no hay puntuacion: cuenta como no evaluada. Vale para TODA
+        # nota, el 2 incluido. Si solo se exigiera evidencia por debajo de 2, el
+        # camino mas barato para aprobar seria poner 2 en todo sin citar nada, y
+        # la puerta volveria a estar siempre abierta.
+        if not (cita and str(cita).strip()):
             errores.append(Error(
                 "G2/rubrica", "'%s' puntua %d sin citar el fragmento." % (dim, nota),
-                "Toda nota menor que 2 exige una cita textual, o la dimension no cuenta."))
+                "Toda nota exige una cita textual de la escena, o la dimension no "
+                "cuenta: un 2 sin evidencia es una afirmacion, no una observacion."))
             continue
         detalle[dim] = nota
         suma += nota
@@ -73,7 +82,7 @@ def evaluar(libro: Libro, sid: str, critica: dict) -> dict:
 
     return salida(sid, errores, {"puerta": "G2", "suma": suma, "maximo": maximo,
                                  "umbral": umbral, "dimensiones": detalle,
-                                 "veto_continuidad": bool(cont.get("veto"))})
+                                 "veto_continuidad": veto})
 
 
 def main(argv: list) -> int:

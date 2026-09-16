@@ -11,3 +11,19 @@ con su primera escena aprobada.
 - Lo que no se dice pesa más que lo que se dice. Las frases cortas cierran.
 - Nada de metáforas de manual: ni corazones que laten fuerte, ni miradas que
   se cruzan, ni tiempos que se detienen.
+
+---
+
+## Muestra fija
+
+Asi suena este libro. Va con cada llamada a `escribir-escena` y con la lente de calidad.
+
+El sobre del club traía el mismo número de siempre, tachado.
+Ana lo abrió con los guantes puestos y no dijo nada todavía.
+Tomás miraba el mate, la bombilla quieta, el agua ya pasada de punto.
+Cuatro meses, dijo ella. Lo mismo que el año pasado. Cuatro meses.
+
+Afuera la radio del vecino repetía nombres de candidatos entre dos avisos.
+Ella dobló el papel en cuatro y lo metió en el bolso.
+Con eso no pagás el ómnibus hasta el Prado, dijo Tomás despacio.
+Ana se sacó el guante derecho y se miró la mano abierta.

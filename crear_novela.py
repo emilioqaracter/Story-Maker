@@ -341,7 +341,9 @@ def criticar(slug: str, sid: str, ctx: str, capitulo: int) -> None:
         "canon no le da, y que la escena no adelante ni retroceda la etapa de la "
         "relacion.\n\n" + comun +
         "Cada hallazgo lleva CITA TEXTUAL de la escena. Si no encontras nada, "
-        "veto false y lista vacia: es el resultado normal, no fuerces hallazgos.\n\n"
+        "veto false y lista vacia: es el resultado normal, no fuerces hallazgos. "
+        "Ojo: un hallazgo cuenta como veto aunque pongas veto false, asi que no "
+        "listes como hallazgo algo que no sea una contradiccion real con el canon.\n\n"
         'Formato exacto:\n{"continuidad": {"veto": false, "hallazgos": '
         '[{"que": "...", "cita": "..."}]}}\n\n' + cierre, "continuidad")
 
@@ -349,10 +351,12 @@ def criticar(slug: str, sid: str, ctx: str, capitulo: int) -> None:
         "Sos la lente de CALIDAD de un harness de novelas. Puntuas una rubrica de "
         "cinco dimensiones, cada una 0, 1 o 2. No elegis un numero en una escala: "
         "senalas cual de las tres descripciones encaja.\n\n" + RUBRICA + "\n\n" + comun +
-        "TODA nota menor que 2 exige CITA TEXTUAL de la escena, o la dimension no "
-        "cuenta y la puerta no abre. cita null solo si la nota es 2. Si en la "
-        "escena no estan los dos protagonistas, quimica va en null.\n\n"
-        'Formato exacto:\n{"calidad": {"conflicto": {"nota": 2, "cita": null}, '
+        "TODA nota, el 2 incluido, exige CITA TEXTUAL de la escena: sin cita la "
+        "dimension no cuenta y la puerta no abre. Un 2 sin evidencia es una "
+        "afirmacion, no una observacion, asi que cita el fragmento que te hizo "
+        "ponerlo. Si en la escena no estan los dos protagonistas, quimica va en "
+        "null entero.\n\n"
+        'Formato exacto:\n{"calidad": {"conflicto": {"nota": 2, "cita": "..."}, '
         '"dialogo": {"nota": 1, "cita": "..."}, "concrecion": {...}, '
         '"frescura": {...}, "quimica": {...}}}\n\n' + cierre, "calidad")
 

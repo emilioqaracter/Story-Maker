@@ -1,5 +1,67 @@
 anio: 1994
-prohibido: []
-existia: []
-notas: 'PENDIENTE: lo completa el agente researcher.'
-fuentes: []
+prohibido:
+- 'Teléfonos celulares de uso común: Ancel recién arranca el 1 de setiembre de 1994
+  y el celular es un ladrillo carísimo de elite, no algo que un hincha saque en la
+  tribuna'
+- Mensajes de texto, WhatsApp, audios, fotos de cancha enviadas al momento
+- Internet doméstica, mail, foros, redes sociales, transmisiones en vivo por streaming;
+  nadie 'entra a la página del club'
+- Sport 890 como radio deportiva (nace el 8 de junio de 1997); en 1994 el fútbol se
+  sigue por radios generalistas de AM
+- Tenfield y el monopolio televisivo del fútbol uruguayo (la empresa es de 1998)
+- VAR, ojo de halcón, tarjeta al cuarto árbitro con cartel electrónico de LED para
+  los cambios y el descuento
+- Repetición instantánea disponible para el hincha en la cancha, pantallas gigantes
+  en el Centenario
+- Camisetas retro-marketineras, tercer uniforme, nombre del jugador en la espalda
+  como algo obvio
+- 'Cobrar con pesos ''viejos'' o con nuevos pesos: desde el 1 de marzo de 1993 se
+  cuenta en pesos uruguayos'
+- Fichajes seguidos en tiempo real, rumores de mercado minuto a minuto, periodistas
+  'reportando' desde el celular
+- Reggaetón, trap, Google, DVD, MP3; el casete, el walkman y el VHS todavía mandan
+- Champions League como palabra corriente en Montevideo, y jugadores uruguayos yendo
+  masivamente a Europa por video de YouTube
+- 'Decir que Uruguay ''jugaba el Mundial'' de 1994: quedó afuera de Estados Unidos
+  94'
+existia:
+- que: 'Ancel, la telefonía celular de Antel, empieza a operar: el celular aparece
+    en Montevideo pero como objeto de lujo'
+  desde: '1994-09-01'
+- que: El peso uruguayo como moneda corriente, tras reemplazar al nuevo peso a razón
+    de 1000 a 1
+  desde: '1993-03-01'
+- que: El Estadio Centenario como escenario obligado del clásico y de los partidos
+    grandes
+  desde: '1930-07-18'
+- que: La Copa Mundial de Estados Unidos 1994, seguida por radio y TV desde Montevideo
+    sin selección uruguaya en cancha
+  desde: '1994-06-17'
+- que: Campaña electoral y elecciones generales con Ley de Lemas, con el país partido
+    en tres tercios
+  desde: '1994-11-27'
+notas: 'Un partido se sigue sobre todo por radio AM: el aparato en la cocina, en el
+  mostrador del boliche, el transistor con auricular pegado a la oreja incluso adentro
+  del estadio, donde el hincha mira la jugada y escucha al relator explicársela. La
+  televisión abierta pasa lo grande —el Mundial, la final, algún clásico— y el resto
+  llega por relato, por el diario del día siguiente o por el comentario del vecino.
+  Si querés saber el resultado de otra cancha, esperás que el relator lo diga o preguntás
+  a gritos a la tribuna de al lado. No hay repetición a pedido: lo que no viste, no
+  lo viste. La discusión se hace cuerpo a cuerpo, en el café, en el ómnibus, en la
+  peluquería, y dura toda la semana porque no hay nada que la cierre. La entrada se
+  compra en efectivo en boletería, en pesos uruguayos; se llega caminando o en ómnibus.
+  El teléfono es fijo, con cable, y si hay que avisar algo se llama de un teléfono
+  público con monedas o se manda a alguien. Fotos, si las hay, salen en rollo y se
+  ven revelado de por medio, días después. El año además está cruzado por la campaña
+  electoral: el fútbol y la política comparten el mismo mostrador y las mismas voces.'
+fuentes:
+- https://es.wikipedia.org/wiki/Campeonato_Uruguayo_de_Primera_Divisi%C3%B3n_1994
+- https://en.wikipedia.org/wiki/1994_Copa_CONMEBOL_finals
+- https://es.wikipedia.org/wiki/Copa_Mundial_de_F%C3%BAtbol_de_1994
+- https://www.elobservador.com.uy/ediciones-especiales/desde-ancel-el-5g-historia-telefonia-movil-uruguay-n5954678
+- https://es.wikipedia.org/wiki/Administraci%C3%B3n_Nacional_de_Telecomunicaciones_(Uruguay)
+- https://es.m.wikipedia.org/wiki/Peso_uruguayo
+- https://es.wikipedia.org/wiki/Nuevo_peso_(Uruguay)
+- https://www.sport890.com.uy/2022/06/08/sport-890-celebra-25-anos/
+- https://es.wikipedia.org/wiki/Elecciones_generales_de_Uruguay_de_1994
+- https://es.wikipedia.org/wiki/Estadio_Centenario

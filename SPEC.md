@@ -17,7 +17,7 @@ JSON, pero cabe en una pantalla. Los contratos se fijan con el caso chico.
 la edad del protagonista en el capítulo 12; un script no. El modelo escribe, el
 código verifica.
 
-**Versión 7.1** · 2026-09-16 · historial completo en §15.
+**Versión 7.2** · 2026-09-16 · historial completo en §15.
 
 **Stack:** Claude Code hace todo el trabajo de modelo — orquesta, planifica,
 escribe y critica con subagentes y skills · scripts Python validan.
@@ -682,6 +682,13 @@ preguntas es toda esta sección.
 | Lente | Qué busca | Qué emite |
 |---|---|---|
 | **Continuidad** | contradicciones que el validador no puede formalizar: objetos que aparecen de la nada, cambios de carácter sin causa, conocimiento inferido | hallazgos con cita; **veta** |
+
+**Un hallazgo cuenta como veto**, aunque la lente no marque `veto: true`.
+Encontrar una contradicción con el canon y no vetarla no es una salida coherente:
+la lente existe justo para encontrarlas, y no hay contradicciones menores. Sin
+esta regla, un hallazgo con su cita quedaba escrito en el JSON y la puerta lo
+ignoraba — que fue lo que pasó la primera vez que corrió el ciclo entero.
+
 | **Calidad** | escena sin conflicto, diálogo expositivo, abstracción, clichés | una rúbrica puntuada con cita |
 
 ### La rúbrica de calidad
@@ -729,11 +736,19 @@ a una escena de pareja por no serlo.
 
 ### Sin cita, no hay puntuación
 
-Toda dimensión por debajo de 2 **exige un fragmento textual de la escena**. No es
+**Toda** dimensión exige un fragmento textual de la escena, el 2 incluido. No es
 un consejo de redacción: si falta la cita, `gate_scene.py` marca esa dimensión
 como no evaluada y **la puerta no abre**, igual que si hubiera salido 0.
 
-Esto corta el fallo más común de un juez automático, que es la crítica genérica.
+Al principio solo se exigía cita por debajo de 2, con el argumento de que un 2
+no necesita defensa. En la práctica eso dejaba abierto el camino más barato:
+**poner 2 en todo y no justificar nada**. Corriéndolo apareció exactamente eso —
+un 10 sobre 10 a un primer borrador, con las cinco citas en `null`. Un 2 sin
+evidencia es una afirmación, no una observación; ahora cuesta lo mismo que
+cualquier otra nota.
+
+Esto corta además el fallo más común de un juez automático, que es la crítica
+genérica.
 "Mejora el ritmo" no se puede corregir ni verificar. "Los párrafos 3-5 explican lo
 que el lector ya vio en el 2" tiene un arreglo evidente, y si es falso se ve al
 instante. Obligar a citar obliga a mirar el texto.
@@ -1244,6 +1259,9 @@ Versionado: `MAYOR.MENOR`. Sube **MENOR** al añadir o precisar contenido; sube
 
 | Versión | Fecha | Commit | Cambio | Por qué |
 |---|---|---|---|---|
+| **7.2** | 2026-09-16 | _sin commitear_ | **Toda nota de la rubrica exige cita, el 2 incluido.** Antes solo se exigia por debajo de 2. | Corriendo el ciclo entero aparecio el camino barato: la lente devolvio 10 sobre 10 a un primer borrador con las cinco citas en `null`. Exigir evidencia solo donde la nota baja deja intacta la forma mas comoda de aprobar todo sin mirar. Un 2 sin evidencia es una afirmacion. |
+| **7.2** | 2026-09-16 | _sin commitear_ | **Un hallazgo de continuidad cuenta como veto**, aunque la lente ponga `veto: false`. | En esa misma corrida la lente encontro una contradiccion real con su cita —un personaje valoraba un monto que nadie le dijo— y la puerta la ignoro porque el campo `veto` venia en false. Encontrar una contradiccion y no vetarla no es una salida coherente. |
+| **7.2** | 2026-09-16 | _sin commitear_ | **Una escena sin `beats` no se escribe.** Si el planner no devuelve plan, el ciclo para en la planificacion en vez de seguir. | El planner fallo, dejo `resumen: (por planificar)` y `beats: []`, y la prosa se escribio igual desde el canon a ojo. Salio bien por suerte, y nadie se habria enterado: un paso que falla en silencio es peor que uno que revienta. |
 | **7.1** | 2026-09-16 | _sin commitear_ | **`crear_novela.py`**: un comando que encadena entrevista, investigacion, planificacion, el ciclo por escena y el compilado, llamando a `claude -p` para las partes de modelo. | Tener los pasos sueltos obligaba a orquestarlos a mano. El script sigue siendo el que conduce: las puertas y el contador de intentos no se le delegan al modelo. |
 | **7.1** | 2026-09-16 | _sin commitear_ | **Ningun agente escribe archivos**: researcher, planner, escritor y criticos devuelven prosa o JSON, y el script guarda. Un YAML invalido ya no revienta el validador con un traceback: sale como error accionable. | El researcher escribio un `:` sin comillas y dejo el canon ilegible. Y pedirle a un agente que cree un archivo abre una superficie de permisos que falla en silencio. Un solo dueno del estado cierra las dos cosas de una vez. |
 | **7.1** | 2026-09-16 | _sin commitear_ | El prompt a `claude -p` viaja por **stdin**, nunca como argumento. | En Windows `claude` es un shim `.cmd` y cmd.exe corta el argumento en el primer salto de linea. El modelo recibia un prompt vacio y contestaba «no me llego ninguna escena»; esa queja terminaba escrita como prosa y G1 la rechazaba nueve veces. Era la causa raiz de todo lo que parecian fallos de permisos y de formato. |

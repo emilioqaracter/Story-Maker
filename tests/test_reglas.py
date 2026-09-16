@@ -443,10 +443,19 @@ def test_g0_avisa_si_el_plan_no_cabe_antes_de_escribir(dir_libro):
 # La puerta G2: la rubrica
 # --------------------------------------------------------------------------- #
 def critica_base() -> dict:
+    """Una critica valida: toda nota lleva su cita, el 2 incluido."""
     return {"escena": SID, "intento": 1,
             "continuidad": {"veto": False, "hallazgos": []},
-            "calidad": {d: {"nota": 2, "cita": None}
+            "calidad": {d: {"nota": 2, "cita": "un fragmento literal de la escena"}
                         for d in ("conflicto", "dialogo", "concrecion", "frescura", "quimica")}}
+
+
+def critica_sin_citas() -> dict:
+    """El camino barato: 2 en todo y ninguna evidencia."""
+    c = critica_base()
+    for dim in c["calidad"]:
+        c["calidad"][dim] = {"nota": 2, "cita": None}
+    return c
 
 
 def test_g2_el_veto_de_continuidad_cierra_la_puerta(dir_libro):
@@ -543,3 +552,27 @@ def test_g0_rechaza_datos_de_epoca_sin_fuente(dir_libro):
     escribir_yaml(dir_libro, "epoca.yaml", e)
     errores = C.v13_una_epoca(libro(dir_libro))
     assert errores and any("fuente" in x.mensaje.lower() for x in errores)
+
+
+# --------------------------------------------------------------------------- #
+# La puerta G2 no se abre sin evidencia
+# --------------------------------------------------------------------------- #
+def test_g2_un_2_sin_cita_tampoco_cuenta(dir_libro):
+    """El camino mas barato para aprobar era poner 2 en todo y no citar nada.
+    Un 2 sin evidencia es una afirmacion, no una observacion."""
+    res = G.evaluar(libro(dir_libro), SID, critica_sin_citas())
+    assert not res["ok"], "10/10 sin una sola cita no puede abrir la puerta"
+
+
+def test_g2_abre_con_todo_en_2_si_cada_uno_cita(dir_libro):
+    assert G.evaluar(libro(dir_libro), SID, critica_base())["ok"]
+
+
+def test_g2_un_hallazgo_de_continuidad_cuenta_aunque_no_vete(dir_libro):
+    """Encontrar una contradiccion y no vetarla no es una salida coherente:
+    la lente existe justo para encontrarlas."""
+    c = critica_base()
+    c["continuidad"] = {"veto": False, "hallazgos": [
+        {"que": "sabe algo que el canon no le da", "cita": "dijo Tomas despacio"}]}
+    res = G.evaluar(libro(dir_libro), SID, c)
+    assert not res["ok"] and res["veto_continuidad"]

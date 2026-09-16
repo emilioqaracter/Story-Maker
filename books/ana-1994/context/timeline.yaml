@@ -7,9 +7,10 @@ escenas:
   - ana
   - tomas
   resumen: (por planificar)
-  estado: planificada
+  estado: aprobada
   cierra:
   - H1
   - H2
   flashback: false
   beats: []
+  palabras: 144

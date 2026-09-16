@@ -1,0 +1,34 @@
+{
+  "escena": "S001",
+  "continuidad": {
+    "veto": false,
+    "hallazgos": [
+      {
+        "que": "Tomas valora el monto del pago sin que nadie se lo diga: Ana abre el sobre, solo menciona el atraso en meses y dobla el papel sin leer cifra alguna en voz alta; el canon no le da acceso a esa informacion.",
+        "cita": "Con eso no pagás el ómnibus hasta el Prado, dijo Tomás despacio."
+      }
+    ]
+  },
+  "calidad": {
+    "conflicto": {
+      "nota": 2,
+      "cita": null
+    },
+    "dialogo": {
+      "nota": 2,
+      "cita": null
+    },
+    "concrecion": {
+      "nota": 2,
+      "cita": null
+    },
+    "frescura": {
+      "nota": 2,
+      "cita": null
+    },
+    "quimica": {
+      "nota": 2,
+      "cita": null
+    }
+  }
+}

@@ -3,4 +3,23 @@ nivel: profesional
 temporada:
   desde: '1994-01-01'
   hasta: '1994-12-31'
-hitos: []
+hitos:
+- fecha: '1994-06-17'
+  que: Arranca la Copa Mundial de Estados Unidos 1994; Uruguay la mira desde afuera,
+    eliminada en las eliminatorias
+  peso: 3
+- fecha: '1994-07-17'
+  que: 'Final del Mundial: Brasil vence a Italia por penales tras 0-0, primera final
+    mundialista definida desde el punto'
+  peso: 4
+- fecha: '1994-11-06'
+  que: 'Primer partido de la final del Campeonato Uruguayo: Peñarol 1-1 Defensor Sporting'
+  peso: 4
+- fecha: '1994-11-20'
+  que: 'Tercer partido de la final: Peñarol 2-1 Defensor Sporting y se consagra campeón
+    uruguayo, bicampeón, en el primer año del formato Apertura-Clausura'
+  peso: 5
+- fecha: '1994-12-21'
+  que: 'Vuelta de la final de la Copa CONMEBOL: Peñarol le gana 3-0 a São Paulo en
+    Montevideo pero pierde el título 6-4 en el global'
+  peso: 4
