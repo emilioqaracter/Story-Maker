@@ -17,7 +17,7 @@ JSON, pero cabe en una pantalla. Los contratos se fijan con el caso chico.
 la edad del protagonista en el capítulo 12; un script no. El modelo escribe, el
 código verifica.
 
-**Versión 7.0** · 2026-09-15 · historial completo en §15.
+**Versión 7.1** · 2026-09-16 · historial completo en §15.
 
 **Stack:** Claude Code hace todo el trabajo de modelo — orquesta, planifica,
 escribe y critica con subagentes y skills · scripts Python validan.
@@ -437,6 +437,30 @@ formas distintas de preguntar lo mismo en cada libro.
 Queda también el agente `interviewer` con el mismo cuestionario, para cuando
 prefieras hacerlo conversando dentro de Claude Code. Los dos escriben el mismo
 `intake.json` y ninguno abre G0.
+
+### Todo encadenado, en un comando
+
+```bash
+python crear_novela.py
+```
+
+Hace la entrevista y sigue solo: investiga la época, planifica, y por cada escena
+escribe, valida, critica, corrige y aprueba, hasta compilar el entregable. Las
+partes de modelo son llamadas a `claude -p`, cada una con contexto limpio; las
+puertas y el contador de intentos siguen siendo del script, porque **el ciclo lo
+conduce el código y no el modelo**.
+
+Dos reglas que salieron de hacerlo funcionar, y que valen para cualquier paso de
+modelo automatizado:
+
+- **Ningún agente escribe archivos.** Devuelven prosa o JSON y el script los
+  guarda. Un agente escribiendo YAML a mano mete un `:` sin comillas y deja el
+  canon ilegible; y pedirle que cree un archivo abre una superficie de permisos
+  que a veces falla en silencio. Con esto hay **un solo dueño del estado**.
+- **El prompt viaja por stdin, nunca como argumento.** En Windows `claude` es un
+  shim `.cmd` y cmd.exe corta el argumento en el primer salto de línea: el modelo
+  recibía un prompt vacío, contestaba «no me llegó ninguna escena», y esa queja
+  terminaba escrita como si fuera prosa.
 
 Antes de las doce preguntas te pide **la forma del documento** (§1): un perfil, o
 los cinco números a mano. Eso se guarda en `books/<slug>/config.yaml` y pisa al
@@ -906,6 +930,7 @@ Story-Maker/
 ├── README.md
 ├── requirements.txt           PyYAML y pytest; nada mas
 ├── nuevo_libro.py             te pregunta todo y crea un libro (§3)
+├── crear_novela.py            encadena todo: pregunta, investiga, escribe (§3)
 ├── demo.py                    corre el harness entero y lo explica
 │
 ├── .claude/                   EL HARNESS — vale para todos los libros
@@ -1219,6 +1244,10 @@ Versionado: `MAYOR.MENOR`. Sube **MENOR** al añadir o precisar contenido; sube
 
 | Versión | Fecha | Commit | Cambio | Por qué |
 |---|---|---|---|---|
+| **7.1** | 2026-09-16 | _sin commitear_ | **`crear_novela.py`**: un comando que encadena entrevista, investigacion, planificacion, el ciclo por escena y el compilado, llamando a `claude -p` para las partes de modelo. | Tener los pasos sueltos obligaba a orquestarlos a mano. El script sigue siendo el que conduce: las puertas y el contador de intentos no se le delegan al modelo. |
+| **7.1** | 2026-09-16 | _sin commitear_ | **Ningun agente escribe archivos**: researcher, planner, escritor y criticos devuelven prosa o JSON, y el script guarda. Un YAML invalido ya no revienta el validador con un traceback: sale como error accionable. | El researcher escribio un `:` sin comillas y dejo el canon ilegible. Y pedirle a un agente que cree un archivo abre una superficie de permisos que falla en silencio. Un solo dueno del estado cierra las dos cosas de una vez. |
+| **7.1** | 2026-09-16 | _sin commitear_ | El prompt a `claude -p` viaja por **stdin**, nunca como argumento. | En Windows `claude` es un shim `.cmd` y cmd.exe corta el argumento en el primer salto de linea. El modelo recibia un prompt vacio y contestaba «no me llego ninguna escena»; esa queja terminaba escrita como prosa y G1 la rechazaba nueve veces. Era la causa raiz de todo lo que parecian fallos de permisos y de formato. |
+| **7.1** | 2026-09-16 | _sin commitear_ | **V13 se extiende**: G0 no abre si `epoca.yaml` no trae anacronismos, ni si trae datos sin fuentes. | Una epoca vacia pasaba todas las comprobaciones por no tener nada que contradecir, y dejaba el libro entrar a produccion con V8 sin lista que vetar y V20 sin hitos. Una puerta que no puede cerrarse nunca no es una puerta. |
 | **7.0** | 2026-09-15 | _sin commitear_ | **La entrevista pasa de agente a script**: `nuevo_libro.py` pregunta la forma del documento y las doce preguntas en la terminal, valida cada respuesta al recibirla, deriva el canon entero y corre G0. El agente `interviewer` se queda para cuando prefieras conversarlo; los dos escriben el mismo `intake.json`. | Las doce preguntas son fijas, cerradas y de tipo conocido: una fecha es una fecha, el nivel es uno de tres, los hilos son dos. No hay nada que decidir, y la regla de reparto dice que eso es un script. Un modelo en el medio solo agregaba formas distintas de preguntar lo mismo en cada libro. |
 | **7.0** | 2026-09-15 | _sin commitear_ | **La configuracion admite override por libro**: `books/<slug>/config.yaml` pisa seccion por seccion al del harness. | Sin esto, elegir el tamano de una novela obligaba a editar el archivo compartido por todos los libros, que es justo lo que la division harness/books existe para evitar. |
 | **7.0** | 2026-09-15 | _sin commitear_ | Nuevos `demo.py` (corre el harness entero y lo explica) y `README.md`. Los tests dejan de depender del estado guardado del libro: la copia de prueba se normaliza sola. | No habia un solo comando que mostrara el sistema funcionando. Y los tests pasaban o fallaban segun si alguien habia corrido el ciclo antes — al montar `demo.py`, que resetea el estado primero, se cayeron cinco. |

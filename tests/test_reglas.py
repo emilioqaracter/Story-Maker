@@ -522,3 +522,24 @@ def test_todo_error_dice_que_pasa_y_como_se_arregla(dir_libro):
     for e in V.validar(libro(dir_libro), SID)["errores"]:
         assert e["regla"] and e["mensaje"].strip() and e["arreglo"].strip()
         assert e["mensaje"].endswith((".", "!")), e["mensaje"]
+
+
+# --------------------------------------------------------------------------- #
+# G0 no puede abrir con la epoca vacia
+# --------------------------------------------------------------------------- #
+def test_g0_rechaza_una_epoca_sin_investigar(dir_libro):
+    """Una epoca vacia pasaba V13 por no tener nada que contradecir, y dejaba
+    el libro entrar a produccion con V8 y V20 sin nada que comprobar."""
+    escribir_yaml(dir_libro, "epoca.yaml",
+                  {"anio": 1990, "prohibido": [], "existia": [], "notas": "", "fuentes": []})
+    errores = C.v13_una_epoca(libro(dir_libro))
+    assert errores, "una epoca sin investigar no puede abrir G0"
+    assert any("prohibido" in e.mensaje or "investig" in e.mensaje.lower() for e in errores)
+
+
+def test_g0_rechaza_datos_de_epoca_sin_fuente(dir_libro):
+    e = leer_yaml(dir_libro, "epoca.yaml")
+    e["fuentes"] = []
+    escribir_yaml(dir_libro, "epoca.yaml", e)
+    errores = C.v13_una_epoca(libro(dir_libro))
+    assert errores and any("fuente" in x.mensaje.lower() for x in errores)

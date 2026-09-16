@@ -89,6 +89,21 @@ def v13_una_epoca(libro: Libro) -> list[Error]:
                       "Completa premise.epoca con dos fechas ISO.")]
     errores = []
 
+    # Una epoca vacia pasaba todas las comprobaciones por no tener nada que
+    # contradecir, y dejaba el libro entrar a produccion con V8 sin lista de
+    # anacronismos y V20 sin hitos. Una puerta que no puede cerrarse nunca no
+    # es una puerta.
+    if not (libro.epoca.get("prohibido") or []):
+        errores.append(Error(
+            "V13", "epoca.yaml no trae ningun anacronismo en 'prohibido'.",
+            "El researcher no investigo, o no guardo lo que encontro. Sin esa "
+            "lista, V8 no tiene nada que vetar y la epoca es decorativa."))
+    elif not (libro.epoca.get("fuentes") or []):
+        errores.append(Error(
+            "V13", "epoca.yaml trae datos pero ninguna fuente.",
+            "Lo que no trae fuente no entra en el canon: es la misma regla que "
+            "ya valia para las personas reales."))
+
     anio = libro.epoca.get("anio")
     if anio is not None and not (desde.year <= int(anio) <= hasta.year):
         errores.append(Error(
