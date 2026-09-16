@@ -74,7 +74,7 @@ Los scripts reciben la ruta del libro como argumento. **No hay libro «actual».
 ## Comandos
 
 ```bash
-python -m pytest tests -q          # 52 tests, sin red ni tokens
+python -m pytest tests -q          # 54 tests, sin red ni tokens
 python demo.py                     # corre el harness entero y lo explica
 python nuevo_libro.py              # entrevista y crea un libro
 python crear_novela.py books/<slug> # encadena todo: escribe, critica, compila
