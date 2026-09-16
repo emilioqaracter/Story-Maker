@@ -1,0 +1,9 @@
+nombre: Ana Rivas
+nacimiento: '1969-04-03'
+rol: arquera titular del club
+estados:
+- desde: '1994-01-01'
+  hasta: '1994-12-31'
+  que: en actividad
+eventos_unicos: []
+sabe: []

@@ -1,0 +1,15 @@
+escenas:
+- id: S001
+  capitulo: 1
+  fecha: '1994-12-13'
+  lugar: Montevideo, Uruguay
+  presentes:
+  - ana
+  - tomas
+  resumen: (por planificar)
+  estado: planificada
+  cierra:
+  - H1
+  - H2
+  flashback: false
+  beats: []

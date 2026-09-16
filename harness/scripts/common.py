@@ -57,8 +57,23 @@ def cargar_config(raiz: Path = RAIZ) -> dict:
     return yaml.safe_load((raiz / "harness" / "config.yaml").read_text(encoding="utf-8"))
 
 
+ERRORES_CARGA: list = []
+
+
 def _yaml(p: Path):
-    return yaml.safe_load(p.read_text(encoding="utf-8")) if p.exists() else None
+    """Un YAML roto no puede tumbar el validador con un traceback: el validador
+    existe justo para dar errores accionables."""
+    if not p.exists():
+        return None
+    try:
+        return yaml.safe_load(p.read_text(encoding="utf-8"))
+    except yaml.YAMLError as e:
+        marca = getattr(e, "problem_mark", None)
+        donde = " (linea %d)" % (marca.line + 1) if marca else ""
+        ERRORES_CARGA.append(Error(
+            "YAML", "%s no es YAML valido%s: %s" % (p.name, donde, getattr(e, "problem", e)),
+            "Suele ser un texto con ':' sin comillas. Reescribe ese valor entre comillas."))
+        return None
 
 
 class Libro:

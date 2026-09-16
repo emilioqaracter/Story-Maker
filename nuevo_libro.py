@@ -313,6 +313,12 @@ def main() -> int:
     escribir_yaml(ctx / "characters" / (ka + ".yaml"), derivar_personaje(pa, epoca))
     escribir_yaml(ctx / "characters" / (kb + ".yaml"), derivar_personaje(pb, epoca))
     escribir_yaml(ctx / "real-figures.yaml", [])
+
+    # La voz arranca como copia del registro del genero. La muestra concreta la
+    # fija el ciclo al aprobar la primera escena; hasta entonces el escritor
+    # tiene al menos el registro, y no se frena por un archivo que falta.
+    base = RAIZ / "harness" / "voz-base.md"
+    (ctx / "voz.md").write_text(base.read_text(encoding="utf-8"), encoding="utf-8")
     escribir_yaml(ctx / "timeline.yaml",
                   derivar_timeline(est["capitulos"], est["escenas_por_capitulo"],
                                    epoca, lugar, [ka, kb]))

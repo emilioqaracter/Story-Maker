@@ -11,7 +11,8 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from common import Error, Libro, emitir, etapa_en, fecha, libro_de_argv, salida  # noqa: E402
+from common import (ERRORES_CARGA, Error, Libro, emitir, etapa_en, fecha,  # noqa: E402
+                    libro_de_argv, salida)
 
 # Campos que la entrevista (SPEC §3) tiene que dejar completos.
 ESQUEMA = {
@@ -161,7 +162,9 @@ def plan_cabe(libro: Libro) -> list[Error]:
 
 def main(argv: list[str]) -> int:
     libro = libro_de_argv(argv, "validate_canon.py books/<slug>")
-    errores = v21_intake(libro) + v13_una_epoca(libro) + v16_arco(libro) + plan_cabe(libro)
+    errores = list(ERRORES_CARGA)
+    if not errores:
+        errores = v21_intake(libro) + v13_una_epoca(libro) + v16_arco(libro) + plan_cabe(libro)
     extra = {"forma": libro.forma,
              "etapa_final_declarada": etapa_en(libro.relacion, fecha(
                  (libro.premise.get("epoca") or {}).get("hasta")))}

@@ -1,0 +1,6 @@
+deporte: futbol
+nivel: profesional
+temporada:
+  desde: '1994-01-01'
+  hasta: '1994-12-31'
+hitos: []

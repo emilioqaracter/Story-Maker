@@ -205,10 +205,15 @@ def fijar_voz(libro: Libro, texto: str) -> bool:
     referencia de registro, no una copia. Regenerarla cada vez seria volver a
     tener una voz que se mueve."""
     destino = libro.ctx / "voz.md"
-    if destino.exists():
+    # El libro arranca con voz.md = el registro del genero, para que el escritor
+    # de la primera escena no se quede sin nada. Aqui se le agrega la muestra.
+    if destino.exists() and "## Muestra fija" in destino.read_text(encoding="utf-8"):
         return False
-    base = (libro.config.get("_raiz_voz") or Path(__file__).resolve().parents[1] / "voz-base.md")
-    cabecera = base.read_text(encoding="utf-8").strip() if Path(base).exists() else ""
+    if destino.exists():
+        cabecera = destino.read_text(encoding="utf-8").strip()
+    else:
+        base = Path(__file__).resolve().parents[1] / "voz-base.md"
+        cabecera = base.read_text(encoding="utf-8").strip() if base.exists() else ""
     muestra = "\n\n".join("\n".join(b) for b in parrafos(texto)[:2])
     destino.write_text(
         "%s\n\n---\n\n## Muestra fija\n\nAsi suena este libro. Va con cada llamada a "

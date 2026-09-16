@@ -1,0 +1,15 @@
+eje: arquera titular del club en 1994
+titulo: Ana 1994
+deporte: futbol
+lugar: Montevideo, Uruguay
+epoca:
+  desde: '1994-01-01'
+  hasta: '1994-12-31'
+estilo: Tercera persona, pasado.
+pregunta_dramatica: 'Que renuncia Ana: la titularidad que le costo diez anos. Y Tomas:
+  el puesto de toda su vida.'
+hilos:
+- id: H1
+  que: la deuda del club con las jugadoras
+- id: H2
+  que: el padre que nunca la vio atajar
