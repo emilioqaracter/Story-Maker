@@ -1,0 +1,26 @@
+# Escrito a mano, no investigado. Lo que importa es que V8 tenga una lista
+# real contra la que vetar y V20 tenga hitos contra los que anclar.
+anio: 2015
+prohibido:
+  - TikTok
+  - VAR
+  - Instagram Stories
+  - reels
+  - ChatGPT
+  - AirPods
+  - Nintendo Switch
+  - pandemia
+  - barbijo
+  - tapabocas
+  - videollamada por Zoom
+existia:
+  - { que: "WhatsApp", desde: 2009-01-01 }
+  - { que: "Copa America de Chile", desde: 2015-06-11, hasta: 2015-07-04 }
+  - { que: "Twitter", desde: 2006-03-21 }
+  - { que: "streaming de partidos por cable", desde: 2000-01-01 }
+notas: >-
+  Los partidos del femenino no se televisaban: se seguian por Twitter y por el
+  relato de quien estaba en la cancha. La prensa deportiva vivia del papel y del
+  portal; el suplemento del lunes todavia decidia de que se hablaba en la semana.
+fuentes:
+  - https://es.wikipedia.org/wiki/Copa_Am%C3%A9rica_2015

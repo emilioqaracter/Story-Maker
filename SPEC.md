@@ -4,6 +4,32 @@ Harness que escribe **novelas románticas ambientadas en el deporte**, sin
 contradecirse. No un libro: un sistema que produce libros del género, y que
 mejora de una novela a la siguiente.
 
+## Para qué existe esto
+
+El objetivo real no es la novela: es **construir capas de control sobre un
+modelo**. Escribir cuarenta mil palabras coherentes es una tarea que un LLM no
+puede sostener solo — se contradice, deriva de voz, aprueba su propio trabajo y
+no sabe cuándo parar. Sirve como banco de pruebas justamente por eso: cada fallo
+es visible y ninguno se arregla pidiéndole al modelo que se esfuerce más.
+
+Lo que se está construyendo son las capas:
+
+| Capa | Qué controla | Cómo |
+|---|---|---|
+| **Canon calculado** | que los hechos no se contradigan | lo que se deriva no se guarda: no hay campo `edad`, hay `nacimiento` (§2) |
+| **Validadores** | que la prosa respete esos hechos | 21 reglas deterministas, sin LLM (§4) |
+| **Rúbrica con evidencia** | que el criterio no sea una opinión | cinco dimensiones ancladas, cita obligatoria en toda nota (§5) |
+| **Puertas** | que nada avance porque alguien opine que puede | cinco puntos de corte, cada uno con criterio escrito y un script que lo aplica (§6) |
+| **Reguladores** | que el trabajo termine | techo de palabras y comprobación de que el final quepa (§10) |
+
+La regla que las une es siempre la misma: **el modelo observa, el código
+decide.** Un agente que puede aprobar su propio trabajo no es un control.
+
+Por eso el género y la longitud importan menos de lo que parece. Si las capas
+funcionan sobre una novela romántica deportiva de cuarenta mil palabras,
+funcionan sobre cualquier tarea larga donde haga falta que un modelo produzca y
+algo verifique.
+
 El deporte, la época y la pareja los pones tú en el prompt. A lo largo del
 documento se usa siempre el mismo ejemplo — *un futbolista en 1990* — pero nada
 de 1990 está cableado: podía ser 1980, 2010 o el año que sea, y el sistema
@@ -17,10 +43,15 @@ JSON, pero cabe en una pantalla. Los contratos se fijan con el caso chico.
 la edad del protagonista en el capítulo 12; un script no. El modelo escribe, el
 código verifica.
 
-**Versión 7.2** · 2026-09-16 · historial completo en §15.
+**Versión 7.3** · 2026-09-16 · historial completo en §15.
 
 **Stack:** Claude Code hace todo el trabajo de modelo — orquesta, planifica,
 escribe y critica con subagentes y skills · scripts Python validan.
+
+**Qué es opcional:** la investigación por internet (§3). Un libro puede traer su
+`epoca.yaml` escrito a mano e ir derecho al ciclo de redacción. Es deliberado:
+buscar contexto en internet es la parte más lenta y menos determinista del
+arranque, y no es lo que hay que hacer funcionar primero.
 
 **Reparto:** `harness/` y `.claude/` saben de romance deportiva y valen para
 todos los libros; `books/<slug>/` sabe de una novela concreta (§9).
@@ -255,7 +286,16 @@ vida cotidiana. Todo lo que se investiga cae dentro de `premise.yaml.epoca` o se
 descarta — es la regla V13, y existe porque un investigador que encuentra un dato
 jugoso de 1978 lo mete igual si nadie se lo impide.
 
-**Quién lo rellena:** el subagente `researcher`, una sola vez, en el arranque.
+**La investigación es opcional y no está en el camino crítico.** Si `epoca.yaml`
+ya trae anacronismos, `crear_novela.py` no la toca y va derecho al ciclo. Un
+libro puede traer el canon entero escrito a mano — es más, así es como conviene
+probar el ciclo de redacción, porque la investigación es el paso más lento y el
+menos determinista del arranque, y su ruido tapa lo que se quiere mirar.
+
+Lo que **no** es opcional es el resultado: G0 no abre con `epoca.yaml` vacío
+(§4, V13). Que lo escriba una persona o un agente da igual; que esté, no.
+
+**Quién lo rellena cuando corre:** el subagente `researcher`, una sola vez, en el arranque.
 Recorre una lista de ámbitos como quien rellena un formulario — vida cotidiana,
 tecnología, medios, y el ámbito del eje (aquí, fútbol) — y escribe un solo
 archivo. Los ámbitos son un checklist para no olvidarse de nada, no una división
@@ -1259,6 +1299,10 @@ Versionado: `MAYOR.MENOR`. Sube **MENOR** al añadir o precisar contenido; sube
 
 | Versión | Fecha | Commit | Cambio | Por qué |
 |---|---|---|---|---|
+| **7.3** | 2026-09-16 | _sin commitear_ | **Nuevo encuadre al principio del documento: para que existe esto.** El objetivo no es la novela, son las capas de control sobre un modelo — canon calculado, validadores, rubrica con evidencia, puertas y reguladores — y la novela es el banco de pruebas. | El documento explicaba muy bien COMO funciona cada pieza y en ningun lado PARA QUE. Sin eso, las decisiones que mas cuestan de defender (que el critico no decida, que el canon solo lo cambie una persona) parecen rigidez en vez de lo que son: el punto. |
+| **7.3** | 2026-09-16 | _sin commitear_ | **La investigacion por internet sale del camino critico.** Si `epoca.yaml` ya trae anacronismos, `crear_novela.py` no llama al `researcher` y va derecho al ciclo. Un libro puede traer el canon entero escrito a mano. | Es el paso mas lento y el menos determinista del arranque, y su ruido tapaba lo que hay que mirar: el ciclo de redaccion, correccion y critica. Lo que sigue sin ser opcional es el resultado — G0 no abre con la epoca vacia (V13). |
+| **7.3** | 2026-09-16 | _sin commitear_ | Nuevo `books/irene-2015`: canon escrito a mano, dos capitulos de dos escenas, para ejercitar el ciclo sin agentes de arranque. | Los libros anteriores tenian una escena sola: no ejercitaban ni el bucle ni G3, la puerta de capitulo. Y su canon era tan escueto que varias reglas no tenian nada que morder — `estados` sin `prohibe`, `sabe` sin marcadores, cero hitos. |
+| **7.3** | 2026-09-16 | _sin commitear_ | Nuevo `CLAUDE.md` en la raiz. | El SPEC explica el diseno y su porque, y es largo. Hacia falta la hoja corta de lo que no se rompe, los comandos y donde esta cada cosa. |
 | **7.2** | 2026-09-16 | _sin commitear_ | **Toda nota de la rubrica exige cita, el 2 incluido.** Antes solo se exigia por debajo de 2. | Corriendo el ciclo entero aparecio el camino barato: la lente devolvio 10 sobre 10 a un primer borrador con las cinco citas en `null`. Exigir evidencia solo donde la nota baja deja intacta la forma mas comoda de aprobar todo sin mirar. Un 2 sin evidencia es una afirmacion. |
 | **7.2** | 2026-09-16 | _sin commitear_ | **Un hallazgo de continuidad cuenta como veto**, aunque la lente ponga `veto: false`. | En esa misma corrida la lente encontro una contradiccion real con su cita —un personaje valoraba un monto que nadie le dijo— y la puerta la ignoro porque el campo `veto` venia en false. Encontrar una contradiccion y no vetarla no es una salida coherente. |
 | **7.2** | 2026-09-16 | _sin commitear_ | **Una escena sin `beats` no se escribe.** Si el planner no devuelve plan, el ciclo para en la planificacion en vez de seguir. | El planner fallo, dejo `resumen: (por planificar)` y `beats: []`, y la prosa se escribio igual desde el canon a ojo. Salio bien por suerte, y nadie se habria enterado: un paso que falla en silencio es peor que uno que revienta. |

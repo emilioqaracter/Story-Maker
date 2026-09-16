@@ -1,0 +1,29 @@
+{
+  "escena": "S004",
+  "continuidad": {
+    "veto": false,
+    "hallazgos": []
+  },
+  "calidad": {
+    "conflicto": {
+      "nota": 2,
+      "cita": "Damián pagó la entrada como cualquiera y subió por la escalera de cemento."
+    },
+    "dialogo": {
+      "nota": 2,
+      "cita": "—Tres semanas te lo guardaste. —Sí. —La plaza queda. —Ya está."
+    },
+    "concrecion": {
+      "nota": 2,
+      "cita": "Irene corrió hasta el final, con la camiseta afuera y la boca abierta."
+    },
+    "frescura": {
+      "nota": 2,
+      "cita": "La credencial seguía en el cajón de su casa, con el cordón enrollado."
+    },
+    "quimica": {
+      "nota": 2,
+      "cita": "Cuando terminó buscó entre la gente hasta encontrarlo y levantó apenas la mano."
+    }
+  }
+}

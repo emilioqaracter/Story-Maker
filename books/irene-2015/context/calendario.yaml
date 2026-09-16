@@ -1,0 +1,8 @@
+deporte: futbol
+nivel: profesional
+temporada: { desde: 2015-02-01, hasta: 2015-12-05 }
+hitos:
+  - { fecha: 2015-02-21, que: "primera fecha del torneo", peso: 1 }
+  - { fecha: 2015-06-27, que: "el clasico del femenino", peso: 3 }
+  - { fecha: 2015-08-15, que: "la asamblea del club", peso: 4 }
+  - { fecha: 2015-11-21, que: "la final", peso: 5 }

@@ -1,0 +1,18 @@
+nombre: Damian Sosa
+nacimiento: 1983-11-27
+rol: "periodista deportivo que cubre el club"
+
+estados:
+  - { desde: 2015-01-01, hasta: 2015-08-15, que: "en el suplemento del lunes" }
+  - { desde: 2015-08-16, hasta: 2015-12-31, que: "apartado de la cobertura del club",
+      prohibe: [publico, publica la nota, firmo la nota] }
+
+eventos_unicos:
+  - { fecha: 2015-08-16, que: "decide no publicar",
+      marcadores: [no publico, guardo la nota, borro el archivo] }
+
+sabe:
+  - { que: "que el club vende la plaza del femenino", desde: 2015-03-10,
+      marcadores: [la venta, vender la plaza, la plaza] }
+  - { que: "lo de la hermana de Irene", desde: 2015-06-05,
+      marcadores: [la hermana, Lucia] }

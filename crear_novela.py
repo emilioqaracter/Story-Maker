@@ -165,10 +165,19 @@ def errores_de(res: dict) -> str:
 # Fase 1: investigar
 # --------------------------------------------------------------------------- #
 def investigar(slug: str, libro: Path) -> None:
-    titulo("INVESTIGAR  -  la epoca no la sabe el sistema, la averigua")
+    titulo("INVESTIGAR  -  la epoca")
     premise = leer_yaml(libro / "context" / "premise.yaml")
     epoca = premise["epoca"]
     anio = str(epoca["desde"])[:4]
+
+    # Si la epoca ya esta escrita, no se toca. Investigar es lo mas lento y lo
+    # menos determinista del arranque: un libro con el canon hecho a mano tiene
+    # que poder ir derecho al ciclo de redaccion.
+    ya = leer_yaml(libro / "context" / "epoca.yaml") or {}
+    if ya.get("prohibido"):
+        nota("Ya esta escrita (%d anacronismos, %d fuentes). No la toco."
+             % (len(ya["prohibido"]), len(ya.get("fuentes") or [])))
+        return
 
     paso("researcher: %s, %s" % (premise.get("deporte"), anio))
     datos = claude_json(
