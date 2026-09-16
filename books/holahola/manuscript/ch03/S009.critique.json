@@ -1,0 +1,29 @@
+{
+  "escena": "S009",
+  "continuidad": {
+    "veto": false,
+    "hallazgos": []
+  },
+  "calidad": {
+    "conflicto": {
+      "nota": 2,
+      "cita": "—Mi madre firmó el papel del traslado el martes —siguió ella—. Ya está hecho."
+    },
+    "dialogo": {
+      "nota": 2,
+      "cita": "—Sigue igual —repitió él, y los dos sabían de qué estaban hablando exactamente."
+    },
+    "concrecion": {
+      "nota": 2,
+      "cita": "Aguantó así hasta que se le durmió el brazo entero y siguió aguantando después."
+    },
+    "frescura": {
+      "nota": 1,
+      "cita": "—Este suelo lo levantan en enero —dijo otra vez, como si fuera una cosa nueva."
+    },
+    "quimica": {
+      "nota": 2,
+      "cita": "Ella apoyó el hombro en el brazo de él y lo dejó ahí apoyado."
+    }
+  }
+}

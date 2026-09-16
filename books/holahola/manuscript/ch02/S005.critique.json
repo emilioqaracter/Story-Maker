@@ -1,0 +1,29 @@
+{
+  "escena": "S005",
+  "continuidad": {
+    "veto": false,
+    "hallazgos": []
+  },
+  "calidad": {
+    "conflicto": {
+      "nota": 2,
+      "cita": "—Salgo yo primero —dijo Lucía—. Tú esperas cinco minutos y bajas por la escalera."
+    },
+    "dialogo": {
+      "nota": 2,
+      "cita": "—El ascensor da a la calle de enfrente, donde aparca el padre de Nuria."
+    },
+    "concrecion": {
+      "nota": 2,
+      "cita": "Se la abrochó hasta arriba y el escudo desapareció debajo de la cremallera."
+    },
+    "frescura": {
+      "nota": 1,
+      "cita": "—Cinco minutos —repitió ella, y buscó las llaves en el bolsillo de delante."
+    },
+    "quimica": {
+      "nota": 2,
+      "cita": "Se quedó parada en el hueco, con la mano todavía en el picaporte."
+    }
+  }
+}

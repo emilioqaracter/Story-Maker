@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from './api.js'
+import Entregable from './Entregable.jsx'
 
 export default function Libros({ libros, refrescar }) {
   const [abierto, setAbierto] = useState(null)
@@ -7,15 +8,29 @@ export default function Libros({ libros, refrescar }) {
   if (!libros.length) {
     return (
       <section className="bloque">
-        <h2>3 · Los libros</h2>
-        <p className="ayuda">Todavia no hay ninguno.</p>
+        <div className="bloque-cabecera">
+          <div>
+            <span className="paso">3</span>
+            <h2>Los libros</h2>
+            <p className="ayuda">Todavia no hay ninguno. Llena el pedido de arriba.</p>
+          </div>
+        </div>
       </section>
     )
   }
 
   return (
     <section className="bloque">
-      <h2>3 · Los libros</h2>
+      <div className="bloque-cabecera">
+        <div>
+          <span className="paso">3</span>
+          <h2>Los libros</h2>
+          <p className="ayuda">
+            El ciclo escribe, valida, critica y corrige cada escena. Las puertas
+            son de los scripts: esta pantalla solo mira.
+          </p>
+        </div>
+      </div>
       <div className="libros">
         {libros.map((l) => (
           <Libro
@@ -127,12 +142,7 @@ function Libro({ libro, abierto, alternar, refrescar }) {
             <pre className="log">{log.split('\n').slice(-30).join('\n')}</pre>
           )}
 
-          {novela && (
-            <div className="novela">
-              <h4>El entregable</h4>
-              <pre>{novela}</pre>
-            </div>
-          )}
+          <Entregable texto={novela} slug={libro.slug} />
         </div>
       )}
     </article>

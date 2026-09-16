@@ -29,7 +29,7 @@ escenas:
   - lucia
   resumen: Dos días después del entrenamiento que los reúne otra vez, Alberto se sorprende
     buscándola con la mirada en la cancha y ninguno de los dos nombra lo que empieza.
-  estado: planificada
+  estado: aprobada
   cierra: []
   flashback: false
   beats:
@@ -38,6 +38,7 @@ escenas:
   - Lucía le pide que le corrija la posición del pie y el contacto dura un segundo
     más de lo que cualquiera de los dos justificaría
   - Alberto le devuelve la botella lavada y ella entiende que la guardó un mes entero
+  palabras: 983
 - id: S003
   capitulo: 1
   fecha: '2010-04-25'
@@ -47,7 +48,7 @@ escenas:
   - lucia
   resumen: Una lesión menor de Lucía obliga a Alberto a acompañarla al fisio y la
     cercanía forzada saca a la superficie los años que los separan.
-  estado: planificada
+  estado: aprobada
   cierra: []
   flashback: false
   beats:
@@ -57,6 +58,7 @@ escenas:
     deja la conversación en silencio
   - Alberto sale al pasillo a llenar la botella de ella y tarda más de lo necesario
     en volver
+  palabras: 1085
 - id: S004
   capitulo: 2
   fecha: '2010-06-02'
@@ -66,7 +68,7 @@ escenas:
   - lucia
   resumen: 'Una noche de cancha vacía después del último partido de la temporada corta:
     se dicen casi todo sin tocarse, y el casi es la escena.'
-  estado: planificada
+  estado: aprobada
   cierra: []
   flashback: false
   beats:
@@ -76,6 +78,7 @@ escenas:
     sin decírselo a nadie
   - Ella le tiende la botella, él bebe de ella y ninguno de los dos comenta lo que
     eso significa
+  palabras: 1112
 - id: S005
   capitulo: 2
   fecha: '2010-07-11'
@@ -85,7 +88,7 @@ escenas:
   - lucia
   resumen: La primera mañana juntos en el piso de Alberto, con la intimidad ya establecida
     y el miedo a que alguien del club lo sepa metido en la habitación.
-  estado: planificada
+  estado: aprobada
   cierra: []
   flashback: false
   beats:
@@ -95,6 +98,7 @@ escenas:
     les duele a los dos
   - Antes de irse, Lucía deja su botella en la cocina de él, deliberadamente, como
     quien deja una bandera
+  palabras: 981
 - id: S006
   capitulo: 2
   fecha: '2010-08-19'
@@ -104,7 +108,7 @@ escenas:
   - lucia
   resumen: El médico confirma que el brazo de Lucía no aguanta otra temporada y Alberto,
     en vez de sostenerla, se refugia en su propia cuenta atrás.
-  estado: planificada
+  estado: aprobada
   cierra: []
   flashback: false
   beats:
@@ -113,6 +117,7 @@ escenas:
   - Alberto responde hablando de su retirada en lugar de la de ella, y Lucía se lo
     señala con una sola frase
   - Ella recoge la botella de la cocina y se la lleva sin decir a dónde va
+  palabras: 1118
 - id: S007
   capitulo: 3
   fecha: '2010-09-26'
@@ -122,7 +127,7 @@ escenas:
   - lucia
   resumen: Un mes después de la ruptura coinciden en el pasillo del pabellón como
     dos profesionales y la cortesía es peor que el grito.
-  estado: planificada
+  estado: aprobada
   cierra: []
   flashback: false
   beats:
@@ -132,6 +137,7 @@ escenas:
     con el parte médico exacto, sin nada más
   - Un compañero menciona delante de los dos la fiesta de retirada de Alberto y Lucía
     dice que no irá
+  palabras: 1048
 - id: S008
   capitulo: 3
   fecha: '2010-11-04'
@@ -142,7 +148,7 @@ escenas:
   resumen: 'En el vestuario donde se conocieron, Lucía devuelve la botella y con ese
     gesto los dos dicen en voz alta lo que cada uno ha entregado: él la vida entera
     al deporte, ella el brazo.'
-  estado: planificada
+  estado: aprobada
   cierra:
   - H1
   flashback: false
@@ -154,6 +160,7 @@ escenas:
   - Lucía coge la botella, bebe, y se la devuelve a él para que la guarde otra vez;
     esta vez él la acepta delante de ella y el objeto deja de ser un secreto entre
     los dos
+  palabras: 1070
 - id: S009
   capitulo: 3
   fecha: '2010-12-13'
@@ -164,7 +171,7 @@ escenas:
   resumen: 'En la cancha del pabellón, ya sin partido ni club de por medio, los dos
     cierran lo que la cancha significó: ella no volverá a jugar y él no volverá a
     entrenar, y eligen quedarse igual.'
-  estado: planificada
+  estado: aprobada
   cierra:
   - H2
   flashback: false
@@ -176,3 +183,4 @@ escenas:
   - Apagan juntos las luces de la cancha, salen por la puerta principal a la vista
     de quien quiera verlos, y la diferencia de edad ya no es un argumento que ninguno
     de los dos use
+  palabras: 1057

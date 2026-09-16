@@ -1,0 +1,29 @@
+{
+  "escena": "S007",
+  "continuidad": {
+    "veto": false,
+    "hallazgos": []
+  },
+  "calidad": {
+    "conflicto": {
+      "nota": 2,
+      "cita": "Un mes antes se habría reído de eso. Se habría reído de la multa."
+    },
+    "dialogo": {
+      "nota": 2,
+      "cita": "—Nada —dijo—. Que se te ha quedado la lengüeta hacia fuera, en la derecha."
+    },
+    "concrecion": {
+      "nota": 2,
+      "cita": "Ella tenía la botella otra vez en la mano y la estaba apretando por el centro."
+    },
+    "frescura": {
+      "nota": 1,
+      "cita": "Cabían tres personas de frente y todavía sobraba sitio de sobra."
+    },
+    "quimica": {
+      "nota": 2,
+      "cita": "Pasó por delante de él con el hombro pegado a la pared de la izquierda."
+    }
+  }
+}

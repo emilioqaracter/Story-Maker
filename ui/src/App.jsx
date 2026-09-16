@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import Pedido from './Pedido.jsx'
+import Pedido, { EJEMPLO } from './Pedido.jsx'
 import Configuracion from './Configuracion.jsx'
 import Libros from './Libros.jsx'
 import { api, derivar } from './api.js'
@@ -75,10 +75,11 @@ export default function App() {
   return (
     <div className="pagina">
       <header>
+        <p className="kicker">Harness de novelas</p>
         <h1>Story-Maker</h1>
         <p className="bajada">
-          Novelas romanticas ambientadas en el deporte. Lo que se escribe abajo
-          es el canon: a partir de ahi el modelo escribe y el codigo verifica.
+          Lo que escribas abajo es el canon. A partir de ahi el modelo escribe y
+          el codigo verifica: cinco puertas deciden que entra y que se rehace.
         </p>
       </header>
 
@@ -89,6 +90,11 @@ export default function App() {
         setRespuestas={setRespuestas}
         epoca={epoca}
         setEpoca={setEpoca}
+        cargarEjemplo={() => {
+          setSlug(EJEMPLO.slug)
+          setRespuestas(structuredClone(EJEMPLO.respuestas))
+          setEpoca({ ...EJEMPLO.epoca })
+        }}
       />
 
       <Configuracion

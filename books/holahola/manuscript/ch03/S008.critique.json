@@ -1,0 +1,29 @@
+{
+  "escena": "S008",
+  "continuidad": {
+    "veto": false,
+    "hallazgos": []
+  },
+  "calidad": {
+    "conflicto": {
+      "nota": 2,
+      "cita": "—La taquilla ya no es tuya —dijo Alberto, y se arrepintió mientras lo decía."
+    },
+    "dialogo": {
+      "nota": 2,
+      "cita": "—A ti te queda todo —dijo ella—. Es distinto. No lo digas como si empatáramos."
+    },
+    "concrecion": {
+      "nota": 2,
+      "cita": "Pesaba. Estaba llena hasta arriba y el agua se movió despacio contra el plástico."
+    },
+    "frescura": {
+      "nota": 1,
+      "cita": "con los dedos fríos y torpes de siempre"
+    },
+    "quimica": {
+      "nota": 2,
+      "cita": "Entre los dos quedaron el bolso, la camiseta doblada y la botella de tapón azul."
+    }
+  }
+}

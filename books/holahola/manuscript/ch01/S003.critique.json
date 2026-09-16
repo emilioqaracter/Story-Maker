@@ -1,0 +1,29 @@
+{
+  "escena": "S003",
+  "continuidad": {
+    "veto": false,
+    "hallazgos": []
+  },
+  "calidad": {
+    "conflicto": {
+      "nota": 2,
+      "cita": "—Me lo mandó el entrenador —contestó Alberto, y se arrepintió antes de terminar la frase."
+    },
+    "dialogo": {
+      "nota": 2,
+      "cita": "—Dos años menos entrenando es la edad —contestó ella, y no lo dijo enfadada."
+    },
+    "concrecion": {
+      "nota": 2,
+      "cita": "Contó las vueltas del vendaje: siete por el pie, cuatro por arriba."
+    },
+    "frescura": {
+      "nota": 1,
+      "cita": "Alberto miró la misma mancha para no mirar el tobillo ni la cara de ella."
+    },
+    "quimica": {
+      "nota": 2,
+      "cita": "La puso en el suelo, entre sus pies, y en el banco quedó un hueco."
+    }
+  }
+}
