@@ -88,7 +88,11 @@ python harness/scripts/resolver_canon.py books/<slug> S001
 python harness/scripts/validate_scene.py books/<slug> S001
 python harness/scripts/gate_scene.py     books/<slug> S001
 python harness/scripts/validate_book.py  books/<slug>
+python harness/scripts/run_scene.py      books/<slug> reset   # volver a empezar
 ```
+
+`reset` devuelve el libro al punto de partida sin tocar `context/`: borra la
+prosa, las criticas, el estado y el entregable. El canon no se toca nunca.
 
 ## Al trabajar acá
 

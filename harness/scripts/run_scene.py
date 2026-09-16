@@ -13,6 +13,7 @@ Subcomandos:
     puerta    G2
     aprobar   marca aprobada, recuenta y comprueba que el final quepa
     estado    el state.json tal cual
+    reset     vuelve al punto de partida sin tocar el canon
 
     python harness/scripts/run_scene.py books/<slug> next
 """
@@ -222,6 +223,42 @@ def fijar_voz(libro: Libro, texto: str) -> bool:
     return True
 
 
+def reset(libro: Libro, borrar_prosa: bool = True) -> dict:
+    """Devuelve el libro al punto de partida, con el canon intacto.
+
+    El canon no se toca nunca: reset vuelve a 'planificada' y borra lo que
+    produjo el ciclo. Sirve para volver a correr el mismo libro sin tener que
+    escribirlo de nuevo."""
+    borrados = []
+    for esc in libro.escenas:
+        esc["estado"] = "planificada"
+        esc.pop("palabras", None)
+        if borrar_prosa:
+            d = libro.ruta_prosa(esc).parent
+            for sufijo in (".md", ".validation.json", ".critique.json"):
+                p = d / (esc["id"] + sufijo)
+                if p.exists():
+                    p.unlink()
+                    borrados.append(p.name)
+    guardar_timeline(libro)
+
+    for rel in ("state.json", "manuscript/novela.md", "reports/final.json"):
+        p = libro.dir / rel
+        if p.exists():
+            p.unlink()
+            borrados.append(rel)
+
+    # voz.md vuelve a la base del genero: su muestra salia de la primera escena
+    # aprobada, y esa escena ya no existe.
+    voz = libro.ctx / "voz.md"
+    base = Path(__file__).resolve().parents[1] / "voz-base.md"
+    if base.exists():
+        voz.write_text(base.read_text(encoding="utf-8"), encoding="utf-8")
+
+    return {"ok": True, "escenas": len(libro.escenas), "borrados": borrados,
+            "aviso": "El canon no se toco: context/ queda como estaba."}
+
+
 def marcar_intento(libro: Libro, sid: str) -> dict:
     estado = leer_estado(libro)
     estado["intento"] = estado["intento"] + 1 if estado.get("escena_actual") == sid else 1
@@ -258,6 +295,8 @@ def main(argv: list) -> int:
         res = marcar_intento(libro, arg)
     elif cmd == "estado":
         res = leer_estado(libro)
+    elif cmd == "reset":
+        res = reset(libro)
     else:
         print("subcomando desconocido: %s" % cmd, file=sys.stderr)
         return 2

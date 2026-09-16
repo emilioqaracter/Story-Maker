@@ -61,7 +61,11 @@ python harness/scripts/run_scene.py    books/marco-1990 aprobar S001
 ```bash
 python harness/scripts/validate_book.py books/marco-1990   # G4: las tres condiciones
 python harness/scripts/compilar.py      books/marco-1990   # -> manuscript/novela.md
+python harness/scripts/run_scene.py     books/marco-1990 reset
 ```
+
+`reset` borra prosa, criticas, estado y entregable, y deja `context/` intacto:
+sirve para volver a correr el mismo libro sin escribirlo de nuevo.
 
 ## Las cinco puertas
 
