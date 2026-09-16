@@ -68,7 +68,7 @@ def v12_techo(libro: Libro) -> list:
     forma = libro.forma
     escritas = palabras_escritas(libro)
     pendientes = [e for e in libro.escenas if e.get("estado") != "aprobada"]
-    proyeccion = escritas + len(pendientes) * forma["palabras_por_escena"]
+    proyeccion = escritas + len(pendientes) * forma["palabras_por_escena_max"]
     errores = []
     if escritas > forma["techo_palabras"]:
         errores.append(Error("V12", "El recuento real es %d y el techo %d." % (escritas, forma["techo_palabras"]),
@@ -153,7 +153,7 @@ def cabe_el_final(libro: Libro) -> dict:
     restantes = forma["techo_palabras"] - palabras_escritas(libro)
     cierres = [e for e in libro.escenas
                if e.get("estado") != "aprobada" and (e.get("cierra") or [])]
-    cuesta = len(cierres) * forma["palabras_por_escena"]
+    cuesta = len(cierres) * forma["palabras_por_escena_max"]
     return {"palabras_restantes": restantes, "cierre_pendiente": cuesta,
             "cabe": restantes >= cuesta,
             "escenas_de_cierre_pendientes": [e["id"] for e in cierres]}

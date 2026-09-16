@@ -93,7 +93,10 @@ def test_el_fixture_pasa_las_cuatro_puertas(dir_libro):
 
 def test_la_forma_derivada_es_la_del_perfil_v1(dir_libro):
     assert libro(dir_libro).forma == {
-        "palabras_por_escena": 144, "escenas_totales": 1, "techo_palabras": 144}
+        "palabras_por_escena": 144,      # 3 x 4 x 12, el objetivo al escribir
+        "palabras_por_escena_max": 180,  # 3 x 4 x 15, lo que V15 tolera
+        "escenas_totales": 1,
+        "techo_palabras": 180}           # el techo presupuesta el maximo
 
 
 # --------------------------------------------------------------------------- #
@@ -576,3 +579,29 @@ def test_g2_un_hallazgo_de_continuidad_cuenta_aunque_no_vete(dir_libro):
         {"que": "sabe algo que el canon no le da", "cita": "dijo Tomas despacio"}]}
     res = G.evaluar(libro(dir_libro), SID, c)
     assert not res["ok"] and res["veto_continuidad"]
+
+
+# --------------------------------------------------------------------------- #
+# El techo y la forma tienen que hablar del mismo hecho
+# --------------------------------------------------------------------------- #
+def test_el_techo_presupuesta_lo_que_V15_permite(dir_libro):
+    """V15 acepta palabras_por_linea +- tolerancia, asi que una escena puede
+    llegar al maximo sin romper nada. Si el techo se calcula con el nominal,
+    un libro pasa todas las reglas de escena y revienta C2 igual."""
+    L = libro(dir_libro)
+    est, tol = L.config["estructura"], L.config["tolerancia"]
+    maximo = (est["parrafos_por_escena"] * est["lineas_por_parrafo"]
+              * (est["palabras_por_linea"] + tol["palabras_por_linea"]))
+    assert L.forma["palabras_por_escena_max"] == maximo
+    assert L.forma["techo_palabras"] == maximo * L.forma["escenas_totales"], (
+        "el techo tiene que presupuestar la escena mas larga que V15 deja pasar")
+
+
+def test_una_escena_en_el_maximo_no_revienta_el_techo(dir_libro):
+    """El caso que aparecio corriendo el ciclo: cuatro escenas legales que
+    sumadas se pasaban del techo."""
+    L = libro(dir_libro)
+    est, tol = L.config["estructura"], L.config["tolerancia"]
+    por_escena = est["parrafos_por_escena"] * est["lineas_por_parrafo"] * (
+        est["palabras_por_linea"] + tol["palabras_por_linea"])
+    assert por_escena * L.forma["escenas_totales"] <= L.forma["techo_palabras"]

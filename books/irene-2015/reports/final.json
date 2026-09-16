@@ -1,42 +1,32 @@
 {
   "objeto": "obra",
-  "ok": false,
-  "errores": [
-    {
-      "regla": "V12",
-      "mensaje": "El recuento real es 585 y el techo 576.",
-      "arreglo": "Ya te pasaste: hay que fusionar escenas que no cierran hilo."
-    },
-    {
-      "regla": "V12",
-      "mensaje": "La proyeccion es 585 (585 escritas + 0 pendientes) y el techo 576.",
-      "arreglo": "Contrae el plan ahora, que todavia se puede: fusiona escenas que no cierran hilo."
-    }
-  ],
+  "ok": true,
+  "errores": [],
   "condiciones": {
     "C1_estructura": {
       "ok": true,
       "sin_aprobar": []
     },
     "C2_techo": {
-      "ok": false,
+      "ok": true,
       "palabras": 585,
-      "techo": 576
+      "techo": 720
     },
     "C3_cierre": {
       "ok": true
     }
   },
   "regulador": {
-    "palabras_restantes": -9,
+    "palabras_restantes": 135,
     "cierre_pendiente": 0,
-    "cabe": false,
+    "cabe": true,
     "escenas_de_cierre_pendientes": []
   },
   "forma": {
     "palabras_por_escena": 144,
+    "palabras_por_escena_max": 180,
     "escenas_totales": 4,
-    "techo_palabras": 576
+    "techo_palabras": 720
   },
-  "termina": false
+  "termina": true
 }

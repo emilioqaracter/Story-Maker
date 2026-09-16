@@ -43,7 +43,7 @@ JSON, pero cabe en una pantalla. Los contratos se fijan con el caso chico.
 la edad del protagonista en el capítulo 12; un script no. El modelo escribe, el
 código verifica.
 
-**Versión 7.3** · 2026-09-16 · historial completo en §15.
+**Versión 7.4** · 2026-09-16 · historial completo en §15.
 
 **Stack:** Claude Code hace todo el trabajo de modelo — orquesta, planifica,
 escribe y critica con subagentes y skills · scripts Python validan.
@@ -170,15 +170,24 @@ declara. Estas tres cifras **no existen en ningún archivo** — las calcula el
 planificador al arrancar:
 
 ```
-palabras_por_escena = parrafos_por_escena × lineas_por_parrafo × palabras_por_linea
-                    = 3 × 4 × 12  =  144
+palabras_por_escena     = parrafos × lineas × palabras_por_linea
+                        = 3 × 4 × 12  =  144        el objetivo al escribir
 
-escenas_totales     = capitulos × escenas_por_capitulo
-                    = 1 × 1  =  1
+palabras_por_escena_max = parrafos × lineas × (palabras_por_linea + tolerancia)
+                        = 3 × 4 × 15  =  180        lo que V15 deja pasar
 
-techo_palabras      = escenas_totales × palabras_por_escena
-                    = 144
+escenas_totales         = capitulos × escenas_por_capitulo
+                        = 1 × 1  =  1
+
+techo_palabras          = escenas_totales × palabras_por_escena_max
+                        = 180
 ```
+
+**El techo presupuesta el máximo, no el nominal.** V15 acepta
+`palabras_por_linea ± tolerancia`, así que una escena puede llegar a 180 sin
+romper ninguna regla. Si el techo se calculara con 144, un libro pasaría todas
+las reglas de escena y reventaría C2 igual — dos reglas en desacuerdo sobre el
+mismo hecho, que es justo lo que este documento no se permite.
 
 Por eso `premise.yaml` ya no lleva `limite`: el techo sale de la forma. Cambiar
 la escala del libro es cambiar cuatro números aquí, y todo lo demás se recalcula
@@ -1299,6 +1308,7 @@ Versionado: `MAYOR.MENOR`. Sube **MENOR** al añadir o precisar contenido; sube
 
 | Versión | Fecha | Commit | Cambio | Por qué |
 |---|---|---|---|---|
+| **7.4** | 2026-09-16 | _sin commitear_ | **El techo se presupuesta con `palabras_por_escena_max`** (nominal + tolerancia), no con el nominal. La proyeccion de V12, el regulador y la comprobacion de G0 usan el mismo numero. | Corriendo el libro de 2015: cuatro escenas que pasaron G1 y G2 sumaron 585 con un techo de 576, y el libro no podia terminar sin que ninguna escena hubiera roto nada. V15 tolera hasta 15 palabras por linea pero el techo contaba 12: dos reglas en desacuerdo sobre el mismo hecho. Ahora no hay combinacion legal de escenas que reviente C2. |
 | **7.3** | 2026-09-16 | _sin commitear_ | **Nuevo encuadre al principio del documento: para que existe esto.** El objetivo no es la novela, son las capas de control sobre un modelo — canon calculado, validadores, rubrica con evidencia, puertas y reguladores — y la novela es el banco de pruebas. | El documento explicaba muy bien COMO funciona cada pieza y en ningun lado PARA QUE. Sin eso, las decisiones que mas cuestan de defender (que el critico no decida, que el canon solo lo cambie una persona) parecen rigidez en vez de lo que son: el punto. |
 | **7.3** | 2026-09-16 | _sin commitear_ | **La investigacion por internet sale del camino critico.** Si `epoca.yaml` ya trae anacronismos, `crear_novela.py` no llama al `researcher` y va derecho al ciclo. Un libro puede traer el canon entero escrito a mano. | Es el paso mas lento y el menos determinista del arranque, y su ruido tapaba lo que hay que mirar: el ciclo de redaccion, correccion y critica. Lo que sigue sin ser opcional es el resultado — G0 no abre con la epoca vacia (V13). |
 | **7.3** | 2026-09-16 | _sin commitear_ | Nuevo `books/irene-2015`: canon escrito a mano, dos capitulos de dos escenas, para ejercitar el ciclo sin agentes de arranque. | Los libros anteriores tenian una escena sola: no ejercitaban ni el bucle ni G3, la puerta de capitulo. Y su canon era tan escueto que varias reglas no tenian nada que morder — `estados` sin `prohibe`, `sabe` sin marcadores, cero hitos. |

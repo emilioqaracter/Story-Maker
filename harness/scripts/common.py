@@ -109,11 +109,24 @@ class Libro:
     # -- derivaciones ------------------------------------------------------- #
     @property
     def forma(self) -> dict:
+        """Todo lo que se deriva de los cinco numeros de la estructura.
+
+        El techo se presupuesta con la escena MAS LARGA que V15 deja pasar, no
+        con la nominal. V15 acepta palabras_por_linea +- tolerancia, asi que una
+        escena puede llegar al maximo sin romper ninguna regla; si el techo se
+        calculara con el nominal, un libro pasaria todas las reglas de escena y
+        reventaria C2 igual. Dos reglas no pueden estar en desacuerdo sobre el
+        mismo hecho."""
         e = self.config["estructura"]
-        ppe = e["parrafos_por_escena"] * e["lineas_por_parrafo"] * e["palabras_por_linea"]
+        tol = self.config.get("tolerancia") or {}
+        lineas = e["parrafos_por_escena"] * e["lineas_por_parrafo"]
+        ppe = lineas * e["palabras_por_linea"]
+        ppe_max = lineas * (e["palabras_por_linea"] + tol.get("palabras_por_linea", 0))
         tot = e["capitulos"] * e["escenas_por_capitulo"]
-        return {"palabras_por_escena": ppe, "escenas_totales": tot,
-                "techo_palabras": ppe * tot}
+        return {"palabras_por_escena": ppe,          # el objetivo al escribir
+                "palabras_por_escena_max": ppe_max,  # lo que V15 tolera
+                "escenas_totales": tot,
+                "techo_palabras": ppe_max * tot}
 
     @property
     def escenas(self) -> list[dict]:

@@ -166,7 +166,7 @@ def plan_cabe(libro: Libro) -> list[Error]:
     n = len(libro.escenas)
     if not n:
         return [Error("G0", "El timeline no tiene escenas.", "El planner tiene que planificar antes de G0.")]
-    necesarias = n * forma["palabras_por_escena"]
+    necesarias = n * forma["palabras_por_escena_max"]
     if necesarias > forma["techo_palabras"]:
         return [Error(
             "G0",
