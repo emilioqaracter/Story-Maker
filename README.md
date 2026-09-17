@@ -9,8 +9,8 @@ se decide queda anotado con su motivo.
 
 > Todo lo que se decide, lo decide un agente, y deja escrito por qué.
 
-- [SPEC-FUNCIONAL.md](SPEC-FUNCIONAL.md): qué hace el sistema y por qué.
-- [SPEC-TECNICO.md](SPEC-TECNICO.md): archivos, contratos y formatos.
+- [docs/SPEC-FUNCIONAL.md](docs/SPEC-FUNCIONAL.md): qué hace el sistema y por qué.
+- [docs/SPEC-TECNICO.md](docs/SPEC-TECNICO.md): archivos, contratos y formatos.
 
 ## Cómo se usa
 
