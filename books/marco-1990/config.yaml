@@ -1,6 +1,0 @@
-# Este libro es el fixture de los tests: una sola escena, para que el recorrido
-# completo quepa en una pantalla. El harness por defecto trae tres (una por
-# acto); aqui se fija en una a proposito.
-estructura:
-  capitulos: 1
-  escenas_por_capitulo: 1

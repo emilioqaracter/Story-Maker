@@ -1,5 +1,0 @@
-PyYAML>=6.0
-
-# Opcional: el espejo del ciclo en Langfuse (harness/scripts/observabilidad.py).
-# Si no esta instalado, el harness corre igual y no traza a ningun lado.
-langfuse>=3.3.1
