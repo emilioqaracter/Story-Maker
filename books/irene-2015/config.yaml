@@ -1,8 +1,0 @@
-# Dos capitulos de dos escenas: lo minimo para que el loop LOOPEE y para que
-# se cierre un capitulo (G3) sin que el libro termine.
-estructura:
-  capitulos: 2
-  escenas_por_capitulo: 2
-  parrafos_por_escena: 3
-  lineas_por_parrafo: 4
-  palabras_por_linea: 12

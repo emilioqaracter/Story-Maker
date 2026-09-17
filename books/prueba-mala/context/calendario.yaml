@@ -1,8 +1,0 @@
-# La temporada. Trae la escalada ya hecha, con fechas reales.
-deporte: futbol
-nivel: profesional
-temporada: { desde: 1990-01-15, hasta: 1990-11-30 }
-hitos:
-  - { fecha: 1990-03-04, que: "debut en liga", peso: 1 }
-  - { fecha: 1990-08-19, que: "el clasico", peso: 3 }
-  - { fecha: 1990-11-25, que: "la final", peso: 5 }

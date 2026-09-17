@@ -1,0 +1,16 @@
+eje: Una nadadora que vuelve de una lesion de hombro
+titulo: El agua fria
+deporte: natacion
+lugar: Gijon
+epoca:
+  desde: '1978-01-01'
+  hasta: '1978-12-31'
+estilo: Tercera persona, pasado.
+pregunta_dramatica: Amparo quiere nadar la final del campeonato de septiembre y bajar
+  de su marca. Le va a costar la plaza en el club, que es lo unico que la mantiene,
+  si vuelve a romperse.
+hilos:
+- id: H1
+  que: la plaza del club que se decide en septiembre
+- id: H2
+  que: el entrenador que la hizo nadar lesionada y no se lo ha dicho

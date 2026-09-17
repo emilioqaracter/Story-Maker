@@ -16,15 +16,28 @@ export default function Traza({ eventos, resumen }) {
     )
   }
 
+  // El camino agentico no deja eventos de modelo: las llamadas las hace Claude
+  // Code y no pasan por ningun script. Las puertas si quedan, porque las anota
+  // el propio validador. Decirlo es mejor que ensenar un costo de 0 dolares.
+  const soloPuertas = !eventos.some((e) => e.tipo === 'modelo')
+
   return (
     <div className="traza">
+      {soloPuertas && (
+        <p className="ayuda" style={{ marginBottom: 12 }}>
+          Este libro lo condujo <strong>Claude Code</strong>: abajo esta lo que
+          hizo el codigo — cada puerta, con su veredicto y sus errores. Lo que
+          hizo el modelo (llamadas, tokens y costo) no pasa por los scripts y
+          se ve en Langfuse, si tenes el hook activo.
+        </p>
+      )}
       <div className="totales">
         <Total valor={seg(resumen.ms_total)} etiqueta="tiempo total" />
-        <Total valor={seg(resumen.ms_modelo)} etiqueta="en el modelo" />
-        <Total valor={resumen.llamadas} etiqueta="llamadas" />
-        <Total valor={mil(resumen.salida)} etiqueta="tokens escritos" />
-        <Total valor={mil(resumen.entrada + resumen.cache_escrita + resumen.cache_leida)} etiqueta="tokens leidos" />
-        <Total valor={`$${resumen.costo.toFixed(2)}`} etiqueta="costo" />
+        {!soloPuertas && <Total valor={seg(resumen.ms_modelo)} etiqueta="en el modelo" />}
+        {!soloPuertas && <Total valor={resumen.llamadas} etiqueta="llamadas" />}
+        {!soloPuertas && <Total valor={mil(resumen.salida)} etiqueta="tokens escritos" />}
+        {!soloPuertas && <Total valor={mil(resumen.entrada + resumen.cache_escrita + resumen.cache_leida)} etiqueta="tokens leidos" />}
+        {!soloPuertas && <Total valor={`$${resumen.costo.toFixed(2)}`} etiqueta="costo" />}
         <Total valor={resumen.reintentos} etiqueta="reintentos" alerta={resumen.reintentos > 0} />
         <Total valor={resumen.puertas_cerradas} etiqueta="puertas cerradas" alerta={resumen.puertas_cerradas > 0} />
       </div>

@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from common import (ERRORES_CARGA, Error, Libro, emitir, etapa_en, fecha,  # noqa: E402
+from common import (ERRORES_CARGA, Error, Libro, emitir, fecha,  # noqa: E402
                     libro_de_argv, salida)
 
 # Campos que la entrevista (SPEC §3) tiene que dejar completos.
@@ -20,11 +20,10 @@ ESQUEMA = {
     "epoca": "rango",
     "lugar": "texto",
     "nivel": "texto",
-    "persona_a": "persona",
-    "persona_b": "persona",
-    "encuentro": "texto",
+    "protagonista": "persona",
+    "meta": "texto",
     "obstaculo": "texto",
-    "precio": "par",
+    "precio": "texto",
     "hilos": "lista2",
 }
 
@@ -44,13 +43,13 @@ def _tipo_ok(valor, tipo: str) -> str | None:
     if tipo == "persona":
         if not isinstance(valor, dict):
             return "no es una persona"
-        faltan = [k for k in ("nombre", "nacimiento", "rol") if not valor.get(k)]
+        # `nacimiento` dejo de ser obligatorio en la v9.0: la edad ya no es una
+        # regla dura. Si viene, tiene que ser una fecha; si no viene, no pasa nada.
+        faltan = [k for k in ("nombre", "rol") if not valor.get(k)]
         if faltan:
             return "le faltan campos: " + ", ".join(faltan)
-        return None if fecha(valor["nacimiento"]) else "nacimiento no es una fecha ISO"
-    if tipo == "par":
-        if not isinstance(valor, dict) or not valor.get("a") or not valor.get("b"):
-            return "necesita 'a' y 'b'"
+        if valor.get("nacimiento") and not fecha(valor["nacimiento"]):
+            return "nacimiento no es una fecha ISO"
         return None
     if tipo == "lista2":
         if not isinstance(valor, list):
@@ -98,11 +97,10 @@ def v13_una_epoca(libro: Libro) -> list[Error]:
             "V13", "epoca.yaml no trae ningun anacronismo en 'prohibido'.",
             "El researcher no investigo, o no guardo lo que encontro. Sin esa "
             "lista, V8 no tiene nada que vetar y la epoca es decorativa."))
-    elif not (libro.epoca.get("fuentes") or []):
-        errores.append(Error(
-            "V13", "epoca.yaml trae datos pero ninguna fuente.",
-            "Lo que no trae fuente no entra en el canon: es la misma regla que "
-            "ya valia para las personas reales."))
+    # Las fuentes dejaron de ser obligatorias en la v9.0. Lo que se le pide a
+    # la epoca es que sea COHERENTE, no exhaustiva: que en 1800 no haya moviles
+    # y en 2010 si haya internet. Para eso no hace falta una bibliografia, y
+    # exigirla empujaba al researcher a buscar la fecha exacta de cada partido.
 
     anio = libro.epoca.get("anio")
     if anio is not None and not (desde.year <= int(anio) <= hasta.year):
@@ -119,45 +117,83 @@ def v13_una_epoca(libro: Libro) -> list[Error]:
                 "V13", f"'{item.get('que')}' aparece con desde {d}, posterior a la epoca.",
                 "Descartalo: el researcher se fue de rango."))
 
-    for hito in (libro.calendario.get("hitos") or []):
-        f = fecha(hito.get("fecha"))
-        if f and not (desde <= f <= hasta):
-            errores.append(Error(
-                "V13", f"El hito '{hito.get('que')}' cae en {f}, fuera de la epoca.",
-                "El calendario deportivo tiene que caer dentro de premise.epoca."))
     return errores
 
 
 def v16_arco(libro: Libro) -> list[Error]:
-    """El arco declarado tiene que seguir el orden del genero, sin saltos."""
-    orden = libro.config["genero"]["etapas_relacion"]
-    tramos = libro.relacion.get("etapas") or []
-    if not tramos:
-        return [Error("V16", "relacion.yaml no declara etapas.",
-                      "El planner deriva el arco del encuentro y el obstaculo del intake.")]
-    errores, anterior_idx, anterior_fecha = [], None, None
-    for tramo in tramos:
-        etapa, f = tramo.get("etapa"), fecha(tramo.get("desde"))
-        if etapa not in orden:
-            errores.append(Error("V16", f"Etapa desconocida: '{etapa}'.",
-                                 "Usa una de genero.etapas_relacion: " + ", ".join(orden)))
-            continue
-        idx = orden.index(etapa)
-        if anterior_idx is not None:
-            if idx <= anterior_idx:
-                errores.append(Error(
-                    "V16", f"La relacion va de '{orden[anterior_idx]}' a '{etapa}': retrocede o repite.",
-                    "El arco avanza; para retroceder hace falta una ruptura declarada."))
-            elif idx > anterior_idx + 1:
-                errores.append(Error(
-                    "V16", f"La relacion salta de '{orden[anterior_idx]}' a '{etapa}'.",
-                    f"Falta la etapa '{orden[anterior_idx + 1]}': se avanza de a una."))
-        if f and anterior_fecha and f <= anterior_fecha:
+    """El arco de tres actos: completo, en orden y con las escenas repartidas.
+
+    Sustituye a la comprobacion de las cinco etapas de pareja. Lo que se
+    comprueba ya no es una relacion que avanza, sino que la historia del
+    protagonista tenga sus tres tiempos y que ninguno se quede vacio: un acto
+    sin escenas no es un acto, es una etiqueta."""
+    orden = libro.config["genero"]["actos"]
+    arco = libro.arco
+    errores = []
+
+    if not arco.get("protagonista"):
+        errores.append(Error("V16", "arco.yaml no dice quien es el protagonista.",
+                             "La novela es de uno: declara `protagonista` con su clave."))
+    elif arco["protagonista"] not in libro.personajes:
+        errores.append(Error(
+            "V16", "El protagonista '%s' no tiene ficha en context/characters/." % arco["protagonista"],
+            "Crea su YAML o corrige la clave en arco.yaml."))
+
+    for campo, que in (("meta", "que quiere"), ("obstaculo", "que se lo impide"),
+                       ("precio", "que le cuesta")):
+        if not str(arco.get(campo) or "").strip():
             errores.append(Error(
-                "V16", f"La etapa '{etapa}' empieza en {f}, no despues de la anterior ({anterior_fecha}).",
+                "V16", "arco.yaml no declara '%s' (%s)." % (campo, que),
+                "Sin las tres cosas no hay historia: hay alguien haciendo deporte."))
+
+    tramos = arco.get("actos") or []
+    if not tramos:
+        errores.append(Error("V16", "arco.yaml no declara actos.",
+                             "Los tres actos se derivan de la epoca: planteamiento, desarrollo, desenlace."))
+        return errores
+
+    vistos, anterior = [], None
+    for tramo in tramos:
+        acto, f = tramo.get("acto"), fecha(tramo.get("desde"))
+        if acto not in orden:
+            errores.append(Error("V16", "Acto desconocido: '%s'." % acto,
+                                 "Usa uno de genero.actos: " + ", ".join(orden)))
+            continue
+        if vistos and orden.index(acto) <= orden.index(vistos[-1]):
+            errores.append(Error(
+                "V16", "El arco va de '%s' a '%s': retrocede o repite." % (vistos[-1], acto),
+                "Los tres actos van en orden y una sola vez."))
+        if f and anterior and f <= anterior:
+            errores.append(Error(
+                "V16", "El acto '%s' empieza en %s, no despues del anterior (%s)." % (acto, f, anterior),
                 "Las fechas del arco son estrictamente crecientes."))
-        anterior_idx, anterior_fecha = idx, f or anterior_fecha
+        vistos.append(acto)
+        anterior = f or anterior
+
+    faltan = [a for a in orden if a not in vistos]
+    if faltan:
+        errores.append(Error("V16", "Al arco le faltan actos: %s." % ", ".join(faltan),
+                             "Los tres tienen que estar: sin desenlace no hay novela."))
+
+    # Un acto sin escenas: el plan no lo cubre. Solo se exige cuando hay
+    # escenas suficientes: un documento de una escena no puede tener tres
+    # actos, y pedirselo seria una regla que no se puede cumplir.
+    if len(libro.escenas) >= len(orden) and not faltan:
+        por_acto = {}
+        for esc in libro.escenas:
+            por_acto.setdefault(libro.acto_de(esc), []).append(esc["id"])
+        vacios = [a for a in orden if not por_acto.get(a)]
+        if vacios:
+            errores.append(Error(
+                "V16", "Ningun escena cae en: %s." % ", ".join(vacios),
+                "Corre mas escenas, o mueve sus fechas: cada acto necesita al menos una."))
     return errores
+
+
+def v16_arco_res(libro: Libro) -> list[Error]:
+    """Alias de `v16_arco` con nombre propio para los tests y para quien lea la
+    traza: dice que devuelve una lista de errores, no un booleano."""
+    return v16_arco(libro)
 
 
 def plan_cabe(libro: Libro) -> list[Error]:
@@ -181,9 +217,10 @@ def main(argv: list[str]) -> int:
     if not errores:
         errores = v21_intake(libro) + v13_una_epoca(libro) + v16_arco(libro) + plan_cabe(libro)
     extra = {"forma": libro.forma,
-             "etapa_final_declarada": etapa_en(libro.relacion, fecha(
-                 (libro.premise.get("epoca") or {}).get("hasta")))}
-    return emitir(salida("canon", errores, extra))
+             "protagonista": libro.protagonista,
+             "actos": {a: [e["id"] for e in libro.escenas if libro.acto_de(e) == a]
+                       for a in libro.config["genero"]["actos"]}}
+    return emitir(salida("canon", errores, extra), libro=libro, paso="G0")
 
 
 if __name__ == "__main__":

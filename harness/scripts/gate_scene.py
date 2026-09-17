@@ -1,10 +1,25 @@
-"""G2 - la puerta del criterio. Lee la rubrica y decide.
-
-El critico no decide: emite notas y citas en SNNN.critique.json. Aqui se suma
-y se compara contra el umbral de config.yaml. Ningun agente abre su propia
-puerta.
+# -*- coding: utf-8 -*-
+"""G2 - el criterio. Decide el critico; este script comprueba que pueda hacerlo.
 
     python harness/scripts/gate_scene.py books/<slug> S001
+
+**Hasta la v9.0 decidia este script**: el critico daba cinco notas y aqui se
+sumaban y se comparaban contra un umbral. Ahora el veredicto es del critico y
+se acata. Lo que queda es lo que un modelo no puede juzgar sobre si mismo:
+
+1. **Que haya critica**, y que hable del texto que hay ahora. Una critica mas
+   vieja que la prosa describe un texto que ya no existe: aprobar con ella es
+   aprobar a ciegas, y es el error mas barato de cometer del ciclo.
+2. **Que el veredicto venga con motivo.** Un `pasa: false` sin decir que esta
+   mal no es accionable: el corrector no tiene a que agarrarse y el intento
+   siguiente sale igual.
+3. **Que las notas de la rubrica traigan cita.** La rubrica ya no decide nada,
+   pero sigue siendo la unica medida comparable entre corridas. Una nota sin
+   cita es una afirmacion, no una observacion, y no sirve para comparar.
+
+La rubrica se sigue sumando y se sigue informando — como **medida**, no como
+puerta. Si la suma es baja y el critico aprobo igual, eso aparece en la salida
+y en la traza: no bloquea, pero queda visible.
 """
 from __future__ import annotations
 
@@ -21,10 +36,7 @@ def evaluar(libro: Libro, sid: str, critica: dict, ruta_critica: Path | None = N
     dimensiones = cfg["dimensiones"]
     errores = []
 
-    # --- la critica tiene que hablar del texto que hay ahora --------------- #
-    # Un scratchpad viejo es la forma mas barata de aprobar a ciegas: si la
-    # escena se reescribio despues de que la criticaran, esa critica describe
-    # un texto que ya no existe.
+    # --- 1. la critica tiene que hablar del texto que hay ahora ------------ #
     esc = libro.escena(sid)
     if ruta_critica and esc:
         prosa = libro.ruta_prosa(esc)
@@ -35,68 +47,75 @@ def evaluar(libro: Libro, sid: str, critica: dict, ruta_critica: Path | None = N
                     "La critica es mas vieja que la prosa: habla de un texto que ya cambio.",
                     "Vuelve a convocar las dos lentes sobre la escena actual."))
 
-    # --- continuidad: manda sobre todo lo demas ---------------------------- #
-    # Un hallazgo cuenta aunque la lente no haya marcado veto. Encontrar una
-    # contradiccion con el canon y no vetarla no es una salida coherente: la
-    # lente existe justo para encontrarlas, y no hay contradicciones menores.
-    cont = critica.get("continuidad") or {}
-    hallazgos = cont.get("hallazgos") or []
-    veto = bool(cont.get("veto")) or bool(hallazgos)
-    if veto:
-        for h in hallazgos or [{"que": "veto sin hallazgo declarado"}]:
-            errores.append(Error(
-                "G2/continuidad",
-                "Veto de continuidad: %s" % h.get("que"),
-                "Corrige eso concreto. Cita: %s" % (h.get("cita") or "(sin cita)")))
+    # --- 2. el veredicto ---------------------------------------------------- #
+    veredicto = critica.get("veredicto") or {}
+    pasa = veredicto.get("pasa")
+    motivo = str(veredicto.get("motivo") or "").strip()
 
-    # --- rubrica de calidad ------------------------------------------------ #
+    if pasa is None:
+        errores.append(Error(
+            "G2/veredicto", "La critica no trae veredicto: falta 'pasa'.",
+            "El critico decide: tiene que devolver {\"veredicto\": {\"pasa\": true|false, \"motivo\": \"...\"}}."))
+    elif not motivo:
+        errores.append(Error(
+            "G2/veredicto", "El veredicto no dice por que.",
+            "Un 'pasa' sin motivo no se puede revisar, y un 'no pasa' sin motivo "
+            "no le dice al corrector que tocar."))
+    elif pasa is False:
+        # No es un fallo del formato: es la puerta haciendo su trabajo. Va como
+        # error para que el corrector reciba el motivo con la misma forma que
+        # el resto de los errores del harness.
+        errores.append(Error(
+            "G2/criterio", motivo,
+            "Corrige eso concreto y vuelve a pasar la escena por las dos lentes."))
+
+    # --- 3. el veto de continuidad ------------------------------------------ #
+    # Tambien es la decision de un agente, no una cuenta: la lente de
+    # continuidad encontro una contradiccion con el canon y la escena no entra.
+    # Se releva tal cual, con su cita, para que el corrector sepa que tocar.
+    cont = critica.get("continuidad") or {}
+    for h in (cont.get("hallazgos") or []):
+        errores.append(Error(
+            "G2/continuidad", "Contradice el canon: %s" % h.get("que"),
+            "Corrige eso concreto. Cita: %s" % (h.get("cita") or "(sin cita)")))
+    if cont.get("veto") and not (cont.get("hallazgos") or []):
+        errores.append(Error(
+            "G2/continuidad", "Veto de continuidad sin hallazgo declarado.",
+            "La lente tiene que decir QUE contradice el canon, con su cita."))
+
+    # --- 4. la rubrica: medida, no puerta ---------------------------------- #
     calidad = critica.get("calidad") or {}
-    suma, evaluadas, detalle = 0, 0, {}
+    suma, detalle, sin_cita = 0, {}, []
     for dim in dimensiones:
         entrada = calidad.get(dim)
         if entrada is None:
-            if dim == "quimica":
-                detalle[dim] = None          # escena que no es de pareja
-                continue
-            errores.append(Error("G2/rubrica", "Falta la dimension '%s' en la critica." % dim,
-                                 "La lente de calidad tiene que puntuar las cinco."))
+            detalle[dim] = None
             continue
         nota, cita = entrada.get("nota"), entrada.get("cita")
         if nota not in cfg["niveles"]:
-            errores.append(Error("G2/rubrica", "'%s' trae nota %r, fuera de %s." % (dim, nota, cfg["niveles"]),
-                                 "Solo 0, 1 o 2: son tres conductas, no una escala."))
-            continue
-        # Sin cita, no hay puntuacion: cuenta como no evaluada. Vale para TODA
-        # nota, el 2 incluido. Si solo se exigiera evidencia por debajo de 2, el
-        # camino mas barato para aprobar seria poner 2 en todo sin citar nada, y
-        # la puerta volveria a estar siempre abierta.
-        if not (cita and str(cita).strip()):
             errores.append(Error(
-                "G2/rubrica", "'%s' puntua %d sin citar el fragmento." % (dim, nota),
-                "Toda nota exige una cita textual de la escena, o la dimension no "
-                "cuenta: un 2 sin evidencia es una afirmacion, no una observacion."))
+                "G2/rubrica", "'%s' trae nota %r, fuera de %s." % (dim, nota, cfg["niveles"]),
+                "Solo 0, 1 o 2: son tres conductas descritas, no una escala."))
+            continue
+        if not (cita and str(cita).strip()):
+            sin_cita.append(dim)
             continue
         detalle[dim] = nota
         suma += nota
-        evaluadas += 1
-        if nota == 0 and cfg.get("cero_prohibido", True):
-            errores.append(Error(
-                "G2/rubrica", "'%s' esta en 0: %s" % (dim, cita),
-                "Un 0 tumba la escena aunque la suma alcance. Reescribe esa dimension."))
 
-    con_quimica = detalle.get("quimica") is not None
-    umbral = cfg["umbral"] if con_quimica else cfg["umbral_sin_quimica"]
-    maximo = 2 * (len(dimensiones) if con_quimica else len(dimensiones) - 1)
-
-    faltan = [d for d in dimensiones if d not in detalle]
-    if not faltan and suma < umbral:
+    if sin_cita:
         errores.append(Error(
-            "G2/rubrica", "La rubrica suma %d sobre %d y el umbral es %d." % (suma, maximo, umbral),
-            "Sube la dimension mas baja; no hace falta brillantez, hace falta pasar el minimo."))
+            "G2/rubrica", "Estas dimensiones puntuan sin citar el texto: %s." % ", ".join(sin_cita),
+            "Toda nota exige una cita textual de la escena, el 2 incluido: sin "
+            "evidencia la nota no se puede comparar con la de otra corrida."))
 
-    return salida(sid, errores, {"puerta": "G2", "suma": suma, "maximo": maximo,
-                                 "umbral": umbral, "dimensiones": detalle,
-                                 "veto_continuidad": veto})
+    maximo = 2 * len([d for d in dimensiones if detalle.get(d) is not None])
+    return salida(sid, errores, {
+        "puerta": "G2",
+        "pasa": bool(pasa) and not errores,
+        "motivo": motivo,
+        "suma": suma, "maximo": maximo, "dimensiones": detalle,
+        "decide": "el critico"})
 
 
 def main(argv: list) -> int:
@@ -113,7 +132,7 @@ def main(argv: list) -> int:
         return emitir(salida(sid, [Error("G2", "No hay critica en %s." % ruta.name,
                                          "Convoca las dos lentes antes de abrir G2.")]))
     critica = json.loads(ruta.read_text(encoding="utf-8"))
-    return emitir(evaluar(libro, sid, critica, ruta_critica=ruta))
+    return emitir(evaluar(libro, sid, critica, ruta_critica=ruta), libro=libro, paso="G2")
 
 
 if __name__ == "__main__":

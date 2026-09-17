@@ -1,9 +1,28 @@
-"""G1 - los hechos de una escena. V1-V9, V14-V16, V20. Sin LLM, sin red.
-
-Corre en cada vuelta del ciclo, antes que el critico: es instantaneo y no
-falla, asi que filtrar aqui es lo que mantiene barato el ciclo.
+"""G1 - los hechos. Lo que se puede comprobar contando y comparando.
 
     python harness/scripts/validate_scene.py books/<slug> S001
+
+Determinista y gratis: corre SIEMPRE antes que G2, porque filtrar aqui antes de
+convocar a un critico es lo que mantiene el ciclo barato.
+
+Lo que comprueba (v9.0):
+
+- **V1/V2** la escena cae dentro de la epoca y en orden.
+- **V5** un evento unico no ocurre dos veces.
+- **V6** el estado del protagonista manda: si esta lesionado hasta cierto punto
+  de la historia, no puede jugar antes. Es lo que sostiene un arco de
+  recuperacion.
+- **V8** anacronismos: lo que no existia en esa epoca no aparece.
+- **V14/V15** la forma: parrafos, lineas y palabras por linea.
+- **V16** el arco de tres actos sigue siendo coherente.
+
+Lo que **dejo** de comprobar en la v9.0, y por que: la edad a la fecha (V3), el
+cumpleanos (V4), lo que cada personaje sabe (V7), las figuras reales (V9) y el
+hito del calendario (V20). No eran malas reglas; eran demasiada precision para
+lo que se le pide a estas novelas. Lo que el canon sigue sabiendo —quien sabe
+que, y cuando— le llega igual al escritor en el contexto resuelto, y las
+contradicciones que queden son trabajo del critico de continuidad, que para eso
+lee. Se cambio el liston, no se quito la vigilancia.
 """
 from __future__ import annotations
 
@@ -54,41 +73,6 @@ def v2_orden(libro: Libro, esc: dict) -> list:
     return []
 
 
-def v3_edad(libro: Libro, esc: dict, texto: str) -> list:
-    f = fecha(esc.get("fecha"))
-    if not f:
-        return []
-    validas = {edad(p.get("nacimiento"), f) for p in _presentes(libro, esc).values()}
-    validas.discard(None)
-    errores = []
-    for m in RE_EDAD.finditer(texto):
-        dicha = int(m.group(1))
-        if validas and dicha not in validas:
-            errores.append(Error(
-                "V3",
-                "La prosa dice '%s' pero a esa fecha las edades son %s." % (m.group(0), sorted(validas)),
-                "La edad no se declara: se deriva de nacimiento. Corrige la prosa."))
-    return errores
-
-
-def v4_cumple(libro: Libro, esc: dict, texto: str) -> list:
-    f = fecha(esc.get("fecha"))
-    if not f or not any(menciona(texto, m) for m in MARCAS_CUMPLE):
-        return []
-    errores = []
-    for p in _presentes(libro, esc).values():
-        n = fecha(p.get("nacimiento"))
-        if not n:
-            continue
-        if menciona(texto, nombre_pila(p)) and (f.month, f.day) != (n.month, n.day):
-            errores.append(Error(
-                "V4",
-                "Se celebra el cumpleanos de %s el %02d-%02d, pero nacio el %02d-%02d."
-                % (p.get("nombre"), f.day, f.month, n.day, n.month),
-                "Cambia el motivo de la celebracion, o mueve la escena a su aniversario."))
-    return errores
-
-
 def v5_evento_unico(libro: Libro, esc: dict, texto: str) -> list:
     f = fecha(esc.get("fecha"))
     errores = []
@@ -119,43 +103,10 @@ def v6_estado(libro: Libro, esc: dict, texto: str) -> list:
     return errores
 
 
-def v7_sabe(libro: Libro, esc: dict, texto: str) -> list:
-    f = fecha(esc.get("fecha"))
-    errores = []
-    for p in _presentes(libro, esc).values():
-        for s in p.get("sabe") or []:
-            desde = fecha(s.get("desde"))
-            marcas = s.get("marcadores") or []
-            if desde and f and f < desde and any(menciona(texto, m) for m in marcas if m):
-                errores.append(Error(
-                    "V7",
-                    "%s reacciona a '%s' el %s, y no lo sabe hasta el %s." % (
-                        p.get("nombre"), s.get("que"), f, desde),
-                    "Quita la reaccion, o adelanta el 'desde' en characters/."))
-    return errores
-
-
 def v8_anacronismos(libro: Libro, texto: str) -> list:
     return [Error("V8", "Aparece '%s', que no existe en esta epoca." % t,
                   "Quitalo: la lista sale de epoca.yaml, no de un criterio.")
             for t in libro.epoca.get("prohibido") or [] if menciona(texto, t)]
-
-
-def v9_reales(libro: Libro, esc: dict, texto: str) -> list:
-    f = fecha(esc.get("fecha"))
-    errores = []
-    for real in libro.reales or []:
-        nombre = str(real.get("nombre") or "")
-        if not nombre or not menciona(texto, nombre.split()[0]):
-            continue
-        n, m = fecha(real.get("nacimiento")), fecha(real.get("muerte"))
-        if f and n and f < n:
-            errores.append(Error("V9", "%s aparece el %s y nacio el %s." % (nombre, f, n),
-                                 "Quitalo de la escena o mueve la escena."))
-        if f and m and f > m:
-            errores.append(Error("V9", "%s aparece el %s y murio el %s." % (nombre, f, m),
-                                 "Quitalo de la escena o mueve la escena."))
-    return errores
 
 
 def v14_parrafos(libro: Libro, bloques: list) -> list:
@@ -187,23 +138,6 @@ def v15_lineas(libro: Libro, bloques: list) -> list:
     return errores
 
 
-def v20_hito(libro: Libro, esc: dict) -> list:
-    nombre = esc.get("hito")
-    if not nombre:
-        return []
-    f = fecha(esc.get("fecha"))
-    for h in libro.calendario.get("hitos") or []:
-        if h.get("que") == nombre:
-            fh = fecha(h.get("fecha"))
-            if fh and f and fh != f:
-                return [Error("V20",
-                              "%s dice hito '%s' pero cae el %s y el hito es el %s." % (esc["id"], nombre, f, fh),
-                              "Ajusta la fecha de la escena a la del calendario.")]
-            return []
-    return [Error("V20", "%s declara el hito '%s', que no esta en calendario.yaml." % (esc["id"], nombre),
-                  "Usa un hito real del calendario, o quita el campo.")]
-
-
 def validar(libro: Libro, sid: str) -> dict:
     esc = libro.escena(sid)
     if not esc:
@@ -215,13 +149,14 @@ def validar(libro: Libro, sid: str) -> dict:
                                   "Escribe la escena antes de validarla.")])
     texto = ruta.read_text(encoding="utf-8")
     bloques = parrafos(texto)
-    errores = (v1_fecha(libro, esc) + v2_orden(libro, esc) + v3_edad(libro, esc, texto)
-               + v4_cumple(libro, esc, texto) + v5_evento_unico(libro, esc, texto)
-               + v6_estado(libro, esc, texto) + v7_sabe(libro, esc, texto)
-               + v8_anacronismos(libro, texto) + v9_reales(libro, esc, texto)
+    errores = (v1_fecha(libro, esc) + v2_orden(libro, esc)
+               + v5_evento_unico(libro, esc, texto) + v6_estado(libro, esc, texto)
+               + v8_anacronismos(libro, texto)
                + v14_parrafos(libro, bloques) + v15_lineas(libro, bloques)
-               + v16_arco(libro) + v20_hito(libro, esc))
-    return salida(sid, errores, {"palabras": contar_palabras(texto), "parrafos": len(bloques)})
+               + v16_arco(libro))
+    return salida(sid, errores, {"palabras": contar_palabras(texto),
+                                 "parrafos": len(bloques),
+                                 "acto": libro.acto_de(esc)})
 
 
 def main(argv: list) -> int:
@@ -231,7 +166,7 @@ def main(argv: list) -> int:
     libro = Libro(argv[1])
     esc = libro.escena(argv[2])
     destino = libro.ruta_prosa(esc).with_suffix(".validation.json") if esc else None
-    return emitir(validar(libro, argv[2]), destino)
+    return emitir(validar(libro, argv[2]), destino, libro=libro, paso="G1")
 
 
 if __name__ == "__main__":

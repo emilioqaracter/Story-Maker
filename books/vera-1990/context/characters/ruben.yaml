@@ -1,9 +1,0 @@
-nombre: Ruben Alcaide
-nacimiento: '1968-01-30'
-rol: entrenador de la seleccion, primer ciclo a cargo
-estados:
-- desde: '1998-01-01'
-  hasta: '1998-12-31'
-  que: en actividad
-eventos_unicos: []
-sabe: []

@@ -1,4 +1,7 @@
 # El flujo declarado: quien trabaja, cuando, con que y contra que regla.
+#
+# Lo conduce Claude Code siguiendo la skill `dirigir-novela`. La UI lo lanza
+# con el mismo prompt; no hay un segundo camino.
 # Vive aca y no en la UI para que la pantalla no pueda contar una historia
 # distinta de la que corre. La traza real se compara contra esto.
 
@@ -7,36 +10,41 @@ fases:
     titulo: "Arranque"
     subtitulo: "una sola vez, antes de escribir una linea"
     pasos:
-      - agente: interviewer
+      - agente: orquestador
         tipo: modelo
-        que: "Hace las doce preguntas fijas y escribe intake.json"
-        skill: entrevistar
-        herramientas: [Read, Write, AskUserQuestion]
-        escribe: [context/intake.json]
-        opcional: true
-        nota: "En la UI lo reemplaza el formulario: las preguntas son fijas y de tipo conocido, asi que son un script."
+        que: "Convierte la idea en las respuestas del canon: deriva lo derivable y pregunta UNA vez solo lo que cambia el libro"
+        skill: preparar-libro
+        herramientas: [AskUserQuestion]
+        nota: "Sustituye a la entrevista de doce preguntas fijas (v8.1). Lo que se calcula no se pregunta; lo que se averigua tampoco."
+
+      - agente: crear_libro.py
+        tipo: script
+        que: "Escribe el canon inicial con las derivaciones de harness/derivaciones.py"
+        escribe: [context/premise.yaml, context/relacion.yaml, context/characters/*.yaml, context/timeline.yaml, context/calendario.yaml, config.yaml]
+        nota: "Mismo camino que usa la UI: server.crear(). Un solo sitio donde se deriva."
 
       - agente: researcher
         tipo: modelo
-        que: "Averigua la epoca: anacronismos, hitos del calendario y fuentes"
+        que: "Averigua la epoca: que no existia todavia y como se vivia entonces"
         skill: epoca
         herramientas: [WebSearch, WebFetch]
-        escribe: [context/epoca.yaml, context/calendario.yaml]
+        escribe: [context/epoca.yaml]
         opcional: true
-        nota: "Se salta si epoca.yaml ya trae anacronismos. Es el paso mas lento y el menos determinista."
+        nota: "Se salta si epoca.yaml ya trae anacronismos. Lo guarda guardar_plan.py: el agente no escribe YAML."
 
       - agente: planner
         tipo: modelo
-        que: "Rellena resumen y beats de cada escena. No escribe prosa"
+        que: "Reparte la historia en escenas respetando los tres actos. No escribe prosa"
         skill: resolver-canon
         lee: [context/premise.yaml, context/relacion.yaml, context/timeline.yaml]
         escribe: [context/timeline.yaml]
+        nota: "Devuelve resumen y beats; los guarda guardar_plan.py, que solo toca esos dos campos."
 
       - agente: validate_canon.py
         tipo: script
         puerta: G0
-        que: "El canon esta completo y el plan cabe bajo el techo"
-        reglas: [V21, V13, V16, "plan cabe"]
+        que: "El canon esta completo, el arco tiene sus tres actos y el plan cabe"
+        reglas: [V21, V13, "V16 arco", "plan cabe"]
         si_falla: "no se escribe una sola linea de prosa"
 
   - id: producir
@@ -81,8 +89,9 @@ fases:
       - agente: gate_scene.py
         tipo: script
         puerta: G2
-        que: "Suma la rubrica y aplica el umbral. El critico no decide"
-        reglas: ["veto de continuidad", "rubrica >= umbral", "cita en toda nota", "critica al dia"]
+        que: "Releva el veredicto del critico y comprueba que sea utilizable"
+        reglas: ["veredicto con motivo", "veto de continuidad", "cita en toda nota", "critica al dia"]
+        nota: "Desde la v9.0 decide el critico; este script ya no suma ni compara umbrales."
         si_falla: "vuelve al corrector con los errores concretos"
 
       - agente: corrector
@@ -95,7 +104,21 @@ fases:
       - agente: run_scene.py
         tipo: script
         que: "Marca aprobada, recuenta y comprueba que el final siga cabiendo"
-        nota: "Al cerrar capitulo avisa G3: la unica puerta humana."
+        nota: "Al cerrar capitulo avisa G3."
+
+      - agente: lector-capitulo
+        tipo: modelo
+        que: "Lee el capitulo seguido y senala lo que no se ve escena por escena"
+        herramientas: [Read]
+        solo_si: "la escena aprobada cierra un capitulo"
+        nota: "Devuelve hallazgos con cita. No decide si el capitulo pasa."
+
+      - agente: gate_chapter.py
+        tipo: script
+        puerta: G3
+        que: "Aplica el umbral del capitulo sobre la lectura"
+        reglas: ["escenas aprobadas", "presupuesto del capitulo", "cita que exista", "sin hallazgos bloqueantes"]
+        si_falla: "las escenas senaladas vuelven al bucle de correccion"
 
   - id: cierre
     titulo: "Cierre"
@@ -105,8 +128,14 @@ fases:
         tipo: script
         puerta: G4
         que: "Las tres condiciones del final"
-        reglas: [V10, V11, V12, V17, V18, V19, C1, C2, C3]
-        si_falla: "sigue produciendo, o para y pregunta"
+        reglas: [V10, V11, V12, "V17 tres actos", "V18 desenlace", C1, C2, C3]
+        si_falla: "replanifica lo que falte cerrar y vuelve al bucle"
+
+      - agente: reportar.py
+        tipo: script
+        que: "Manda a Langfuse la vista por escena: intentos, puertas y rubrica como scores"
+        opcional: true
+        nota: "Sin claves en .env no hace nada. El hook de Claude Code cuenta la otra mitad: la conversacion."
 
       - agente: compilar.py
         tipo: script

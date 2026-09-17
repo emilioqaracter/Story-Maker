@@ -1,6 +1,6 @@
 # Story-Maker
 
-Harness que escribe novelas románticas ambientadas en el deporte. El diseño
+Harness que escribe novelas deportivas: la historia de un atleta, en tres actos. El diseño
 completo y el porqué de cada decisión están en [SPEC.md](SPEC.md); esto es lo
 que hace falta saber para trabajar en el repo.
 
@@ -8,6 +8,21 @@ que hace falta saber para trabajar en el repo.
 de pruebas para **capas de control sobre un modelo**. La novela es la excusa;
 lo que se está construyendo son las puertas, los validadores y las rúbricas que
 deciden si lo que produjo un modelo entra o no entra.
+
+## Quien conduce
+
+**Claude Code.** El ciclo lo lleva la skill `dirigir-novela`: decide que escena
+toca, despacha los subagentes, corre las puertas y reacciona a lo que digan, de
+la idea a `novela.md` sin intervencion humana.
+
+Es el unico conductor: el bucle en Python se quito en la v9.0.
+
+Lo que **no** es suyo es el criterio de aceptacion. Los hechos los comprueba un
+script (G0, G1, G4) y no se discuten; el criterio lo pone otro agente (G2, G3).
+Lo que ninguno de los dos admite es que el orquestador decida que una escena
+esta bien.
+
+> Vos elegis el camino. El veredicto no lo pones vos.
 
 ## El principio
 
@@ -23,12 +38,12 @@ personaje, existen tramos con vigencia.
 Estas no son preferencias de estilo. Cada una está porque su ausencia rompió
 algo, y está documentada con su fecha en el historial del SPEC.
 
-1. **Ningún agente abre su propia puerta.** El escritor no decide si escribió
-   bien; el crítico no decide si la escena pasa; el planificador no decide si su
-   plan cabe. Emiten algo estructurado y un script aplica un umbral escrito.
+1. **Nadie abre su propia puerta.** El escritor no decide si escribió bien; el
+   planificador no decide si su plan cabe. El crítico **sí** decide si la escena
+   pasa (v9.0), pero sobre trabajo ajeno y sin ver los intentos anteriores.
 
-2. **Ningún agente escribe archivos.** Devuelven prosa o JSON y el script los
-   guarda. Un agente escribiendo YAML mete un `:` sin comillas y deja el canon
+2. **Ningún agente escribe el canon.** Devuelven prosa o JSON y un script lo
+   guarda (`guardar_plan.py`, `crear_libro.py`, `run_scene.py`). Un agente escribiendo YAML mete un `:` sin comillas y deja el canon
    ilegible; y pedirle que cree un archivo abre una superficie de permisos que
    falla en silencio. Hay un solo dueño del estado: el código.
 
@@ -79,22 +94,37 @@ Las cuatro formas de manejar el contexto, y para qué sirve cada una acá:
 | Puerta | Quién la abre | Qué comprueba |
 |---|---|---|
 | G0 canon | `validate_canon.py` | V21, V13, V16, que el plan quepa |
-| G1 hechos | `validate_scene.py` | V1-V9, V14-V16, V20 |
-| G2 criterio | `gate_scene.py` | veto de continuidad + rúbrica con citas + crítica al día |
-| G3 capítulo | **una persona** | lo lee |
-| G4 obra | `validate_book.py` | V10-V12, V17-V19 + las tres condiciones |
+| G1 hechos | `validate_scene.py` | V1, V2, V5, V6, V8, V14-V16 |
+| G2 criterio | **`critic-quality`** | decide `pasa` con motivo; `gate_scene.py` releva y comprueba veto, citas y que la crítica sea del texto actual |
+| G3 capítulo | `gate_chapter.py` | lo lee `lector-capitulo`; el script aplica el umbral |
+| G4 obra | `validate_book.py` | V10-V12, los tres actos, el desenlace + las tres condiciones |
 
 G1 corre siempre antes que G2: es determinista y gratis, y filtrar ahí antes de
 convocar dos críticos es lo que mantiene el ciclo barato.
 
 ## Ver como funciono
 
-`reports/traza.jsonl` guarda un evento por paso: agente, fase, escena, intento,
-duracion, tokens reales y costo, y las puertas con **sus errores**. Se escribe
-en el momento, no al final: si el ciclo se corta, lo que paso hasta ahi queda.
+`reports/traza.jsonl` guarda un evento por puerta: cual, si abrio y **con que
+errores** si no. Lo escribe cada validador al emitir su JSON, en el momento: si
+el ciclo se corta, lo que paso hasta ahi queda.
 
-En la UI es la pestana «Como funciono» de cada libro. Los tokens salen de
-`claude -p --output-format json`, no de una estimacion.
+En la UI es la pestana «Como funciono» de cada libro.
+
+### El espejo en Langfuse (opcional)
+
+Dos vistas, dos preguntas distintas:
+
+- **Por conversación** — el hook oficial de Claude Code: cada turno con sus tool
+  calls, tokens y costo. Cuenta *cómo trabajó el agente*.
+- **Por novela** — `harness/scripts/reportar.py`: una sesión por libro, una
+  traza por escena con sus intentos y sus puertas, y el veredicto y la rúbrica
+  como **scores**. Cuenta *cómo salió el libro*, y es lo que deja comparar
+  corridas entre sí.
+
+`reports/traza.jsonl` sigue siendo la dueña de la traza local, y la escriben las
+propias puertas al emitir (`common.emitir`). Langfuse es un espejo y **no puede
+romper nada**: sin claves en `.env`, sin el paquete o sin red, no se manda nada
+y el ciclo ni se entera. Para encenderlo: `cp .env.example .env`.
 
 `harness/flujo.yaml` declara el flujo entero: quien trabaja, en que orden, con
 que skill, que herramientas y contra que regla. La ventana «Flujo de trabajo»
@@ -104,15 +134,6 @@ actualizalo ahi: es lo que evita que la pantalla cuente otra historia.
 **El servidor no recarga codigo.** Si tocas `harness/server.py` o los scripts,
 reinicialo. La UI avisa si detecta un servidor viejo.
 
-## Ver como funciono
-
-`reports/traza.jsonl` guarda un evento por paso: agente, fase, escena, intento,
-duracion, tokens reales y costo, y las puertas con **sus errores**. Se escribe
-en el momento, no al final: si el ciclo se corta, lo que paso hasta ahi queda.
-
-En la UI es la pestana «Como funciono» de cada libro. Los tokens salen de
-`claude -p --output-format json`, no de una estimacion.
-
 ## Estructura
 
 ```
@@ -120,17 +141,26 @@ En la UI es la pestana «Como funciono» de cada libro. Los tokens salen de
 harness/     config y scripts      /
 books/<slug>/  context · manuscript · reports · state.json   una novela
 tests/       una escena-trampa por regla
+ui/          interfaz React sobre harness/server.py
 ```
+
+La explicación completa del repo —qué hace cada agente, cada skill y cada
+script— está en [README.md](README.md).
 
 Los scripts reciben la ruta del libro como argumento. **No hay libro «actual».**
 
 ## Comandos
 
+El camino por defecto no es un comando: es pedirmelo.
+
+    > escribi una novela de ciclismo en 1985
+    > segui con books/marco-1990
+
+Eso invoca `dirigir-novela`. Lo demas son scripts:
+
 ```bash
-python -m pytest tests -q          # 56 tests, sin red ni tokens
-python demo.py                     # corre el harness entero y lo explica
-python nuevo_libro.py              # entrevista y crea un libro
-python crear_novela.py books/<slug> # encadena todo: escribe, critica, compila
+python -m pytest tests -q          # 55 tests, sin red ni tokens
+python harness/scripts/crear_libro.py x.json   # crea un libro sin preguntar nada
 ```
 
 Con interfaz:
@@ -145,7 +175,8 @@ Vite sirve en :5273 y proxea `/api` al servidor.
 
 La UI no decide nada. Crea el canon y lanza los mismos scripts; las puertas
 siguen siendo de ellos. `harness/server.py` es un envoltorio delgado sobre
-`harness/scripts/` y sobre `nuevo_libro.py`: no hay dos caminos para lo mismo.
+`harness/scripts/` y sobre `harness/derivaciones.py`: no hay dos caminos para
+lo mismo.
 
 Del ciclo, por partes:
 
@@ -154,6 +185,7 @@ python harness/scripts/run_scene.py      books/<slug> next
 python harness/scripts/resolver_canon.py books/<slug> S001
 python harness/scripts/validate_scene.py books/<slug> S001
 python harness/scripts/gate_scene.py     books/<slug> S001
+python harness/scripts/gate_chapter.py   books/<slug> 1     # la lectura por stdin
 python harness/scripts/validate_book.py  books/<slug>
 python harness/scripts/run_scene.py      books/<slug> reset   # volver a empezar
 ```
@@ -163,7 +195,7 @@ prosa, las criticas, el estado y el entregable. El canon no se toca nunca.
 
 ## Al trabajar acá
 
-- **Cada cambio del SPEC se registra en su historial (§15), en la misma
+- **Cada cambio del SPEC se registra en su historial (§16), en la misma
   entrega.** Con versión, fecha, qué cambió y **por qué**. El log de git guarda
   el qué; el porqué de una decisión de diseño solo vive ahí.
 - Los tests primero cuando se agrega una regla: escribir la escena-trampa,
@@ -177,5 +209,5 @@ prosa, las criticas, el estado y el entregable. El canon no se toca nunca.
 ## Lo que NO está en el camino crítico
 
 La investigación por internet (`researcher`) es opcional: si `epoca.yaml` ya
-tiene anacronismos, `crear_novela.py` no la toca. Un libro con el canon escrito
+tiene anacronismos, el arranque no la toca. Un libro con el canon escrito
 a mano va derecho al ciclo de redacción, que es lo que importa que funcione.

@@ -1,0 +1,2 @@
+{"t": "2026-09-16T17:50:27", "paso": "G0", "ms": 0, "tipo": "puerta", "agente": "G0", "ok": true, "errores": [], "suma": null, "umbral": null, "palabras": null, "escena": "canon"}
+{"t": "2026-09-16T17:52:30", "paso": "G1", "ms": 0, "tipo": "puerta", "agente": "G1", "ok": true, "errores": [], "suma": null, "umbral": null, "palabras": 150, "escena": "S001"}

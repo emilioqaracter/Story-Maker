@@ -10,7 +10,7 @@
       "nota": 2,
       "cita": "Dejó el parte firmado sobre el banco y encima puso otra hoja."
     },
-    "dialogo": {
+    "voz": {
       "nota": 2,
       "cita": "—Tu hermano dejó la cancha solo. Vos no —agregó, y se sentó."
     },
@@ -22,9 +22,13 @@
       "nota": 1,
       "cita": "Se quedaron ahí, hombro con hombro"
     },
-    "quimica": {
+    "avance": {
       "nota": 2,
       "cita": "Después Marco juntó las dos hojas y se las guardó en el bolsillo."
     }
+  },
+  "veredicto": {
+    "pasa": true,
+    "motivo": "la escena cierra los dos hilos y paga el precio anunciado"
   }
 }

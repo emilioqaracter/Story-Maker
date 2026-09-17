@@ -7,6 +7,9 @@ Una sola voz para el libro entero. No hay variantes por tipo de escena: una
 escena de accion y una intima se diferencian en **que pasa**, no en quien las
 narra.
 
+La novela es de un protagonista: **el punto de vista es suyo y no se mueve**.
+Lo que sienten los demas se ve desde fuera, en lo que hacen.
+
 Antes de escribir, leé dos cosas: el canon resuelto (`resolver-canon`) y
 `context/voz.md`, la muestra de como suena este libro.
 
@@ -16,7 +19,7 @@ Antes de escribir, leé dos cosas: el canon resuelto (`resolver-canon`) y
 - La emocion no se nombra: se ve en lo que el cuerpo hace mientras habla.
 - El deporte es oficio, no espectaculo: desde dentro, con su ruido y su
   cansancio, nunca como lo narraria una transmision.
-- El dialogo no informa al lector de nada que los dos ya sepan.
+- El dialogo no informa al lector de nada que los que hablan ya sepan.
 - Lo que no se dice pesa mas que lo que se dice. Las frases cortas cierran.
 - Nada de metaforas de manual: ni corazones que laten fuerte, ni miradas que se
   cruzan, ni tiempos que se detienen.

@@ -1,9 +1,0 @@
-entre: [irene, damian]
-encuentro: "El va a hacerle una nota de dos preguntas y ella lo deja esperando una hora en el tunel"
-obstaculo: "El tiene la primicia de que el club vende la plaza del equipo femenino: publicarla le da la carrera, callarla la protege a ella"
-etapas:
-  - { etapa: desconocidos, desde: 2015-01-01 }
-  - { etapa: atraccion,    desde: 2015-03-10 }
-  - { etapa: intimidad,    desde: 2015-06-05 }
-  - { etapa: ruptura,      desde: 2015-08-16 }
-  - { etapa: union,        desde: 2015-11-07 }

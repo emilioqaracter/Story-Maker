@@ -41,11 +41,22 @@ def salida(nombre: str, errores: list[Error], extra: dict | None = None) -> dict
     return d
 
 
-def emitir(res: dict, destino: Path | None = None) -> int:
+def emitir(res: dict, destino: Path | None = None, libro=None,
+           paso: str = "", ms: int = 0) -> int:
+    """La unica salida de todos los validadores: imprime, guarda y deja traza.
+
+    Anotar la traza aqui, y no en quien conduce el ciclo, es lo que hace que el
+    rastro no dependa de quien lo corra: el mismo evento sale con Claude Code
+    dirigiendo y con el conductor en Python. Y si manana hay una puerta nueva,
+    se anota sola: si emite, queda registrada."""
     texto = json.dumps(res, ensure_ascii=False, indent=2)
     if destino:
         destino.parent.mkdir(parents=True, exist_ok=True)
         destino.write_text(texto + "\n", encoding="utf-8")
+    if libro is not None:
+        from traza import anotar_puerta
+        anotar_puerta(getattr(libro, "dir", libro),
+                      paso or res.get("puerta") or res.get("objeto") or "?", res, ms)
     print(texto)
     return 0 if res["ok"] else 1
 
@@ -96,10 +107,8 @@ class Libro:
             if (self.ctx / "intake.json").exists() else None
         self.premise = _yaml(self.ctx / "premise.yaml") or {}
         self.epoca = _yaml(self.ctx / "epoca.yaml") or {}
-        self.calendario = _yaml(self.ctx / "calendario.yaml") or {}
-        self.relacion = _yaml(self.ctx / "relacion.yaml") or {}
+        self.arco = _yaml(self.ctx / "arco.yaml") or {}
         self.timeline = _yaml(self.ctx / "timeline.yaml") or {"escenas": []}
-        self.reales = _yaml(self.ctx / "real-figures.yaml") or []
         self.personajes = {}
         d = self.ctx / "characters"
         if d.exists():
@@ -139,8 +148,13 @@ class Libro:
         return self.dir / "manuscript" / f"ch{esc['capitulo']:02d}" / f"{esc['id']}.md"
 
     @property
-    def protagonistas(self) -> list[str]:
-        return list(self.relacion.get("entre") or [])
+    def protagonista(self) -> str:
+        """Uno solo. La novela es de el; los demas son personajes."""
+        return self.arco.get("protagonista") or ""
+
+    def acto_de(self, esc: dict) -> str | None:
+        """El acto de una escena se calcula por su fecha. No se declara."""
+        return acto_en(self.arco, fecha(esc.get("fecha")))
 
 
 # --------------------------------------------------------------------------- #
@@ -180,13 +194,19 @@ def sabe_en(personaje: dict, en: _dt.date) -> list[dict]:
             if (f := fecha(s.get("desde"))) and f <= en]
 
 
-def etapa_en(relacion: dict, en: _dt.date) -> str | None:
-    """La etapa de la pareja se calcula a una fecha, igual que la edad."""
+def acto_en(arco: dict, en: _dt.date) -> str | None:
+    """En que acto cae una fecha. Se calcula, no se guarda.
+
+    Sustituye a `etapa_en`, que devolvia la etapa de la pareja: desde la v9.0
+    la novela es de un solo protagonista y lo que avanza no es una relacion,
+    es su historia."""
+    if not en:
+        return None
     actual = None
-    for tramo in relacion.get("etapas") or []:
+    for tramo in arco.get("actos") or []:
         d = fecha(tramo.get("desde"))
         if d and d <= en:
-            actual = tramo.get("etapa")
+            actual = tramo.get("acto")
     return actual
 
 

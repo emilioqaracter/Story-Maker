@@ -10,6 +10,7 @@ siguen siendo los mismos scripts que corren en la terminal.
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 import sys
 import threading
@@ -27,8 +28,10 @@ sys.path.insert(0, str(SCRIPTS))
 sys.path.insert(0, str(RAIZ))
 import yaml  # noqa: E402
 from common import Libro, contar_palabras, cargar_config  # noqa: E402
+
+CONFIG = cargar_config()
 import traza as TZ  # noqa: E402
-import nuevo_libro as NL  # noqa: E402
+import derivaciones as NL  # noqa: E402
 
 PUERTO = 8770
 # Se sirve en /api/config. Un servidor de larga vida corriendo codigo viejo es
@@ -104,7 +107,7 @@ def script(nombre: str, *args) -> dict:
 # --------------------------------------------------------------------------- #
 def crear(datos: dict) -> dict:
     """Escribe el canon de un libro nuevo. Las mismas derivaciones que usa
-    nuevo_libro.py en la terminal: no hay dos caminos para lo mismo."""
+    `harness/scripts/crear_libro.py`: no hay dos caminos para lo mismo."""
     slug = (datos.get("slug") or "").strip().lower().replace(" ", "-")
     if not slug or not slug.replace("-", "").replace("_", "").isalnum():
         return {"ok": False, "error": "El nombre de carpeta solo admite letras, numeros y guiones."}
@@ -114,57 +117,76 @@ def crear(datos: dict) -> dict:
 
     est = datos["estructura"]
     r = datos["respuestas"]
-    ka, kb = NL.clave(r["persona_a"]["nombre"]), NL.clave(r["persona_b"]["nombre"])
+    prot = NL.clave(r["protagonista"]["nombre"])
+    secundarios = r.get("secundarios") or []
     ctx = destino / "context"
     (ctx / "characters").mkdir(parents=True, exist_ok=True)
     (destino / "manuscript").mkdir(parents=True, exist_ok=True)
     (destino / "reports").mkdir(parents=True, exist_ok=True)
 
     (ctx / "intake.json").write_text(json.dumps(
-        {"version": 1, "fecha": datos.get("fecha", ""), "respuestas": r,
+        {"version": 2, "fecha": datos.get("fecha", ""), "respuestas": r,
          "pendiente_investigar": []}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
     NL.escribir_yaml(destino / "config.yaml", {"estructura": est})
     NL.escribir_yaml(ctx / "premise.yaml", {
-        "eje": datos.get("eje") or "%s en %s" % (r["persona_a"]["rol"], r["epoca"]["desde"][:4]),
+        "eje": datos.get("eje") or "%s en %s" % (r["protagonista"]["rol"], r["epoca"]["desde"][:4]),
         "titulo": datos.get("titulo") or slug.replace("-", " ").title(),
         "deporte": r["deporte"], "lugar": r["lugar"], "epoca": r["epoca"],
         "estilo": "Tercera persona, pasado.",
-        "pregunta_dramatica": "Que renuncia %s: %s. Y %s: %s." % (
-            r["persona_a"]["nombre"].split()[0], r["precio"]["a"],
-            r["persona_b"]["nombre"].split()[0], r["precio"]["b"]),
+        "pregunta_dramatica": "%s quiere %s. Le va a costar %s." % (
+            r["protagonista"]["nombre"].split()[0], r["meta"], r["precio"]),
         "hilos": [{"id": "H1", "que": r["hilos"][0]}, {"id": "H2", "que": r["hilos"][1]}]})
     NL.escribir_yaml(ctx / "epoca.yaml", {
         "anio": int(r["epoca"]["desde"][:4]),
         "prohibido": datos.get("prohibido") or [],
         "existia": [], "notas": datos.get("notas_epoca") or "",
         "fuentes": datos.get("fuentes") or []})
-    NL.escribir_yaml(ctx / "calendario.yaml", {
-        "deporte": r["deporte"], "nivel": r["nivel"],
-        "temporada": r["epoca"], "hitos": []})
-    NL.escribir_yaml(ctx / "relacion.yaml", NL.derivar_relacion(ka, kb, r["epoca"], r))
-    NL.escribir_yaml(ctx / "characters" / (ka + ".yaml"), NL.derivar_personaje(r["persona_a"], r["epoca"]))
-    NL.escribir_yaml(ctx / "characters" / (kb + ".yaml"), NL.derivar_personaje(r["persona_b"], r["epoca"]))
-    NL.escribir_yaml(ctx / "real-figures.yaml", [])
+    NL.escribir_yaml(ctx / "arco.yaml", NL.derivar_arco(
+        prot, r["epoca"], r, CONFIG["genero"]["reparto"]))
+    NL.escribir_yaml(ctx / "characters" / (prot + ".yaml"),
+                     NL.derivar_personaje(r["protagonista"], r["epoca"]))
+    for s in secundarios:
+        NL.escribir_yaml(ctx / "characters" / (NL.clave(s["nombre"]) + ".yaml"),
+                         NL.derivar_personaje(s, r["epoca"]))
     NL.escribir_yaml(ctx / "timeline.yaml", NL.derivar_timeline(
-        est["capitulos"], est["escenas_por_capitulo"], r["epoca"], r["lugar"], [ka, kb]))
+        est["capitulos"], est["escenas_por_capitulo"], r["epoca"], r["lugar"],
+        [prot] + [NL.clave(s["nombre"]) for s in secundarios]))
     (ctx / "voz.md").write_text(
         (RAIZ / "harness" / "voz-base.md").read_text(encoding="utf-8"), encoding="utf-8")
 
     return {"ok": True, "slug": slug, "g0": script("validate_canon.py", "books/" + slug)}
 
 
+# En Windows `claude` es un shim .cmd: hay que resolverlo con which, porque
+# pasar el comando por shell rompe el comillado en cuanto lleva saltos.
+CLAUDE = shutil.which("claude")
+
+
 def lanzar(slug: str) -> dict:
     """Corre el ciclo en segundo plano. La UI hace polling del log: el proceso
-    tarda minutos y no tiene sentido bloquear una peticion HTTP."""
+    tarda minutos y no tiene sentido bloquear una peticion HTTP.
+
+    Lanza Claude Code sin sesion interactiva, siguiendo la skill
+    `dirigir-novela`: decide que toca, despacha subagentes y acata lo que digan
+    las puertas. Es el unico conductor desde la v9.0."""
     if slug in _corriendo and _corriendo[slug].poll() is None:
         return {"ok": False, "error": "Ya esta corriendo."}
+    if not CLAUDE:
+        return {"ok": False, "error": "No encuentro el ejecutable `claude` en el PATH."}
+
     LOGS.mkdir(parents=True, exist_ok=True)
-    log = LOGS / (slug + ".log")
-    fh = log.open("w", encoding="utf-8")
-    _corriendo[slug] = subprocess.Popen(
-        [sys.executable, str(RAIZ / "crear_novela.py"), "books/" + slug],
-        stdout=fh, stderr=subprocess.STDOUT, cwd=RAIZ)
+    fh = (LOGS / (slug + ".log")).open("w", encoding="utf-8")
+    # El prompt va por stdin y no como argumento: el shim .cmd de Windows corta
+    # el argumento en el primer salto de linea.
+    proc = subprocess.Popen(
+        [CLAUDE, "-p", "--permission-mode", "acceptEdits", "--add-dir", str(RAIZ)],
+        stdin=subprocess.PIPE, stdout=fh, stderr=subprocess.STDOUT,
+        cwd=RAIZ, text=True, encoding="utf-8")
+    proc.stdin.write("Escribi la novela de books/%s de punta a punta, "
+                     "siguiendo la skill dirigir-novela." % slug)
+    proc.stdin.close()
+    _corriendo[slug] = proc
     return {"ok": True, "slug": slug}
 
 

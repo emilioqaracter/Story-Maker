@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from common import (Error, Libro, contar_palabras, emitir, etapa_en, fecha,  # noqa: E402
+from common import (Error, Libro, contar_palabras, emitir, fecha,  # noqa: E402
                     libro_de_argv, salida)
 
 
@@ -82,54 +82,50 @@ def v12_techo(libro: Libro) -> list:
     return errores
 
 
-def v17_una_crisis(libro: Libro) -> list:
-    tramos = libro.relacion.get("etapas") or []
-    rupturas = [t for t in tramos if t.get("etapa") == "ruptura"]
-    intimidades = [t for t in tramos if t.get("etapa") == "intimidad"]
-    if len(rupturas) != 1:
-        return [Error("V17", "Hay %d rupturas declaradas y tiene que haber exactamente una." % len(rupturas),
-                      "La crisis del genero es una sola: ajusta relacion.yaml.")]
-    if intimidades:
-        fr, fi = fecha(rupturas[0].get("desde")), fecha(intimidades[0].get("desde"))
-        if fr and fi and fr <= fi:
-            return [Error("V17", "La ruptura (%s) no es posterior a la intimidad (%s)." % (fr, fi),
-                          "La crisis va despues del punto de mayor intimidad, o no es una crisis.")]
+def v17_tres_actos(libro: Libro) -> list:
+    """Los tres actos tienen escenas aprobadas, y el ultimo es el desenlace.
+
+    Sustituye a la comprobacion de que hubiera una sola crisis de pareja. Lo
+    que se pide ahora es lo que pide cualquier novela: que la historia tenga
+    sus tres tiempos y no se quede a medias en el segundo."""
+    orden = libro.config["genero"]["actos"]
+    aprobadas = _aprobadas(libro)
+    if not aprobadas:
+        return [Error("V17", "No hay ninguna escena aprobada.", "Produce antes de cerrar.")]
+    if len(libro.escenas) < len(orden):
+        return []          # un documento mas corto que el arco no puede cubrirlo
+    por_acto = {}
+    for esc in aprobadas:
+        por_acto.setdefault(libro.acto_de(esc), []).append(esc["id"])
+    vacios = [a for a in orden if not por_acto.get(a)]
+    if vacios:
+        return [Error(
+            "V17", "Estos actos no tienen ninguna escena aprobada: %s." % ", ".join(vacios),
+            "Un libro sin %s no esta terminado: %s." % (
+                vacios[0], libro.config["genero"]["exige"].get(vacios[0], "falta ese tiempo")))]
     return []
 
 
-def v18_promesa(libro: Libro) -> list:
-    obligatoria = libro.config["genero"]["etapa_final_obligatoria"]
+def v18_desenlace(libro: Libro) -> list:
+    """La ultima escena aprobada cae en el desenlace y cierra lo que quedaba.
+
+    El equivalente a la vieja promesa del genero romantico (`acaban juntos`),
+    pero para una novela de un solo protagonista: lo que se prometio al
+    principio —una meta, un precio— se resuelve al final y no antes."""
+    orden = libro.config["genero"]["actos"]
     aprobadas = _aprobadas(libro)
     if not aprobadas:
         return [Error("V18", "No hay ninguna escena aprobada.", "Produce antes de cerrar.")]
-    ultima = _orden(aprobadas)[-1]
-    f = fecha(ultima.get("fecha"))
-    etapa = etapa_en(libro.relacion, f) if f else None
-    if etapa != obligatoria:
-        return [Error(
-            "V18",
-            "La ultima escena (%s, %s) deja la relacion en '%s' y el genero exige '%s'."
-            % (ultima["id"], f, etapa, obligatoria),
-            "En romance, que acaben juntos no es una decision narrativa: es la promesa del genero.")]
-    return []
-
-
-def v19_coinciden(libro: Libro) -> list:
-    prot = libro.protagonistas
-    if len(prot) < 2:
+    if len(libro.escenas) < len(orden):
         return []
-    limite = libro.config["ciclo"]["escenas_sin_coincidir_max"]
-    racha, peor = 0, 0
-    for esc in _orden(libro.escenas):
-        presentes = set(esc.get("presentes") or [])
-        if set(prot) <= presentes:
-            racha = 0
-        else:
-            racha += 1
-            peor = max(peor, racha)
-    if peor > limite:
-        return [Error("V19", "Los protagonistas pasan %d escenas seguidas sin coincidir (maximo %d)." % (peor, limite),
-                      "Es una romance: si la pareja no comparte escena, la novela se desarmo.")]
+    ultima = _orden(aprobadas)[-1]
+    acto = libro.acto_de(ultima)
+    if acto != orden[-1]:
+        return [Error(
+            "V18", "La ultima escena aprobada (%s, %s) cae en '%s' y no en '%s'."
+                   % (ultima["id"], ultima.get("fecha"), acto, orden[-1]),
+            "La novela no puede terminar antes del desenlace: %s."
+            % libro.config["genero"]["exige"].get(orden[-1], "ahi se resuelve la meta"))]
     return []
 
 
@@ -137,7 +133,7 @@ def condiciones(libro: Libro) -> dict:
     forma = libro.forma
     sin_aprobar = [e["id"] for e in libro.escenas if e.get("estado") != "aprobada"]
     escritas = palabras_escritas(libro)
-    c3 = not (v10_hilos_cierran(libro) + v18_promesa(libro))
+    c3 = not (v10_hilos_cierran(libro) + v18_desenlace(libro))
     return {
         "C1_estructura": {"ok": not sin_aprobar, "sin_aprobar": sin_aprobar},
         "C2_techo": {"ok": escritas <= forma["techo_palabras"],
@@ -162,12 +158,14 @@ def cabe_el_final(libro: Libro) -> dict:
 def main(argv: list) -> int:
     libro = libro_de_argv(argv, "validate_book.py books/<slug>")
     errores = (v10_hilos_cierran(libro) + v11_hilos_declarados(libro) + v12_techo(libro)
-               + v17_una_crisis(libro) + v18_promesa(libro) + v19_coinciden(libro))
+               + v17_tres_actos(libro) + v18_desenlace(libro))
     cond = condiciones(libro)
     extra = {"condiciones": cond, "regulador": cabe_el_final(libro), "forma": libro.forma,
+             "actos": {a: [e["id"] for e in _aprobadas(libro) if libro.acto_de(e) == a]
+                       for a in libro.config["genero"]["actos"]},
              "termina": all(c["ok"] for c in cond.values()) and not errores}
     destino = libro.dir / "reports" / "final.json"
-    return emitir(salida("obra", errores, extra), destino)
+    return emitir(salida("obra", errores, extra), destino, libro=libro, paso="G4")
 
 
 if __name__ == "__main__":

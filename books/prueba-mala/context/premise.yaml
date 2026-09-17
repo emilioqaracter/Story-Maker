@@ -1,14 +1,15 @@
-# Derivado de intake.json por el planner. No se escribe a mano.
-eje: "Un futbolista en 1990"
-titulo: "El parte medico"
+eje: Un futbolista en 1990
+titulo: El parte medico
 deporte: futbol
-lugar: "Rosario, Argentina"
-epoca: { desde: 1990-01-01, hasta: 1990-12-31 }
-
-estilo: "Tercera persona, pasado, espanol rioplatense."
-
-pregunta_dramatica: "Que renuncia Marco para quedarse con Sofia: la ultima temporada de su carrera."
-
+lugar: Rosario, Argentina
+epoca:
+  desde: 1990-01-01
+  hasta: 1990-12-31
+estilo: Tercera persona, pasado, espanol rioplatense.
+pregunta_dramatica: Marco quiere jugar la final antes de que se le acabe el contrato.
+  Le va a costar la ultima temporada de su carrera.
 hilos:
-  - { id: H1, que: "la deuda que el club tiene con los jugadores" }
-  - { id: H2, que: "el hermano que dejo de jugar y no volvio a la cancha" }
+- id: H1
+  que: la deuda que el club tiene con los jugadores
+- id: H2
+  que: el hermano que dejo de jugar y no volvio a la cancha

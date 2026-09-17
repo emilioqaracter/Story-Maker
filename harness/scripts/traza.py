@@ -55,6 +55,42 @@ def uso(salida: dict) -> dict:
             "cache_leida": u.get("cache_read_input_tokens", 0)}
 
 
+def anotar_puerta(dir_libro, paso: str, res: dict, ms: int = 0) -> None:
+    """Un evento de puerta, escrito por el script que la aplica.
+
+    Vive aca y no en el conductor porque hay dos conductores: Claude Code
+    siguiendo `dirigir-novela` y `legado/crear_novela.py`. Si la traza la
+    escribiera el conductor, la mitad del sistema no dejaria rastro segun quien
+    lo corriera — y una metrica que depende de quien mira no es una metrica.
+
+    Lo que el script NO puede anotar es lo que hizo el modelo: eso no pasa por
+    aca. Del camino agentico lo cuenta Langfuse; del camino en Python, el
+    conductor. La division es limpia: **aqui lo que hizo el codigo**, alli lo
+    que hizo el modelo."""
+    try:
+        Traza(Path(dir_libro)).evento(
+            paso, tipo="puerta", agente=paso, ok=bool(res.get("ok")), ms=ms,
+            errores=res.get("errores") or [],
+            suma=res.get("suma"), umbral=res.get("umbral"),
+            palabras=res.get("palabras"), escena=res.get("objeto"))
+    except Exception:                       # noqa: BLE001
+        pass                                # la traza nunca tumba una puerta
+
+
+def modelo(salida: dict) -> str | None:
+    """Que modelo trabajo, segun `claude -p --output-format json`.
+
+    No viene en un campo de primer nivel: viene como las CLAVES de `modelUsage`,
+    porque una sola llamada puede tocar varios (el principal y el barato de las
+    tareas auxiliares). Manda el que mas salida genero, que es el que hizo el
+    trabajo. Sin esto el modelo queda vacio y no se puede comparar entre
+    versiones: es el dato del que cuelga el precio."""
+    mu = (salida or {}).get("modelUsage") or {}
+    if not mu:
+        return (salida or {}).get("model") or None
+    return max(mu, key=lambda k: (mu[k] or {}).get("outputTokens", 0))
+
+
 def leer(dir_libro: Path) -> list:
     ruta = Path(dir_libro) / "reports" / "traza.jsonl"
     if not ruta.exists():

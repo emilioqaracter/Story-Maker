@@ -77,11 +77,16 @@ function Libro({ libro, abierto, alternar, refrescar }) {
     api.traza(libro.slug).then(setTraza)
   }, [abierto, libro.slug, libro.aprobadas])
 
+  // Un solo conductor: Claude Code siguiendo la skill `dirigir-novela`. El
+  // bucle en Python se quito del repo en la v9.0.
   async function correr() {
     const r = await api.correr(libro.slug)
     if (r.ok) {
       setCorriendo(true)
       setPestana('traza')
+    } else if (r.error) {
+      setLog(r.error)
+      setPestana('log')
     }
   }
 
@@ -122,11 +127,12 @@ function Libro({ libro, abierto, alternar, refrescar }) {
         <div className="detalle">
           <div className="acciones">
             <button className="primario" onClick={correr} disabled={corriendo}>
-              {corriendo ? 'Corriendo…' : 'Correr el ciclo'}
+              {corriendo ? 'Corriendo…' : 'Escribir con Claude Code'}
             </button>
             <button onClick={reiniciar} disabled={corriendo}>Reset</button>
             <span className="nota">
-              Reset borra prosa, criticas, traza y estado. No toca el canon.
+              Claude Code conduce el ciclo entero. Reset borra prosa, criticas,
+              traza y estado — el canon no se toca.
             </span>
           </div>
 

@@ -1,9 +1,0 @@
-nombre: Tomas Bentancur
-nacimiento: '1966-09-12'
-rol: utilero del estadio
-estados:
-- desde: '1994-01-01'
-  hasta: '1994-12-31'
-  que: en actividad
-eventos_unicos: []
-sabe: []

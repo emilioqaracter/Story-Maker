@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import copy
 import json
+import os
 import shutil
 import sys
 from pathlib import Path
@@ -69,8 +70,11 @@ def prosa(dir_libro: Path) -> str:
     return (dir_libro / "manuscript" / "ch01" / (SID + ".md")).read_text(encoding="utf-8")
 
 
-def reglas(res: dict) -> set:
-    return {e["regla"] for e in res["errores"]}
+def reglas(res) -> set:
+    """Las reglas que fallaron. Acepta el JSON de un validador o la lista de
+    Error que devuelve una regla suelta."""
+    lista = res["errores"] if isinstance(res, dict) else res
+    return {(e["regla"] if isinstance(e, dict) else e.regla) for e in lista}
 
 
 def reglas_escena(dir_libro: Path) -> set:
@@ -86,7 +90,7 @@ def test_el_fixture_pasa_las_cuatro_puertas(dir_libro):
     critica = json.loads((dir_libro / "manuscript" / "ch01" / (SID + ".critique.json")).read_text("utf-8"))
     assert G.evaluar(L, SID, critica)["ok"], "G2 deberia abrir"
     errores = (B.v10_hilos_cierran(L) + B.v11_hilos_declarados(L) + B.v12_techo(L)
-               + B.v17_una_crisis(L) + B.v18_promesa(L) + B.v19_coinciden(L))
+               + B.v17_tres_actos(L) + B.v18_desenlace(L))
     assert not errores, [e.mensaje for e in errores]
     assert all(c["ok"] for c in B.condiciones(L).values())
 
@@ -128,18 +132,6 @@ def test_v2_el_flashback_declarado_no_es_un_error(dir_libro):
     assert "V2" not in reglas_escena(dir_libro)
 
 
-def test_v3_la_edad_no_coincide_con_el_nacimiento(dir_libro):
-    escribir_prosa(dir_libro, prosa(dir_libro).replace(
-        "Marco se ató los botines despacio, dos veces cada uno, sin mirar.",
-        "Marco tenía 35 años y se ató los botines despacio, sin mirar."))
-    assert "V3" in reglas_escena(dir_libro)
-
-
-def test_v4_el_cumpleanos_cae_en_otra_fecha(dir_libro):
-    escribir_prosa(dir_libro, prosa(dir_libro).replace(
-        "Sofía entró con la carpeta bajo el brazo y cerró la puerta.",
-        "Sofía entró con una torta: era el cumpleaños de Marco y nadie lo sabía."))
-    assert "V4" in reglas_escena(dir_libro)
 
 
 def test_v5_un_evento_unico_se_narra_dos_veces(dir_libro):
@@ -159,15 +151,6 @@ def test_v6_hace_algo_que_su_estado_impide(dir_libro):
     assert "V6" in reglas_escena(dir_libro)
 
 
-def test_v7_reacciona_a_algo_que_todavia_no_sabe(dir_libro):
-    t = leer_yaml(dir_libro, "timeline.yaml")
-    t["escenas"][0]["fecha"] = "1990-07-01"          # antes del 25 de noviembre
-    escribir_yaml(dir_libro, "timeline.yaml", t)
-    escribir_prosa(dir_libro, prosa(dir_libro).replace(
-        "Era su licencia del colegio médico, doblada en dos.",
-        "Marco ya sabía lo del parte y no dijo una sola palabra."))
-    assert "V7" in reglas_escena(dir_libro)
-
 
 def test_v8_anacronismo_de_la_lista_prohibida(dir_libro):
     escribir_prosa(dir_libro, prosa(dir_libro).replace(
@@ -176,36 +159,6 @@ def test_v8_anacronismo_de_la_lista_prohibida(dir_libro):
     assert "V8" in reglas_escena(dir_libro)
 
 
-def test_v9_persona_real_fuera_de_su_vida(dir_libro):
-    escribir_yaml(dir_libro, "real-figures.yaml", [
-        {"nombre": "Obdulio Varela", "wikipedia": "https://es.wikipedia.org/wiki/Obdulio_Varela",
-         "nacimiento": "1917-09-20", "muerte": "1996-08-02"},
-        {"nombre": "Zinedine Zidane", "wikipedia": "https://es.wikipedia.org/wiki/Zinedine_Zidane",
-         "nacimiento": "1972-06-23", "muerte": None},
-    ])
-    escribir_prosa(dir_libro, prosa(dir_libro).replace(
-        "Después Marco juntó las dos hojas y se las guardó en el bolsillo.",
-        "Obdulio lo miró desde la puerta y Marco guardó las dos hojas."))
-    assert "V9" not in reglas_escena(dir_libro), "Obdulio vivia en 1990"
-    escribir_prosa(dir_libro, prosa(dir_libro).replace(
-        "Obdulio lo miró desde la puerta y Marco guardó las dos hojas.",
-        "Zinedine lo miró desde la puerta y Marco guardó las dos hojas."))
-    assert "V9" not in reglas_escena(dir_libro), "Zidane ya habia nacido en 1990"
-    t = leer_yaml(dir_libro, "timeline.yaml")
-    t["escenas"][0]["fecha"] = "1990-01-05"
-    escribir_yaml(dir_libro, "timeline.yaml", t)
-    escribir_prosa(dir_libro, prosa(dir_libro).replace("Zinedine", "Obdulio"))
-    assert "V9" not in reglas_escena(dir_libro)
-
-
-def test_v9_caza_a_quien_ya_habia_muerto(dir_libro):
-    escribir_yaml(dir_libro, "real-figures.yaml", [
-        {"nombre": "Alguien Temprano", "wikipedia": "https://es.wikipedia.org/wiki/X",
-         "nacimiento": "1900-01-01", "muerte": "1989-12-31"}])
-    escribir_prosa(dir_libro, prosa(dir_libro).replace(
-        "Después Marco juntó las dos hojas y se las guardó en el bolsillo.",
-        "Alguien lo miró desde la puerta y Marco guardó las dos hojas."))
-    assert "V9" in reglas_escena(dir_libro)
 
 
 # --------------------------------------------------------------------------- #
@@ -242,77 +195,10 @@ def test_v15_una_linea_demasiado_larga(dir_libro):
 # --------------------------------------------------------------------------- #
 # Genero (V16-V20)
 # --------------------------------------------------------------------------- #
-def test_v16_la_relacion_salta_una_etapa(dir_libro):
-    r = leer_yaml(dir_libro, "relacion.yaml")
-    r["etapas"] = [e for e in r["etapas"] if e["etapa"] != "intimidad"]
-    escribir_yaml(dir_libro, "relacion.yaml", r)
-    assert "V16" in reglas_escena(dir_libro)
 
 
-def test_v16_la_relacion_retrocede_sin_ruptura(dir_libro):
-    r = leer_yaml(dir_libro, "relacion.yaml")
-    r["etapas"] = [{"etapa": "desconocidos", "desde": "1990-01-01"},
-                   {"etapa": "atraccion", "desde": "1990-02-11"},
-                   {"etapa": "desconocidos", "desde": "1990-05-03"}]
-    escribir_yaml(dir_libro, "relacion.yaml", r)
-    assert "V16" in reglas_escena(dir_libro)
 
 
-def test_v17_dos_crisis(dir_libro):
-    r = leer_yaml(dir_libro, "relacion.yaml")
-    r["etapas"].append({"etapa": "ruptura", "desde": "1990-12-01"})
-    escribir_yaml(dir_libro, "relacion.yaml", r)
-    assert B.v17_una_crisis(libro(dir_libro))
-
-
-def test_v17_la_crisis_antes_de_la_intimidad(dir_libro):
-    r = leer_yaml(dir_libro, "relacion.yaml")
-    for e in r["etapas"]:
-        if e["etapa"] == "ruptura":
-            e["desde"] = "1990-04-01"
-    escribir_yaml(dir_libro, "relacion.yaml", r)
-    assert B.v17_una_crisis(libro(dir_libro))
-
-
-def test_v18_el_libro_no_cierra_en_union(dir_libro):
-    r = leer_yaml(dir_libro, "relacion.yaml")
-    for e in r["etapas"]:
-        if e["etapa"] == "union":
-            e["desde"] = "1990-12-30"          # posterior a la ultima escena
-    escribir_yaml(dir_libro, "relacion.yaml", r)
-    errores = B.v18_promesa(libro(dir_libro))
-    assert errores and "promesa del genero" in errores[0].arreglo
-
-
-def test_v19_la_pareja_no_coincide_nunca(dir_libro):
-    t = leer_yaml(dir_libro, "timeline.yaml")
-    for i in range(3):
-        extra = copy.deepcopy(t["escenas"][0])
-        extra.update({"id": "S10%d" % i, "presentes": ["marco"], "cierra": [],
-                      "fecha": "1990-12-0%d" % (i + 1), "estado": "aprobada"})
-        t["escenas"].append(extra)
-    escribir_yaml(dir_libro, "timeline.yaml", t)
-    L = libro(dir_libro)
-    L.config["ciclo"]["escenas_sin_coincidir_max"] = 2
-    errores = B.v19_coinciden(L)
-    assert errores and "3 escenas seguidas" in errores[0].mensaje
-
-
-def test_v20_el_hito_no_cae_en_su_fecha(dir_libro):
-    t = leer_yaml(dir_libro, "timeline.yaml")
-    t["escenas"][0]["hito"] = "el clásico"      # existe, pero es del 19 de agosto
-    escribir_yaml(dir_libro, "timeline.yaml", t)
-    c = leer_yaml(dir_libro, "calendario.yaml")
-    c["hitos"][1]["que"] = "el clásico"
-    escribir_yaml(dir_libro, "calendario.yaml", c)
-    assert "V20" in reglas_escena(dir_libro)
-
-
-def test_v20_hito_inventado(dir_libro):
-    t = leer_yaml(dir_libro, "timeline.yaml")
-    t["escenas"][0]["hito"] = "la superfinal intergalactica"
-    escribir_yaml(dir_libro, "timeline.yaml", t)
-    assert "V20" in reglas_escena(dir_libro)
 
 
 # --------------------------------------------------------------------------- #
@@ -394,7 +280,7 @@ def test_v21_falta_un_campo_del_intake(dir_libro):
 def test_v21_una_fecha_que_no_es_fecha(dir_libro):
     p = dir_libro / "context" / "intake.json"
     datos = json.loads(p.read_text(encoding="utf-8"))
-    datos["respuestas"]["persona_a"]["nacimiento"] = "por ahi en los sesenta"
+    datos["respuestas"]["protagonista"]["nacimiento"] = "por ahi en los sesenta"
     p.write_text(json.dumps(datos, ensure_ascii=False), encoding="utf-8")
     assert C.v21_intake(libro(dir_libro))
 
@@ -424,12 +310,6 @@ def test_v13_dos_epocas_distintas(dir_libro):
     assert errores and "1950" in errores[0].mensaje
 
 
-def test_v13_el_calendario_se_va_de_epoca(dir_libro):
-    c = leer_yaml(dir_libro, "calendario.yaml")
-    c["hitos"][0]["fecha"] = "1978-06-25"
-    escribir_yaml(dir_libro, "calendario.yaml", c)
-    assert C.v13_una_epoca(libro(dir_libro))
-
 
 def test_g0_avisa_si_el_plan_no_cabe_antes_de_escribir(dir_libro):
     t = leer_yaml(dir_libro, "timeline.yaml")
@@ -446,11 +326,15 @@ def test_g0_avisa_si_el_plan_no_cabe_antes_de_escribir(dir_libro):
 # La puerta G2: la rubrica
 # --------------------------------------------------------------------------- #
 def critica_base() -> dict:
-    """Una critica valida: toda nota lleva su cita, el 2 incluido."""
+    """Una critica valida: veredicto con motivo y toda nota con su cita.
+
+    Desde la v9.0 el que decide es el critico: la rubrica acompana como medida,
+    no como puerta."""
     return {"escena": SID, "intento": 1,
+            "veredicto": {"pasa": True, "motivo": "la escena cumple lo que pedia el plan"},
             "continuidad": {"veto": False, "hallazgos": []},
             "calidad": {d: {"nota": 2, "cita": "un fragmento literal de la escena"}
-                        for d in ("conflicto", "dialogo", "concrecion", "frescura", "quimica")}}
+                        for d in ("conflicto", "voz", "concrecion", "frescura", "avance")}}
 
 
 def critica_sin_citas() -> dict:
@@ -468,17 +352,10 @@ def test_g2_el_veto_de_continuidad_cierra_la_puerta(dir_libro):
     assert not G.evaluar(libro(dir_libro), SID, c)["ok"]
 
 
-def test_g2_un_cero_tumba_la_escena_aunque_la_suma_alcance(dir_libro):
-    c = critica_base()
-    c["calidad"]["conflicto"] = {"nota": 0, "cita": "no pasa nada"}
-    res = G.evaluar(libro(dir_libro), SID, c)
-    assert res["suma"] == 8 and res["suma"] >= res["umbral"]
-    assert not res["ok"], "un 0 tumba la escena aunque la suma pase el umbral"
 
-
-def test_g2_sin_cita_la_dimension_no_cuenta(dir_libro):
+def test_g2_una_nota_sin_cita_es_un_error(dir_libro):
     c = critica_base()
-    c["calidad"]["dialogo"] = {"nota": 1, "cita": None}
+    c["calidad"]["voz"] = {"nota": 1, "cita": None}
     res = G.evaluar(libro(dir_libro), SID, c)
     assert not res["ok"]
     assert any("sin citar" in e["mensaje"] for e in res["errores"])
@@ -490,30 +367,7 @@ def test_g2_la_critica_generica_no_abre_la_puerta(dir_libro):
     assert not G.evaluar(libro(dir_libro), SID, c)["ok"]
 
 
-def test_g2_no_llega_al_umbral(dir_libro):
-    c = critica_base()
-    for d in ("conflicto", "dialogo", "concrecion"):
-        c["calidad"][d] = {"nota": 1, "cita": "un fragmento citado"}
-    res = G.evaluar(libro(dir_libro), SID, c)
-    assert res["suma"] == 7 and res["ok"], "7 sobre 10 pasa el umbral de 6"
-    c["calidad"]["frescura"] = {"nota": 1, "cita": "otro fragmento"}
-    c["calidad"]["quimica"] = {"nota": 1, "cita": "otro mas"}
-    res = G.evaluar(libro(dir_libro), SID, c)
-    assert res["suma"] == 5 and not res["ok"], "5 sobre 10 no llega a 6"
 
-
-def test_g2_escena_sin_pareja_baja_el_umbral(dir_libro):
-    c = critica_base()
-    c["calidad"]["quimica"] = None
-    res = G.evaluar(libro(dir_libro), SID, c)
-    assert res["umbral"] == 5 and res["maximo"] == 8 and res["ok"]
-
-
-def test_g2_falta_una_dimension(dir_libro):
-    c = critica_base()
-    del c["calidad"]["conflicto"]
-    res = G.evaluar(libro(dir_libro), SID, c)
-    assert not res["ok"] and any("Falta la dimension" in e["mensaje"] for e in res["errores"])
 
 
 def test_g2_nota_fuera_de_escala(dir_libro):
@@ -549,37 +403,22 @@ def test_g0_rechaza_una_epoca_sin_investigar(dir_libro):
     assert any("prohibido" in e.mensaje or "investig" in e.mensaje.lower() for e in errores)
 
 
-def test_g0_rechaza_datos_de_epoca_sin_fuente(dir_libro):
-    e = leer_yaml(dir_libro, "epoca.yaml")
-    e["fuentes"] = []
-    escribir_yaml(dir_libro, "epoca.yaml", e)
-    errores = C.v13_una_epoca(libro(dir_libro))
-    assert errores and any("fuente" in x.mensaje.lower() for x in errores)
-
 
 # --------------------------------------------------------------------------- #
 # La puerta G2 no se abre sin evidencia
 # --------------------------------------------------------------------------- #
-def test_g2_un_2_sin_cita_tampoco_cuenta(dir_libro):
-    """El camino mas barato para aprobar era poner 2 en todo y no citar nada.
-    Un 2 sin evidencia es una afirmacion, no una observacion."""
-    res = G.evaluar(libro(dir_libro), SID, critica_sin_citas())
-    assert not res["ok"], "10/10 sin una sola cita no puede abrir la puerta"
 
-
-def test_g2_abre_con_todo_en_2_si_cada_uno_cita(dir_libro):
-    assert G.evaluar(libro(dir_libro), SID, critica_base())["ok"]
-
-
-def test_g2_un_hallazgo_de_continuidad_cuenta_aunque_no_vete(dir_libro):
-    """Encontrar una contradiccion y no vetarla no es una salida coherente:
-    la lente existe justo para encontrarlas."""
+def test_g2_un_hallazgo_de_continuidad_cierra_aunque_el_critico_apruebe(dir_libro):
+    """Las dos lentes son independientes: la de calidad puede estar encantada y
+    la de continuidad haber encontrado una contradiccion con el canon. Encontrar
+    una y dejarla pasar no es una salida coherente."""
     c = critica_base()
+    c["veredicto"] = {"pasa": True, "motivo": "esta muy bien escrita"}
     c["continuidad"] = {"veto": False, "hallazgos": [
-        {"que": "sabe algo que el canon no le da", "cita": "dijo Tomas despacio"}]}
+        {"que": "usa un dato que el canon no le da", "cita": "sabia lo del parte"}]}
     res = G.evaluar(libro(dir_libro), SID, c)
-    assert not res["ok"] and res["veto_continuidad"]
-
+    assert not res["ok"]
+    assert "G2/continuidad" in reglas(res)
 
 # --------------------------------------------------------------------------- #
 # El techo y la forma tienen que hablar del mismo hecho
@@ -636,3 +475,207 @@ def test_g2_abre_si_la_critica_es_posterior_a_la_prosa(dir_libro):
     res = G.evaluar(libro(dir_libro), SID, json.loads(critica.read_text("utf-8")),
                     ruta_critica=critica)
     assert res["ok"]
+
+
+# --------------------------------------------------------------------------- #
+# El reporte a Langfuse es un espejo: si falla, no se lleva el ciclo por delante
+# --------------------------------------------------------------------------- #
+import reportar as R  # noqa: E402
+
+
+def test_sin_claves_no_manda_nada_y_no_falla(monkeypatch, dir_libro):
+    """Un libro tiene que poder escribirse sin cuenta de Langfuse."""
+    monkeypatch.delenv("LANGFUSE_PUBLIC_KEY", raising=False)
+    monkeypatch.delenv("LANGFUSE_SECRET_KEY", raising=False)
+    monkeypatch.setattr(R, "RAIZ", dir_libro)        # sin .env que leer
+    (dir_libro / "reports").mkdir(exist_ok=True)
+    (dir_libro / "reports" / "traza.jsonl").write_text(
+        json.dumps({"t": "2026-01-01", "paso": "G1", "tipo": "puerta", "ok": True,
+                    "escena": SID, "errores": []}) + "\n", encoding="utf-8")
+    res = R.reportar(dir_libro)
+    assert res["ok"] and res["enviado"] == 0
+
+
+def test_sin_traza_no_hay_nada_que_mandar(dir_libro):
+    (dir_libro / "reports" / "traza.jsonl").unlink(missing_ok=True)
+    assert R.reportar(dir_libro)["ok"]
+
+
+def test_el_env_no_pisa_lo_que_ya_esta_exportado(monkeypatch, tmp_path):
+    """Quien exporta una clave en su shell o en CI manda sobre el .env."""
+    (tmp_path / ".env").write_text(
+        "LANGFUSE_HOST=https://del-archivo\nLANGFUSE_PUBLIC_KEY=del-archivo\n",
+        encoding="utf-8")
+    monkeypatch.setenv("LANGFUSE_HOST", "https://del-entorno")
+    monkeypatch.delenv("LANGFUSE_PUBLIC_KEY", raising=False)
+    R.cargar_env(tmp_path / ".env")
+    assert os.environ["LANGFUSE_HOST"] == "https://del-entorno"
+    assert os.environ["LANGFUSE_PUBLIC_KEY"] == "del-archivo"
+
+
+# --------------------------------------------------------------------------- #
+# G3: la lee un agente, pero la decision sigue siendo del script
+# --------------------------------------------------------------------------- #
+import gate_chapter as CH  # noqa: E402
+
+
+def test_g3_abre_con_una_lectura_limpia(dir_libro):
+    libro = Libro(dir_libro)
+    res = CH.evaluar(libro, 1, {"hallazgos": []})
+    assert res["ok"], res["errores"]
+
+
+def test_g3_un_hallazgo_bloqueante_cierra_el_capitulo(dir_libro):
+    """Un lector que senala algo que saca del libro para el capitulo."""
+    libro = Libro(dir_libro)
+    texto = libro.ruta_prosa(libro.escena(SID)).read_text(encoding="utf-8")
+    cita = " ".join(texto.split()[:6])
+    res = CH.evaluar(libro, 1, {"hallazgos": [
+        {"que": "El mismo gesto en dos escenas", "cita": cita,
+         "escena": SID, "bloquea": True}]})
+    assert not res["ok"]
+    assert any(e["regla"] == "G3/capitulo" for e in res["errores"])
+
+
+def test_g3_no_abre_con_una_lectura_que_cita_lo_que_no_esta(dir_libro):
+    """Una cita inventada quiere decir que el lector no leyo el capitulo, y una
+    lectura asi no puede abrir ninguna puerta ni cerrarla."""
+    libro = Libro(dir_libro)
+    res = CH.evaluar(libro, 1, {"hallazgos": [
+        {"que": "algo", "cita": "zzzqqq una frase que no existe en el capitulo",
+         "escena": SID, "bloquea": False}]})
+    assert not res["ok"]
+    assert any(e["regla"] == "G3/lectura" for e in res["errores"])
+
+
+def test_g3_un_hallazgo_sin_cita_no_cuenta_igual_que_en_g2(dir_libro):
+    libro = Libro(dir_libro)
+    res = CH.evaluar(libro, 1, {"hallazgos": [{"que": "algo", "bloquea": False}]})
+    assert not res["ok"]
+    assert any(e["regla"] == "G3/lectura" for e in res["errores"])
+
+
+def test_g3_no_abre_con_escenas_sin_aprobar(dir_libro):
+    import yaml as _yaml
+    t = _yaml.safe_load((dir_libro / "context" / "timeline.yaml").read_text(encoding="utf-8"))
+    t["escenas"][0]["estado"] = "planificada"
+    (dir_libro / "context" / "timeline.yaml").write_text(
+        _yaml.safe_dump(t, allow_unicode=True, sort_keys=False), encoding="utf-8")
+    res = CH.evaluar(Libro(dir_libro), 1, {"hallazgos": []})
+    assert not res["ok"]
+    assert any(e["regla"] == "G3/completo" for e in res["errores"])
+
+
+def test_g3_una_cita_con_tilde_no_se_pierde_por_stdin(dir_libro):
+    """El stdin de Windows llega en cp1252: sin forzar utf-8, una cita con
+    tilde llegaba rota y el script acusaba al lector de citar lo que no existe."""
+    import subprocess
+    prosa = (dir_libro / "manuscript" / "ch01" / (SID + ".md")).read_text(encoding="utf-8")
+    cita = next((l for l in prosa.splitlines() if any(c in l for c in "aeiou")), "")
+    lectura = json.dumps({"hallazgos": [
+        {"que": "prueba", "cita": cita, "escena": SID, "bloquea": False}]},
+        ensure_ascii=False)
+    r = subprocess.run(
+        [sys.executable, str(RAIZ / "harness" / "scripts" / "gate_chapter.py"),
+         str(dir_libro), "1"],
+        input=lectura.encode("utf-8"), capture_output=True)
+    res = json.loads(r.stdout.decode("utf-8"))
+    assert res["ok"], res["errores"]
+
+
+# --------------------------------------------------------------------------- #
+# El arco de tres actos (v9.0): sustituye a las etapas de la pareja
+# --------------------------------------------------------------------------- #
+def test_v16_el_arco_sin_protagonista(dir_libro):
+    a = leer_yaml(dir_libro, "arco.yaml")
+    a.pop("protagonista")
+    escribir_yaml(dir_libro, "arco.yaml", a)
+    assert "V16" in reglas(C.v16_arco_res(libro(dir_libro)))
+
+
+def test_v16_el_protagonista_no_tiene_ficha(dir_libro):
+    """Declarar un protagonista que no existe deja al escritor sin nadie."""
+    a = leer_yaml(dir_libro, "arco.yaml")
+    a["protagonista"] = "fulano"
+    escribir_yaml(dir_libro, "arco.yaml", a)
+    assert "V16" in reglas(C.v16_arco_res(libro(dir_libro)))
+
+
+def test_v16_sin_meta_no_hay_historia(dir_libro):
+    """Sin meta, obstaculo y precio hay alguien haciendo deporte, no una novela."""
+    for campo in ("meta", "obstaculo", "precio"):
+        a = leer_yaml(dir_libro, "arco.yaml")
+        a[campo] = ""
+        escribir_yaml(dir_libro, "arco.yaml", a)
+        assert "V16" in reglas(C.v16_arco_res(libro(dir_libro))), campo
+
+
+def test_v16_al_arco_le_falta_el_desenlace(dir_libro):
+    a = leer_yaml(dir_libro, "arco.yaml")
+    a["actos"] = [t for t in a["actos"] if t["acto"] != "desenlace"]
+    escribir_yaml(dir_libro, "arco.yaml", a)
+    assert "V16" in reglas(C.v16_arco_res(libro(dir_libro)))
+
+
+def test_v16_los_actos_no_pueden_retroceder(dir_libro):
+    a = leer_yaml(dir_libro, "arco.yaml")
+    a["actos"] = list(reversed(a["actos"]))
+    escribir_yaml(dir_libro, "arco.yaml", a)
+    assert "V16" in reglas(C.v16_arco_res(libro(dir_libro)))
+
+
+def test_el_acto_de_una_escena_se_calcula_por_su_fecha(dir_libro):
+    """No se declara en ningun lado: se deriva, igual que todo lo demas."""
+    L = libro(dir_libro)
+    esc = L.escena(SID)
+    assert L.acto_de(esc) == "desenlace"
+    assert "acto" not in esc, "el acto no se guarda en el timeline"
+
+
+def test_un_libro_de_una_escena_no_tiene_que_cubrir_tres_actos(dir_libro):
+    """Una regla que no se puede cumplir no es una regla: el perfil de prueba
+    tiene una sola escena y no puede repartirse en tres actos."""
+    assert C.v16_arco_res(libro(dir_libro)) == []
+    assert B.v17_tres_actos(libro(dir_libro)) == []
+
+
+# --------------------------------------------------------------------------- #
+# G2 (v9.0): decide el critico, el script comprueba que pueda decidir
+# --------------------------------------------------------------------------- #
+def test_g2_sin_veredicto_no_abre(dir_libro):
+    c = critica_base()
+    c.pop("veredicto")
+    res = G.evaluar(libro(dir_libro), SID, c)
+    assert not res["ok"]
+    assert "G2/veredicto" in reglas(res)
+
+
+def test_g2_un_no_pasa_sin_motivo_no_le_sirve_al_corrector(dir_libro):
+    c = critica_base()
+    c["veredicto"] = {"pasa": False, "motivo": ""}
+    res = G.evaluar(libro(dir_libro), SID, c)
+    assert not res["ok"]
+    assert "G2/veredicto" in reglas(res)
+
+
+def test_g2_el_critico_rechaza_y_su_motivo_llega_al_corrector(dir_libro):
+    """El motivo del critico tiene que viajar con la forma de un error del
+    harness: regla, mensaje y arreglo. Si no, el corrector no sabe que tocar."""
+    c = critica_base()
+    c["veredicto"] = {"pasa": False, "motivo": "el protagonista no decide nada en toda la escena"}
+    res = G.evaluar(libro(dir_libro), SID, c)
+    assert not res["ok"]
+    err = [e for e in res["errores"] if e["regla"] == "G2/criterio"]
+    assert err and "no decide nada" in err[0]["mensaje"]
+    assert err[0]["arreglo"]
+
+
+def test_g2_la_rubrica_ya_no_decide(dir_libro):
+    """Una suma baja no cierra la puerta si el critico aprobo: la rubrica es
+    medida, no puerta. Pero la suma queda visible en la salida."""
+    c = critica_base()
+    for dim in c["calidad"]:
+        c["calidad"][dim] = {"nota": 0, "cita": "un fragmento literal"}
+    res = G.evaluar(libro(dir_libro), SID, c)
+    assert res["ok"], "el critico dijo que pasa"
+    assert res["suma"] == 0

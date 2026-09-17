@@ -10,14 +10,14 @@
     "C2_techo": {
       "ok": true,
       "palabras": 142,
-      "techo": 180
+      "techo": 540
     },
     "C3_cierre": {
       "ok": true
     }
   },
   "regulador": {
-    "palabras_restantes": 38,
+    "palabras_restantes": 398,
     "cierre_pendiente": 0,
     "cabe": true,
     "escenas_de_cierre_pendientes": []
@@ -25,8 +25,15 @@
   "forma": {
     "palabras_por_escena": 144,
     "palabras_por_escena_max": 180,
-    "escenas_totales": 1,
-    "techo_palabras": 180
+    "escenas_totales": 3,
+    "techo_palabras": 540
+  },
+  "actos": {
+    "planteamiento": [],
+    "desarrollo": [],
+    "desenlace": [
+      "S001"
+    ]
   },
   "termina": true
 }

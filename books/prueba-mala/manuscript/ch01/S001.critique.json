@@ -9,7 +9,7 @@
       "nota": 2,
       "cita": "Lo dejó sobre el banco, firmado, y encima puso su licencia doblada."
     },
-    "dialogo": {
+    "voz": {
       "nota": 2,
       "cita": "—Cobrá lo que te deben —dijo—. Yo ya pagué lo mío."
     },
@@ -21,9 +21,13 @@
       "nota": 2,
       "cita": "El vestuario estaba vacío y olía al linimento que nadie había guardado."
     },
-    "quimica": {
+    "avance": {
       "nota": 2,
       "cita": "Afuera sonó el silbato. Él se quedó adentro, con ella, sin vendas."
     }
+  },
+  "veredicto": {
+    "pasa": false,
+    "motivo": "no pasa nada: la escena termina como empezo y nadie decide nada"
   }
 }

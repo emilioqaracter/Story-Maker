@@ -1,0 +1,11 @@
+protagonista: marco
+meta: jugar la final antes de que se le acabe el contrato
+obstaculo: una lesion que esconde, y un club que no le paga
+precio: la ultima temporada de su carrera
+actos:
+- acto: planteamiento
+  desde: '1990-01-01'
+- acto: desarrollo
+  desde: '1990-04-02'
+- acto: desenlace
+  desde: '1990-10-01'

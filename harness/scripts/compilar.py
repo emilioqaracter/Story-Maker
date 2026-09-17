@@ -51,7 +51,8 @@ def compilar(libro: Libro) -> dict:
 
 
 def main(argv: list) -> int:
-    return emitir(compilar(libro_de_argv(argv, "compilar.py books/<slug>")))
+    libro = libro_de_argv(argv, "compilar.py books/<slug>")
+    return emitir(compilar(libro), libro=libro, paso="compilar")
 
 
 if __name__ == "__main__":

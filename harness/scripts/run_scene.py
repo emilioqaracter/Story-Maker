@@ -24,7 +24,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from common import (Libro, contar_palabras, edad, estado_en, etapa_en, fecha,  # noqa: E402
+from common import (Libro, contar_palabras, edad, estado_en, fecha,  # noqa: E402
                     parrafos, sabe_en)
 from gate_scene import evaluar  # noqa: E402
 from validate_book import cabe_el_final, condiciones, palabras_escritas  # noqa: E402
@@ -70,27 +70,54 @@ def contexto(libro: Libro, sid: str) -> str:
     if not esc:
         return "No existe la escena %s." % sid
     f = fecha(esc.get("fecha"))
+    cfg = libro.config["genero"]
+    acto = libro.acto_de(esc)
     L = []
-    L.append("ESCENA %s - capitulo %s - %s - %s" % (
-        esc["id"], esc.get("capitulo"), f, esc.get("lugar", "sin lugar")))
+    L.append("ESCENA %s - capitulo %s - %s" % (
+        esc["id"], esc.get("capitulo"), esc.get("lugar", "sin lugar")))
     L.append("Resumen del plan: %s" % esc.get("resumen", "(sin resumen)"))
-    if esc.get("hito"):
-        L.append("Coincide con el hito deportivo: %s" % esc["hito"])
+    for i, b in enumerate(esc.get("beats") or [], 1):
+        L.append("  beat %d: %s" % (i, b))
     L.append("")
 
+    # --- el arco: donde esta esta escena dentro de la historia -------------- #
+    L.append("LA HISTORIA: %s." % (libro.arco.get("meta") or "(sin meta declarada)"))
+    if libro.arco.get("obstaculo"):
+        L.append("Lo que se lo impide: %s" % libro.arco["obstaculo"])
+    if libro.arco.get("precio"):
+        L.append("Lo que le va a costar: %s" % libro.arco["precio"])
+    if acto:
+        L.append("ESTA ESCENA ESTA EN EL %s (acto %d de 3): %s" % (
+            acto.upper(), cfg["actos"].index(acto) + 1,
+            (cfg.get("exige") or {}).get(acto, "")))
+        L.append("Escribila para ese momento de la historia, ni antes ni despues.")
+    L.append("")
+
+    # --- quien esta --------------------------------------------------------- #
+    prot = libro.protagonista
     L.append("QUIEN ESTA:")
     for clave in esc.get("presentes") or []:
         p = libro.personajes.get(clave)
         if not p:
             L.append("- %s (no esta en el canon)" % clave)
             continue
-        trozos = ["%s, %s anos" % (p.get("nombre"), edad(p.get("nacimiento"), f))]
-        est = estado_en(p, f)
+        quien = p.get("nombre")
+        if clave == prot:
+            quien += " (EL PROTAGONISTA: la escena es suya)"
+        trozos = [quien]
+        if p.get("rol"):
+            trozos.append(p["rol"])
+        if p.get("nacimiento") and f:
+            trozos.append("%s anos" % edad(p.get("nacimiento"), f))
+        est = estado_en(p, f) if f else {}
         if est:
             etiqueta = est.get("que") or est.get("lesion")
             if etiqueta:
                 hasta = fecha(est.get("hasta"))
-                trozos.append("%s%s" % (etiqueta, " hasta el %s" % hasta if hasta else ""))
+                trozos.append("AHORA MISMO: %s%s" % (
+                    etiqueta, " hasta el %s" % hasta if hasta else ""))
+                if est.get("prohibe"):
+                    trozos.append("no puede: " + ", ".join(map(str, est["prohibe"])))
         sabidos = [s.get("que") for s in sabe_en(p, f)] if f else []
         ignora = [s.get("que") for s in (p.get("sabe") or [])
                   if s.get("que") not in sabidos]
@@ -101,23 +128,18 @@ def contexto(libro: Libro, sid: str) -> str:
         L.append("- " + ". ".join(trozos) + ".")
     L.append("")
 
-    etapa = etapa_en(libro.relacion, f) if f else None
-    L.append("LA PAREJA: a esta fecha la relacion esta en '%s'." % etapa)
-    if libro.relacion.get("obstaculo"):
-        L.append("Lo que los separa: %s" % libro.relacion["obstaculo"])
-    L.append("No adelantes ni retrocedas esa etapa en esta escena.")
-    L.append("")
-
-    L.append("EPOCA: %s. No puede aparecer: %s." % (
-        libro.epoca.get("anio"), ", ".join(libro.epoca.get("prohibido") or []) or "(nada declarado)"))
+    # --- la epoca, en cualitativo ------------------------------------------- #
+    L.append("EPOCA: %s. No puede aparecer nada de esto: %s." % (
+        libro.epoca.get("anio"),
+        ", ".join(libro.epoca.get("prohibido") or []) or "(nada declarado)"))
     if libro.epoca.get("notas"):
-        L.append("Como era: %s" % libro.epoca["notas"])
+        L.append("Como era la vida entonces: %s" % libro.epoca["notas"])
     L.append("")
 
-    est = libro.config["estructura"]
+    est_cfg = libro.config["estructura"]
     L.append("FORMA OBLIGATORIA: %d parrafos, %d lineas cada uno, %d palabras por linea (+-%d)." % (
-        est["parrafos_por_escena"], est["lineas_por_parrafo"], est["palabras_por_linea"],
-        libro.config["tolerancia"]["palabras_por_linea"]))
+        est_cfg["parrafos_por_escena"], est_cfg["lineas_por_parrafo"],
+        est_cfg["palabras_por_linea"], libro.config["tolerancia"]["palabras_por_linea"]))
     L.append("Separa los parrafos con una linea en blanco. Devuelve solo la prosa.")
     if esc.get("cierra"):
         hilos = {h.get("id"): h.get("que") for h in libro.premise.get("hilos") or []}

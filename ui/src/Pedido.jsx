@@ -9,11 +9,11 @@ export const EJEMPLO = {
     epoca: { desde: '1998-01-01', hasta: '1998-12-31' },
     lugar: 'Montevideo, Uruguay',
     nivel: 'seleccion',
-    persona_a: { nombre: 'Vera Olmos', nacimiento: '1972-06-04', rol: 'base de la seleccion, la mas veterana del plantel' },
-    persona_b: { nombre: 'Ruben Alcaide', nacimiento: '1968-01-30', rol: 'entrenador de la seleccion, primer ciclo a cargo' },
-    encuentro: 'El la corta de la lista y se la cruza esa misma noche en el gimnasio vacio',
-    obstaculo: 'Si el la convoca lo acusan de favoritismo; si no la convoca, ella se retira',
-    precio: { a: 'el ultimo mundial que le queda', b: 'el puesto que le costo veinte anos' },
+    protagonista: { nombre: 'Vera Olmos', rol: 'base de la seleccion, la mas veterana del plantel' },
+    secundarios: [{ nombre: 'Ruben Alcaide', rol: 'entrenador de la seleccion, primer ciclo a cargo' }],
+    meta: 'jugar el mundial que va a ser el ultimo de su carrera',
+    obstaculo: 'el entrenador la dejo fuera de la lista y el medico no le firma el alta',
+    precio: 'el gimnasio que levanto en su barrio, que no puede sostener si se va seis meses',
     hilos: ['la lista de doce que hay que cerrar', 'el gimnasio del barrio que van a demoler'],
   },
   epoca: {
@@ -40,8 +40,12 @@ export default function Pedido({ slug, setSlug, respuestas, setRespuestas, epoca
     else if (!valor.trim()) set('epoca', { desde: '', hasta: '' })
   }
 
-  const nombreA = r.persona_a.nombre.split(' ')[0]
-  const nombreB = r.persona_b.nombre.split(' ')[0]
+  const nombre = r.protagonista.nombre.split(' ')[0]
+  const setSecundario = (i, sub, valor) => {
+    const s = [...(r.secundarios || [])]
+    s[i] = { ...s[i], [sub]: valor }
+    set('secundarios', s)
+  }
 
   return (
     <section className="bloque">
@@ -100,68 +104,77 @@ export default function Pedido({ slug, setSlug, respuestas, setRespuestas, epoca
         </Campo>
       </div>
 
-      <h3 className="sub">La pareja</h3>
+      <h3 className="sub">El protagonista</h3>
+      <p className="ayuda">
+        La novela es de una sola persona: su historia, su punto de vista. Los
+        demas son personajes.
+      </p>
       <div className="campos dos">
-        {[
-          ['persona_a', 'Primera persona', { nombre: 'Vera Olmos', rol: 'base de la seleccion, la mas veterana del plantel' }],
-          ['persona_b', 'Segunda persona', { nombre: 'Ruben Alcaide', rol: 'entrenador de la seleccion, primer ciclo a cargo' }],
-        ].map(([clave, titulo, ej]) => (
-          <fieldset key={clave}>
-            <legend>{titulo}</legend>
-            <Campo
-              etiqueta="Nombre y apellido"
-              ejemplo={ej.nombre}
-              valor={r[clave].nombre}
-              onChange={(v) => setAnidado(clave, 'nombre', v)}
-            />
-            <Campo
-              etiqueta="Fecha de nacimiento"
-              tipo="date"
-              nota="la edad no se guarda: se calcula a la fecha de cada escena"
-              valor={r[clave].nacimiento}
-              onChange={(v) => setAnidado(clave, 'nacimiento', v)}
-            />
-            <Campo
-              etiqueta="Que hace en ese mundo"
-              ejemplo={ej.rol}
-              valor={r[clave].rol}
-              onChange={(v) => setAnidado(clave, 'rol', v)}
-            />
-          </fieldset>
-        ))}
+        <fieldset>
+          <legend>Quien es</legend>
+          <Campo
+            etiqueta="Nombre y apellido"
+            ejemplo="Vera Olmos"
+            valor={r.protagonista.nombre}
+            onChange={(v) => setAnidado('protagonista', 'nombre', v)}
+          />
+          <Campo
+            etiqueta="Que hace en ese mundo"
+            ejemplo="base de la seleccion, la mas veterana del plantel"
+            valor={r.protagonista.rol}
+            onChange={(v) => setAnidado('protagonista', 'rol', v)}
+          />
+        </fieldset>
+        <fieldset>
+          <legend>Quien mas hay (opcional)</legend>
+          <Campo
+            etiqueta="Nombre y apellido"
+            ejemplo="Ruben Alcaide"
+            valor={(r.secundarios || [{}])[0]?.nombre || ''}
+            onChange={(v) => setSecundario(0, 'nombre', v)}
+          />
+          <Campo
+            etiqueta="Que hace en ese mundo"
+            ejemplo="entrenador de la seleccion, primer ciclo a cargo"
+            valor={(r.secundarios || [{}])[0]?.rol || ''}
+            onChange={(v) => setSecundario(0, 'rol', v)}
+          />
+        </fieldset>
       </div>
 
-      <h3 className="sub">Lo que los une y lo que los separa</h3>
+      <h3 className="sub">La historia</h3>
+      <p className="ayuda">
+        De estas tres sale todo el arco. Los tres actos no se declaran: se
+        calculan repartiendo la epoca (25/50/25).
+      </p>
       <div className="campos">
         <Campo
           ancho
-          etiqueta="Como se cruzan por primera vez"
-          ejemplo="El la corta de la lista y se la cruza esa misma noche en el gimnasio vacio"
-          valor={r.encuentro}
-          onChange={(v) => set('encuentro', v)}
+          destacado
+          etiqueta={`Que quiere ${nombre || 'el protagonista'}`}
+          ejemplo="jugar el mundial que va a ser el ultimo de su carrera"
+          nota="Concreta y comprobable: si no se puede saber si lo consiguio, el desenlace no puede existir."
+          valor={r.meta}
+          onChange={(v) => set('meta', v)}
         />
         <Campo
           ancho
           destacado
           filas={2}
-          etiqueta="Que los separa"
-          ejemplo="Si el la convoca lo acusan de favoritismo; si no la convoca, ella se retira"
-          nota="Sin obstaculo no hay romance, hay dos personas simpaticas. Lo mejor es algo donde lo que le conviene a uno le cuesta al otro."
+          etiqueta="Que se lo impide"
+          ejemplo="el entrenador la dejo fuera de la lista y el medico no le firma el alta"
+          nota="Mejor algo estructural — un cuerpo roto, un contrato, una federacion — que una duda que se resuelve decidiendo."
           valor={r.obstaculo}
           onChange={(v) => set('obstaculo', v)}
         />
         <Campo
-          etiqueta={`Que pierde ${nombreA || 'la primera'}`}
-          ejemplo="el ultimo mundial que le queda"
-          valor={r.precio.a}
-          onChange={(v) => setAnidado('precio', 'a', v)}
-        />
-        <Campo
-          etiqueta={`Que pierde ${nombreB || 'la segunda'}`}
-          ejemplo="el puesto que le costo veinte anos"
-          nota="de estos dos sale la pregunta dramatica: que acaben juntos ya lo sabemos, lo que no sabemos es que les cuesta"
-          valor={r.precio.b}
-          onChange={(v) => setAnidado('precio', 'b', v)}
+          ancho
+          filas={2}
+          etiqueta="Que le va a costar"
+          ejemplo="el gimnasio que levanto en su barrio, que no puede sostener si se va seis meses"
+          nota="Si no pierde nada, no hay historia: hay un entrenamiento largo."
+          valor={r.precio}
+          onChange={(v) => set('precio', v)}
         />
       </div>
 
