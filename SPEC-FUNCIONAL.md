@@ -1,6 +1,6 @@
 # Story-Maker — Especificación funcional
 
-**Versión 1.3** · 2026-09-17 · la parte técnica está en [SPEC-TECNICO.md](SPEC-TECNICO.md).
+**Versión 1.4** · 2026-09-17 · la parte técnica está en [SPEC-TECNICO.md](SPEC-TECNICO.md).
 
 Este documento dice **qué hace el sistema y por qué**: quién trabaja, en qué
 orden, quién aprueba y cómo se ve después lo que pasó.
@@ -45,14 +45,6 @@ escrito. El verificador mira la novela entera y le pregunta si este capítulo
 pertenece. Un capítulo puede estar espléndidamente escrito y contradecir el
 plan. Juntar las dos preguntas en un solo agente deja que una compense a la
 otra, que es justo lo que no puede pasar.
-
-**Qué cuenta como coherencia.** El verificador no solo compara el capítulo con
-el plan y con lo ya escrito: comprueba también **los hechos que el capítulo
-afirma**. Las reglas del mundo que la novela invoca y las cuentas que ella
-misma echa. Un ciclista de veintinueve años con el maillot de mejor joven, o
-una ventaja que el texto describe como derretida y cifra más alta que antes,
-son incoherencias tanto como un personaje que resucita. Donde el capítulo da un
-número, el número es una promesa al lector.
 
 **Y la sesión de Claude Code.** No está en la tabla porque no es un agente: es
 **quien orquesta**. Lee la carpeta, despacha a los agentes, recoge sus luces y
@@ -317,3 +309,4 @@ que la cambia, con **qué** cambió y **por qué**.
 | **1.1** | 2026-09-17 | Las capas dejan de ser un orden de construcción y pasan a ser lo que se puede apagar, con una columna que dice qué se pierde al apagar cada una. | Se construyeron las seis de una vez, así que un orden de construcción ya no describe nada. Lo que sigue siendo cierto y útil es que cada capa es un interruptor, y que apagarla muestra exactamente qué control aportaba. |
 | **1.2** | 2026-09-17 | La sesión de Claude Code orquesta siguiendo una skill, sin ningún programa por debajo. La traza deja de ser un archivo propio: las decisiones ya son archivos y Langfuse recoge los despachos con su plugin oficial. | El orquestador tenía que ser la sesión, y los scripts intermedios le estaban ocupando el sitio. Un registro aparte podía quedar incompleto; el archivo de una decisión no, porque escribirlo **es** decidir. |
 | **1.3** | 2026-09-17 | La coherencia que juzga el verificador incluye los hechos que el capítulo afirma y las cuentas que echa. La luz roja viaja entera al redactor, y un capítulo corregido se vuelve a juzgar desde cero por las dos luces. Al tercer intento para la sesión. | La primera novela completa enseñó qué rechazos aparecen de verdad: un dato del mundo imposible para la edad del protagonista y una resta que no cerraba, ninguno de los dos una contradicción con el plan ni un problema de prosa. Y una corrección vuelve a pasar por el revisor, así que la regla tenía que decirlo en vez de dejarlo al criterio de quien orquesta. Parar es de la sesión, que es la que lleva la cuenta de los intentos. |
+| **1.4** | 2026-09-17 | Sale de §2 el párrafo que ampliaba la coherencia del verificador a los hechos del mundo y a las cuentas del capítulo. Su competencia es la que describe su encargo: contradicciones con lo escrito y con el plan, el sitio en la historia, el tiempo y la repetición. | Lo que el verificador mira está escrito en su archivo, y ahí no dice nada de datos ni de aritmética: lo que cazó en la primera novela lo cazó por su regla de leer como un lector atento. Una spec que promete más de lo que el sistema encarga se vuelve una spec en la que no se puede confiar, y ampliar el encargo para sostener el párrafo era añadir una regla más a cambio de nada que hoy falte. |
