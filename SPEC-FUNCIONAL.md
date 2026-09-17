@@ -1,367 +1,319 @@
 # Story-Maker — Especificación funcional
 
-**Versión 10.0** · 2026-09-17 · la parte técnica está en [SPEC-TECNICO.md](SPEC-TECNICO.md).
+**Versión 1.3** · 2026-09-17 · la parte técnica está en [SPEC-TECNICO.md](SPEC-TECNICO.md).
 
 Este documento dice **qué hace el sistema y por qué**: quién trabaja, en qué
-orden, quién decide y cómo se ve después lo que pasó. No dice cómo está
-programado; para eso está el técnico.
+orden, quién aprueba y cómo se ve después lo que pasó.
 
 ---
 
 ## 1. Qué es esto
 
-Un harness que escribe **novelas deportivas cortas**: la historia de un
-atleta, en tres actos, escena por escena. Lo conduce Claude Code; escriben y
-critican subagentes con contexto limpio; deciden scripts y un crítico.
+Un sistema de agentes que **escribe una novela corta** y deja ver, paso a paso,
+cómo la escribió.
 
-**La novela es la excusa.** Lo que se está construyendo son **capas de control
-sobre un modelo**: los filtros que deciden si lo que produjo un modelo entra o
-no entra. La novela es un buen banco de pruebas porque las incoherencias se
-ven a simple vista: alguien que juega con la rodilla rota dos escenas antes de
-que se la operen, un final que llega en la primera página, un personaje que
-sabe algo que todavía no ocurrió.
+La novela es la excusa. Lo que se está construyendo es un **sistema agéntico
+observable**: unos agentes escriben, otros aprueban o rechazan, y todo lo que
+se decide queda anotado con su motivo.
 
-| Capa | Qué controla | Cómo |
-|---|---|---|
-| **Canon calculado** | que los hechos no se contradigan | lo derivable no se guarda: no hay `edad`, hay `nacimiento`; no hay «estado actual», hay tramos con vigencia (§7) |
-| **Validadores** | que la prosa respete esos hechos y la forma | siete reglas deterministas, sin modelo (§5) |
-| **Crítico con evidencia** | que el criterio no sea una opinión | un veredicto motivado, un veto con cita, una rúbrica con cita en toda nota (§5, §6) |
-| **Puertas** | que nada avance porque alguien opine que puede | cinco puntos de corte con criterio escrito y un script que lo aplica (§5) |
-| **Traza** | que se pueda ver después qué pasó y por qué | cada puerta y cada agente dejan un evento en disco, en el momento (§8) |
+La novela es un buen banco de pruebas porque los fallos se ven a simple vista.
+Un personaje que reaparece después de haberse ido. Un final que llega en el
+primer capítulo. Un capítulo bien escrito que no encaja con nada de lo
+anterior.
 
-> **El principio del que sale todo lo demás:** lo que se puede calcular no se
-> recuerda. El modelo escribe; el código y otro modelo verifican.
+> **El principio del que sale todo lo demás:** todo lo que se decide, lo decide
+> un agente, y deja escrito por qué.
+
+No hay reglas en código que aprueben o rechacen nada. Donde haría falta un
+validador, hay un agente que lee y argumenta.
 
 ---
 
-## 2. Lo que esta versión quitó, y por qué
+## 2. Los cinco agentes
 
-La versión 10 vuelve a las bases. El sistema había acumulado complejidad en
-cosas que no eran el problema que se quería estudiar. Se quitó:
+| Agente | Qué hace | Qué decide |
+|---|---|---|
+| **arquitecto** | Convierte la idea y la longitud pedida en el plan de la novela: quién es el protagonista, qué quiere, qué se lo impide, y cómo se reparte la historia en introducción, nudo y desenlace. | el plan |
+| **director** | Dice qué toca ahora y a quién le toca. Lleva la cuenta de por dónde va la novela y de cuándo un capítulo se ha atascado. | el turno |
+| **redactor** | Escribe el capítulo. Cuando le llega una luz roja, lo reescribe atendiendo solo a lo que le señalaron. | nada |
+| **revisor** | Lee el capítulo por sí solo. ¿Está bien escrito? Da luz verde o luz roja, siempre con el motivo. | si el capítulo está bien escrito |
+| **verificador** | Lee el capítulo contra la historia hasta ahora y contra el plan. ¿Encaja? Da luz verde o luz roja, con el motivo. Cuando da verde, el capítulo entra en la novela. | si el capítulo entra |
 
-| Se quitó | Por qué |
+**Por qué revisor y verificador son dos y no uno.** Juzgan cosas distintas y a
+distinta escala. El revisor mira un capítulo aislado y le pregunta si está bien
+escrito. El verificador mira la novela entera y le pregunta si este capítulo
+pertenece. Un capítulo puede estar espléndidamente escrito y contradecir el
+plan. Juntar las dos preguntas en un solo agente deja que una compense a la
+otra, que es justo lo que no puede pasar.
+
+**Qué cuenta como coherencia.** El verificador no solo compara el capítulo con
+el plan y con lo ya escrito: comprueba también **los hechos que el capítulo
+afirma**. Las reglas del mundo que la novela invoca y las cuentas que ella
+misma echa. Un ciclista de veintinueve años con el maillot de mejor joven, o
+una ventaja que el texto describe como derretida y cifra más alta que antes,
+son incoherencias tanto como un personaje que resucita. Donde el capítulo da un
+número, el número es una promesa al lector.
+
+**Y la sesión de Claude Code.** No está en la tabla porque no es un agente: es
+**quien orquesta**. Lee la carpeta, despacha a los agentes, recoge sus luces y
+va contando en voz alta lo que pasa. No hay ningún programa por debajo que la
+conduzca: sigue una skill escrita, `dirigir-novela`, y usa las órdenes normales
+de la terminal.
+
+Al **director** lo consulta cuando no está claro cómo seguir. Para el camino
+normal no hace falta, porque el ciclo se sigue solo.
+
+Lo único que Claude Code no puede hacer nunca es **decidir que un capítulo está
+bien**. Eso es del revisor y del verificador.
+
+---
+
+## 3. El flujo
+
+### 3.1 De la idea al plan
+
+```
+  el usuario pide una novela
+  «un ciclista que vuelve de una caída, unas 15.000 palabras»
+        │
+        ▼
+  ┌──────────────┐
+  │  ARQUITECTO  │   decide protagonista, meta, obstáculo y precio
+  └──────────────┘   reparte la longitud en tres partes
+        │            escribe un capítulo por línea
+        ▼
+     plan.md        ◄── el plan de la novela: un documento y nada más
+```
+
+### 3.2 El círculo de aprobación de un capítulo
+
+Este es el corazón del sistema. Se repite una vez por capítulo.
+
+```
+  ┌───────────────────────── CAPÍTULO N ──────────────────────────┐
+  │                                                                │
+  │    ┌────────────┐                                              │
+  │    │  REDACTOR  │ ──────────►  borrador del capítulo           │
+  │    └────────────┘                      │                       │
+  │          ▲                             ▼                       │
+  │          │                    ┌─────────────────┐              │
+  │          │    LUZ ROJA        │     REVISOR     │              │
+  │          ├────────────────────┤  ¿está bien     │              │
+  │          │    y el motivo     │   escrito?      │              │
+  │          │                    └─────────────────┘              │
+  │          │                             │ LUZ VERDE             │
+  │          │                             ▼                       │
+  │          │                    ┌─────────────────┐              │
+  │          │    LUZ ROJA        │  VERIFICADOR    │              │
+  │          └────────────────────┤  ¿encaja en la  │              │
+  │               y el motivo     │   historia?     │              │
+  │                               └─────────────────┘              │
+  │                                        │ LUZ VERDE             │
+  │                                        ▼                       │
+  │                           el capítulo entra en la novela       │
+  └────────────────────────────────────────────────────────────────┘
+```
+
+El revisor va primero porque es la pregunta más barata. No tiene sentido
+comprobar si un capítulo encaja en la historia mientras todavía está mal
+escrito.
+
+Cada luz roja vuelve al redactor **con el motivo entero**, tal como lo escribió
+quien juzgó, y el redactor toca solo lo que le señalaron.
+
+Un capítulo corregido **vuelve a entrar por el principio**: pasa otra vez por el
+revisor aunque la luz roja se la hubiera dado el verificador. Nadie hereda una
+luz verde de un texto que ya no existe.
+
+A los tres intentos sin las dos verdes, la sesión **para** el capítulo, le
+enseña a la persona los motivos que se repiten y le pregunta si prefiere
+cambiar el plan o bajar el listón.
+
+### 3.3 Todo junto, hasta el final
+
+```
+  IDEA ──► ARQUITECTO ──► plan.md
+                             │
+                             ▼
+                      ┌─────────────┐
+            ┌────────►│  DIRECTOR   │  ¿qué toca ahora?
+            │         └─────────────┘
+            │                │
+            │                ▼
+            │      círculo de aprobación del capítulo N
+            │         (redactor · revisor · verificador)
+            │                │
+            │                ▼
+            │         capítulo aprobado
+            │                │
+            │                ▼
+            │      ¿queda historia en el plan?
+            │                │
+            └───── sí ───────┤
+                             │
+                            no
+                             ▼
+                         novela.md
+```
+
+---
+
+## 4. Luz verde y luz roja
+
+Un capítulo solo avanza si **dos agentes le dan luz verde**. Cualquiera de los
+dos puede darle **luz roja** y devolverlo al redactor.
+
+Una luz roja sin motivo no sirve para nada, así que siempre trae tres cosas:
+
+| | |
 |---|---|
-| **La investigación de época** (agente `researcher`, `epoca.yaml`, lista de anacronismos, fuentes, la regla que los buscaba en la prosa) | No interesa que el libro sea fiel a la historia real. Si es de 1990, con lo que el modelo sabe de 1990 alcanza. La investigación era el paso más lento y menos determinista del arranque, y su ruido tapaba lo que se quería mirar. Ahora la época es un año y un lugar, y la vigilancia la hace el crítico de continuidad leyendo. |
-| **El intake y su validación** | Era una copia de las decisiones que ya están en el canon. El JSON de entrada lo consume `crear_libro.py` y no se guarda: lo que se puede derivar no se guarda. |
-| **El techo de palabras, el regulador y la contracción del plan** | Con la forma fija (párrafos × líneas × palabras por línea, comprobada en cada escena), el libro entero cabe por construcción. El techo era una regla que no podía cerrar nunca, y una puerta que no puede cerrarse no es una puerta. |
-| **Eventos únicos, conocimiento fechado, flashbacks** | Precisión que no cambiaba una línea de prosa y que nadie rellenaba. Lo que queda de eso es trabajo del crítico de continuidad. |
-| **La lectura de Langfuse en la UI, los informes y la skill de análisis** | La UI dependía de la red para decir «qué agente corrió». Ahora todo lo que muestra sale de la traza en disco. Langfuse queda como espejo opcional de salida. |
-| **Tres libros de prueba y un diagrama viejo** | Describían el sistema anterior. Queda un fixture (`marco-1990`) y un libro real en curso (`nuria-1992`). |
+| **Qué está mal** | la frase que describe el problema |
+| **Dónde** | una cita textual del capítulo, para no discutir de memoria |
+| **Qué cambiar** | qué tendría que ocurrir para que la luz fuera verde |
 
-Lo que **no** se tocó: quién decide en cada puerta, la rúbrica con cita, la
-dimensión más floja, los scripts que rodean a cada agente, y la traza. Eso es
-el proyecto.
+Una luz verde también dice por qué. No hace falta que sea larga, pero tiene que
+existir: es lo que permite leer una corrida entera después y entender qué
+criterio se aplicó.
 
----
-
-## 3. Cómo se usa
-
-No hay un comando que escriba la novela. **Se le pide a Claude Code**, en la
-terminal o en el panel de VS Code:
-
-```
-> escribí una novela sobre un nadador que vuelve de una lesión, en 1975
-> seguí con books/nuria-1992
-```
-
-1. Si no hay libro, Claude Code sigue la skill **`preparar-libro`**: exprime la
-   idea, decide meta, obstáculo, precio e hilos, pregunta **una sola vez** lo
-   que de verdad cambia el libro, y crea el canon con un script.
-2. Con el canon listo sigue **`dirigir-novela`**: planifica, escribe escena por
-   escena, las hace criticar, corrige lo que haga falta y compila.
-
-Mientras trabaja dice una línea por escena aprobada y una por intento fallido,
-con el motivo real. Al final hay un `books/<slug>/manuscript/novela.md` y una
-traza de cómo se llegó.
-
-También se puede lanzar desde la interfaz web, que por dentro hace exactamente
-lo mismo, y que sirve sobre todo para **ver** el sistema y lo que pasó (§8).
+Todo esto se guarda. Una luz roja de hace tres intentos se puede releer.
 
 ---
 
-## 4. El recorrido
+## 5. El plan de la novela
 
-Tres fases: **arranque** (una vez), **producción** (una vuelta por escena) y
-**cierre** (una vez).
+El plan es **un documento**, `plan.md`, escrito en prosa por el arquitecto.
+Nada se calcula y nada se deriva de otra cosa. Si algo hay que saberlo, está
+escrito ahí con todas las letras.
 
-```
-IDEA
- └─ preparar-libro (orquestador)  decide y pregunta una vez
-     └─ crear_libro.py            escribe el canon: premisa, arco, personajes, timeline
- └─ G0  validate_canon.py         el canon está completo y es coherente
- └─ planner → guardar_plan.py     resumen y tres beats por escena
+Contiene:
 
- POR CADA ESCENA (hasta 3 intentos):
-     ├─ empaquetar.py             resuelve el canon a la fecha y arma el prompt
-     ├─ escritor | corrector      la prosa
-     ├─ guardar_prosa.py          limpia, comprueba la forma, guarda
-     ├─ G1  validate_scene.py     los hechos y la forma
-     ├─ critic-continuity ┐       dos llamadas separadas, contexto aislado
-     ├─ critic-quality    ┘
-     ├─ guardar_critica.py        junta las dos lentes, guarda
-     ├─ G2  gate_scene.py         releva el veredicto del crítico
-     └─ run_scene.py aprobar      marca aprobada, fija la voz con la primera
+- **Quién es el protagonista** y qué le importa.
+- **Qué quiere**, qué se lo impide y qué le va a costar conseguirlo.
+- **Las tres partes**: introducción, nudo y desenlace, con lo que pasa en cada
+  una.
+- **Los capítulos**, uno por línea, con lo que ocurre en cada uno.
+- **La voz**: cómo suena este libro, en dos o tres frases.
 
- AL CERRAR UN CAPÍTULO: lector-capitulo → G3 gate_chapter.py
- G4  validate_book.py             hilos cerrados, tres actos, desenlace
- compilar.py → novela.md
- traza.py                         qué pasó, en prosa
- reportar.py (opcional)           espejo en Langfuse
-```
+El plan lo lee todo el mundo. El redactor escribe contra él, el verificador
+comprueba contra él y el director se orienta con él.
 
-Todo lo que falla vuelve por el **corrector** y se revalida. El contador de
-intentos vive en disco (`state.json`): reanudar mañana no reinicia la cuenta.
-
-**G1 corre siempre antes que G2.** Es determinista y gratis; filtrar ahí antes
-de convocar dos críticos es lo que mantiene el ciclo barato.
+**El plan solo lo cambia el arquitecto, y solo si se le pide.** Si un capítulo
+contradice el plan, se cambia el capítulo. Es la única manera de que el plan
+siga sirviendo de referencia cuando la novela va por la mitad.
 
 ---
 
-## 5. Los agentes
+## 6. La longitud
 
-Viven en `.claude/agents/`. Cada uno corre en **su propio proceso, con contexto
-limpio**: los dos críticos no se ven entre sí, no saben en qué intento van y no
-leen la crítica anterior. Nadie recibe un archivo del canon: recibe **el canon
-resuelto a la fecha de su escena**, en prosa, dentro de un prompt que arma un
-script.
+El usuario pide una longitud aproximada. No hace falta que sea exacta ni que la
+tenga pensada de antemano. Vale «una novela corta» y vale «unas 20.000
+palabras».
 
-| Agente | Cuándo entra | Qué recibe | Qué devuelve | Qué **no** hace | Skill |
-|---|---|---|---|---|---|
-| **planner** | al arrancar, y cuando una escena se atasca | meta, obstáculo, precio, hilos, época, y las escenas con su fecha, su acto y lo que cierran | `resumen` y tres `beats` por escena, en JSON | no escribe prosa; no elige el acto (se calcula); no toca fechas ni hilos | `resolver-canon` |
-| **escritor** | cada escena, primer intento | la voz del libro, el canon resuelto, lo que pasó antes, la forma | la prosa, y nada más | no escribe archivos; no juzga su escena; no toca el canon | `escribir-escena` |
-| **corrector** | cada intento a partir del 2º | la escena actual, la lista de errores con su arreglo, el canon resuelto | la escena entera, corregida | no reescribe lo que ya pasó; no cambia el canon | `corregir-escena` |
-| **critic-continuity** | cada intento, tras G1 | la escena, el canon resuelto, lo que pasó antes | hallazgos con cita; **un hallazgo veta** | no reescribe; no puntúa | `formato-critica` |
-| **critic-quality** | cada intento, tras G1 | la escena, el acto y lo que se le pide, el canon resuelto, la voz | **`pasa` con motivo**, la dimensión más floja, la rúbrica con cita | no reescribe; no toca el canon | `formato-critica` |
-| **lector-capitulo** | al cerrar un capítulo | las escenas del capítulo seguidas, y el contexto del arco | hallazgos con cita, bloqueantes o no | no repite G1/G2; **no decide si el capítulo pasa** | — |
+El **arquitecto** decide todo lo demás y lo deja escrito en el plan:
 
-El **orquestador** (Claude Code siguiendo `dirigir-novela`) no está en la
-tabla porque no es un subagente: es quien despacha. Elige el camino, corre los
-scripts y acata lo que digan. **Lo único que no puede hacer es decidir que una
-escena está bien.**
+- Cuánto le toca a cada parte de la historia, en porcentaje y en palabras.
+- Cuántos capítulos tiene cada parte.
+- Cuántas palabras tiene que tener cada capítulo, aproximadamente.
 
-### Por qué dos críticos y no uno
+Un reparto razonable de partida es una cuarta parte para la introducción, la
+mitad para el nudo y una cuarta parte para el desenlace. Pero **lo decide el
+arquitecto** según la historia que tenga entre manos, y lo justifica en el plan.
 
-Son dos criterios incompatibles. La continuidad es binaria, hay contradicción
-o no la hay, y **veta**: un solo hallazgo cierra la puerta. La calidad es
-gradual y decide en conjunto. Mezclarlas haría que una escena bien escrita
-compensara una contradicción, que es justo lo que no puede pasar.
+Nadie cuenta las palabras con un contador. El revisor sabe cuántas debería
+tener el capítulo y avisa si se ha ido muy lejos.
 
-### Las skills
+---
 
-Una skill es el manual de un trabajo concreto, escrito una vez en disco y
-cargado idéntico en cada invocación. Es lo que hace que la escena 6 suene igual
-que la 1 sin que nadie haya visto las dos.
+## 7. La traza
 
-| Skill | Para quién | Qué fija |
+Que se pueda ver después qué pasó y por qué es la mitad del proyecto. Pero
+**esto no lo escribe ningún código propio**, por dos motivos.
+
+### Las decisiones ya están en disco
+
+Emitir un juicio **es** escribir un archivo. Cada luz, verde o roja, queda en
+la carpeta de la novela con su veredicto, su motivo entero y su hora. No hay
+un registro aparte que pudiera quedar incompleto, porque el registro es el
+mismo acto de decidir.
+
+Con solo esos archivos se responde: qué se decidió sobre un capítulo, por qué
+se rechazó, cuántos intentos costó y qué acabó entrando en el libro.
+
+### Langfuse lo recoge solo
+
+Claude Code ya registra sus propias llamadas a agentes y herramientas. Langfuse
+publica un plugin oficial que las captura y las manda, agrupadas por sesión,
+sin que haya que escribir una línea.
+
+Ahí se ve lo que los archivos no cuentan: cuánto tardó cada agente, cuánto
+costó, y cómo se compara una corrida con la siguiente.
+
+Es una capa aparte y se puede apagar. Sin ella el sistema funciona igual y las
+decisiones siguen enteras en disco.
+
+---
+
+## 8. Las reglas que no se rompen
+
+1. **Nadie aprueba su propio trabajo.** El redactor no decide si escribió bien.
+   Los que deciden, revisor y verificador, no escriben prosa.
+2. **Todo rechazo dice por qué**, con una cita y con qué cambiar. Un rechazo sin
+   motivo no es accionable y no cuenta como rechazo.
+3. **Los que juzgan no ven los intentos anteriores.** Cada revisión empieza con
+   contexto limpio, para que el capítulo se juzgue por lo que es y no por lo que
+   costó llegar hasta él.
+4. **Decidir es escribir el archivo de la decisión.** No hay juicio que exista
+   solo en una respuesta de chat.
+5. **El plan solo lo cambia el arquitecto.** Si un capítulo lo contradice, se
+   cambia el capítulo.
+6. **El redactor toca solo lo que le señalaron.** Al corregir no reescribe lo
+   que ya había pasado.
+7. **La luz roja viaja entera.** Quien orquesta se la pasa al redactor tal como
+   la escribió el juez, sin resumirla. Un resumen es una interpretación, y
+   interpretar un juicio se parece demasiado a emitirlo.
+8. **Una corrección se juzga otra vez desde cero**, por las dos luces, aunque
+   solo una de las dos hubiera sido roja.
+
+---
+
+## 9. Las capas: qué se puede apagar
+
+El sistema es **una pila de capas de control**, y cada una es un interruptor.
+La de abajo escribe la novela. Cada una que se enciende encima añade un
+control, y con él algo que antes no se veía.
+
+Quitar una capa no rompe el sistema: lo deja escribiendo igual, con menos
+control y menos visibilidad. Esa es la prueba de que cada capa se gana su
+sitio, porque se puede apagar y ver exactamente qué se pierde.
+
+| Capa | Qué aporta | Qué pasa si se apaga |
 |---|---|---|
-| `preparar-libro` | el orquestador | cómo convertir una idea en un canon: qué se calcula, qué se decide, y cuándo preguntar |
-| `dirigir-novela` | el orquestador | el recorrido entero, qué correr y qué delegar, las reglas que no se rompen, qué hacer al atascarse |
-| `resolver-canon` | planner, y quien lo necesite | cómo se entrega el canon resuelto a una fecha |
-| `escribir-escena` | escritor | la voz, la época mostrada y no explicada, la forma |
-| `corregir-escena` | corrector | la regla del bisturí: tocar solo lo señalado |
-| `formato-critica` | los dos críticos | el JSON exacto del veredicto, el veto y la rúbrica |
+| **el plan** | arquitecto y redactor. Sin esto no hay novela. | no hay nada |
+| **las decisiones en disco** | qué se decidió sobre cada capítulo y por qué | el sistema escribe igual, pero a ciegas |
+| **el revisor** | la luz roja por cómo está escrito el capítulo | entra todo lo que el redactor produzca |
+| **el verificador** | la luz roja por coherencia con la historia | los capítulos se contradicen entre sí |
+| **el director** | el turno lo decide un agente | lo decide a mano la sesión de Claude Code |
+| **Langfuse** | cuánto tardó y costó cada agente, y una corrida comparada con otra | las decisiones en disco siguen completas |
+
+**Apagar una capa es no llamar a ese agente.** No hay una opción de
+configuración en ningún sitio: si no se llama al verificador, esa capa está
+apagada. Es deliberado, porque hace que el estado del sistema se vea en lo que
+se ejecutó y no en un archivo de ajustes.
+
+Las seis están construidas. El orden de la tabla sigue siendo el orden en que
+conviene entenderlas, y la regla es que no se toca una capa sin poder explicar
+la de abajo.
 
 ---
 
-## 6. Las puertas
+## 10. Historial
 
-Una **puerta** es un punto donde el trabajo se para y alguien dice sí o no. Si
-dice que no, la escena vuelve atrás con los motivos y se reescribe.
-
-Hay dos tipos, y la diferencia es el proyecto entero:
-
-- **Puertas de hecho**: comprueban cosas con una respuesta correcta, que se
-  pueden contar o comparar. Las abre un script. No opinan, no cuestan nada, no
-  se discuten.
-- **Puertas de criterio**: comprueban cosas que no se pueden contar. **Decide
-  un modelo**, sobre trabajo ajeno y sin ver los intentos anteriores; el script
-  solo comprueba que su decisión sea utilizable.
-
-| Puerta | Cuándo | Quién decide | Qué comprueba | Si no abre |
-|---|---|---|---|---|
-| **G0** el canon | una vez, antes de planificar | script | premisa con época y dos hilos (V1); arco con protagonista, meta, obstáculo, precio y tres actos (V2); timeline coherente con la época y la estructura (V3) | no se escribe una sola línea |
-| **G1** los hechos | cada intento | script | la escena cae en su fecha (V3); nadie hace lo que su estado le impide (V4); la forma cuadra (V5) | vuelve al corrector, sin gastar críticos |
-| **G2** el criterio | tras G1 | **critic-quality** decide; critic-continuity puede vetar | que el veredicto exista y traiga motivo; que nombre la dimensión más floja; que el veto traiga cita; que toda nota cite; que la crítica no sea más vieja que la prosa | vuelve al corrector con el motivo del crítico |
-| **G3** el capítulo | al cerrar un capítulo | lo lee **lector-capitulo**; el script aplica | capítulo completo; toda cita existe en el texto; ningún hallazgo bloqueante | las escenas señaladas vuelven al bucle |
-| **G4** la obra | al final | script | todas aprobadas; cada hilo cerrado exactamente una vez (V6); los tres actos con escena y la última en el desenlace (V7) | se replanifica y se vuelve al bucle |
-
-### La rúbrica
-
-Cinco dimensiones, cada una 0, 1 o 2, anclada a una conducta observable.
-**No decide nada**: es la medida que permite comparar una corrida con otra y
-una versión del prompt con la siguiente. Dos reglas la hacen útil:
-
-- **Toda nota exige cita textual, el 2 incluido.** Si solo se exigiera
-  evidencia para las notas bajas, el camino más cómodo sería poner 2 en todo.
-- **La dimensión más floja es obligatoria, aunque todas sean un 2.** Con el
-  crítico decidiendo, la rúbrica tiende al techo y deja de distinguir; nombrar
-  la más débil fuerza una comparación relativa.
-
-| Dimensión | 0 | 1 | 2 |
-|---|---|---|---|
-| conflicto | no pasa nada: termina como empezó | hay tensión, se resuelve sin costo | algo cambia y tiene precio |
-| voz | podría haberlo escrito cualquiera | correcto pero neutro | suena a este libro y a este personaje |
-| concreción | se nombran emociones | mezcla mostrar y explicar | la acción y el detalle físico llevan el peso |
-| frescura | cliché o frases hechas | alguna muletilla | limpio |
-| avance | el protagonista termina donde empezó | se mueve, pero nada le cuesta | algo cambia para él, y paga por ello |
-
----
-
-## 7. El canon
-
-El **canon** es el expediente del libro: quién es el protagonista, qué quiere,
-qué se lo impide, qué le va a costar, en qué época y lugar transcurre, qué
-escenas hay y cuándo. Son los YAML de `books/<slug>/context/`.
-
-**Solo lo cambia una persona.** Si una escena contradice el canon, se cambia la
-escena. Un ciclo que puede editar el canon para que su texto pase deja de
-validar nada. Lo único que el ciclo escribe en `context/` es el **plan**
-(`resumen` y `beats` de cada escena) y la **voz** (la muestra fijada con la
-primera escena aprobada).
-
-Dos cubos, y de dónde sale cada dato depende de cuál:
-
-| Cubo | Ejemplos | De dónde sale |
-|---|---|---|
-| **Se decide** | quién es, qué quiere, qué se lo impide, qué le cuesta, qué dos cosas más están en juego, en qué año y dónde | una persona, o el orquestador si le dieron vía libre |
-| **Se calcula** | en qué acto cae cada escena, las fechas de las escenas, la clave de cada personaje, la edad a una fecha, el estado vigente | `crear_libro.py` al crear; `resolver_canon.py` al escribir. Nunca se pregunta, nunca se guarda |
-
-**La época no se investiga.** El libro lleva un año y un lugar; el modelo sabe
-cómo se vivía entonces. Si hay un detalle que importa fijar, va en una o dos
-frases de `notas`. La coherencia de época es trabajo del crítico de
-continuidad, que lee con el año en la cabeza.
-
-**El estado de un personaje tiene vigencia.** `lesionado desde el 19 de agosto
-hasta el 24 de noviembre, no puede: jugó, entrenó, corrió` es un tramo. A la
-fecha de cada escena se calcula cuál rige, se le dice al escritor, y un script
-comprueba que la prosa no lo contradiga. Es lo que sostiene un arco de
-recuperación, y es la regla que demuestra que el canon se calcula.
-
-**Los tres actos se calculan por fecha** sobre la ventana de la época
-(25 / 50 / 25). El escritor recibe en qué acto está y qué se espera de él; el
-crítico juzga primero eso; G4 comprueba que los tres tengan escena y que la
-última caiga en el desenlace.
-
----
-
-## 8. La trazabilidad
-
-Un sistema que no se puede mirar por dentro se depura reescribiendo prompts,
-que es justo lo que no se quiere. Por eso **todo lo que hace el ciclo deja un
-evento en disco, en el momento**, y lo escriben los scripts, nunca el
-orquestador.
-
-### Qué se registra
-
-`books/<slug>/reports/traza.jsonl`, un evento por línea, append-only:
-
-| Evento | Quién lo escribe | Qué dice |
-|---|---|---|
-| **puerta** | la propia puerta al emitir su veredicto (G0 a G4 y `compilar`) | cuál, sobre qué escena o capítulo, si abrió, y **con qué errores** si no (regla, mensaje, arreglo) |
-| **agente / inicio** | `empaquetar.py` al armar el prompt | qué agente, sobre qué escena, en qué intento, cuántos caracteres recibió |
-| **agente / fin** | el script que guarda su respuesta (`guardar_prosa.py`, `guardar_critica.py`, `gate_chapter.py`) | cuánto tardó, y lo que importa de lo que devolvió: si la forma cuadró, si hubo que recortar un preámbulo, cuántos hallazgos, si aprobó, cuál fue la dimensión más floja |
-
-Además, por escena quedan en `manuscript/`: la prosa, el JSON de G1, el JSON
-de la crítica, y el prompt exacto que recibió cada agente.
-
-Si el ciclo se corta a la mitad, lo que pasó hasta ahí queda igual.
-
-### Cómo se lee
-
-- **`python harness/scripts/traza.py books/<slug>`** imprime la corrida en
-  prosa: cuántas llamadas a agentes y cuánto tardaron, por agente; cuántas
-  veces se aplicó cada puerta y cuántas cerró; y escena por escena, cuántos
-  intentos costó y qué dijo cada puerta en cada uno, con sus errores.
-- **La interfaz web** tiene tres vistas, todas leídas del disco: *El sistema*
-  (los agentes con su skill, las puertas con quién las abre, el ciclo en orden
-  tal como lo declara `harness/flujo.yaml`; las piezas que están trabajando
-  se encienden), *Lo que pasó* (la línea de tiempo de puertas y agentes de
-  todos los libros) y *Las novelas* (el expediente de cada libro: escena por
-  escena, en su acto, con intentos, veredicto, dimensión más floja, rúbrica,
-  puertas y agentes; y el texto).
-- **Langfuse**, opcional: `reportar.py` manda una traza por escena con sus
-  intentos y sus puertas, y el veredicto y la rúbrica como scores. Sirve para
-  comparar corridas. Sin claves en `.env` no hace nada.
-
-### Qué se puede saber, y qué no
-
-De la traza se sabe **qué pasó y por qué**: cada cierre de puerta con su error,
-cada agente con su duración, cuántos intentos costó cada escena. Lo que no está
-son los tokens y el coste de cada llamada: eso lo hace Claude Code y no pasa
-por ningún script del repo. Si hace falta, el hook oficial de Claude Code lo
-manda a Langfuse por conversación.
-
----
-
-## 9. Las reglas que no se rompen
-
-Cada una está porque su ausencia rompió algo.
-
-1. **Nadie abre su propia puerta.** El escritor no decide si escribió bien; el
-   planificador no decide si su plan sirve. El crítico **sí** decide si la
-   escena pasa, pero sobre trabajo ajeno y sin ver los intentos anteriores.
-2. **Ningún agente escribe archivos, ni el orquestador.** Devuelven prosa o
-   JSON y un script lo guarda. Un agente escribiendo YAML mete un `:` sin
-   comillas y deja el canon ilegible; pedirle que cree un archivo abre una
-   superficie de permisos que falla en silencio. Hay un solo dueño del estado.
-3. **Los prompts los arma un script.** El orquestador pasa una ruta, no copia
-   el canon. Cada copia a mano era un sitio donde transcribir mal y miles de
-   tokens por generación.
-4. **El canon solo lo cambia una persona.** Si una escena lo contradice, se
-   cambia la escena.
-5. **Toda nota de la rúbrica exige cita**, el 2 incluido, y **toda crítica
-   nombra la dimensión más floja**.
-6. **Todo error dice qué está mal, cuál es la verdad y cómo se arregla.** Un
-   error sin `arreglo` no es accionable.
-
-### Las políticas de contexto
-
-Un validador no salva a un modelo al que nunca le dijeron lo que necesitaba.
-
-| Fallo | Política |
-|---|---|
-| relleno de contexto | ningún paso recibe un archivo del canon: recibe la resolución a su fecha |
-| prerrequisitos invisibles | si no está escrito en el canon, no existe |
-| borradores rancios | contexto limpio por llamada; una crítica más vieja que la prosa no abre G2 |
-| vaivén de altitud | ante un fallo se cambia la regla o el dato, nunca el nivel del prompt |
-| depurar solo el prompt | antes de tocar un prompt, comprobar que el dato llegó |
-| métricas silenciosas | ninguna puerta abre sin evidencia citable |
-
-> Escribir para no olvidar, aislar para no contaminar, seleccionar para no
-> ahogar, comprimir para no interpretar.
-
----
-
-## 10. Decisiones heredadas
-
-Lo que la versión 10 conserva viene de fallos reales de las versiones
-anteriores. Se listan para que nadie las deshaga sin saber qué rompió su
-ausencia. El detalle completo está en el historial de git (`SPEC.md` hasta
-la 9.2).
-
-| Decisión | Qué la motivó |
-|---|---|
-| El crítico decide y el script solo comprueba que pueda decidir | Sumar una rúbrica contra un umbral daba una puerta siempre abierta con aspecto de control |
-| Cita obligatoria en toda nota, el 2 incluido | La primera corrida completa devolvió un 10/10 a un primer borrador con las cinco citas vacías |
-| Dimensión más floja obligatoria | Con el crítico decidiendo, la rúbrica dio 10 / 9 / 10 y no distinguía nada |
-| Un hallazgo de continuidad cuenta como veto aunque la lente no lo marque | Un hallazgo con su cita quedaba escrito en el JSON y la puerta lo ignoraba |
-| Una crítica más vieja que la prosa no abre G2 | Aprobar con la crítica de un texto que ya cambió es aprobar a ciegas |
-| Los prompts los arma un script | El orquestador gastaba más de mil tokens de salida y 35 segundos por generación copiando el canon a mano |
-| Los archivos los escriben los scripts | El corrector coló un preámbulo que hubo que recortar a mano; un agente escribiendo YAML lo dejó ilegible |
-| Una escena sin beats es un error, no una omisión | El planner devolvió una escena sin beats y el script la saltó en silencio |
-| Se comprueba el sistema antes de escribir | Un `:` sin comillas dejó a un agente sin cargar y se supo tres pasos tarde, con el genérico gastando 3,7 veces más |
-| La traza la escriben las puertas al emitir, y los agentes al empaquetar y guardar | Una métrica que dependía de la salida de consola decía «cero puertas cerraron» con tres cerradas en disco |
-| El prompt a `claude -p` viaja por stdin | En Windows `claude` es un shim `.cmd` y cmd.exe corta el argumento en el primer salto de línea |
-| El orquestador corre en sesión limpia | El coste de la primera novela lo dominó el contexto de sesión releído en cada generación, cien veces más que el trabajo de los agentes |
-| La novela es de un protagonista, en tres actos | El género romántico anterior metía en el canon una relación con cinco etapas y reglas de pareja que no eran el problema a estudiar |
-
----
-
-## 11. Historial
-
-Toda modificación de esta especificación se registra aquí, en la misma
-entrega que la cambia, con **qué** cambió y **por qué**.
+Toda modificación de esta especificación se registra aquí, en la misma entrega
+que la cambia, con **qué** cambió y **por qué**.
 
 | Versión | Fecha | Cambio | Por qué |
 |---|---|---|---|
-| **10.0** | 2026-09-17 | **Vuelta a las bases.** Se quita la investigación de época (agente `researcher`, `epoca.yaml`, anacronismos, skills `epoca` y `analizar-traza`), el intake, el techo de palabras y el regulador, los eventos únicos y el conocimiento fechado, la lectura de Langfuse en la UI, los informes y tres libros de prueba. Las reglas se renumeran V1-V7. La traza se lee con `traza.py`. Dos especificaciones nuevas, funcional y técnica, sustituyen al SPEC anterior. | El sistema había puesto la complejidad en la fidelidad histórica y en el control del tamaño, que no eran el problema. Lo que se quiere estudiar son las puertas, el criterio con evidencia y la traza: eso se conserva entero y ahora se ve. |
+| **1.0** | 2026-09-17 | Primera versión. Cinco agentes: arquitecto, director, redactor, revisor y verificador. El círculo de aprobación por capítulo con dos luces. El plan como documento en prosa. La longitud repartida por el arquitecto en tres partes. La traza en disco, con Langfuse como capa aparte. | El sistema se construye desde cero con el criterio en manos de agentes y no de reglas en código, porque un criterio que se puede leer y discutir vale más que uno que solo se puede depurar. La unidad de trabajo es el capítulo. |
+| **1.1** | 2026-09-17 | Las capas dejan de ser un orden de construcción y pasan a ser lo que se puede apagar, con una columna que dice qué se pierde al apagar cada una. | Se construyeron las seis de una vez, así que un orden de construcción ya no describe nada. Lo que sigue siendo cierto y útil es que cada capa es un interruptor, y que apagarla muestra exactamente qué control aportaba. |
+| **1.2** | 2026-09-17 | La sesión de Claude Code orquesta siguiendo una skill, sin ningún programa por debajo. La traza deja de ser un archivo propio: las decisiones ya son archivos y Langfuse recoge los despachos con su plugin oficial. | El orquestador tenía que ser la sesión, y los scripts intermedios le estaban ocupando el sitio. Un registro aparte podía quedar incompleto; el archivo de una decisión no, porque escribirlo **es** decidir. |
+| **1.3** | 2026-09-17 | La coherencia que juzga el verificador incluye los hechos que el capítulo afirma y las cuentas que echa. La luz roja viaja entera al redactor, y un capítulo corregido se vuelve a juzgar desde cero por las dos luces. Al tercer intento para la sesión. | La primera novela completa enseñó qué rechazos aparecen de verdad: un dato del mundo imposible para la edad del protagonista y una resta que no cerraba, ninguno de los dos una contradicción con el plan ni un problema de prosa. Y una corrección vuelve a pasar por el revisor, así que la regla tenía que decirlo en vez de dejarlo al criterio de quien orquesta. Parar es de la sesión, que es la que lleva la cuenta de los intentos. |

@@ -1,0 +1,6 @@
+{
+  "env": {
+    "TRACE_TO_LANGFUSE": "true",
+    "LANGFUSE_BASE_URL": "https://cloud.langfuse.com"
+  }
+}

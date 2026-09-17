@@ -1,79 +1,94 @@
 # Story-Maker
 
-Un sistema que escribe **novelas deportivas cortas** —la historia de un
-atleta, en tres actos— sin contradecirse, y que deja ver por dentro cómo lo
-hizo.
+Un sistema de agentes que escribe una **novela corta** y deja ver, paso a paso,
+cómo la escribió.
 
-La novela es la excusa. **Lo que se está construyendo son las capas de control
-sobre un modelo**: las puertas que deciden si lo que produjo un modelo entra o
-no entra, el criterio con evidencia que las abre, y la traza que cuenta después
-qué pasó y por qué.
+La novela es la excusa. Lo que se está construyendo es un **sistema agéntico
+observable**: unos agentes escriben, otros aprueban o rechazan, y todo lo que
+se decide queda anotado con su motivo.
 
-> Lo que se puede calcular no se recuerda. El modelo escribe; el código y otro
-> modelo verifican.
+> Todo lo que se decide, lo decide un agente, y deja escrito por qué.
 
 - [SPEC-FUNCIONAL.md](SPEC-FUNCIONAL.md): qué hace el sistema y por qué.
-- [SPEC-TECNICO.md](SPEC-TECNICO.md): archivos, scripts, reglas, contratos, traza.
-- [CLAUDE.md](CLAUDE.md): lo que hace falta saber para trabajar en el repo.
+- [SPEC-TECNICO.md](SPEC-TECNICO.md): archivos, contratos y formatos.
 
 ## Cómo se usa
 
-Se le pide a **Claude Code**, en la terminal o en VS Code:
+Se le pide a Claude Code, en la terminal o en VS Code:
 
 ```
-> escribí una novela sobre un nadador que vuelve de una lesión, en 1975
-> seguí con books/nuria-1992
+> una novela sobre una ciclista que vuelve de una caída, unas 15.000 palabras
 ```
 
-Si no hay libro, sigue `preparar-libro` (decide y pregunta una sola vez); con el
-canon listo sigue `dirigir-novela` (planifica, escribe, critica, corrige,
-compila). Al final: `books/<slug>/manuscript/novela.md` y una traza en
-`books/<slug>/reports/traza.jsonl`.
+**La sesión de Claude Code es el orquestador.** Sigue la skill
+`dirigir-novela`, despacha a los agentes, lee sus veredictos y aprueba los
+capítulos que pasan. No hay ningún programa por debajo: el repositorio no tiene
+una sola línea de código.
 
-## Quién hace qué
+## Los cinco agentes
 
-| Pieza | Qué hace | Quién decide |
+| Agente | Qué hace |
+|---|---|
+| **arquitecto** | convierte la idea y la longitud en el plan de la novela |
+| **director** | dice qué toca ahora, cuando no está claro cómo seguir |
+| **redactor** | escribe el capítulo, y lo reescribe si le dan luz roja |
+| **revisor** | ¿está bien escrito este capítulo? |
+| **verificador** | ¿encaja este capítulo en la historia? |
+
+Ningún agente aprueba su propio trabajo, y Claude Code no puede decidir que un
+capítulo está bien.
+
+## El círculo de aprobación
+
+Se repite una vez por capítulo. Dos luces verdes y el capítulo entra en la
+novela. Una luz roja y vuelve al redactor con el motivo.
+
+```
+  REDACTOR ──► borrador ──► REVISOR ──► VERIFICADOR ──► el capítulo entra
+      ▲                        │             │
+      └──── luz roja ──────────┴─────────────┘
+            y el motivo
+```
+
+Toda luz roja dice qué está mal, dónde con una cita, y qué cambiar, y le llega
+al redactor entera, sin resumir. Un capítulo corregido vuelve a entrar por el
+principio: las dos luces se piden de nuevo. A los tres intentos sin aprobar, el
+capítulo se para y decide la persona.
+
+## Ver lo que pasó
+
+**El estado es la carpeta de la novela.** No hay contadores escondidos ni
+archivo de estado:
+
+```bash
+ls books/<slug>/capitulos books/<slug>/decisiones
+head -1 books/<slug>/decisiones/*.md
+```
+
+Un capítulo aprobado es el que no lleva `borrador` en el nombre. Cada juicio es
+un archivo con su veredicto, su motivo y su hora, así que el historial de
+decisiones no puede quedar incompleto: escribirlo **es** decidir.
+
+Los nombres cuentan el camino solos: un intento con archivo de revisor y ninguno
+de verificador es un borrador que no pasó de la primera puerta.
+
+Hay una novela completa de ejemplo en `books/ciclista-2010/`.
+
+Para los tiempos y los costes está **Langfuse**, con su plugin oficial para
+Claude Code:
+
+```bash
+claude plugin marketplace add langfuse/Claude-Observability-Plugin
+claude plugin install langfuse-observability@langfuse-observability
+```
+
+## Capas que se pueden apagar
+
+| Capa | Qué aporta | Si se apaga |
 |---|---|---|
-| **planner** | reparte la historia en escenas: resumen y tres beats | un script comprueba que no falte ninguno |
-| **escritor** / **corrector** | la prosa; el corrector toca solo lo señalado | no deciden nada |
-| **critic-continuity** | contradicciones con el canon; un hallazgo veta | **decide** (veta) |
-| **critic-quality** | si la escena entra, con motivo; la rúbrica con cita | **decide** |
-| **lector-capitulo** | lo que solo se ve leyendo el capítulo seguido | el script aplica sus hallazgos |
-| **G0 · G1 · G4** | canon, hechos y forma, obra | scripts, siete reglas |
-
-Cada agente corre con contexto limpio y recibe el canon **resuelto a la fecha
-de su escena**, en prosa, dentro de un prompt que arma un script. Ningún agente
-escribe archivos.
-
-## Ver cómo funcionó
-
-```bash
-python harness/scripts/traza.py books/<slug>
-```
-
-Y con interfaz (`cd ui && npm install && npm run build`, luego
-`python harness/server.py`): el mapa del sistema, la línea de tiempo de puertas
-y agentes, y el expediente de cada novela escena por escena. Todo del disco.
-
-## Correrlo a mano
-
-```bash
-pip install -r requirements.txt
-python -m pytest tests -q                       # sin red ni tokens
-python harness/scripts/comprobar_sistema.py
-```
-
-Los comandos del ciclo, uno por uno, están en [CLAUDE.md](CLAUDE.md).
-
-## Estructura
-
-```
-.claude/         6 agentes y 6 skills
-harness/         config.yaml · flujo.yaml · voz-base.md · vista.py · server.py · scripts/
-books/<slug>/    context/ (el canon) · manuscript/ · reports/ · state.json
-tests/           una trampa por regla y por script
-ui/              React sobre harness/server.py
-```
-
-Langfuse es opcional: `cp .env.example .env` con tus claves y `reportar.py`
-manda una traza por escena con la rúbrica como scores. Sin claves, no pasa nada.
+| el plan | arquitecto y redactor | no hay novela |
+| las decisiones en disco | qué se decidió y por qué | escribe a ciegas |
+| el revisor | luz roja por cómo está escrito | entra todo |
+| el verificador | luz roja por coherencia | los capítulos se contradicen |
+| el director | el turno lo decide un agente | se decide leyendo la carpeta |
+| Langfuse | tiempos, costes y comparar corridas | las decisiones siguen enteras |

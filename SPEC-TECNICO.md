@@ -1,404 +1,316 @@
 # Story-Maker — Especificación técnica
 
-**Versión 10.0** · 2026-09-17 · el porqué de cada decisión está en
-[SPEC-FUNCIONAL.md](SPEC-FUNCIONAL.md). Esto es **cómo está hecho**: archivos,
-formatos, scripts, reglas, contratos y traza.
+**Versión 1.2** · 2026-09-17 · el qué y el porqué están en
+[SPEC-FUNCIONAL.md](SPEC-FUNCIONAL.md).
+
+Este documento dice **cómo está hecho**: archivos, contratos y formatos.
 
 ---
 
 ## 1. Estructura del repositorio
 
 ```
-.claude/
-  agents/            6 agentes: planner, escritor, corrector, critic-continuity,
-                     critic-quality, lector-capitulo
-  skills/            6 skills: preparar-libro, dirigir-novela, resolver-canon,
-                     escribir-escena, corregir-escena, formato-critica
-  settings.json      permisos para los scripts del harness
-harness/
-  config.yaml        los numeros del sistema (§2)
-  flujo.yaml         el ciclo declarado: quien, cuando, con que; lo lee la UI
-  voz-base.md        el registro del genero; punto de partida de voz.md
-  vista.py           lo que la UI muestra: sistema, actividad, expediente
-  server.py          API local + UI estatica
-  scripts/           los validadores, las puertas y los scripts del ciclo (§5)
-books/<slug>/        una novela (§3)
-tests/               una trampa por regla y por script
-ui/                  interfaz React (Vite) sobre server.py
+.claude/agents/                 un archivo por agente
+.claude/skills/dirigir-novela/  el ciclo entero, para la sesión que orquesta
+.claude/skills/luz/             el formato de una decisión
+.claude/settings.json           las variables de entorno del proyecto
+books/<slug>/                   una novela
 ```
 
-Los scripts reciben la ruta del libro como argumento. **No hay libro
-«actual».** `.claude/` está en la raíz porque Claude Code descubre agentes y
-skills ahí; conceptualmente es parte del harness.
+**No hay código.** Ni un script, ni un validador, ni un archivo de Python.
+
+Lo que en otro sistema sería un harness aquí son tres cosas: la sesión de
+Claude Code, que orquesta siguiendo una skill; los agentes, que hacen el
+trabajo y lo escriben; y las órdenes normales de la terminal, `mkdir`, `ls`,
+`head`, `mv` y `cat`, que la sesión usa directamente.
+
+La razón es que cada script intermedio es una pieza que hay que leer para
+entender el sistema, y ninguno estaba haciendo nada que la sesión no pueda
+hacer con una orden. Un script que interpreta `plan.md` con una expresión
+regular, además, se rompe en silencio el día que el arquitecto cambia una
+palabra del formato.
 
 ---
 
-## 2. Configuración
-
-`harness/config.yaml`. Todo lo que tiene un número está aquí y nada lo repite.
-Un libro puede pisar cualquier sección con su propio `books/<slug>/config.yaml`
-(normalmente solo `estructura`).
-
-```yaml
-estructura:
-  capitulos: 1
-  escenas_por_capitulo: 3
-  parrafos_por_escena: 3
-  lineas_por_parrafo: 4
-  palabras_por_linea: 12
-tolerancia:
-  lineas_por_parrafo: 0        # exacto
-  palabras_por_linea: 3        # 12 +- 3
-rubrica:
-  dimensiones: [conflicto, voz, concrecion, frescura, avance]
-  niveles: [0, 1, 2]
-ciclo:
-  intentos_max: 3
-genero:
-  actos: [planteamiento, desarrollo, desenlace]
-  reparto: { planteamiento: 0.25, desarrollo: 0.50, desenlace: 0.25 }
-  exige: { planteamiento: "...", desarrollo: "...", desenlace: "..." }
-```
-
-**Derivado, no guardado** (`Libro.forma`):
-
-```
-palabras_por_escena     = parrafos × lineas × palabras_por_linea         = 144
-palabras_por_escena_max = parrafos × lineas × (palabras_por_linea + tol) = 180
-escenas_totales         = capitulos × escenas_por_capitulo
-```
-
-No hay techo de palabras: V5 acota cada escena, así que el libro cabe por
-construcción.
-
----
-
-## 3. Los archivos de un libro
+## 2. Los archivos de una novela
 
 ```
 books/<slug>/
-  config.yaml                    opcional: la estructura de ESTE libro
-  context/                       EL CANON. Lo escribe crear_libro.py; lo cambia una persona
-    premise.yaml
-    arco.yaml
-    characters/<clave>.yaml
-    timeline.yaml                el ciclo solo toca resumen, beats y estado
-    voz.md                       voz-base + muestra fija de la primera escena aprobada
-  manuscript/
-    chNN/SNNN.md                 la prosa
-    chNN/SNNN.validation.json    la salida de G1
-    chNN/SNNN.critique.json      la critica juntada
-    chNN/SNNN.<rol>.prompt.md    el prompt exacto que recibio cada agente (no se versiona)
-    chNN/capitulo.lector-capitulo.prompt.md
-    novela.md                    el entregable
-  reports/
-    traza.jsonl                  la traza (§7)
-    final.json                   la salida de G4
-  state.json                     escena actual, intento, ultima aprobada
+  plan.md                        el plan. Lo escribe el arquitecto
+  capitulos/
+    01.md                        aprobado: entra en la novela
+    02.md                        aprobado
+    03.borrador.md               en curso, todavía sin aprobar
+  decisiones/
+    03.intento1.revisor.md       una luz, con su motivo
+    03.intento2.revisor.md
+    03.intento2.verificador.md
+  novela.md                      al final: los capítulos aprobados, seguidos
 ```
 
-### `premise.yaml`
+**El estado del sistema es la carpeta.** No hay un archivo de estado aparte con
+contadores. Por dónde va la novela se sabe mirando qué capítulos existen sin el
+sufijo `borrador`. En qué intento va un capítulo se sabe contando sus archivos
+en `decisiones/`. Todo lo que el sistema sabe de sí mismo se ve con `ls`.
 
-```yaml
-titulo: La ultima calle
-eje: Una espaldista de 29 anos en su ultima temporada
-deporte: natacion
-lugar: Barcelona
-epoca:
-  desde: '1992-01-13'
-  hasta: '1992-07-31'
-  notas: opcional, una o dos frases        # NO hay lista de anacronismos
-hilos:
-- { id: H1, que: la plaza de maestra interina que pierde }
-- { id: H2, que: la oferta del club para quedarse de entrenadora }
-```
+Un capítulo aprobado **pierde el sufijo**: `03.borrador.md` pasa a ser `03.md`.
+Ese cambio de nombre es la aprobación.
 
-### `arco.yaml`
-
-```yaml
-protagonista: nuria                        # clave de characters/
-meta: nadar los 200 espalda en los Juegos
-obstaculo: la minima no baja y la plaza ya es de otra
-precio: la plaza de maestra
-actos:                                     # derivados de la epoca con genero.reparto
-- { acto: planteamiento, desde: '1992-01-13' }
-- { acto: desarrollo,    desde: '1992-03-03' }
-- { acto: desenlace,     desde: '1992-06-11' }
-```
-
-### `characters/<clave>.yaml`
-
-```yaml
-nombre: Marco Iriarte
-rol: mediocampista del club, en el ultimo ano de contrato
-nacimiento: '1962-03-14'                   # opcional; la edad se calcula, no se guarda
-estados:                                   # tramos con vigencia; no hay "estado actual"
-- { desde: '1990-01-01', hasta: '1990-08-18', que: sano }
-- { desde: '1990-08-19', hasta: '1990-11-24', que: lesionado,
-    prohibe: [jugo, entreno, corrio, pateo] }   # lo que V4 no deja aparecer en ese tramo
-- { desde: '1990-11-25', hasta: '1990-12-31', que: retirado }
-```
-
-`crear_libro.py` deja un solo tramo `en actividad`; los tramos con `prohibe`
-los añade una persona.
-
-### `timeline.yaml`
-
-```yaml
-escenas:
-- id: S001
-  capitulo: 1
-  fecha: '1992-01-23'                      # absoluta; el acto se calcula de aqui
-  lugar: Barcelona
-  presentes: [nuria, marta, toni]          # claves de characters/
-  resumen: una frase                       # plan: lo escribe guardar_plan.py
-  beats: [tres momentos concretos]         # plan
-  estado: planificada | escrita | aprobada # lo mueve run_scene.py
-  cierra: []                               # que hilos resuelve; la penultima H1, la ultima H2
-```
-
-### `state.json`
-
-```json
-{"escena_actual": "S003", "intento": 1, "ultima_aprobada": "S002"}
-```
-
-### `SNNN.critique.json`
-
-```json
-{"escena": "S001",
- "veredicto": {"pasa": true, "motivo": "...", "mas_floja": {"dimension": "avance", "por_que": "..."}},
- "continuidad": {"veto": false, "hallazgos": [{"que": "...", "cita": "..."}]},
- "calidad": {"conflicto": {"nota": 1, "cita": "..."}, "voz": {...}, "concrecion": {...},
-             "frescura": {...}, "avance": {...}}}
-```
-
-### Salida de toda puerta
-
-```json
-{"objeto": "S001", "ok": false, "puerta": "G1",
- "errores": [{"regla": "V4", "mensaje": "que esta mal y cual es la verdad.", "arreglo": "como salir de ahi."}],
- "...": "campos propios de cada puerta"}
-```
-
-Todas salen por `common.emitir()`: imprime, guarda si tiene destino y anota la
-traza. Una puerta nueva no puede olvidarse de registrarse.
+**En `decisiones/` se lee también por qué se repitió un intento.** Un intento con
+un solo archivo, el del revisor, es uno que nunca llegó al verificador: la
+prosa no pasó y no tenía sentido pagar la llamada más cara. Un intento con los
+dos archivos se rechazó por coherencia, o se aprobó. El contador de intentos no
+se reinicia al cambiar de juez: cada reescritura es un intento nuevo y se
+vuelve a juzgar entera.
 
 ---
 
-## 4. Las reglas
+## 3. Quién escribe cada archivo
 
-| Regla | Qué comprueba | Puerta | Función | Trampa en `tests/` |
-|---|---|---|---|---|
-| **V1** premisa | `deporte`, `lugar`; `epoca.desde <= hasta`; exactamente 2 hilos con `id` y `que` | G0 | `validate_canon.v1_premisa` | `test_v1_*` |
-| **V2** arco | protagonista con ficha; `meta`, `obstaculo`, `precio`; tres actos en orden con fechas crecientes; cada acto con ≥1 escena si hay ≥3 escenas | G0 | `validate_canon.v2_arco` | `test_v2_*` |
-| **V3** timeline | tantas escenas como `escenas_totales`; ids únicos; capítulo en rango; cada escena con fecha dentro de la época, sin retroceder dentro de su capítulo, y con presentes que existen | G0 (todas) y G1 (la escena) | `validate_canon.v3_timeline`, `v3_escena` | `test_v3_*` |
-| **V4** estado | ningún término de `prohibe` del tramo vigente de un presente aparece en la prosa (palabra completa, sin tildes ni mayúsculas) | G1 | `validate_scene.v4_estado` | `test_v4_*` |
-| **V5** forma | `parrafos_por_escena` párrafos; `lineas_por_parrafo` líneas cada uno; cada línea `palabras_por_linea ± tolerancia` | G1 | `validate_scene.v5_forma` | `test_v5_*` |
-| **V6** hilos | cada hilo declarado lo cierra exactamente una escena aprobada; ninguna escena cierra un hilo no declarado | G4 | `validate_book.v6_hilos` | `test_v6_*` |
-| **V7** actos | los tres actos tienen escena aprobada; la última aprobada (por fecha) cae en el desenlace. No se exige con menos de 3 escenas | G4 | `validate_book.v7_actos` | `test_v7_*` |
+Los agentes **escriben sus propios archivos**. El arquitecto escribe `plan.md`,
+el redactor escribe su borrador, el revisor y el verificador escriben su
+decisión.
 
-Y las comprobaciones de las puertas de criterio, que no son reglas sobre el
-canon sino sobre **la utilizabilidad del juicio**:
+Hay una sola excepción. **El renombrado de `NN.borrador.md` a `NN.md` lo hace
+la sesión**, no un agente. La aprobación es la consecuencia de dos luces
+verdes, no el acto de nadie. Si la consumara el verificador, un agente podría
+dar por aprobado un capítulo sin que el revisor se hubiera pronunciado.
 
-| Id | Qué | Puerta |
-|---|---|---|
-| `G2/traza` | la crítica es posterior a la prosa (mtime) | G2 |
-| `G2/veredicto` | existe `pasa` y trae `motivo` | G2 |
-| `G2/criterio` | el crítico dijo `pasa: false`; su motivo viaja como error para el corrector | G2 |
-| `G2/mas_floja` | `mas_floja.dimension` existe en la rúbrica y trae `por_que` | G2 |
-| `G2/continuidad` | cada hallazgo cierra; un `veto: true` sin hallazgos también | G2 |
-| `G2/rubrica` | nota en `niveles`; toda nota con cita | G2 |
-| `G3/completo` | todas las escenas del capítulo aprobadas | G3 |
-| `G3/lectura` | todo hallazgo con cita, y la cita aparece en el capítulo | G3 |
-| `G3/capitulo` | un hallazgo con `bloquea: true` | G3 |
-| `G4/completo` | quedan escenas sin aprobar | G4 |
+Los agentes pueden escribir sus propios archivos porque todos son prosa en
+Markdown. Un agente que escribe prosa no puede dejar un archivo ilegible, como
+mucho deja un párrafo de más que se ve al leerlo. Si el plan fuera un YAML con
+estructura haría falta otra cosa, y es una de las razones por las que no lo es.
 
-Correspondencia con la numeración anterior (para leer trazas viejas):
-V1 ← V13 (época) y V21 (intake); V2 ← V16; V3 ← V1, V2 y `plan_cabe`;
-V4 ← V6; V5 ← V14 y V15; V6 ← V10 y V11; V7 ← V17 y V18. Retiradas: V3, V4,
-V5, V7, V8, V9, V12, V19, V20 y el regulador.
+### Por qué esto no necesita un guardián
+
+Nada impide técnicamente que la sesión renombre un borrador sin haber leído las
+dos luces. Lo que lo hace comprobable es que **las decisiones están en disco**:
+cada juicio es un archivo con su veredicto, su motivo y su hora. Cualquiera
+puede abrir `decisiones/` y ver si un capítulo aprobado tenía sus dos luces
+verdes.
+
+Se prefirió eso a un script que lo impidiera. Un guardián da una garantía más
+fuerte, pero es una pieza más que hay que leer para entender el sistema, y la
+garantía que da se puede reconstruir mirando los archivos.
 
 ---
 
-## 5. Los scripts
+## 4. Los contratos de los agentes
 
-Todos en `harness/scripts/`. Todos imprimen JSON. Todos reciben la ruta del
-libro. Código y comentarios en español sin tildes (la consola de Windows viene
-en cp1252). Los que leen stdin lo reconfiguran a UTF-8 por la misma razón.
+Cada agente corre en **su propio proceso, con contexto limpio**. Recibe un
+prompt y devuelve texto. No ve lo que vieron los demás.
 
-| Script | Uso | Qué hace | Efectos |
-|---|---|---|---|
-| `comprobar_sistema.py` | `comprobar_sistema.py` | los 6 agentes y las 6 skills existen y su frontmatter carga | — |
-| `crear_libro.py` | `crear_libro.py <libro.json>` | deriva y escribe el canon; corre G0 | crea `books/<slug>/`; traza G0 |
-| `validate_canon.py` | `validate_canon.py <libro>` | **G0**: V1, V2, V3; devuelve `actos` y `sin_beats` | traza |
-| `guardar_plan.py` | `guardar_plan.py <libro> < plan.json` | guarda `resumen` y `beats`; rechaza escenas sin tres beats | `timeline.yaml` |
-| `run_scene.py` | `next` · `aprobar <SID>` · `intento <SID>` · `estado` · `reset` | el estado del ciclo (§6) | `state.json`, `timeline.yaml`, `voz.md` |
-| `resolver_canon.py` | `resolver_canon.py <libro> <SID>` | el canon resuelto a la fecha, en prosa | — |
-| `empaquetar.py` | `empaquetar.py <libro> <SID\|chN> <rol> [--errores f.json]` | arma el prompt del agente y lo deja en un archivo | `*.prompt.md`; traza `agente/inicio` |
-| `guardar_prosa.py` | `guardar_prosa.py <libro> <SID> --de <rol> < prosa` | limpia preámbulo y fences, comprueba la forma, guarda | `SNNN.md`; traza `agente/fin` |
-| `validate_scene.py` | `validate_scene.py <libro> <SID>` | **G1**: V3, V4, V5 | `SNNN.validation.json`; traza |
-| `guardar_critica.py` | `guardar_critica.py <libro> <SID> --continuidad a --calidad b` | parsea las dos respuestas crudas, exige veredicto y `mas_floja`, junta y guarda | `SNNN.critique.json`; traza `agente/fin` ×2 |
-| `gate_scene.py` | `gate_scene.py <libro> <SID>` | **G2** | traza |
-| `gate_chapter.py` | `gate_chapter.py <libro> <N> < lectura.json` | **G3** | traza `agente/fin` (lector) + puerta |
-| `validate_book.py` | `validate_book.py <libro>` | **G4**: completo, V6, V7 | `reports/final.json`; traza |
-| `compilar.py` | `compilar.py <libro>` | concatena las aprobadas | `manuscript/novela.md`; traza |
-| `traza.py` | `traza.py <libro> [--json]` | resume la traza (§7) | — |
-| `reportar.py` | `reportar.py <libro>` | espejo opcional en Langfuse | red, si hay claves |
+### arquitecto
 
-Módulos compartidos: `common.py` (carga, `Libro`, derivaciones, `Error`,
-`emitir`), `parseo.py` (`limpiar_prosa`, `extraer_json`), `traza.py`.
+| | |
+|---|---|
+| **Recibe** | la idea del usuario y la longitud aproximada que pidió |
+| **Devuelve** | el contenido de `plan.md` |
+| **Escribe** | `plan.md` |
+| **No hace** | no escribe prosa de la novela; no decide si un capítulo pasa |
 
-### `run_scene.py next`
+### director
 
-Devuelve `accion`:
+| | |
+|---|---|
+| **Recibe** | `plan.md`, la lista de archivos de `capitulos/` y de `decisiones/` |
+| **Devuelve** | qué toca ahora: el capítulo, el agente y el motivo |
+| **Escribe** | nada |
+| **No hace** | no escribe prosa; no aprueba capítulos; no cambia el plan |
 
-| `accion` | Cuándo | Qué hace el orquestador |
-|---|---|---|
-| `planificar` | la primera escena pendiente no tiene tres beats | Task al planner → `guardar_plan.py` |
-| `escribir` | pendiente sin prosa en disco | `empaquetar.py ... escritor` |
-| `corregir` | pendiente con prosa | `empaquetar.py ... corrector` |
-| `parar` | `intento >= ciclo.intentos_max` | replanificar una vez; si no, parar e informar |
-| `cerrar` | ninguna pendiente y G4 abriría | `validate_book.py`, `compilar.py`, `traza.py` |
-| `revisar` | ninguna pendiente y G4 no abriría | mirar `condiciones` y replanificar |
+Sus respuestas posibles son pocas: escribir el capítulo N, revisarlo,
+verificarlo, reescribirlo con estos motivos, parar y avisar, o cerrar la novela.
 
-`aprobar <SID>` vuelve a correr G1 y G2 antes de marcar la escena: el estado
-no se mueve sin las puertas abiertas. Con la primera aprobada fija `voz.md`
-(dos párrafos de muestra bajo `## Muestra fija`; no se regenera). `reset`
-borra prosa, críticas, prompts, estado, traza y entregable, devuelve `voz.md` a
-la base y **no toca el canon ni los beats**.
+### redactor
+
+| | |
+|---|---|
+| **Recibe** | `plan.md`, los capítulos ya aprobados, el capítulo que le toca, y —si es una corrección— las luces rojas que recibió, enteras y literales |
+| **Devuelve** | el capítulo entero, solo prosa |
+| **Escribe** | `capitulos/NN.borrador.md` |
+| **No hace** | no juzga su capítulo; no cambia el plan; al corregir, no toca lo que no le señalaron |
+
+### revisor
+
+| | |
+|---|---|
+| **Recibe** | el borrador del capítulo, la voz del plan y las palabras que debería tener |
+| **Devuelve** | una luz, con su motivo (§5) |
+| **Escribe** | `decisiones/NN.intentoK.revisor.md` |
+| **No hace** | no reescribe; no ve los intentos anteriores; no ve los otros capítulos |
+
+El revisor **no ve el resto de la novela** a propósito. Su pregunta es si este
+capítulo está bien escrito, y para eso el resto sobra.
+
+### verificador
+
+| | |
+|---|---|
+| **Recibe** | el borrador del capítulo, `plan.md` y los capítulos aprobados hasta ahora |
+| **Devuelve** | una luz, con su motivo (§5) |
+| **Escribe** | `decisiones/NN.intentoK.verificador.md` |
+| **No hace** | no reescribe; no juzga la calidad de la prosa; no ve los intentos anteriores |
 
 ---
 
-## 6. Los contratos de los agentes
+## 5. El formato de una luz
 
-El **método** vive en `.claude/agents/<rol>.md` (Claude Code lo carga solo).
-Los **datos** van en el prompt que arma `empaquetar.py`. El orquestador lanza
-un Task con la instrucción literal que devuelve `empaquetar.py`: «Lee
-`books/<slug>/manuscript/chNN/SNNN.<rol>.prompt.md` y haz tu trabajo».
+Una decisión es un archivo Markdown. La primera línea es la única que la
+sesión necesita leer para saber el veredicto:
 
-| Rol | Secciones del prompt | Devuelve | Lo guarda | Traza `fin` |
-|---|---|---|---|---|
-| `escritor` | VOZ · CANON resuelto · LO QUE PASO ANTES · FORMA · cierre «solo prosa» | prosa | `guardar_prosa.py --de escritor` | `chars`, `forma_ok`, `recortado` |
-| `corrector` | LA ESCENA ACTUAL · errores con `arreglo` (del `--errores` o de la última puerta que cerró sobre la escena o su capítulo) · CANON · FORMA | prosa entera | `guardar_prosa.py --de corrector` | idem |
-| `critic-continuity` | LA ESCENA · CANON · LO QUE PASO ANTES · formato | `{"continuidad": {"veto", "hallazgos": [{"que", "cita"}]}}` | `guardar_critica.py` | `hallazgos` |
-| `critic-quality` | LA ESCENA · EL ACTO y lo que se le pide · CANON · LO QUE PASO ANTES · VOZ · formato | `{"veredicto": {"pasa", "motivo", "mas_floja": {"dimension", "por_que"}}, "calidad": {dim: {"nota", "cita"}}}` | `guardar_critica.py` | `pasa`, `mas_floja` |
-| `lector-capitulo` | las escenas del capítulo seguidas · contexto del arco · formato | `{"hallazgos": [{"que", "cita", "escena", "bloquea"}]}` | `gate_chapter.py` (por stdin) | `hallazgos` |
-| `planner` | lo arma el orquestador: meta, obstáculo, precio, hilos, época, escenas con fecha, acto y `cierra` | `{"escenas": [{"id", "resumen", "beats": [3]}]}` | `guardar_plan.py` | — |
+```
+LUZ: VERDE
+```
 
-Los scripts que guardan **toleran** preámbulos y bloques de código
-(`parseo.py`): la salida del modelo se limpia, no se confía en que obedezca.
-Y **rechazan** lo que no sirve con `ok: false` y un `arreglo` que dice a quién
-volver a pedir qué.
+o
+
+```
+LUZ: ROJA
+```
+
+Después va el motivo, en prosa. En una luz roja, un bloque por cada problema:
+
+```
+LUZ: ROJA
+
+## El protagonista sabe algo que todavía no ha pasado
+
+**Dónde:** «Marta ya sabía que el equipo la iba a dejar fuera de la Vuelta.»
+
+**Qué cambiar:** la decisión del equipo se comunica en el capítulo 7. Aquí
+Marta puede sospecharlo, pero no puede darlo por hecho.
+```
+
+El formato exacto lo fija la skill **`luz`**, que los jueces cargan por el campo
+`skills` de su frontmatter. No hay que recordarles el formato al llamarlos.
+
+Se eligió una primera línea fija en vez de un JSON porque se lee con un
+`head -1` y también con los ojos. El motivo va en prosa porque su destinatario
+es el redactor, que es un modelo de lenguaje y no un parser.
+
+**Una luz sin motivo no cuenta.** Si un archivo dice `LUZ: ROJA` y nada más, la
+llamada se repite.
+
+**Una luz que no se entiende no se interpreta.** Si la primera línea no es
+ninguna de las dos, la sesión repite esa llamada en lugar de deducir qué quiso
+decir el juez. Deducirlo sería decidir, y eso no le toca.
+
+---
+
+## 6. Quién orquesta
+
+**La sesión de Claude Code**, siguiendo la skill `dirigir-novela`. Lee la
+carpeta, despacha a los agentes, lee sus luces y renombra los borradores
+aprobados. No hay ningún programa que la conduzca.
+
+El **director** es un agente al que la sesión consulta cuando no está claro
+cómo seguir: al retomar una novela a medias, cuando el ciclo se atasca, o
+cuando alguien pregunta cómo va. Para el camino normal no hace falta, porque
+el ciclo se sigue solo.
+
+La sesión usa las órdenes normales de la terminal. Crear la novela es un
+`mkdir`, ver el estado es un `ls`, leer un veredicto es un `head -1`, aprobar
+es un `mv` y compilar es un `cat`. Nada de eso merece un script.
+
+El `cat` de cierre lleva el patrón de dos dígitos a propósito:
+
+```bash
+cat books/<slug>/capitulos/[0-9][0-9].md > books/<slug>/novela.md
+```
+
+`[0-9][0-9].md` no casa con `NN.borrador.md`, así que un capítulo que no pasó
+las dos luces no puede colarse en el libro por un descuido al cerrarlo.
 
 ---
 
 ## 7. La traza
 
-`books/<slug>/reports/traza.jsonl`. Append-only; nunca se lee para escribir;
-un JSON por línea; la escritura nunca tumba una puerta.
+**No la escribe este repositorio.** Claude Code ya registra lo que hace, y el
+trabajo es mandarlo a donde se pueda mirar.
 
-### Eventos
+### En Langfuse, con el plugin oficial
 
-```json
-{"t": "2026-09-17T10:19:32", "paso": "G1", "ms": 0, "tipo": "puerta", "agente": "G1",
- "ok": true, "errores": [], "escena": "S001", "palabras": 154, "suma": null, "mas_floja": null}
-
-{"t": "...", "paso": "agente", "ms": 0, "tipo": "agente", "fase": "inicio",
- "agente": "escritor", "escena": "S001", "intento": 1, "chars": 6581}
-
-{"t": "...", "paso": "agente", "ms": 146756, "tipo": "agente", "fase": "fin",
- "agente": "escritor", "escena": "S001", "chars": 802, "forma_ok": true, "recortado": false}
-```
-
-- `puerta`: lo escribe `common.emitir()` con el JSON de la puerta. `escena` es
-  `SNNN`, `chNN`, `canon`, `obra` o `novela.md`.
-- `agente/inicio`: lo escribe `empaquetar.py`. `intento` sale de `state.json`.
-- `agente/fin`: lo escribe el script que guarda la respuesta. `ms` se calcula
-  buscando hacia atrás el último `inicio` del mismo agente sobre la misma
-  escena.
-
-### Derivaciones (`traza.resumen`)
-
-- **intentos de una escena** = pasadas por G1 sobre esa escena.
-- **llamadas a agentes** = eventos `fin`; **tiempo en agentes** = suma de sus `ms`.
-- **por puerta**: aplicadas y cerradas.
-
-### Lecturas
-
-- `traza.py <libro>`: informe en texto (cabecera, por agente, por puerta, por
-  escena con cada evento y cada error, puertas del libro y de los capítulos).
-- `traza.py <libro> --json`: el `resumen`.
-- `vista.actividad(desde)`: los eventos de todos los libros desde una hora,
-  para la UI.
-- `vista.dossier(libro)`: por escena, puertas y agentes cruzados con la
-  crítica y el timeline.
-- `reportar.py`: en Langfuse, una sesión por libro; un span `producir-escena`
-  por escena; un `evaluator` por pasada de G1 (`validar-hechos`) y G2
-  (`evaluar-rubrica`); scores `intentos`, `veredicto`, `mas-floja`,
-  `rubrica-<dim>` y `rubrica`.
-
----
-
-## 8. El servidor y la UI
-
-`python harness/server.py` sirve en `http://127.0.0.1:8770` la UI construida
-(`ui/dist`) y la API. No recarga código: reiniciar tras tocar Python.
-
-| Método | Ruta | Devuelve |
-|---|---|---|
-| GET | `/api/config` | versión, `estructura`, `tolerancia`, `rubrica`, `ciclo`, `genero`, `perfiles` |
-| GET | `/api/sistema` | `vista.sistema()`: agentes, skills, puertas, flujo |
-| GET | `/api/actividad?desde=ISO` | `vista.actividad()` |
-| GET | `/api/books` · `/api/books/<slug>` | estado de los libros / de uno |
-| GET | `/api/books/<slug>/dossier` · `/traza` · `/novela` · `/log` | expediente · eventos + resumen · el entregable · el log del ciclo lanzado |
-| POST | `/api/books` | `crear_libro.crear(json)` |
-| POST | `/api/books/<slug>/run` · `/reset` · `/validar` | lanza `claude -p` con `dirigir-novela` en sesión limpia · `run_scene.py reset` · `validate_book.py` |
-
-La UI (`ui/src/`) tiene tres vistas: `Sistema.jsx`, `Actividad.jsx`,
-`Libros.jsx`. Naranja lo que actúa (agentes), pizarra lo que juzga (puertas).
-Desarrollo: `python harness/server.py` y `cd ui && npm run dev` (Vite en :5273
-proxea `/api`).
-
----
-
-## 9. Tests
+Langfuse publica un plugin para Claude Code que captura las conversaciones y
+las llamadas a herramientas, incluidos los despachos de subagente, y las manda
+como trazas:
 
 ```bash
-python -m pytest tests -q
+claude plugin marketplace add langfuse/Claude-Observability-Plugin
+claude plugin install langfuse-observability@langfuse-observability
 ```
 
-Sin red ni tokens. El fixture es `books/marco-1990` (una escena aprobada, con
-crítica), copiado a un temporal por test.
+Las credenciales se piden al instalarlo y la clave secreta queda en el llavero
+del sistema. El proyecto activa el envío con un bloque `env` en
+`.claude/settings.json`, y las claves, si se ponen a mano, van en
+`.claude/settings.local.json`, que no se commitea.
 
-- `tests/test_reglas.py`: una trampa por regla (V1-V7) y por comprobación de
-  G2, G3 y G4; el caso bueno; que todo error sea accionable; que el
-  frontmatter de agentes y skills cargue.
-- `tests/test_ciclo.py`: los scripts que rodean a los agentes (`parseo`,
-  `guardar_*`, `empaquetar`, `resolver_canon`, `run_scene`, `traza`,
-  `crear_libro`, `comprobar_sistema`).
+Lo que se ve en Langfuse: una traza por turno, una generación por respuesta,
+una observación anidada por cada llamada a herramienta y a subagente, y todos
+los turnos de una sesión agrupados.
 
-Al añadir una regla: escribir la trampa, verla fallar, implementar. Si una
-regla no tiene su trampa, no está comprobada.
+Como alternativa, Claude Code exporta trazas OpenTelemetry nativas que se
+pueden apuntar al endpoint OTLP de Langfuse. Está en beta y requiere
+`CLAUDE_CODE_ENABLE_TELEMETRY`, `CLAUDE_CODE_ENHANCED_TELEMETRY_BETA` y
+`OTEL_TRACES_EXPORTER`. El plugin es el camino soportado.
+
+### En disco, sin haber escrito nada
+
+Aunque Langfuse esté apagado, el registro de lo que se decidió **no se pierde**,
+porque son los propios archivos de la novela:
+
+| Pregunta | Dónde está la respuesta |
+|---|---|
+| ¿qué se decidió sobre el capítulo 3? | `decisiones/03.intento*.md` |
+| ¿por qué se rechazó? | el motivo entero, dentro de ese archivo |
+| ¿cuántos intentos costó? | cuántos archivos hay de ese capítulo |
+| ¿cuándo pasó? | la fecha de modificación de cada archivo |
+| ¿qué entró en el libro? | los capítulos sin `borrador` en el nombre |
+
+Esto es lo que hace que el sistema no necesite un archivo de traza propio. La
+traza que importa, la de los juicios y sus motivos, la escriben los jueces al
+emitirlos, porque emitir un juicio **es** escribir el archivo.
 
 ---
 
-## 10. Convenciones
+## 8. Convenciones
 
-- Código y comentarios en español, **sin tildes en el código fuente**. La
-  prosa de las novelas sí lleva tildes.
-- Todo script imprime JSON con `ok` y `errores`; cada error trae `regla`,
-  `mensaje` (termina en punto) y `arreglo`.
-- Los scripts que leen stdin lo reconfiguran a UTF-8.
-- El prompt a `claude -p` viaja por stdin, nunca como argumento.
-- Si se agrega o mueve un paso del ciclo, se actualiza `harness/flujo.yaml`.
-- Cada cambio de especificación se registra en el historial del documento
-  que toca, en la misma entrega, con su porqué.
+- **Código y comentarios en español, sin tildes.** La consola de Windows viene
+  en cp1252 y una tilde en un `print` rompe la salida. La prosa de las novelas y
+  de estos documentos sí lleva tildes.
+- **Todo lo que lee la entrada estándar la reconfigura a UTF-8**, por el mismo
+  motivo.
+- **Un error dice tres cosas**: qué está mal, cuál es la verdad y cómo se
+  arregla. Un error que solo dice que algo falló obliga a leer el código.
+- **Cada cambio de especificación se registra en el historial del documento que
+  toca, en la misma entrega**, con qué cambió y por qué.
 
 ---
 
-## 11. Historial técnico
+## 9. Qué hay construido y qué está comprobado
 
-| Versión | Fecha | Cambio |
+| Pieza | Construida | Comprobada corriendo |
 |---|---|---|
-| **10.0** | 2026-09-17 | Reglas renumeradas V1-V7 (§4 trae la correspondencia). Eliminados: `researcher.md`, skills `epoca` y `analizar-traza`, `epoca.yaml`, `intake.json`, `derivaciones.py` (absorbido por `crear_libro.py`), `sistema.py` y `dossier.py` (fundidos en `vista.py`, solo disco), la lectura de Langfuse en la UI, `Informes.jsx`/`md.js`, `reports/`, `Novelas.drawio`, `books/prueba-*` y `books/ruben-2015`. `resolver_canon.py` pasa a ser el dueño de `contexto()`. `run_scene.py` pierde el regulador y el subcomando `contexto`; `next` devuelve `planificar`. `guardar_plan.py` solo guarda beats. `traza.py` gana `informe()` y CLI. `crear_libro.py` toma un JSON de decisiones y deja de depender de `server.py`. `state.json` queda con tres campos. `timeline.yaml` pierde `flashback` y `palabras`; `characters/*.yaml` pierde `eventos_unicos`, `sabe`, `club`. `premise.yaml` pierde `estilo` y `pregunta_dramatica` y gana `epoca.notas`. Los `*.prompt.md` dejan de versionarse. Tests reescritos. |
+| arquitecto, redactor, revisor, verificador | sí | sí, una novela entera: tres capítulos, once juicios y tres rechazos corregidos |
+| skill `dirigir-novela` | sí | sí, esa misma novela de punta a punta, del plan al `novela.md` |
+| skill `luz` | sí | sí, se precarga sola por el campo `skills` del frontmatter de cada juez |
+| director | sí | **no**, el ciclo normal no lo necesitó |
+| plugin de Langfuse | **no instalado** | **no** |
+
+La corrida que lo comprueba se conserva entera en `books/ciclista-2010/`: su
+carpeta `decisiones/` tiene los once juicios con sus motivos, y por sus nombres
+se reconstruye el camino de cada capítulo sin haber estado delante.
+
+**Los agentes y las skills se cargan al arrancar la sesión.** Una sesión que ya
+estaba abierta cuando se crearon no los ve, y hay que reiniciarla.
+
+Esta tabla se actualiza cuando cambie alguna de las dos columnas.
+
+---
+
+## 10. Historial técnico
+
+| Versión | Fecha | Cambio | Por qué |
+|---|---|---|---|
+| **1.0** | 2026-09-17 | Primera versión. Carpeta por novela con el plan, los capítulos, las decisiones y la traza. El estado del sistema es la carpeta, sin archivo de contadores. Los agentes escriben sus propios archivos, salvo la traza y el renombrado de aprobación. La luz es un Markdown cuya primera línea da el veredicto. Traza en JSONL, con el mapa a sesiones, trazas, observaciones y scores de Langfuse. | El criterio vive en los agentes, así que el código se queda con lo que no se puede delegar sin perder garantías: anotar lo que pasó y consumar la aprobación. El estado en la propia carpeta evita que haya dos versiones de la verdad. |
+| **1.1** | 2026-09-17 | **Se elimina todo el código.** Fuera los seis scripts de `harness/` y el hook de trazas. La sesión de Claude Code orquesta siguiendo la skill `dirigir-novela` y usa las órdenes normales de la terminal. La traza pasa a Langfuse mediante su plugin oficial para Claude Code, y en disco la sostienen los propios archivos de decisión. | Los scripts estaban ocupando el sitio del orquestador y ninguno hacía algo que la sesión no pueda hacer con una orden. Uno de ellos interpretaba `plan.md` con una expresión regular, que se rompe en silencio si el arquitecto cambia una palabra. El hook existía para que no se perdiera la traza, pero Claude Code ya registra sus propios despachos y el plugin de Langfuse los recoge sin que haya que escribir nada. |
+| **1.2** | 2026-09-17 | Cómo se leen los intentos en `decisiones/`: un intento con un solo archivo es uno que no llegó al verificador, y el contador no se reinicia al cambiar de juez. El ejemplo de luz roja se alinea con el formato de la skill `luz`, que los jueces cargan por su frontmatter. El `cat` de cierre explica su patrón de dos dígitos. La tabla de lo comprobado recoge la primera novela completa. | La primera corrida entera dejó once archivos de decisión, y ahí se vio que la forma de la carpeta ya cuenta quién rechazó qué sin abrir un archivo: eso merecía estar escrito, porque es la garantía que sustituye al guión que no existe. El ejemplo de luz roja no coincidía con lo que la skill pide ni con lo que los jueces escriben. |
