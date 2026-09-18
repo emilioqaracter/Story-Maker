@@ -1,6 +1,6 @@
 # Story-Maker — Especificación técnica
 
-**Versión 1.4** · 2026-09-18 · el qué y el porqué están en
+**Versión 1.5** · 2026-09-18 · el qué y el porqué están en
 [SPEC-FUNCIONAL.md](SPEC-FUNCIONAL.md).
 
 Este documento dice **cómo está hecho**: archivos, contratos y formatos.
@@ -333,6 +333,18 @@ una observación anidada por cada llamada a herramienta y a subagente, y todos
 los turnos de una sesión agrupados. La sesión de Langfuse es la sesión de
 Claude Code, cuyo identificador la terminal tiene en `CLAUDE_CODE_SESSION_ID`.
 
+**Cuándo llega.** Una novela entera es un solo turno de la sesión: un prompt
+de la persona y, después, los avisos de los agentes que terminan en segundo
+plano. El plugin retiene ese turno mientras tenga avisos de agentes por
+resolver y solo lo manda al terminar la sesión (`SessionEnd`). Con la extensión
+de VS Code ese cierre puede no llegar nunca; entonces la traza se manda
+ejecutando a mano el hook del plugin con un aviso de fin de sesión sobre la
+transcripción, que Claude Code guarda en
+`~/.claude/projects/<proyecto>/<sesión>.jsonl`. El hook lleva la cuenta de lo
+que ya mandó, así que repetirlo no duplica nada. El log del hook está en
+`~/.claude/state/langfuse_hook.log`: `Processed 0 turns` repetido durante una
+novela es la señal de que el turno está retenido, no de que falle nada.
+
 ### Cómo se llama cada subagente en la traza
 
 El plugin nombra la observación de un subagente `Subagent: <description>`,
@@ -349,15 +361,20 @@ Cada luz se manda a Langfuse como un *score* categórico de la sesión, en el
 mismo `Bash` en que la sesión la lee con `head -1`:
 
 ```bash
-npx -y langfuse-cli --env .env api scores create --body-json '{
+npx -y langfuse-cli --env .env api scores create --body-file - >/dev/null 2>&1 <<EOF || true
+{
   "name": "luz-revisor", "value": "VERDE", "dataType": "CATEGORICAL",
-  "sessionId": "'"$CLAUDE_CODE_SESSION_ID"'",
+  "sessionId": "$CLAUDE_CODE_SESSION_ID",
   "comment": "<slug> cap <NN> intento <K>",
   "metadata": {"novela": "<slug>", "capitulo": "<NN>", "intento": <K>, "juez": "revisor"}
-}' >/dev/null 2>&1 || true
+}
+EOF
 ```
 
-`luz-revisor` y `luz-verificador` con valor `VERDE` o `ROJA`. Las credenciales
+`luz-revisor` y `luz-verificador` con valor `VERDE` o `ROJA`. El cuerpo va por
+la entrada estándar (`--body-file -`) porque en Windows `npx` rompe las
+comillas simples de un argumento y la petición no sale; el `EOF` sin comillas
+deja que la terminal sustituya la sesión. Las credenciales
 las lee `langfuse-cli` de `.env`, que está en `.gitignore`. El `|| true` es la
 regla: si no hay red o Langfuse no responde, el ciclo sigue, porque la luz que
 manda es la de `decisiones/`. Es una orden más de la skill, igual que `mv` o
@@ -409,12 +426,12 @@ emitirlos, porque emitir un juicio **es** escribir el archivo.
 | skill `dirigir-novela` | sí | sí, esas dos novelas de punta a punta, del plan al `novela.md` |
 | skill `luz` | sí | sí, se precarga sola por el campo `skills` del frontmatter de cada juez |
 | director | sí | **no**, el ciclo normal no lo necesitó |
-| plugin de Langfuse | sí, instalado y activado en `settings.json` | sí, la novela `veterano-2010` tiene su traza entera |
-| jueces a la vez, revisor sin plan, luces por ruta | sí | **no**, todavía no se escribió una novela con ellos |
-| `continuidad/` y el verificador que la escribe y la lee | sí | **no** |
-| luces como puntuaciones en Langfuse | sí | **a medias**: la orden se probó en seco con `--curl` y la petición sale bien formada, pero no se ha mandado ninguna en una corrida |
-| nombre de agente en `description` | sí | **no**, hay que ver una traza nueva |
-| modelos por agente (`haiku` y `sonnet`) | sí | **no** |
+| plugin de Langfuse | sí, instalado y activado en `settings.json` | sí, `veterano-2010` y `adrian-2025` tienen su traza entera; la de `adrian-2025` salió al forzar el cierre de sesión a mano (§7) |
+| jueces a la vez, revisor sin plan, luces por ruta | sí | sí, la novela `adrian-2025`: cinco capítulos, once intentos, dos archivos por intento en `decisiones/` |
+| `continuidad/` y el verificador que la escribe y la lee | sí | sí, `adrian-2025` tiene `continuidad/01.md` a `05.md` |
+| luces como puntuaciones en Langfuse | sí | **a medias**: las 22 luces de `adrian-2025` están en Langfuse como *scores* de su sesión, pero se mandaron a mano; la orden con que corrió la novela fallaba en Windows, y la actual todavía no ha corrido dentro de una novela |
+| nombre de agente en `description` | sí | sí, en la traza de `adrian-2025`: `Subagent: revisor · cap 01 · intento 1` |
+| modelos por agente (`haiku` y `sonnet`) | sí | sí, la traza de `adrian-2025` lo enseña: arquitecto y redactor en Haiku, los dos jueces en Sonnet |
 
 Las corridas que lo comprueban se conservan enteras en `books/`: cada carpeta
 `decisiones/` tiene sus juicios con sus motivos, y por sus nombres se
@@ -439,3 +456,4 @@ Esta tabla se actualiza cuando cambie alguna de las dos columnas.
 | **1.2** | 2026-09-17 | Cómo se leen los intentos en `decisiones/`: un intento con un solo archivo es uno que no llegó al verificador, y el contador no se reinicia al cambiar de juez. El ejemplo de luz roja se alinea con el formato de la skill `luz`, que los jueces cargan por su frontmatter. El `cat` de cierre explica su patrón de dos dígitos. La tabla de lo comprobado recoge la primera novela completa. | La primera corrida entera dejó once archivos de decisión, y ahí se vio que la forma de la carpeta ya cuenta quién rechazó qué sin abrir un archivo: eso merecía estar escrito, porque es la garantía que sustituye al guión que no existe. El ejemplo de luz roja no coincidía con lo que la skill pide ni con lo que los jueces escriben. |
 | **1.3** | 2026-09-17 | Las dos especificaciones pasan de la raíz a `docs/`. Los enlaces entre ellas siguen siendo relativos y no cambian; el del README sí. | Una raíz con dos archivos de spec de treinta kilobytes esconde lo único que hay que ver al llegar: el README, `books/` y `.claude/`. La carpeta `docs/` es el sitio convenido para la referencia. |
 | **1.4** | 2026-09-18 | Modelo por agente: `haiku` para arquitecto, director y redactor, `sonnet` para los dos jueces (§4). Los jueces se despachan en el mismo turno y cada intento tiene dos archivos (§2, §6). El revisor recibe en el prompt la voz, las palabras pedidas y las contadas con `wc -w`, extraídas por la sesión con `sed` y `grep`; no lee `plan.md` (§4, §6). Las luces rojas llegan al redactor por ruta (§4). Nueva carpeta `continuidad/` con una lista de hechos por capítulo aprobado, que escribe el verificador como borrador y la sesión renombra al aprobar (§2, §3, §4). Presupuesto de deliberación en los jueces (§4). `novela.md` empieza por el título (§6). El entorno de Langfuse va en `settings.json` y el usuario en `settings.local.json`; los despachos se nombran por el campo `description` y las luces se mandan como *scores* de sesión con `langfuse-cli` (§7). La tabla de lo comprobado distingue lo que corrió de lo que no (§9). | La traza de `veterano-2010` dio los números: el orquestador con el modelo caro se llevaba el 56 % del coste por hacer `mv` y `head -1`, y los jueces, que son los que deciden, corrían en uno más barato. El revisor leía el plan entero y juzgaba lo mismo que el verificador. Serializarlos ahorró una llamada y costó un 23 % del reloj. Copiar las luces rojas en el contexto de la sesión y hacer que el verificador leyera todos los capítulos hacía crecer el coste con el cuadrado de los capítulos, y la novela de 6.000 palabras no cabía. El 64 % de los tokens de salida era deliberación que no quedaba en ningún archivo. El proyecto de Langfuse tenía cero *scores*, la traza cayó en el entorno `default` porque la variable solo estaba en `.env`, y en el grafo los subagentes salían sin nombre porque el plugin usa el campo `description` y nadie lo fijaba. Cada arreglo es una orden más en la skill o una línea más en un agente; ninguno es un script. |
+| **1.5** | 2026-09-18 | La orden que manda cada luz como *score* pasa el cuerpo por la entrada estándar con `--body-file -` (§7). Se documenta cuándo llega la traza a Langfuse, al terminar la sesión, y cómo forzarlo si el cierre no llega (§7). La tabla de lo comprobado recoge la novela `adrian-2025` (§9). | `adrian-2025`, la primera novela con los cambios de 1.4, corrió entera y ni la traza ni las luces llegaron a Langfuse. Las luces no llegaban porque en Windows `npx` rompe las comillas simples del argumento y la petición ni salía; el `|| true` lo tapaba, como debe. La traza no llegaba porque una novela entera es un solo turno con agentes en segundo plano, y el plugin lo retiene hasta el fin de la sesión, que la extensión de VS Code no disparó. |

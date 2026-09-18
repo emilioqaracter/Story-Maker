@@ -59,6 +59,9 @@ Marta puede sospecharlo o temerlo, pero no darlo por hecho.
 
 **Que cambiar:** falta desarrollar la conversacion con el entrenador, que en el
 plan es lo que hace girar el capitulo y aqui se resuelve en dos lineas.
+
+**Leccion:** Te quedas corto cuando el plan pide una conversacion: dale a cada
+escena del plan el espacio que pide antes de cerrar el capitulo.
 ```
 
 | | |
@@ -66,6 +69,7 @@ plan es lo que hace girar el capitulo y aqui se resuelve en dos lineas.
 | **El titulo del bloque** | que esta mal, en una frase |
 | **Donde** | una cita textual del capitulo, para no discutir de memoria |
 | **Que cambiar** | que tendria que pasar para que la luz fuera verde |
+| **Leccion** | al final de la luz, una frase para el redactor sobre el habito que falla, no sobre este caso. En una roja va siempre; en una verde, solo si hay algo flojo que se repite |
 
 ## Las reglas
 
@@ -79,6 +83,9 @@ plan es lo que hace girar el capitulo y aqui se resuelve en dos lineas.
   de verdad impide que el capitulo entre en el libro.
 - **Como mucho cuatro problemas.** Si hay mas, elegi los cuatro que mas pesan.
   Una lista de quince cosas no se puede corregir de una vez.
+- **La leccion no lleva citas ni nombres.** Es la unica parte de la luz que
+  habla del habito y no del capitulo: si solo sirve para esta historia, no es
+  una leccion. Lo que fallo aqui ya esta en los bloques.
 - **Las citas van literales.** Copia el texto del capitulo tal cual, con sus
   tildes y sus comillas. Si la cita no coincide con el original, el redactor no
   encuentra lo que le senalas.

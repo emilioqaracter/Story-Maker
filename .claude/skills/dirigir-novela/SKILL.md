@@ -186,15 +186,22 @@ Se hace en el mismo `Bash` del paso 3, justo despues del `head -1`, con el
 valor que acabas de leer:
 
 ```bash
-npx -y langfuse-cli --env .env api scores create --body-json '{
+npx -y langfuse-cli --env .env api scores create --body-file - >/dev/null 2>&1 <<EOF || true
+{
   "name": "luz-revisor",
   "value": "VERDE",
   "dataType": "CATEGORICAL",
-  "sessionId": "'"$CLAUDE_CODE_SESSION_ID"'",
+  "sessionId": "$CLAUDE_CODE_SESSION_ID",
   "comment": "<slug> cap <NN> intento <K>",
   "metadata": {"novela": "<slug>", "capitulo": "<NN>", "intento": <K>, "juez": "revisor"}
-}' >/dev/null 2>&1 || true
+}
+EOF
 ```
+
+El cuerpo entra por la entrada estandar, con `--body-file -`, y no entre
+comillas dentro de la propia orden: en Windows `npx` rompe las comillas simples
+y la peticion no llega a salir. El `EOF` va sin comillas para que la terminal
+sustituya `$CLAUDE_CODE_SESSION_ID`.
 
 Igual para el verificador, con `"name": "luz-verificador"` y `"juez":
 "verificador"`. `sessionId` es la sesion de Claude Code, que es la misma que

@@ -12,6 +12,11 @@ se decide queda anotado con su motivo.
 - [docs/SPEC-FUNCIONAL.md](docs/SPEC-FUNCIONAL.md): qué hace el sistema y por qué.
 - [docs/SPEC-TECNICO.md](docs/SPEC-TECNICO.md): archivos, contratos y formatos.
 
+El loop de automejora de los jueces tiene su propia especificación, aparte:
+
+- [docs/SPEC-AUTOMEJORA-FUNCIONAL.md](docs/SPEC-AUTOMEJORA-FUNCIONAL.md): qué mide, qué mueve y cuándo para.
+- [docs/SPEC-AUTOMEJORA-TECNICO.md](docs/SPEC-AUTOMEJORA-TECNICO.md): órdenes, evaluador y bitácora.
+
 ## Cómo se usa
 
 Se le pide a Claude Code, en la terminal o en VS Code:

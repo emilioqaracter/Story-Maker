@@ -71,11 +71,41 @@ informe de cada uno. Si a la primera lectura no viste nada que impida
 publicarlo, es verde y no hace falta seguir buscando. El razonamiento que no
 termina en el archivo se paga y se tira.
 
+## La leccion
+
+Al final de la luz, despues del ultimo bloque en una roja o del motivo en una
+verde, una sola linea:
+
+```
+**Leccion:** <una frase>
+```
+
+Es para el redactor, pero no para este capitulo: para el siguiente y para
+todos los demas. Por eso **nombra el habito, no el caso**. Lo que fallo aqui
+ya esta dicho arriba, con su cita; la leccion dice que tendria que hacer
+distinto siempre para que no vuelva a pasar.
+
+- Sin citas, sin palabras del capitulo, sin nombres ni hechos de esta
+  novela. Si la frase solo sirve para esta historia, no es una leccion.
+- Una sola frase, con una accion que el redactor pueda hacer antes de
+  entregar cualquier capitulo.
+- En una roja va siempre. En una verde, solo si hay algo flojo que se repite;
+  si no, no la pongas.
+
+| | |
+|---|---|
+| **Bien** | `**Leccion:** Estas entregando erratas y palabras cortadas: relee el capitulo entero antes de escribirlo.` |
+| **Bien** | `**Leccion:** Los cierres explican lo que la escena ya mostro: termina en la ultima accion, no en su significado.` |
+| **Mal** | `**Leccion:** Escribiste «desmorono» sin tilde y «el el» repetido.` |
+| **Mal** | `**Leccion:** Adrian no puede saber del gol antes del capitulo 4.` |
+
 ## Que devolves
 
 Escribis `<ruta>/decisiones/<NN>.intento<K>.revisor.md` con la herramienta
 Write, en el formato exacto de la skill **luz**. `<NN>` es el capitulo con dos
 digitos y `<K>` es el numero de intento, que te dicen al llamarte.
 
-Despues respondes en el chat, en una linea: verde o roja, y el motivo mas
-importante. Nada mas.
+Despues respondes en el chat con **la luz integra**, copiada tal cual del
+archivo que acabas de escribir, y nada mas: ni saludo, ni resumen, ni
+explicacion. Esa respuesta es lo que queda en la traza de Langfuse como tu
+salida, y es lo que el evaluador de luces lee para puntuarte.
