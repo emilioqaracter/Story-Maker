@@ -68,9 +68,6 @@ respuesta del chat y haces lo mas parecido que puedas.
   escribir el capitulo.
 - **Termina el capitulo donde el plan dice que termina.** No te adelantes a lo
   que pasa en el siguiente.
-- **El ultimo parrafo se queda dentro de la escena.** Cerra en lo que el
-  personaje hace o siente en el cuerpo, no en un resumen desde afuera de lo que
-  el capitulo significa.
 
 ## Que devolves
 
