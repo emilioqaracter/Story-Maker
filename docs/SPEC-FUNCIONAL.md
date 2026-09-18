@@ -1,6 +1,6 @@
 # Story-Maker — Especificación funcional
 
-**Versión 1.5** · 2026-09-17 · la parte técnica está en [SPEC-TECNICO.md](SPEC-TECNICO.md).
+**Versión 1.6** · 2026-09-18 · la parte técnica está en [SPEC-TECNICO.md](SPEC-TECNICO.md).
 
 Este documento dice **qué hace el sistema y por qué**: quién trabaja, en qué
 orden, quién aprueba y cómo se ve después lo que pasó.
@@ -37,7 +37,7 @@ validador, hay un agente que lee y argumenta.
 | **director** | Dice qué toca ahora y a quién le toca. Lleva la cuenta de por dónde va la novela y de cuándo un capítulo se ha atascado. | el turno |
 | **redactor** | Escribe el capítulo. Cuando le llega una luz roja, lo reescribe atendiendo solo a lo que le señalaron. | nada |
 | **revisor** | Lee el capítulo por sí solo. ¿Está bien escrito? Da luz verde o luz roja, siempre con el motivo. | si el capítulo está bien escrito |
-| **verificador** | Lee el capítulo contra la historia hasta ahora y contra el plan. ¿Encaja? Da luz verde o luz roja, con el motivo. Cuando da verde, el capítulo entra en la novela. | si el capítulo entra |
+| **verificador** | Lee el capítulo contra el plan y contra la continuidad de la historia. ¿Encaja? Da luz verde o luz roja, con el motivo. Cuando da verde, deja anotados los hechos que el capítulo fija, para que el siguiente verificador los tenga. | si el capítulo encaja |
 
 **Por qué revisor y verificador son dos y no uno.** Juzgan cosas distintas y a
 distinta escala. El revisor mira un capítulo aislado y le pregunta si está bien
@@ -45,6 +45,18 @@ escrito. El verificador mira la novela entera y le pregunta si este capítulo
 pertenece. Un capítulo puede estar espléndidamente escrito y contradecir el
 plan. Juntar las dos preguntas en un solo agente deja que una compense a la
 otra, que es justo lo que no puede pasar.
+
+**Y por qué el revisor no ve el plan.** Si supiera qué tiene que pasar en el
+capítulo, juzgaría si pasa, y esa es la pregunta del verificador. Dos jueces
+que miran lo mismo fallan juntos. Al revisor le llegan solo la voz del libro y
+la longitud, y con eso su pregunta sigue siendo la suya: ¿está bien escrito
+esto?
+
+**Los que juzgan corren en un modelo más capaz que los que escriben y
+despachan.** El criterio del sistema está en las dos luces, así que ahí va el
+modelo mejor. Escribir un plan, escribir prosa contra un plan y leer una
+carpeta son trabajos con instrucciones precisas, y los hace un modelo más
+barato.
 
 **Y la sesión de Claude Code.** No está en la tabla porque no es un agente: es
 **quien orquesta**. Lee la carpeta, despacha a los agentes, recoge sus luces y
@@ -87,31 +99,30 @@ Este es el corazón del sistema. Se repite una vez por capítulo.
   │    ┌────────────┐                                              │
   │    │  REDACTOR  │ ──────────►  borrador del capítulo           │
   │    └────────────┘                      │                       │
-  │          ▲                             ▼                       │
-  │          │                    ┌─────────────────┐              │
-  │          │    LUZ ROJA        │     REVISOR     │              │
-  │          ├────────────────────┤  ¿está bien     │              │
-  │          │    y el motivo     │   escrito?      │              │
-  │          │                    └─────────────────┘              │
-  │          │                             │ LUZ VERDE             │
-  │          │                             ▼                       │
-  │          │                    ┌─────────────────┐              │
-  │          │    LUZ ROJA        │  VERIFICADOR    │              │
-  │          └────────────────────┤  ¿encaja en la  │              │
-  │               y el motivo     │   historia?     │              │
-  │                               └─────────────────┘              │
-  │                                        │ LUZ VERDE             │
+  │          ▲                   ┌─────────┴─────────┐             │
+  │          │                   ▼                   ▼             │
+  │          │         ┌─────────────────┐ ┌─────────────────┐     │
+  │          │         │     REVISOR     │ │  VERIFICADOR    │     │
+  │          │         │  ¿está bien     │ │  ¿encaja en la  │     │
+  │          │         │   escrito?      │ │   historia?     │     │
+  │          │         └─────────────────┘ └─────────────────┘     │
+  │          │                   │                   │             │
+  │          │  alguna LUZ ROJA  │                   │             │
+  │          └───────────────────┴─────────┬─────────┘             │
+  │              y el motivo               │ las dos LUZ VERDE     │
   │                                        ▼                       │
   │                           el capítulo entra en la novela       │
   └────────────────────────────────────────────────────────────────┘
 ```
 
-El revisor va primero porque es la pregunta más barata. No tiene sentido
-comprobar si un capítulo encaja en la historia mientras todavía está mal
-escrito.
+Los dos jueces se pronuncian **a la vez y a ciegas**: se despachan en el mismo
+turno y ninguno sabe lo que dijo el otro. Hacen dos preguntas distintas, así
+que no hay por qué esperar a una para hacer la otra, y preguntarlas por
+separado es lo que garantiza que una no contamine a la otra.
 
 Cada luz roja vuelve al redactor **con el motivo entero**, tal como lo escribió
-quien juzgó, y el redactor toca solo lo que le señalaron.
+quien juzgó: quien orquesta le da la ruta del archivo de la luz y el redactor
+lo lee. El redactor toca solo lo que le señalaron.
 
 Un capítulo corregido **vuelve a entrar por el principio**: pasa otra vez por el
 revisor aunque la luz roja se la hubiera dado el verificador. Nadie hereda una
@@ -133,7 +144,7 @@ cambiar el plan o bajar el listón.
             │                │
             │                ▼
             │      círculo de aprobación del capítulo N
-            │         (redactor · revisor · verificador)
+            │         (redactor · revisor ‖ verificador)
             │                │
             │                ▼
             │         capítulo aprobado
@@ -147,6 +158,22 @@ cambiar el plan o bajar el listón.
                              ▼
                          novela.md
 ```
+
+### 3.4 La memoria del verificador
+
+El verificador tiene que saber todo lo que la novela ya dejó fijado: quién
+sabe qué, qué se rompió, dónde duele, en qué fecha estamos. Leer todos los
+capítulos aprobados cada vez lo sabría, pero haría que cada verificación
+costara más que la anterior y que una novela larga no cupiera.
+
+En su lugar, **cada capítulo aprobado deja una lista de hechos**, la escribe el
+verificador que le dio luz verde, y el siguiente verificador lee esas listas en
+vez de los capítulos. Lee entero solo el último capítulo aprobado, porque el
+punto exacto donde quedó la escena no lo transmite un resumen.
+
+La lista de hechos es un artefacto más de la carpeta de la novela, con la misma
+regla que el capítulo: se escribe como borrador y pierde el sufijo cuando el
+capítulo entra. Así nunca hay hechos de un capítulo que no esté en el libro.
 
 ---
 
@@ -186,8 +213,10 @@ Contiene:
 - **Los capítulos**, uno por línea, con lo que ocurre en cada uno.
 - **La voz**: cómo suena este libro, en dos o tres frases.
 
-El plan lo lee todo el mundo. El redactor escribe contra él, el verificador
-comprueba contra él y el director se orienta con él.
+El plan lo leen casi todos. El redactor escribe contra él, el verificador
+comprueba contra él y el director se orienta con él. El revisor no lo lee:
+recibe solo la voz y la longitud, para que su pregunta siga siendo si el
+capítulo está bien escrito y no si cumple el plan.
 
 **El plan solo lo cambia el arquitecto, y solo si se le pide.** Si un capítulo
 contradice el plan, se cambia el capítulo. Es la única manera de que el plan
@@ -211,8 +240,9 @@ Un reparto razonable de partida es una cuarta parte para la introducción, la
 mitad para el nudo y una cuarta parte para el desenlace. Pero **lo decide el
 arquitecto** según la historia que tenga entre manos, y lo justifica en el plan.
 
-Nadie cuenta las palabras con un contador. El revisor sabe cuántas debería
-tener el capítulo y avisa si se ha ido muy lejos.
+Las palabras las cuenta la terminal, no un agente a ojo. Quien orquesta le
+pasa al revisor cuántas pide el plan y cuántas tiene el borrador, y el revisor
+avisa si se ha ido muy lejos.
 
 ---
 
@@ -238,7 +268,20 @@ publica un plugin oficial que las captura y las manda, agrupadas por sesión,
 sin que haya que escribir una línea.
 
 Ahí se ve lo que los archivos no cuentan: cuánto tardó cada agente, cuánto
-costó, y cómo se compara una corrida con la siguiente.
+costó, y cómo se compara una corrida con la siguiente. Cada despacho aparece
+con el nombre del agente, el capítulo y el intento, porque quien orquesta lo
+nombra así al despacharlo.
+
+### Las luces también llegan a Langfuse
+
+Cada luz, además de quedar en disco, se manda a Langfuse como una puntuación de
+la sesión: qué juez, qué capítulo, qué intento, verde o roja. Con eso se
+responde desde Langfuse lo que antes obligaba a abrir carpetas: si sube o baja
+la tasa de rechazo entre corridas, qué juez rechaza más, si un cambio en un
+agente bajó los reintentos.
+
+Mandarla es una orden más de quien orquesta, en el mismo paso en que lee la
+luz. Si Langfuse no responde, el ciclo sigue: la luz que manda es la del disco.
 
 Es una capa aparte y se puede apagar. Sin ella el sistema funciona igual y las
 decisiones siguen enteras en disco.
@@ -260,11 +303,17 @@ decisiones siguen enteras en disco.
    cambia el capítulo.
 6. **El redactor toca solo lo que le señalaron.** Al corregir no reescribe lo
    que ya había pasado.
-7. **La luz roja viaja entera.** Quien orquesta se la pasa al redactor tal como
-   la escribió el juez, sin resumirla. Un resumen es una interpretación, y
-   interpretar un juicio se parece demasiado a emitirlo.
+7. **La luz roja viaja entera.** Quien orquesta le da al redactor la ruta del
+   archivo de la luz, y el redactor lo lee tal como lo escribió el juez. Ni se
+   resume ni se copia. Un resumen es una interpretación, y interpretar un
+   juicio se parece demasiado a emitirlo.
 8. **Una corrección se juzga otra vez desde cero**, por las dos luces, aunque
    solo una de las dos hubiera sido roja.
+9. **Los dos jueces se pronuncian a la vez y a ciegas.** Ninguno sabe lo que
+   dijo el otro, y el revisor no sabe qué pedía el plan.
+10. **Se delibera en proporción al capítulo.** Un juez lee una vez con
+    atención, decide y escribe. El razonamiento que no termina en el archivo
+    de la decisión se paga y se tira.
 
 ---
 
@@ -285,7 +334,7 @@ sitio, porque se puede apagar y ver exactamente qué se pierde.
 | **el revisor** | la luz roja por cómo está escrito el capítulo | entra todo lo que el redactor produzca |
 | **el verificador** | la luz roja por coherencia con la historia | los capítulos se contradicen entre sí |
 | **el director** | el turno lo decide un agente | lo decide a mano la sesión de Claude Code |
-| **Langfuse** | cuánto tardó y costó cada agente, y una corrida comparada con otra | las decisiones en disco siguen completas |
+| **Langfuse** | cuánto tardó y costó cada agente, las luces como puntuaciones, y una corrida comparada con otra | las decisiones en disco siguen completas |
 
 **Apagar una capa es no llamar a ese agente.** No hay una opción de
 configuración en ningún sitio: si no se llama al verificador, esa capa está
@@ -311,3 +360,4 @@ que la cambia, con **qué** cambió y **por qué**.
 | **1.3** | 2026-09-17 | La coherencia que juzga el verificador incluye los hechos que el capítulo afirma y las cuentas que echa. La luz roja viaja entera al redactor, y un capítulo corregido se vuelve a juzgar desde cero por las dos luces. Al tercer intento para la sesión. | La primera novela completa enseñó qué rechazos aparecen de verdad: un dato del mundo imposible para la edad del protagonista y una resta que no cerraba, ninguno de los dos una contradicción con el plan ni un problema de prosa. Y una corrección vuelve a pasar por el revisor, así que la regla tenía que decirlo en vez de dejarlo al criterio de quien orquesta. Parar es de la sesión, que es la que lleva la cuenta de los intentos. |
 | **1.4** | 2026-09-17 | Sale de §2 el párrafo que ampliaba la coherencia del verificador a los hechos del mundo y a las cuentas del capítulo. Su competencia es la que describe su encargo: contradicciones con lo escrito y con el plan, el sitio en la historia, el tiempo y la repetición. | Lo que el verificador mira está escrito en su archivo, y ahí no dice nada de datos ni de aritmética: lo que cazó en la primera novela lo cazó por su regla de leer como un lector atento. Una spec que promete más de lo que el sistema encarga se vuelve una spec en la que no se puede confiar, y ampliar el encargo para sostener el párrafo era añadir una regla más a cambio de nada que hoy falte. |
 | **1.5** | 2026-09-17 | Las dos especificaciones se mudan de la raíz del repositorio a `docs/`. El README las enlaza en su sitio nuevo. | La raíz es lo primero que se lee, y debe decir qué es esto y cómo se usa. Las specs son documentación de referencia: viven en la carpeta que se llama así, y quien llega al repositorio ve antes el sistema que su descripción. |
+| **1.6** | 2026-09-18 | Los dos jueces se pronuncian a la vez y a ciegas (§3.2, regla 9). El revisor no ve el plan: recibe la voz y las palabras, contadas por la terminal (§2, §5, §6). La luz roja llega al redactor por la ruta del archivo (§3.2, regla 7). El verificador deja una lista de hechos por capítulo aprobado y lee esas listas en vez de los capítulos (§3.4). Los jueces corren en un modelo más capaz que el resto (§2). Se delibera en proporción al capítulo (regla 10). Las luces llegan a Langfuse como puntuaciones y los despachos con el nombre del agente (§7, §9). | La traza de la novela `veterano-2010` lo enseñó con números. El revisor leía el plan entero y sus veredictos recitaban los mismos hitos que los del verificador: dos jueces mirando lo mismo fallan juntos, y el capítulo 3 lo demostró. Serializar los jueces ahorró una llamada en toda la corrida y costó un 23 % del reloj, porque cuestan lo mismo. El contexto de quien orquesta crecía con cada luz roja copiada, y el verificador leía todos los capítulos en cada llamada: con eso la novela de 6.000 palabras que la skill propone por defecto no cabía. Juzgar un capítulo costaba ocho veces más tokens que escribirlo, y ese razonamiento no quedaba en ningún sitio. El proyecto de Langfuse tenía cero puntuaciones, así que ninguna pregunta sobre rechazos se podía responder sin abrir carpetas, y los subagentes aparecían sin nombre. |

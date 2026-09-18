@@ -1,7 +1,8 @@
 {
   "env": {
     "TRACE_TO_LANGFUSE": "true",
-    "LANGFUSE_BASE_URL": "https://cloud.langfuse.com"
+    "LANGFUSE_BASE_URL": "https://cloud.langfuse.com",
+    "LANGFUSE_TRACING_ENVIRONMENT": "desarrollo"
   },
   "enabledPlugins": {
     "langfuse-observability@langfuse-observability": true

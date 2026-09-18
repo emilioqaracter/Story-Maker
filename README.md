@@ -27,27 +27,30 @@ una sola línea de código.
 
 ## Los cinco agentes
 
-| Agente | Qué hace |
-|---|---|
-| **arquitecto** | convierte la idea y la longitud en el plan de la novela |
-| **director** | dice qué toca ahora, cuando no está claro cómo seguir |
-| **redactor** | escribe el capítulo, y lo reescribe si le dan luz roja |
-| **revisor** | ¿está bien escrito este capítulo? |
-| **verificador** | ¿encaja este capítulo en la historia? |
+| Agente | Qué hace | Modelo |
+|---|---|---|
+| **arquitecto** | convierte la idea y la longitud en el plan de la novela | haiku |
+| **director** | dice qué toca ahora, cuando no está claro cómo seguir | haiku |
+| **redactor** | escribe el capítulo, y lo reescribe si le dan luz roja | haiku |
+| **revisor** | ¿está bien escrito este capítulo? | sonnet |
+| **verificador** | ¿encaja este capítulo en la historia? | sonnet |
 
 Ningún agente aprueba su propio trabajo, y Claude Code no puede decidir que un
-capítulo está bien.
+capítulo está bien. Los que juzgan corren en el modelo más capaz; los demás,
+en el más barato.
 
 ## El círculo de aprobación
 
-Se repite una vez por capítulo. Dos luces verdes y el capítulo entra en la
-novela. Una luz roja y vuelve al redactor con el motivo.
+Se repite una vez por capítulo. Los dos jueces miran el borrador a la vez, sin
+saber qué dijo el otro. Dos luces verdes y el capítulo entra en la novela.
+Alguna luz roja y vuelve al redactor con el motivo.
 
 ```
-  REDACTOR ──► borrador ──► REVISOR ──► VERIFICADOR ──► el capítulo entra
-      ▲                        │             │
-      └──── luz roja ──────────┴─────────────┘
-            y el motivo
+                              ┌──► REVISOR ─────┐
+  REDACTOR ──► borrador ──────┤                 ├──► dos verdes: el capítulo entra
+      ▲                       └──► VERIFICADOR ─┘
+      │                                │
+      └──── alguna roja, y el motivo ──┘
 ```
 
 Toda luz roja dice qué está mal, dónde con una cita, y qué cambiar, y le llega
@@ -55,24 +58,28 @@ al redactor entera, sin resumir. Un capítulo corregido vuelve a entrar por el
 principio: las dos luces se piden de nuevo. A los tres intentos sin aprobar, el
 capítulo se para y decide la persona.
 
+El revisor no ve el plan: solo la voz del libro y cuántas palabras tiene que
+haber. El verificador no relee toda la novela: lee la lista de hechos que dejó
+cada capítulo aprobado, y el último capítulo entero.
+
 ## Ver lo que pasó
 
 **El estado es la carpeta de la novela.** No hay contadores escondidos ni
 archivo de estado:
 
 ```bash
-ls books/<slug>/capitulos books/<slug>/decisiones
+ls books/<slug>/capitulos books/<slug>/decisiones books/<slug>/continuidad
 head -1 books/<slug>/decisiones/*.md
 ```
 
 Un capítulo aprobado es el que no lleva `borrador` en el nombre. Cada juicio es
 un archivo con su veredicto, su motivo y su hora, así que el historial de
-decisiones no puede quedar incompleto: escribirlo **es** decidir.
+decisiones no puede quedar incompleto: escribirlo **es** decidir. En
+`continuidad/` está, por capítulo aprobado, lo que la novela ya dejó fijado.
 
-Los nombres cuentan el camino solos: un intento con archivo de revisor y ninguno
-de verificador es un borrador que no pasó de la primera puerta.
-
-Hay una novela completa de ejemplo en `books/ciclista-2010/`.
+Hay dos novelas completas de ejemplo en `books/`, `ciclista-2010` y
+`veterano-2010`, y una empezada, `sara-1994`, que sirve para ver cómo se retoma
+una novela a medias.
 
 Para los tiempos y los costes está **Langfuse**, con su plugin oficial para
 Claude Code:
@@ -81,6 +88,10 @@ Claude Code:
 claude plugin marketplace add langfuse/Claude-Observability-Plugin
 claude plugin install langfuse-observability@langfuse-observability
 ```
+
+En la traza cada despacho aparece con el nombre del agente, el capítulo y el
+intento, y cada luz llega también como puntuación de la sesión, así que se
+puede comparar una corrida con otra sin abrir carpetas.
 
 ## Capas que se pueden apagar
 
@@ -91,4 +102,4 @@ claude plugin install langfuse-observability@langfuse-observability
 | el revisor | luz roja por cómo está escrito | entra todo |
 | el verificador | luz roja por coherencia | los capítulos se contradicen |
 | el director | el turno lo decide un agente | se decide leyendo la carpeta |
-| Langfuse | tiempos, costes y comparar corridas | las decisiones siguen enteras |
+| Langfuse | tiempos, costes, luces y comparar corridas | las decisiones siguen enteras |
