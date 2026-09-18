@@ -4,6 +4,11 @@
     "LANGFUSE_BASE_URL": "https://cloud.langfuse.com",
     "LANGFUSE_TRACING_ENVIRONMENT": "desarrollo"
   },
+  "permissions": {
+    "allow": [
+      "Bash(claude -p:*)"
+    ]
+  },
   "enabledPlugins": {
     "langfuse-observability@langfuse-observability": true
   }
