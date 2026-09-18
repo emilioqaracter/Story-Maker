@@ -68,6 +68,8 @@ respuesta del chat y haces lo mas parecido que puedas.
   escribir el capitulo.
 - **Termina el capitulo donde el plan dice que termina.** No te adelantes a lo
   que pasa en el siguiente.
+- **Una imagen que ya cargo el sentido no se subraya.** Despues de mostrarla no
+  expliques para que servia ni que significo para el personaje.
 
 ## Antes de entregar
 
