@@ -73,48 +73,66 @@ termina en el archivo se paga y se tira.
 
 ## La leccion
 
-Al final de la luz, despues del ultimo bloque en una roja o del motivo en una
-verde, una sola linea:
+**Toda luz lleva su linea final.** Una roja lleva **leccion**. Una verde lleva
+**refuerzo**, y ademas leccion si hay algo flojo. Ninguna luz se entrega sin al
+menos una de las dos: el redactor tiene que salir de cada capitulo sabiendo que
+sostener y que cambiar, y una verde muda no le ensena nada.
 
 ```
-**Leccion:** <una frase>
+**Leccion:** <la capacidad que falla, dicha como se escribe bien>
+**Refuerzo:** <la capacidad que este capitulo sostuvo bien>
 ```
 
-**Para que existe.** Esa linea no es para este capitulo, ni para quien lee la
-traza: es la unica parte de tu luz que puede acabar copiada en las
-instrucciones del redactor como una regla permanente de como escribir.
-Escribila pensando en eso. Si la frase no serviria de regla para cualquier
-capitulo de cualquier novela, todavia no es una leccion: volve a escribirla.
+**Para que existen.** Son la unica parte de tu luz que puede acabar copiada en
+las instrucciones del redactor como una regla permanente de como escribir.
+Escribilas pensando en eso. Lo que fallo aqui ya esta dicho arriba, con su
+cita.
 
-Lo que falla aqui ya esta dicho arriba, con su cita. La leccion dice que
-tendria que hacer distinto siempre para que no vuelva a pasar.
+### El nivel: la capacidad, no la situacion
 
-- **Nombra el habito y decilo como se escribe bien**, no como se revisa. «Cerra
-  en lo que el personaje hace» es una leccion; «prestale mas atencion al
-  cierre» no le dice al redactor que escribir.
+Una frase que solo sirve cuando vuelva a darse la situacion de este capitulo no
+mejora al redactor: lo prepara para un caso y lo deja igual de flojo en todos
+los demas. Subi hasta la capacidad general, la que vale aunque el proximo
+capitulo no se parezca en nada a este.
+
+| | |
+|---|---|
+| El caso. **No va** | «en el recuerdo del segundo parrafo te fuiste al preterito» |
+| La situacion. **Tampoco va** | «el recuerdo dentro de una escena se te va a otro tiempo verbal» |
+| La capacidad. **Esto si** | «los tiempos verbales tienen que ser consistentes a lo largo de todo el capitulo: antes de entregar revisa que no cambien de una escena a otra» |
+
+La prueba, y hacela siempre antes de escribir la linea: **si el proximo
+capitulo no tuviera recuerdos, ¿la frase seguiria sirviendo?** Si la respuesta
+es no, todavia estas nombrando la situacion. Si tu frase empieza por
+«cuando...», mirala dos veces: esa palabra suele estar atando la leccion a un
+caso.
+
+### Las reglas
+
 - **Sin nada de esta historia.** Ni citas, ni nombres, ni lugares, ni palabras
   del capitulo. Si la frase solo sirve para esta novela, no es una leccion.
 - **Con las palabras mas comunes que encuentres.** Dos jueces que ven el mismo
   fallo en novelas distintas tienen que escribir casi la misma frase. No le
-  pongas un giro propio a un habito que ya tiene nombre.
-- **Una sola, la que mas pesa.** Aunque hayas puesto cuatro bloques, la leccion
-  es una: el habito detras del problema mayor. No encadenes dos consejos con
-  un «y».
-- **Nada de erratas, tildes, concordancia ni terminos que cambian de grafia.**
-  Eso lo limpia el redactor solo antes de entregarte el borrador, y una leccion
-  gastada ahi es una leccion que no ensena a escribir. Si es lo unico que te
-  chirrio, no pongas leccion.
-- **En una roja va siempre**, salvo que el unico problema sea de los que el
-  redactor ya se limpia solo. En una verde, solo si hay algo flojo que se
-  repite.
+  pongas un giro propio a una capacidad que ya tiene nombre: tiempo verbal,
+  punto de vista, mostrar en vez de explicar, repeticion, ritmo, continuidad,
+  cuentas de tiempo.
+- **Una de cada, la que mas pesa.** Aunque la roja tenga cuatro bloques, la
+  leccion es una. Sin dos consejos encadenados con un «y».
+- **Nada de erratas, tildes ni concordancia.** Eso lo limpia el redactor solo
+  antes de entregar el borrador. Si eso fuera lo unico que te chirrio, nombra
+  la capacidad que esta por encima, nunca el error suelto.
+- **El refuerzo no es un elogio.** «Muy bien escrito» no le sirve a nadie.
+  Nombra la capacidad concreta que el capitulo sostuvo, al mismo nivel y con la
+  misma prueba que la leccion.
 
 | | |
 |---|---|
-| **Bien** | `**Leccion:** Los cierres explican lo que la escena ya mostro: termina en la ultima accion, no en su significado.` |
-| **Bien** | `**Leccion:** El recuerdo dentro de una escena se te va a otro tiempo verbal: sostene el del plan tambien en lo que el personaje recuerda.` |
+| **Bien** | `**Leccion:** Los tiempos verbales tienen que ser consistentes a lo largo de todo el capitulo: antes de entregar revisa que no cambien de una escena a otra.` |
+| **Bien** | `**Leccion:** El significado de una escena se muestra, no se enuncia: cuando la accion ya lo carga, no agregues la frase que lo explica.` |
+| **Bien** | `**Refuerzo:** Sostuviste el punto de vista en un solo personaje de principio a fin; segui cerrando asi el foco de cada capitulo.` |
+| **Mal** | `**Leccion:** El recuerdo dentro de una escena se te va a otro tiempo verbal.` — es la situacion, no la capacidad |
 | **Mal** | `**Leccion:** Escribiste «desmorono» sin tilde y «el el» repetido.` — lo limpia el redactor solo |
-| **Mal** | `**Leccion:** Adrian no puede saber del gol antes del capitulo 4.` — es el caso, no el habito |
-| **Mal** | `**Leccion:** Antes de entregar, revisa que la prosa este cuidada.` — no dice que escribir |
+| **Mal** | `**Refuerzo:** El capitulo esta muy bien escrito.` — no nombra ninguna capacidad |
 
 ## Que devolves
 

@@ -106,6 +106,22 @@ Cada luz termina con **una lección**: una frase que el juez le deja al
 redactor sobre el hábito que falla, no sobre el caso. En una roja va siempre;
 en una verde, solo si hay algo flojo que se repite.
 
+**Ninguna luz se entrega muda.** Una roja lleva **lección**: la capacidad que
+falla. Una verde lleva **refuerzo**: la capacidad que el capítulo sostuvo bien,
+para que el redactor sepa qué seguir haciendo; y lleva además lección si hay
+algo flojo. Una verde callada deja al redactor sin saber qué acertó.
+
+Son dos etiquetas distintas porque el loop solo cuenta las lecciones. Si los
+refuerzos entraran en la cuenta, a medida que el redactor mejorase serían
+mayoría y el loop acabaría escribiendo reglas sobre lo que ya hace bien.
+
+**La lección nombra la capacidad, no la situación.** Es el nivel lo que decide
+si sirve. «El recuerdo dentro de una escena se te va a otro tiempo verbal»
+prepara al redactor para los recuerdos y lo deja igual de flojo en todo lo
+demás; «los tiempos verbales tienen que ser consistentes a lo largo de todo el
+capítulo» lo prepara para cualquier capítulo. La prueba que hace el juez: si la
+próxima escena no se pareciera en nada a esta, ¿la frase seguiría sirviendo?
+
 **La lección se escribe para una sola cosa: convertirse en regla del
 redactor.** Es la única parte de la luz que puede acabar copiada en sus
 instrucciones, tal cual, como una regla permanente de cómo escribir. Por eso
@@ -295,3 +311,4 @@ entrega que la cambia, con **qué** cambió y **por qué**.
 |---|---|---|---|
 | **1.0** | 2026-09-18 | Primera versión. Un loop que escribe hasta diez novelas distintas de tres capítulos cortos, cada una en su sesión, con el sistema tal como es; cuenta cuántos capítulos entraron a la primera; convierte la lección más repetida de los jueces en una regla del redactor por novela; revierte solo ante cero de tres. Jueces fijos. Meta: dos novelas seguidas con tres de tres, o diez novelas, con una comparación final de las tres primeras contra las tres últimas. Cada luz termina con una lección general para el redactor. | Casi ningún capítulo entra a la primera y las rojas del primer intento repiten los mismos fallos del redactor. La aprobación del sistema ya es una métrica que se cuenta con la terminal. Se eligen novelas distintas para que el redactor no pueda aprenderse una historia, y por eso mismo la métrica queda con tres muestras por vuelta: las decisiones se ajustan a lo que tres muestras pueden decir y la comparación fina se hace al final. La meta se pide dos veces porque una novela entera a la primera sale por suerte. La lección la escribe el juez porque es quien vio el fallo. Va en su propia especificación para que el sistema que escribe la novela siga describiéndose solo. |
 | **1.1** | 2026-09-18 | La lección se define por su destino: la frase que puede acabar copiada en las instrucciones del redactor como regla permanente. Se pide en las palabras más comunes que el juez encuentre, para que dos jueces que ven el mismo fallo escriban casi la misma frase. Deja de haber lecciones sobre erratas: eso lo limpia el redactor solo antes de entregar (§5). | Las dos primeras novelas de control salieron 0 de 3 y ninguna dejó un grupo de lecciones claro: cada juez nombraba el mismo hábito con su propio giro, así que el grupo más repetido llegó a tener dos miembros de trece lecciones. Una lección que no agrupa no se puede contar, y el loop entero depende de contar. Las mecánicas, además, ya no hacen falta. |
+| **1.2** | 2026-09-18 | Ninguna luz se entrega muda: la roja lleva lección y la verde lleva refuerzo, con lección además si hay algo flojo. El refuerzo no se cuenta para la regla. La lección nombra la capacidad general y no la situación en que falló, con una prueba explícita para el juez (§5). | Las cuatro primeras novelas de control dieron treinta y tantas lecciones y casi todas empezaban por «cuando…»: describían la situación del capítulo, así que solo habrían mejorado al redactor si la situación se repetía. Subir el nivel a la capacidad hace que una lección sirva siempre. Y tres luces verdes del control 4 salieron sin nada escrito: el capítulo estaba bien y el redactor no se enteró de qué había acertado. |

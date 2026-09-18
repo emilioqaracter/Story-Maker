@@ -114,6 +114,10 @@ muestras solo "cero de tres" es una senal; no revertis por menos.
 grep -h '^\*\*Leccion:\*\*' books/control-$n/decisiones/*.md
 ```
 
+Eso trae solo las lecciones. Los `**Refuerzo:**` de las luces verdes dicen que
+capacidad sostuvo el capitulo y **no se cuentan**: el loop escribe reglas para
+lo que falla, no para lo que ya sale bien.
+
 Leelas todas. Agrupa las que dicen lo mismo y toma el grupo mas numeroso.
 Anota en la fila "Leccion mas repetida" con cuantas la forman.
 

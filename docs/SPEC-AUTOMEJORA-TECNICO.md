@@ -68,8 +68,13 @@ o del motivo en una verde:
 - Nada de erratas, tildes, concordancia ni términos que cambian de grafía: eso
   lo limpia el redactor solo (§2.1). Si es el único problema, la luz va sin
   lección.
-- En una roja va siempre, salvo ese caso. En una verde, solo si hay algo flojo
-  que se repite.
+- Nombra la capacidad general, no la situación en que falló. La prueba: si la
+  próxima escena no se pareciera en nada a esta, ¿la frase seguiría sirviendo?
+- En una roja va siempre. En una verde va el `**Refuerzo:**` —la capacidad que
+  el capítulo sostuvo— y además `**Leccion:**` si hay algo flojo.
+
+El paso 5 de la skill cuenta solo las líneas `**Leccion:**`; los refuerzos
+quedan fuera de la cuenta a propósito.
 
 Cada juez lleva dos ejemplos buenos y tres malos de su propio terreno. Se lee
 con una orden:
@@ -370,3 +375,4 @@ diez y quince minutos. Diez novelas, como mucho dos horas y media y unos
 |---|---|---|---|
 | **1.0** | 2026-09-18 | Primera versión. Skill `automejora` con una vuelta orden por orden. Diez ideas en `ideas.md`; cada novela en su sesión `claude -p` con `dirigir-novela` sin cambios, tres capítulos de unas cuatrocientas palabras. Métrica contada con `head -1` sobre el intento 1. Reversión solo ante cero de tres. Regla nueva en `redactor.md` a partir de la lección más repetida. Bitácora como estado del loop, `/goal` como motor, comparación final de tres novelas contra tres. Puesta a punto que crea la rama y commitea lo pendiente. Langfuse opcional. | La métrica es la aprobación del sistema y está en disco en cuanto los jueces escriben. Cada novela va en su sesión para que el contexto de quien orquesta no arrastre las anteriores, no por ninguna traza. Con tres muestras por vuelta solo «cero de tres» es señal, así que la reversión se reserva para eso y la comparación fina se hace al final con nueve contra nueve. El estado del loop es un archivo porque `/goal` decide leyendo lo que la sesión imprime. |
 | **1.1** | 2026-09-18 | Sección 2 reescrita con las reglas nuevas de la lección y sección 2.1 con lo que el redactor se limpia solo antes de entregar. | Lo mismo que la 1.1 funcional, con el sitio exacto de cada regla: `redactor.md` sección *Antes de entregar*, `revisor.md` y `verificador.md` sección *La leccion*, y las dos reglas nuevas de la skill `luz`. |
+| **1.2** | 2026-09-18 | Sección *La leccion* de los dos jueces reescrita con la escalera caso / situación / capacidad y su prueba, y con `**Refuerzo:**` obligatorio en toda luz verde. En la skill `luz`, el refuerzo entra en el formato, en el ejemplo de luz verde y en las reglas. El paso 5 de la skill `automejora` dice que los refuerzos no se cuentan. | Los jueces copian los ejemplos casi literalmente: una lección del control 4 era copia palabra por palabra del ejemplo «Bien» del revisor. Si el ejemplo está al nivel de la situación, todas las lecciones salen al nivel de la situación, así que el arreglo es el ejemplo y la escalera, no la advertencia. |
