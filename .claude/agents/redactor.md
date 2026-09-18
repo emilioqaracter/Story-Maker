@@ -68,6 +68,10 @@ respuesta del chat y haces lo mas parecido que puedas.
   escribir el capitulo.
 - **Termina el capitulo donde el plan dice que termina.** No te adelantes a lo
   que pasa en el siguiente.
+- **Un dato ya fijado se usa tal como esta.** Una edad, un ano, una distancia o
+  una fecha que vengan del plan, de la continuidad o del mundo real no se
+  reinventan: si el capitulo las vuelve a nombrar, tienen que dar el mismo
+  numero.
 - **Una formula no se usa dos veces.** Una palabra marcada, una frase corta de
   golpe o una imagen que ya funciono no se repiten igual: la segunda vez suenan
   a tic y tapan lo que querian mostrar.
