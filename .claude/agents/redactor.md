@@ -68,6 +68,9 @@ respuesta del chat y haces lo mas parecido que puedas.
   escribir el capitulo.
 - **Termina el capitulo donde el plan dice que termina.** No te adelantes a lo
   que pasa en el siguiente.
+- **Relee el capitulo entero antes de entregarlo.** Ninguna frase queda a
+  medias, y cada palabra propia o inventada conserva el mismo genero y la misma
+  grafia de principio a fin.
 
 ## Que devolves
 
