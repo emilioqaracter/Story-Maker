@@ -68,6 +68,9 @@ respuesta del chat y haces lo mas parecido que puedas.
   escribir el capitulo.
 - **Termina el capitulo donde el plan dice que termina.** No te adelantes a lo
   que pasa en el siguiente.
+- **Primero la evidencia, y la conclusion nunca.** No anuncies lo que la escena
+  va a mostrar ni lo resumas cuando ya lo mostro: la frase que traduce la
+  accion en conclusion se corta, la accion se queda.
 - **Un dato ya fijado se usa tal como esta.** Una edad, un ano, una distancia o
   una fecha que vengan del plan, de la continuidad o del mundo real no se
   reinventan: si el capitulo las vuelve a nombrar, tienen que dar el mismo
