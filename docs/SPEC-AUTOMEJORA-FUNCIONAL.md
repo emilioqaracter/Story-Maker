@@ -106,8 +106,41 @@ Cada luz termina con **una lección**: una frase que el juez le deja al
 redactor sobre el hábito que falla, no sobre el caso. En una roja va siempre;
 en una verde, solo si hay algo flojo que se repite.
 
+**La lección se escribe para una sola cosa: convertirse en regla del
+redactor.** Es la única parte de la luz que puede acabar copiada en sus
+instrucciones, tal cual, como una regla permanente de cómo escribir. Por eso
+nombra el hábito y lo dice como se escribe bien, no como se revisa, y usa las
+palabras más comunes que encuentre: dos jueces que ven el mismo fallo en
+novelas distintas tienen que escribir casi la misma frase, o el loop no puede
+agruparlas y nunca hay una lección repetida que contar.
+
 | Lo que ya dice la luz | Lo que dice la lección |
 |---|---|
+| «El festejo repite la coreografía del capítulo anterior», con la cita | «Estás repitiendo la imagen de cierre del capítulo anterior: cambia la imagen, no solo lo que la motiva.» |
+| «El cierre nombra la emoción en vez de mostrarla», con la cita | «Los cierres explican lo que la escena ya mostró: termina en la última acción, no en su significado.» |
+
+**Por qué la lección la escribe el juez y no el loop.** El juez es quien vio
+el fallo y puede decir de qué tipo es. Si el loop tuviera que deducir el
+hábito a partir de una lista de citas, estaría juzgando, y eso no le toca.
+Con la lección, al loop le queda contar: qué lección se repite más.
+
+**Por qué la lección no lleva citas, ni nombres, ni hechos de la novela.**
+Con diez novelas distintas el redactor no puede aprenderse una historia,
+pero una regla que hablara de un personaje concreto seguiría siendo inútil
+para la novela siguiente. La lección lo tiene prohibido por escrito, y el
+loop descarta cualquiera que lo haga.
+
+**Por qué la lección no se gasta en erratas.** El redactor revisa su propio
+borrador antes de entregarlo, y ahí se le van las tildes, las palabras
+cortadas, la concordancia y los términos que cambian de grafía. Una lección
+sobre eso enseñaría al redactor algo que ya hace, y ocuparía el sitio de la
+que sí le enseña a escribir. Si un capítulo solo falla en eso, la luz puede
+ser roja, pero va sin lección.
+
+La lección es parte del formato de la luz, y la leen también los redactores
+de las novelas normales cuando corrigen. No es solo para el loop.
+
+---|---|
 | «Escribiste "desmorono" sin tilde y "el el" repetido», con la cita | «Estás entregando erratas y palabras cortadas: relee el capítulo entero antes de escribirlo.» |
 | «El festejo repite la coreografía del capítulo anterior», con la cita | «Estás repitiendo la imagen de cierre del capítulo anterior: léelo antes de escribir el tuyo y busca otra.» |
 
@@ -261,3 +294,4 @@ entrega que la cambia, con **qué** cambió y **por qué**.
 | Versión | Fecha | Cambio | Por qué |
 |---|---|---|---|
 | **1.0** | 2026-09-18 | Primera versión. Un loop que escribe hasta diez novelas distintas de tres capítulos cortos, cada una en su sesión, con el sistema tal como es; cuenta cuántos capítulos entraron a la primera; convierte la lección más repetida de los jueces en una regla del redactor por novela; revierte solo ante cero de tres. Jueces fijos. Meta: dos novelas seguidas con tres de tres, o diez novelas, con una comparación final de las tres primeras contra las tres últimas. Cada luz termina con una lección general para el redactor. | Casi ningún capítulo entra a la primera y las rojas del primer intento repiten los mismos fallos del redactor. La aprobación del sistema ya es una métrica que se cuenta con la terminal. Se eligen novelas distintas para que el redactor no pueda aprenderse una historia, y por eso mismo la métrica queda con tres muestras por vuelta: las decisiones se ajustan a lo que tres muestras pueden decir y la comparación fina se hace al final. La meta se pide dos veces porque una novela entera a la primera sale por suerte. La lección la escribe el juez porque es quien vio el fallo. Va en su propia especificación para que el sistema que escribe la novela siga describiéndose solo. |
+| **1.1** | 2026-09-18 | La lección se define por su destino: la frase que puede acabar copiada en las instrucciones del redactor como regla permanente. Se pide en las palabras más comunes que el juez encuentre, para que dos jueces que ven el mismo fallo escriban casi la misma frase. Deja de haber lecciones sobre erratas: eso lo limpia el redactor solo antes de entregar (§5). | Las dos primeras novelas de control salieron 0 de 3 y ninguna dejó un grupo de lecciones claro: cada juez nombraba el mismo hábito con su propio giro, así que el grupo más repetido llegó a tener dos miembros de trece lecciones. Una lección que no agrupa no se puede contar, y el loop entero depende de contar. Las mecánicas, además, ya no hacen falta. |

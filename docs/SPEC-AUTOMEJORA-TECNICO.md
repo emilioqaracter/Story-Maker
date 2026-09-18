@@ -54,19 +54,43 @@ o del motivo en una verde:
 
 **Reglas,** tal como las leen los jueces:
 
-- Nombra el hábito, no el caso. Lo que falló ya está arriba, con su cita.
+- La lección puede acabar copiada en las instrucciones del redactor como
+  regla permanente. Si no serviría de regla para cualquier capítulo de
+  cualquier novela, no es una lección.
+- Nombra el hábito y lo dice como se escribe bien, no como se revisa. Lo que
+  falló ya está arriba, con su cita.
 - Sin citas, sin palabras del capítulo, sin nombres ni hechos de la novela.
   Si solo sirve para esta historia, no es una lección.
-- Una sola frase, con una acción que el redactor pueda hacer antes de
-  entregar cualquier capítulo.
-- En una roja va siempre. En una verde, solo si hay algo flojo que se repite.
+- Con las palabras más comunes que el juez encuentre, para que dos jueces que
+  ven el mismo fallo escriban casi la misma frase y el loop pueda agruparlas.
+- Una sola, la que más pesa, aunque la roja tenga cuatro bloques. Sin dos
+  consejos encadenados con un «y».
+- Nada de erratas, tildes, concordancia ni términos que cambian de grafía: eso
+  lo limpia el redactor solo (§2.1). Si es el único problema, la luz va sin
+  lección.
+- En una roja va siempre, salvo ese caso. En una verde, solo si hay algo flojo
+  que se repite.
 
-Cada juez lleva dos ejemplos buenos y dos malos de su propio terreno. Se lee
+Cada juez lleva dos ejemplos buenos y tres malos de su propio terreno. Se lee
 con una orden:
 
 ```bash
 grep -h '^\*\*Leccion:\*\*' books/control-03/decisiones/*.md
 ```
+
+---
+
+### 2.1 Lo que el redactor se limpia solo
+
+`redactor.md`, sección *Antes de entregar*. Antes de escribir el archivo del
+borrador, el redactor relee lo que escribió y corrige ortografía y
+acentuación, palabras cortadas o repetidas, concordancia, la grafía y el
+género de cada nombre y término, la puntuación del diálogo, y la persona y el
+tiempo verbal del plan dentro de los recuerdos y en la última frase.
+
+Está ahí y no en un juez porque no hace falta criterio para verlo: un juez que
+gasta una luz roja en una tilde le cuesta al redactor uno de sus tres
+intentos, y una lección sobre erratas desplaza a la que enseña a escribir.
 
 ---
 
@@ -345,3 +369,4 @@ diez y quince minutos. Diez novelas, como mucho dos horas y media y unos
 | Versión | Fecha | Cambio | Por qué |
 |---|---|---|---|
 | **1.0** | 2026-09-18 | Primera versión. Skill `automejora` con una vuelta orden por orden. Diez ideas en `ideas.md`; cada novela en su sesión `claude -p` con `dirigir-novela` sin cambios, tres capítulos de unas cuatrocientas palabras. Métrica contada con `head -1` sobre el intento 1. Reversión solo ante cero de tres. Regla nueva en `redactor.md` a partir de la lección más repetida. Bitácora como estado del loop, `/goal` como motor, comparación final de tres novelas contra tres. Puesta a punto que crea la rama y commitea lo pendiente. Langfuse opcional. | La métrica es la aprobación del sistema y está en disco en cuanto los jueces escriben. Cada novela va en su sesión para que el contexto de quien orquesta no arrastre las anteriores, no por ninguna traza. Con tres muestras por vuelta solo «cero de tres» es señal, así que la reversión se reserva para eso y la comparación fina se hace al final con nueve contra nueve. El estado del loop es un archivo porque `/goal` decide leyendo lo que la sesión imprime. |
+| **1.1** | 2026-09-18 | Sección 2 reescrita con las reglas nuevas de la lección y sección 2.1 con lo que el redactor se limpia solo antes de entregar. | Lo mismo que la 1.1 funcional, con el sitio exacto de cada regla: `redactor.md` sección *Antes de entregar*, `revisor.md` y `verificador.md` sección *La leccion*, y las dos reglas nuevas de la skill `luz`. |

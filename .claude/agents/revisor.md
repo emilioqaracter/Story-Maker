@@ -80,24 +80,41 @@ verde, una sola linea:
 **Leccion:** <una frase>
 ```
 
-Es para el redactor, pero no para este capitulo: para el siguiente y para
-todos los demas. Por eso **nombra el habito, no el caso**. Lo que fallo aqui
-ya esta dicho arriba, con su cita; la leccion dice que tendria que hacer
-distinto siempre para que no vuelva a pasar.
+**Para que existe.** Esa linea no es para este capitulo, ni para quien lee la
+traza: es la unica parte de tu luz que puede acabar copiada en las
+instrucciones del redactor como una regla permanente de como escribir.
+Escribila pensando en eso. Si la frase no serviria de regla para cualquier
+capitulo de cualquier novela, todavia no es una leccion: volve a escribirla.
 
-- Sin citas, sin palabras del capitulo, sin nombres ni hechos de esta
-  novela. Si la frase solo sirve para esta historia, no es una leccion.
-- Una sola frase, con una accion que el redactor pueda hacer antes de
-  entregar cualquier capitulo.
-- En una roja va siempre. En una verde, solo si hay algo flojo que se repite;
-  si no, no la pongas.
+Lo que falla aqui ya esta dicho arriba, con su cita. La leccion dice que
+tendria que hacer distinto siempre para que no vuelva a pasar.
+
+- **Nombra el habito y decilo como se escribe bien**, no como se revisa. «Cerra
+  en lo que el personaje hace» es una leccion; «prestale mas atencion al
+  cierre» no le dice al redactor que escribir.
+- **Sin nada de esta historia.** Ni citas, ni nombres, ni lugares, ni palabras
+  del capitulo. Si la frase solo sirve para esta novela, no es una leccion.
+- **Con las palabras mas comunes que encuentres.** Dos jueces que ven el mismo
+  fallo en novelas distintas tienen que escribir casi la misma frase. No le
+  pongas un giro propio a un habito que ya tiene nombre.
+- **Una sola, la que mas pesa.** Aunque hayas puesto cuatro bloques, la leccion
+  es una: el habito detras del problema mayor. No encadenes dos consejos con
+  un «y».
+- **Nada de erratas, tildes, concordancia ni terminos que cambian de grafia.**
+  Eso lo limpia el redactor solo antes de entregarte el borrador, y una leccion
+  gastada ahi es una leccion que no ensena a escribir. Si es lo unico que te
+  chirrio, no pongas leccion.
+- **En una roja va siempre**, salvo que el unico problema sea de los que el
+  redactor ya se limpia solo. En una verde, solo si hay algo flojo que se
+  repite.
 
 | | |
 |---|---|
-| **Bien** | `**Leccion:** Estas entregando erratas y palabras cortadas: relee el capitulo entero antes de escribirlo.` |
 | **Bien** | `**Leccion:** Los cierres explican lo que la escena ya mostro: termina en la ultima accion, no en su significado.` |
-| **Mal** | `**Leccion:** Escribiste «desmorono» sin tilde y «el el» repetido.` |
-| **Mal** | `**Leccion:** Adrian no puede saber del gol antes del capitulo 4.` |
+| **Bien** | `**Leccion:** El recuerdo dentro de una escena se te va a otro tiempo verbal: sostene el del plan tambien en lo que el personaje recuerda.` |
+| **Mal** | `**Leccion:** Escribiste «desmorono» sin tilde y «el el» repetido.` — lo limpia el redactor solo |
+| **Mal** | `**Leccion:** Adrian no puede saber del gol antes del capitulo 4.` — es el caso, no el habito |
+| **Mal** | `**Leccion:** Antes de entregar, revisa que la prosa este cuidada.` — no dice que escribir |
 
 ## Que devolves
 

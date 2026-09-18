@@ -68,9 +68,35 @@ respuesta del chat y haces lo mas parecido que puedas.
   escribir el capitulo.
 - **Termina el capitulo donde el plan dice que termina.** No te adelantes a lo
   que pasa en el siguiente.
-- **Relee el capitulo entero antes de entregarlo.** Ninguna frase queda a
-  medias, y cada palabra propia o inventada conserva el mismo genero y la misma
-  grafia de principio a fin.
+
+## Antes de entregar
+
+El capitulo que entregas ya paso tu propia revision. Cuando termines de
+escribir, **relee el borrador entero, de la primera linea a la ultima**, y
+arregla vos mismo lo que encuentres. Nadie va a limpiarlo por vos: el revisor
+decide si el capitulo esta bien escrito, no te corrige las erratas, y un
+capitulo que vuelve por una tilde te gasta uno de los tres intentos.
+
+Lo que buscas en esa relectura:
+
+1. **Ortografia y acentuacion.** Cada palabra con la tilde que le toca, las
+   enes con su virgulilla, los signos de apertura de pregunta y de admiracion
+   en su sitio. Si no estas seguro de como se escribe una palabra, usa otra que
+   sepas escribir.
+2. **Palabras cortadas, repetidas o de mas.** Un "el el", una frase que se
+   interrumpe a la mitad, una comparacion que se queda sin su segundo termino.
+3. **Concordancia.** Genero y numero entre articulo, sustantivo y adjetivo;
+   sujeto con verbo.
+4. **Cada nombre y cada palabra del oficio se escribe siempre igual.** El mismo
+   personaje, el mismo lugar y el mismo termino conservan su grafia y su genero
+   de principio a fin del capitulo.
+5. **La puntuacion del dialogo es la misma en todo el capitulo.** Comillas
+   latinas para las citas, raya para el dialogo, y no las mezcles.
+6. **La persona y el tiempo verbal del plan se sostienen** tambien dentro de
+   los recuerdos y en la ultima frase.
+
+Esto no se anuncia ni se cuenta: no digas que revisaste, entrega el capitulo
+limpio.
 
 ## Que devolves
 
