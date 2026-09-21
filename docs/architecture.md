@@ -1,7 +1,7 @@
 # architecture.md
 
 > Documentación de dominio · ver [`../AGENTS.md`](../AGENTS.md) para el índice completo.
-> Relacionados: [definitions](definitions.md) · [domain-knowledge](domain-knowledge.md) · [validations](validations.md)
+> Relacionados: [definitions](definitions.md) · [domain-knowledge](domain-knowledge.md) · [verification](verification.md)
 
 Arquitectura de un sistema **autónomo** de generación de novelas largas, con el caso de referencia de la épica deportiva. Consume el vocabulario de `definitions.md` y los modelos de `domain-knowledge.md`.
 
@@ -54,6 +54,34 @@ graph TD
   CAPA5 --> SAL["Manuscrito congelado"]
   CAPA6 -.replanifica.-> CAPA1
 ```
+
+El diagrama es la vista lógica. Todo lo que aparece en él vive en `backend/`.
+
+### 2.1 Reparto físico: monorepo
+
+El repositorio es un monorepo con dos artefactos desplegables.
+
+| Carpeta | Stack | Contiene |
+|---|---|---|
+| `backend/` | Python y FastAPI | Orquestador, los 13 agentes, el catálogo de skills, los cinco almacenes de la capa de memoria y las puertas de calidad |
+| `frontend/` | React y Three.js | Lectura del manuscrito y visualización del estado: grafo de entidades, curva de tensión, deuda narrativa y salud de la tirada |
+
+**El frontend es un observador de solo lectura.** No aprueba, no corrige, no desbloquea y no escribe canon. El motivo no es de alcance sino de diseño: cualquier interacción de la interfaz que condicione el ciclo reintroduce la aprobación manual que PRO-11 prohíbe, y lo hace por la puerta de atrás, sin regla de precedencia ni agente responsable.
+
+De ahí se sigue una prueba barata de que el diseño se respeta: **el sistema completa una novela con el frontend apagado**. El día que no pueda, hay un fallo de diseño.
+
+### 2.2 Frontera entre las dos mitades
+
+| Qué cruza | Dirección | Forma |
+|---|---|---|
+| Brief (PRO-01) | frontend → backend | Encargo inicial. Es entrada, no revisión: ocurre antes del ciclo y no lo interrumpe |
+| Manuscrito congelado | backend → frontend | Solo capítulos cerrados. Un borrador (PRO-06) no sale |
+| Proyecciones de estado | backend → frontend | Grafo de entidades, curva de tensión, deuda narrativa. Derivadas, nunca el registro de eventos en crudo |
+| Traza de ejecución | backend → frontend | Las métricas de §11, en lectura |
+
+El contrato es el esquema OpenAPI que genera FastAPI, y es el único punto de acoplamiento entre las dos mitades. Se verifica con VER-08 de [`verification.md`](verification.md): el cliente del frontend se genera desde ese mismo esquema, de modo que un cambio incompatible rompe la compilación en vez de romper la pantalla.
+
+Three.js se reserva para lo que lo justifica — el grafo de entidades y la curva de tensión a lo largo de la obra son estructuras que no se leen bien en una tabla — y no como envoltorio de todo lo demás.
 
 ---
 
@@ -488,7 +516,7 @@ stateDiagram-v2
 
 ## 9. Control de calidad automático
 
-El catálogo completo de comprobaciones, con su regla exacta, severidad y acción al fallar, está en [`validations.md`](validations.md). Aquí solo se describe el mecanismo.
+Los métodos con los que se verifica este control — y el código que lo implementa — están en [`verification.md`](verification.md). Aquí solo se describe el mecanismo.
 
 ### 9.1 Verificadores deterministas
 
@@ -614,5 +642,6 @@ En un sistema sin supervisión externa, la observabilidad no es un extra: es el 
 8. Recuperación híbrida.
 9. Jurado, conjunto dorado y Estilista.
 10. Supervisor, replanificación y métricas de salud.
+11. Frontend de lectura y visualización.
 
-Los pasos 1 a 6 producen una novela coherente sin intervención. Del 7 en adelante se gana escala y calidad, no viabilidad.
+Los pasos 1 a 6 producen una novela coherente sin intervención. Del 7 al 10 se gana escala y calidad, no viabilidad. El paso 11 está fuera del camino crítico por definición (§2.1) y solo tiene sentido cuando el paso 10 ya produce métricas que mostrar.

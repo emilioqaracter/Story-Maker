@@ -1,7 +1,7 @@
 # definitions.md
 
 > Documentación de dominio · ver [`../AGENTS.md`](../AGENTS.md) para el índice completo.
-> Relacionados: [domain-knowledge](domain-knowledge.md) · [architecture](architecture.md) · [validations](validations.md)
+> Relacionados: [domain-knowledge](domain-knowledge.md) · [architecture](architecture.md) · [verification](verification.md)
 
 Ontología de dominio para un sistema de IA generador de novelas largas (caso de referencia: épica deportiva).
 

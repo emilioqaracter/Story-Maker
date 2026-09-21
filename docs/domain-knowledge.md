@@ -1,7 +1,7 @@
 # domain-knowledge.md
 
 > Documentación de dominio · ver [`../AGENTS.md`](../AGENTS.md) para el índice completo.
-> Relacionados: [definitions](definitions.md) · [architecture](architecture.md) · [validations](validations.md)
+> Relacionados: [definitions](definitions.md) · [architecture](architecture.md) · [verification](verification.md)
 
 Representación visual de la ontología definida en `definitions.md`. Cada diagrama responde a una pregunta concreta sobre el dominio. Los identificadores entre corchetes remiten al glosario.
 
@@ -616,4 +616,4 @@ graph LR
   C9 --> S9["Presupuesto de contexto + compactación"]
 ```
 
-Cada solución de la columna derecha corresponde a un componente concreto en [`architecture.md`](architecture.md) y a una comprobación con ID en [`validations.md`](validations.md).
+Cada solución de la columna derecha corresponde a un componente concreto en [`architecture.md`](architecture.md) y a un método de verificación con ID en [`verification.md`](verification.md).
