@@ -142,7 +142,7 @@ Enunciar una propiedad general que debe cumplirse para cualquier entrada, y gene
 
 | Atributo | Valor |
 |---|---|
-| **Qué verifica aquí** | «El recálculo de la clasificación es invariante a la permutación de los encuentros»; «el paquete de contexto nunca supera 70.000 tokens de entrada»; «la suma de las llamadas en vuelo nunca supera CTX-20, sea cual sea el orden de llegada» (CTX-I1); «fusionar dos deltas canónicos es asociativo»; «todo setup insertado aparece en la lista de deuda hasta cobrarse» |
+| **Qué verifica aquí** | «El recálculo de la clasificación es invariante a la permutación de los encuentros»; «el paquete de contexto nunca supera 70.000 tokens de entrada»; «la suma de las llamadas en vuelo nunca supera CTX-20, sea cual sea el orden de llegada» (CTX-I1); «fusionar dos deltas canónicos es asociativo»; «todo setup insertado aparece en la lista de deuda hasta cobrarse»; «congelar un capítulo no deja ninguna fila de memoria de trabajo» (PRO-I1); «reanudar desde un punto de reanudación produce el mismo capítulo que una tirada sin interrupción» (PRO-14) |
 | **Clase** | T |
 | **Herramienta** | `hypothesis` en `backend/`, con `fast-check` en `frontend/` si la lógica de proyección lo justifica |
 | **Límite** | Encuentra contraejemplos, no demuestra ausencia. Y solo prueba lo que la propiedad enuncia |
@@ -325,7 +325,7 @@ Explorar de forma exhaustiva los estados y transiciones alcanzables del flujo pa
 | Atributo | Valor |
 |---|---|
 | **Qué verifica aquí** | La máquina de estados del ciclo de vida del capítulo de `architecture.md` §7 |
-| **Invariantes** | «Nunca se congela sin superar todas las puertas»; «nunca se escribe canon antes de congelar»; «toda reparación revalida desde la primera puerta»; «no hay ciclo que evite la cuarentena para siempre»; «nunca hay más de CTX-20 tokens en vuelo», que es CTX-I1 |
+| **Invariantes** | «Nunca se congela sin superar todas las puertas»; «nunca se escribe canon antes de congelar»; «toda reparación revalida desde la primera puerta»; «no hay ciclo que evite la cuarentena para siempre»; «nunca hay más de CTX-20 tokens en vuelo», que es CTX-I1; «nunca se reanuda desde un punto que no esté cerrado», que es PRO-I2 |
 | **Clase** | A |
 | **Herramienta** | `TLA+` con TLC sobre el modelo de estados |
 | **Límite** | Prueba el flujo modelado, no el orquestador que lo implementa. Esa distancia la cubre VER-05 |
@@ -374,6 +374,8 @@ El eje de producto y el de proceso se cruzan en un solo punto: los evals agregad
 | Frontend | VER-01, 02, 05, 08 | T |
 | Verificadores deterministas CAL-03 | VER-05, 06, 07 | T |
 | Flujo del orquestador | VER-05, 18 | A |
+| Memoria de trabajo PRO-13 | VER-01, 05, 06 | T |
+| Reanudación de una tirada | VER-06, 18 | A |
 | Prompt de un agente | VER-10, 16, 17 | T · D |
 | Prosa generada | VER-10, 14 | I |
 | Delta canónico | VER-08, 12, 14, 17 | A · I |

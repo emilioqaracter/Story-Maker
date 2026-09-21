@@ -145,9 +145,20 @@ La regla 1 y su excepción son estáticamente comprobables, así que no se dejan
 
 ## 3. Capa de memoria
 
-Cinco almacenes con responsabilidades separadas. Unificarlos en un único índice vectorial es el error estructural más frecuente en este tipo de sistema.
+La memoria tiene **dos horizontes**, y confundirlos es lo que degrada una novela larga.
 
-**Todos viven en SQLite, en local, con un fichero por novela.** Separación lógica, no física: cinco conjuntos de tablas en la misma base. El motivo está en `AGENTS.md` §3.2.
+| Horizonte | Qué guarda | Cuándo muere |
+|---|---|---|
+| **Largo plazo** (§3.1) | Lo que es verdad en el universo: canon, eventos, relaciones, prosa congelada, resúmenes | Nunca. Es la novela |
+| **Corto plazo** (§3.2) | Lo que el sistema sostiene mientras produce un capítulo: borradores, defectos, veredictos, reintentos | Al congelar el capítulo |
+
+La regla que los separa: **el largo plazo guarda lo que es verdad; el corto plazo, lo que todavía se está decidiendo.** Un borrador no es canon hasta que pasa las puertas, y tratarlo como si lo fuera es el camino corto al envenenamiento de canon (CTX-13).
+
+**Los dos viven en SQLite, en local, con un fichero por novela.** El motivo está en `AGENTS.md` §3.2.
+
+### 3.1 Largo plazo: los cinco almacenes
+
+Cinco almacenes con responsabilidades separadas. Unificarlos en un único índice vectorial es el error estructural más frecuente en este tipo de sistema. Separación lógica, no física: cinco conjuntos de tablas en la misma base.
 
 | Almacén | Contenido | Implementación en SQLite | Consulta que resuelve |
 |---|---|---|---|
@@ -162,6 +173,26 @@ Cinco almacenes con responsabilidades separadas. Unificarlos en un único índic
 **Troceado del índice de prosa**: la unidad es la escena, no un bloque de N tokens. Cada trozo lleva metadatos de capítulo, POV, lugar, instante de mundo y personajes presentes, de modo que la recuperación se filtre antes de puntuarse.
 
 **Consistencia entre almacenes**: el registro de eventos manda. Canon estructurado y grafo son proyecciones reconstruibles. El índice de prosa se reindexa al congelar un capítulo.
+
+### 3.2 Corto plazo: la memoria de trabajo (PRO-13)
+
+Todo lo que el sistema sostiene mientras produce un capítulo y que **no es verdad todavía**. Vive en el mismo fichero, en tablas marcadas como efímeras.
+
+| Tabla | Qué guarda | Se vacía |
+|---|---|---|
+| `run_state` | En qué capítulo, escena y paso va la tirada. Es el punto de reanudación (PRO-14) | Al terminar la novela |
+| `draft` | Prosa de escena y de capítulo aún no congelada (PRO-06) | Al congelar: pasa al índice de prosa |
+| `defect` | Defectos abiertos (CAL-05) con su evidencia y su estado en el bucle de §7.3 | Al congelar |
+| `verdict` | Puntuaciones del jurado por dimensión, con su dispersión (CAL-11) | Al congelar |
+| `admission` | Qué llamadas están en vuelo y cuáles esperan en la cola de CTX-20 | Al terminar cada llamada |
+
+**Tres reglas.**
+
+1. **La memoria de trabajo nunca entra en la ventana de un modelo.** Lo que el agente ve es su paquete de contexto (CTX-03), que el Documentalista ensambla. Si un borrador rechazado llegara al contexto del Escritor, el sistema estaría aprendiendo de su propio error.
+2. **Se purga al congelar** (PRO-I1). La prosa aprobada pasa al índice; defectos, veredictos y cola desaparecen.
+3. **Lo que se purga no se pierde: se traza.** §11 exige conservar defectos, puntuaciones y arbitrajes, y eso es trabajo de la observabilidad (VER-09), no del fichero de la novela. **SQLite guarda lo que es verdad; la traza guarda lo que pasó.** Duplicarlo en tablas históricas haría crecer el fichero con material que ya nadie consulta.
+
+**Por qué en SQLite y no en memoria del proceso.** `AGENTS.md` §3.2 promete que copiar el fichero es copiar el estado completo, y de ahí salen la reproducibilidad de una tirada, el conjunto dorado (CAL-10) y los evals (VER-10). Con el estado de trabajo en el proceso esa promesa deja de ser cierta, y una caída en el capítulo 28 se lleva el capítulo entero.
 
 ---
 
@@ -606,6 +637,56 @@ stateDiagram-v2
 ```
 
 **Presupuestos de reintento por defecto**: 3 a nivel de escena, 2 a nivel de capítulo, 1 replanificación de tramo. Al agotarse la tercera, se replanifica el arco completo. No hay cuarto nivel: si un arco falla dos veces, el problema está en la escaleta y se recalcula desde el Arquitecto.
+
+### 7.4 Ejecución: el Orquestador como código
+
+§7.1 a §7.3 dicen **qué pasa**. Esta sección dice **cómo se ejecuta**, que es lo que hace falta para escribir `backend/orchestration/`.
+
+#### Un proceso, un bucle asíncrono
+
+El Orquestador es un bucle `asyncio` en un solo proceso. No hay cola de trabajos ni workers.
+
+El motivo es de dimensionamiento, no de gusto: una novela es una unidad aislada, no hay concurrencia entre tiradas, la persistencia es un fichero local, y el paralelismo real que hay que soportar son **tres llamadas simultáneas**, las del Jurado (§4.2). Un broker y un proceso más serían infraestructura para un problema que este sistema no tiene, y añadirían un modo de fallo nuevo a un ciclo que por PRO-11 debe terminar sin que nadie intervenga.
+
+#### Reanudación por escena
+
+La tirada persiste su punto de reanudación (PRO-14) en `run_state` al cerrar **cada escena**, no cada llamada.
+
+| | |
+|---|---|
+| **Al arrancar** | Si hay un capítulo sin congelar, se reanuda desde la última escena cerrada |
+| **Qué se descarta** | Todo borrador posterior a ese punto: puede estar a medias y no ha pasado ninguna puerta (PRO-I2) |
+| **Qué se conserva** | Las escenas ya cerradas del capítulo y su cuenta de reintentos consumidos |
+
+Por escena y no por llamada porque la escena **ya es** la unidad de reintento de §7.3: reanudar por ahí reaprovecha una frontera que el diseño tiene, en vez de inventar otra. Persistir cada llamada obligaría a serializar su paquete de contexto y multiplicaría la escritura sin comprar nada.
+
+#### Admisión de llamadas: CTX-20 como semáforo
+
+El techo de concurrencia de §4.1 se implementa como un **semáforo con contador de tokens**, no como un límite de llamadas simultáneas: lo que se cuenta son tokens, porque tres jueces y un Continuista ocupan cosas muy distintas.
+
+```
+admitir(llamada):
+    si en_vuelo + presupuesto(llamada) <= 100.000:
+        en_vuelo += presupuesto(llamada);  ejecutar
+    si no:
+        encolar en FIFO estricta, sin reordenar por hueco
+al terminar(llamada):
+    en_vuelo -= presupuesto(llamada);  admitir al primero de la cola
+```
+
+Dos reglas que no se negocian: **FIFO estricta**, porque reordenar por hueco mata de hambre al Arquitecto y al Continuista, que son las llamadas grandes; y **fallo cerrado**, si el presupuesto de una llamada no se puede estimar, no se admite.
+
+#### Módulos de `backend/orchestration/`
+
+| Módulo | Responsabilidad |
+|---|---|
+| `loop` | Los bucles de capítulo y de escena de §7.1 |
+| `checkpoint` | Escribe y lee el punto de reanudación en `run_state` |
+| `admission` | Contador de CTX-20, cola FIFO y fallo cerrado |
+| `retries` | Presupuesto de reintentos y paso a cuarentena de §7.3 |
+| `dispatch` | Llama al agente que toca y valida su salida contra el esquema antes de devolverla |
+
+`dispatch` es el que concentra el riesgo: es la frontera de confianza donde el texto de un modelo se convierte en objeto tipado (VER-01). Todo lo que pase de ahí sin validar contamina el canon.
 
 ---
 

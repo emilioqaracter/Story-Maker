@@ -29,6 +29,26 @@ Separación lógica, no física: cinco conjuntos de tablas conviviendo. Unificar
 | Índice de prosa | FTS5 para el léxico, que ya trae BM25 |
 | Resúmenes jerárquicos | Tabla con nivel y referencia al padre |
 
+Esos cinco son la memoria de **largo plazo**: lo que es verdad y sobrevive a la congelación.
+
+## 2.1 Las tablas efímeras
+
+Aparte viven las de **memoria de trabajo** (PRO-13, `architecture.md` §3.2): lo que el sistema sostiene mientras produce un capítulo y todavía no es verdad.
+
+| Tabla | Guarda | Se vacía |
+|---|---|---|
+| `run_state` | Capítulo, escena y paso en curso. Es el punto de reanudación, PRO-14 | Al terminar la novela |
+| `draft` | Prosa sin congelar | Al congelar: pasa al índice de prosa |
+| `defect` | Defectos abiertos con su evidencia | Al congelar |
+| `verdict` | Puntuaciones del jurado y su dispersión | Al congelar |
+| `admission` | Llamadas en vuelo y cola de CTX-20 | Al terminar cada llamada |
+
+Tres cosas que importan al escribir el esquema:
+
+- **Márcalas como efímeras en el propio esquema**, con prefijo o con un `schema` aparte. Que se distingan de un vistazo es lo que impide que una consulta de canon lea un borrador por error.
+- **La purga al congelar es una transacción**, junto con la escritura del delta. A medias deja huérfanos, y el invariante PRO-I1 dice que tras congelar no queda ninguna fila del capítulo.
+- **No las archives en tablas históricas.** Esa traza es de Langfuse (VER-09). Aquí se guarda lo que es verdad, no lo que pasó.
+
 ## 3. El registro de eventos manda
 
 Es la regla de consistencia del sistema (`architecture.md` §3):
@@ -64,5 +84,5 @@ Si tu trabajo la necesita, **para y ejecuta el proceso B de `AGENTS.md` §6.3**.
 ## 6. Verificación
 
 - Las migraciones son código y pasan la puerta de CI como el resto (VER-15).
-- Los invariantes del esquema se prueban con `hypothesis` (VER-06): «fusionar dos deltas es asociativo», «toda arista tiene vigencia coherente», «reconstruir la proyección desde cero da el mismo resultado que la incremental».
+- Los invariantes del esquema se prueban con `hypothesis` (VER-06): «fusionar dos deltas es asociativo», «toda arista tiene vigencia coherente», «reconstruir la proyección desde cero da el mismo resultado que la incremental», «congelar no deja ninguna fila de memoria de trabajo» (PRO-I1).
 - Ninguna consulta se construye concatenando cadenas que vengan de un modelo. Parámetros siempre (VER-02).

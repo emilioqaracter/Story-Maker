@@ -579,7 +579,9 @@ stateDiagram-v2
   Reabierto --> Revisión
 ```
 
-El paso `Integrado → Congelado` es el único que modifica el canon. Todo lo anterior trabaja sobre material provisional.
+El paso `Integrado → Congelado` es el único que modifica el canon. Todo lo anterior trabaja sobre **material provisional**, que es la memoria de trabajo (PRO-13): borradores, defectos abiertos y veredictos. Ese mismo paso la purga, porque al congelar ya no queda nada por decidir (PRO-I1).
+
+El estado en que se quedó el capítulo es el punto de reanudación (PRO-14): una tirada interrumpida vuelve a la última escena cerrada, nunca a mitad de una.
 
 ---
 

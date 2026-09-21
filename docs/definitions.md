@@ -287,6 +287,11 @@ Las filas van agrupadas por tema, no por número: los cinco términos de límite
 | PRO-10 | **Política de arbitraje** | Conjunto de reglas de precedencia que resuelve conflictos sin intervención externa: canon congelado gana sobre delta nuevo, brief gana sobre canon derivado, invariante duro gana sobre preferencia estética. Todo arbitraje queda registrado. |
 | PRO-11 | **Autonomía de extremo a extremo** | El sistema decide, verifica, corrige y cierra sin aprobación externa. Toda decisión que en un flujo asistido correspondería a una persona debe tener aquí una regla explícita, un umbral o un agente responsable. |
 | PRO-12 | **Replanificación** | Reacción a un bloqueo persistente: en vez de pedir ayuda, se reescribe la especificación de la escena o se recalcula el tramo de escaleta afectado y se vuelve a generar. |
+| PRO-13 | **Memoria de trabajo** | Material vivo de un capítulo en curso: borradores, defectos abiertos con su evidencia, veredictos del jurado, cuenta de reintentos y cola de admisión. Nace al planificar el capítulo y muere al congelarlo. **Nunca entra en la ventana de un modelo**: es lo que el sistema sostiene mientras produce, no lo que el agente ve. |
+| PRO-14 | **Punto de reanudación** | Última frontera cerrada desde la que una tirada interrumpida continúa sin rehacer trabajo ya validado. En este sistema es la escena, porque es la unidad de reintento (PRO-07, CAL-12). |
+
+**Invariante PRO-I1**: al congelar un capítulo no queda ninguna fila de memoria de trabajo asociada a él. Lo que era verdad pasó al canon; lo que fue proceso vive en la traza, no en el fichero de la novela.
+**Invariante PRO-I2**: una tirada solo reanuda desde un punto de reanudación cerrado. El material posterior a ese punto se descarta, nunca se reaprovecha a medias.
 
 ---
 
