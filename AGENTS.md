@@ -57,13 +57,12 @@ Es un **monorepo**: backend y frontend viven en la misma raíz, junto a la espec
 │   ├── architecture.md       ← cómo se construye el sistema
 │   └── verification.md       ← cómo se verifica el código y la salida de los agentes
 ├── .claude/skills/           ← reglas de este repositorio, ejecutables
-│   ├── proceso-a/            ← proceso: ontología
-│   ├── proceso-b/            ← proceso: specs
-│   ├── proceso-c/            ← proceso: código
-│   ├── sync-docs/            ← proceso: sincronización inversa
+│   ├── grill-me/             ← proceso: interrogatorio previo, §6.1
+│   ├── verification-sheet/   ← proceso: produce verification.md
 │   ├── fastapi/              ← tecnología: backend
 │   ├── react/                ← tecnología: frontend
 │   └── sqlite/               ← tecnología: persistencia
+├── specs/                    ← reservada y hoy vacía: ver §3.3
 ├── backend/                  ← API y motor del sistema autónomo
 └── frontend/                 ← visualización del estado narrativo
 ```
@@ -95,6 +94,14 @@ Por qué encaja con este sistema y no es una decisión provisional:
 - **Sin servidor no hay una pieza más que pueda fallar** en un ciclo que debe terminar sin que nadie intervenga.
 
 El reparto detallado, la frontera entre las dos mitades y su contrato están en `docs/architecture.md` §2.1 y §2.2.
+
+### 3.3 `specs/`
+
+Carpeta **reservada**. Hoy está vacía, y **ninguna sección de este repositorio define qué va dentro ni cómo se organiza**.
+
+Lo que sí está fijado es otra cosa: los cuatro documentos de `docs/` son la especificación del sistema que escribe la novela, y el proceso B (§6.3) los gobierna. `specs/` no es eso, y su convención está sin escribir.
+
+Antes de poner el primer fichero ahí hay que decidir y documentar cuatro cosas: qué justifica una spec propia frente a una sección de `architecture.md`, cómo se nombra, qué estructura lleva y qué proceso de §6 la gobierna. Es una decisión con dueño, así que cruza el umbral de §6.1 y no se resuelve creando ficheros a ver qué sale.
 
 ---
 
@@ -222,13 +229,25 @@ Los diagramas son parte del contenido, no decoración. Reglas para que renderice
 
 Hay tres clases de cambio en este repositorio y cada una tiene su proceso. El eje que las separa es el radio de impacto: un término mal puesto en `definitions.md` contamina los cuatro documentos y todo el código que venga después; un bug en una función no sale de su fichero.
 
-| Proceso | Qué se toca | Radio de impacto | Skill |
+| Proceso | Qué se toca | Radio de impacto | Detalle |
 |---|---|---|---|
-| **A** | `definitions.md`, `domain-knowledge.md` | Máximo: la ontología la consume todo lo demás | `proceso-a` |
-| **B** | `architecture.md`, `verification.md` | Alto: fija cómo se construye y cómo se comprueba | `proceso-b` |
-| **C** | `backend/`, `frontend/` | Local, pero puede revelar que la spec está mal | `proceso-c` |
+| **A** | `definitions.md`, `domain-knowledge.md` | Máximo: la ontología la consume todo lo demás | §6.2 |
+| **B** | `architecture.md`, `verification.md` | Alto: fija cómo se construye y cómo se comprueba | §6.3 |
+| **C** | `backend/`, `frontend/` | Local, pero puede revelar que la spec está mal | §6.4 |
 
-Los tres están escritos como skills en `.claude/skills/`, junto a tres skills de tecnología — `fastapi`, `react` y `sqlite` — que dicen cómo se escribe el código de cada mitad. Las de proceso dicen **qué pasos seguir**; las de tecnología, **cómo escribir**. Las secciones siguientes son la versión canónica: **si una skill y este documento discrepan, manda este documento** y la skill se corrige.
+Los tres procesos se describen en §6.2 a §6.4, que son su **única** fuente: no hay una skill que los repita, y por eso no hace falta regla de desempate.
+
+En `.claude/skills/` viven cinco skills, que hacen otra cosa:
+
+| Skill | Qué hace |
+|---|---|
+| `grill-me` | Lanza el interrogatorio previo de §6.1. Solo la puedes invocar tú, con `/grill-me` |
+| `verification-sheet` | Produce `verification.md` desde un context seed: catálogo de métodos, TAIDU y riesgo aceptado |
+| `fastapi` | Cómo se escribe `backend/` |
+| `react` | Cómo se escribe `frontend/` |
+| `sqlite` | Cómo se guarda el estado |
+
+Las tres de tecnología dicen **cómo escribir**; este documento dice **qué pasos seguir** y **si procede**.
 
 ### 6.1 El interrogatorio previo
 
@@ -288,7 +307,7 @@ Para `backend/` y `frontend/`. Hoy no aplica: el repositorio está en fase de es
 3. **Elegir el método de verificación antes de escribir**, con el procedimiento de `verification.md` §8. Si no hay método, va al registro de riesgo aceptado antes de escribir el código, nunca después.
 4. **Escribir la prueba o la propiedad primero** cuando el método sea VER-05 o VER-06.
 5. **Pasar la puerta de CI**: VER-01, VER-02, VER-05, VER-06 y VER-08 en verde (VER-15).
-6. **Sincronizar la documentación.** Skill `sync-docs`, ver §6.5. Es un paso del proceso, no una tarea aparte.
+6. **Sincronizar la documentación**, con el procedimiento de §6.5. Es un paso del proceso, no una tarea aparte.
 
 Si al implementar descubres que la spec está mal, **paras y ejecutas el proceso B**. No se corrige en el código dejando la spec mintiendo: así es como los documentos dejan de describir el sistema.
 
@@ -302,7 +321,8 @@ Todo cambio de código lanza una **ejecución de sincronización** que revisa y 
 | ¿Lo implementado hace lo que dice la sección que lo autorizó? | `architecture.md` |
 | ¿Los métodos `VER-NN` que cubren ese artefacto siguen siendo los de la matriz? | `verification.md` §7 |
 | ¿Apareció vocabulario nuevo en el código que no está en el glosario? | `definitions.md` |
-| ¿Cambió el estado de alguna fila de §2 o algún paso de §8? | Este fichero |
+| ¿Cambió el estado de alguna fila de §2? | Este fichero |
+| ¿Cambió algún paso del orden de construcción? | `architecture.md` §14 |
 
 La ejecución **informa y propone; no edita la ontología por su cuenta**. Si detecta que hace falta tocar `definitions.md`, eso dispara el proceso A con su interrogatorio, porque el proceso A es bloqueante y una sincronización automática no puede saltarse esa puerta.
 
@@ -312,43 +332,17 @@ La ejecución **informa y propone; no edita la ontología por su cuenta**. Si de
 
 ## 7. Los 13 agentes especificados
 
-Referencia rápida. El detalle está en `docs/architecture.md` §6. **Ninguno está implementado.**
+El catálogo completo —misión, skills principales, criterio de salida y contrato de entrada y salida— está en [`docs/architecture.md`](docs/architecture.md) §6 y §6.2. **No se repite aquí**: dos copias de la misma tabla garantizan que una se quede atrás.
 
-| # | Agente | Misión |
-|---|---|---|
-| 0 | Orquestador | Dirige el flujo y cuenta reintentos. Código, no modelo |
-| 1 | Arquitecto narrativo | Arcos, doble arco, curva de tensión, escaleta |
-| 2 | Planificador de capítulo | Especificaciones de escena |
-| 3 | Documentalista | Ensambla el paquete de contexto. Código |
-| 4 | Escritor de escena | Produce la prosa |
-| 5 | Especialista deportivo | Resuelve y narra encuentros |
-| 6 | Continuista | Verificación de continuidad |
-| 7 | Jurado (×3) | Evalúa dimensiones subjetivas |
-| 8 | Reparador | Corrección dirigida |
-| 9 | Estilista | Pase de voz, poda y proscripción |
-| 10 | Archivero | Extrae el delta canónico y resume |
-| 11 | Árbitro | Resuelve conflictos por precedencia |
-| 12 | Supervisor | Vigila deuda, tensión y deriva; replanifica |
-
-Tres son los que suelen faltar en implementaciones ingenuas: **Archivero** (sin él el canon se queda atrás respecto al texto), **Árbitro** (sin él un conflicto detiene el sistema, porque no hay a quién preguntar) y **Supervisor** (sin él la novela pierde forma en el segundo acto sin que nada lo señale).
+**Ninguno está implementado** (§2).
 
 ---
 
 ## 8. Orden de implementación previsto
 
-1. Canon estructurado + registro de eventos
-2. Especificación de escena y escaleta
-3. Documentalista con presupuesto fijo
-4. Escritor de escena + verificadores deterministas
-5. Archivero y ciclo de congelación
-6. Árbitro y política de precedencia ← **desde aquí el sistema es autónomo**
-7. Resúmenes jerárquicos
-8. Recuperación híbrida
-9. Jurado, conjunto dorado y Estilista
-10. Supervisor, replanificación y métricas
-11. Frontend de lectura y visualización ← fuera del camino crítico
+Los once pasos, con su justificación y con qué funcionalidad de `architecture.md` §2.3 llena cada uno, están en [`docs/architecture.md`](docs/architecture.md) §14.
 
-Los pasos 1 a 6 producen una novela coherente sin intervención. Del 7 al 10 se gana escala y calidad, no viabilidad. El 11 no afecta a ninguna de las dos cosas: el sistema termina una novela con el frontend apagado (`architecture.md` §2.1).
+Lo único que conviene retener aquí: **los pasos 1 a 6 producen una novela coherente sin intervención**. Del 7 al 10 se gana escala y calidad, no viabilidad, y el 11 —el frontend— está fuera del camino crítico por diseño (§3.1).
 
 ---
 
