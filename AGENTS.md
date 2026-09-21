@@ -11,7 +11,17 @@ Un sistema **autónomo** de generación de novelas largas. Caso de referencia: �
 Dos restricciones fijan todo el diseño:
 
 - **Autonomía de extremo a extremo.** No hay aprobación manual, ni revisión de una persona, ni escalado. Cada decisión necesita una regla de precedencia, un umbral numérico o un agente responsable.
-- **Ventana de contexto de 100.000 tokens** por llamada, entrada más salida, para cualquier agente.
+- **Ventana de contexto de 100.000 tokens** por llamada, entrada más salida, para cualquier agente **del sistema mientras escribe la novela**. Es cuánto cabe en una llamada, no cuánto mide la novela. No aplica al trabajo de crear el sistema, las specs ni la documentación.
+
+**De un vistazo**
+
+| | |
+|---|---|
+| **Ventana máxima de contexto** | **100.000 tokens** por llamada, entrada más salida (§5.3.2) |
+| **Backend** — `backend/` | **Python + FastAPI** |
+| **Frontend** — `frontend/` | **React** |
+| **Persistencia** | **SQLite en local**, un fichero por novela |
+| **Intervención humana en la novela** | Ninguna (§5.3.1) |
 
 La idea central del dominio: **una novela larga no es un texto largo, es un estado del mundo que evoluciona**. El texto es la proyección visible. El sistema gestiona el estado; la prosa es consecuencia.
 
@@ -46,6 +56,14 @@ Es un **monorepo**: backend y frontend viven en la misma raíz, junto a la espec
 │   ├── domain-knowledge.md   ← modelos visuales de esa ontología
 │   ├── architecture.md       ← cómo se construye el sistema
 │   └── verification.md       ← cómo se verifica el código y la salida de los agentes
+├── .claude/skills/           ← reglas de este repositorio, ejecutables
+│   ├── proceso-a/            ← proceso: ontología
+│   ├── proceso-b/            ← proceso: specs
+│   ├── proceso-c/            ← proceso: código
+│   ├── sync-docs/            ← proceso: sincronización inversa
+│   ├── fastapi/              ← tecnología: backend
+│   ├── react/                ← tecnología: frontend
+│   └── sqlite/               ← tecnología: persistencia
 ├── backend/                  ← API y motor del sistema autónomo
 └── frontend/                 ← visualización del estado narrativo
 ```
@@ -57,18 +75,30 @@ Es un **monorepo**: backend y frontend viven en la misma raíz, junto a la espec
 | Carpeta | Stack | Responsabilidad |
 |---|---|---|
 | `backend/` | Python + FastAPI | Orquestador, agentes, skills, capa de memoria y canon. Todo lo especificado en `docs/architecture.md` |
-| `frontend/` | React + Three.js | Interfaz de lectura y visualización del estado del mundo, del grafo canónico y de la curva de tensión |
+| `frontend/` | React | Interfaz de lectura y visualización del estado del mundo, del grafo canónico y de la curva de tensión |
+
+**Las dos se organizan por funcionalidad, no por capa técnica.** Cada funcionalidad es una carpeta con todo lo suyo dentro y lo compartido vive en `commons/`; en el frontend, además, **no se usa Feature-Sliced Design**. El reparto concreto, con las tres reglas que impiden que degenere, está en `docs/architecture.md` §2.3.
 
 Dos consecuencias que conviene tener claras desde ya:
 
 - **El frontend no participa en el ciclo de generación.** Observa y muestra; no aprueba, no corrige, no desbloquea. Cualquier interacción que condicione al ciclo viola la restricción de autonomía (§5.3.1).
 - **El backend es el único dueño del canon.** El frontend lee proyecciones del estado; no escribe en él (§5.3.3).
 
+### 3.2 Persistencia
+
+**SQLite en local.** Los cinco almacenes de la capa de memoria (`architecture.md` §3) viven en SQLite, con un fichero por novela.
+
+Por qué encaja con este sistema y no es una decisión provisional:
+
+- **Una novela es una unidad aislada.** No hay concurrencia entre tiradas ni escritura desde varios procesos a la vez: el Archivero es el único que escribe canon, y solo al congelar un capítulo. Es el caso de uso donde SQLite es mejor, no donde se le tolera.
+- **Un fichero por novela hace la tirada reproducible.** Copiar el fichero es copiar el estado completo, lo que vale tanto para depurar como para el conjunto dorado (CAL-10) y para los evals de VER-10.
+- **Sin servidor no hay una pieza más que pueda fallar** en un ciclo que debe terminar sin que nadie intervenga.
+
 El reparto detallado, la frontera entre las dos mitades y su contrato están en `docs/architecture.md` §2.1 y §2.2.
 
 ---
 
-## 4. Los tres documentos
+## 4. Los cuatro documentos
 
 Están pensados para leerse en este orden. Cada uno depende del anterior.
 
@@ -124,7 +154,7 @@ Si la tarea afecta a más de un documento, léelos todos antes de escribir nada.
 
 ### 5.2 Coherencia entre documentos
 
-Un cambio conceptual toca los tres documentos o ninguno. La propagación no es opcional ni se deja para después: se entrega en el mismo cambio.
+Un cambio conceptual toca los cuatro documentos o ninguno. La propagación no es opcional ni se deja para después: se entrega en el mismo cambio.
 
 | Si cambias... | Actualiza también |
 |---|---|
@@ -136,10 +166,13 @@ Un cambio conceptual toca los tres documentos o ninguno. La propagación no es o
 
 ### 5.3 Restricciones que no se negocian
 
-Estas seis restricciones acotan **el sistema que se especifica**, no el trabajo sobre este repositorio. La distinción importa y se desarrolla en §6: en el ciclo de generación de la novela no interviene ninguna persona; en la edición de la spec el autor eres tú, y el agente te interroga antes de tocar nada.
+Estas seis restricciones acotan **el sistema que se especifica**, no el trabajo de construirlo. Las dos que más se malinterpretan:
 
-1. **Nada de intervención humana.** Si al diseñar aparece un paso de aprobación, revisión o confirmación manual **dentro del sistema**, es un error de diseño. Sustitúyelo por regla, umbral o agente.
-2. **100.000 tokens es el techo.** Entrada ≤70.000, entrada más salida ≤85.000. Lo que no quepa se resuelve con jerarquía de resúmenes y recuperación selectiva, nunca con truncamiento.
+- **El agente pregunta para crear y desarrollar; cero intervención humana en la revisión del texto durante la creación de la novela** (§6.1).
+- **Los 100.000 tokens son el contexto que puede tener un agente del sistema en cada llamada mientras escribe la novela** (§5.3.2). No son la longitud de la novela, que es mucho mayor, ni un techo para el trabajo sobre este repositorio. Leer los cuatro documentos enteros para hacer un cambio bien no viola nada.
+
+1. **Nada de intervención humana en la revisión del texto.** Si al diseñar aparece una persona que aprueba, revisa o confirma una escena, un capítulo, un veredicto o un delta canónico, es un error de diseño. Sustitúyelo por regla, umbral o agente.
+2. **100.000 tokens es el techo de cada llamada del sistema al redactar.** Entrada ≤70.000, entrada más salida ≤85.000. Lo que no quepa se resuelve con jerarquía de resúmenes y recuperación selectiva, nunca con truncamiento.
 3. **El canon es la fuente de verdad.** Ninguna propuesta puede hacer que la verdad viva solo en la prosa.
 4. **Determinista antes que modelo.** Si algo se puede comprobar con código, no se le pregunta a un modelo.
 5. **Evidencia obligatoria.** Cualquier veredicto sin cita localizable se descarta.
@@ -151,11 +184,11 @@ Estas seis restricciones acotan **el sistema que se especifica**, no el trabajo 
 - Prosa directa, sin relleno. Frases cortas. Se evita el énfasis decorativo y las fórmulas de transición vacías.
 - Tablas cuando hay más de dos atributos por elemento; listas solo para enumeraciones simples.
 - Cada afirmación de diseño lleva su porqué cuando no es obvio. Una regla sin motivo se salta en la primera implementación.
-- Cada documento de `docs/` abre con el bloque de referencias cruzadas a los otros dos. Si creas uno nuevo, incluye el bloque y añádelo al índice de §3 y §4.
+- Cada documento de `docs/` abre con el bloque de referencias cruzadas a los otros tres. Si creas uno nuevo, incluye el bloque y añádelo al índice de §3 y §4.
 
 ### 5.5 Alcance: solo esta rama
 
-La única fuente de información válida es el estado actual de la rama de trabajo (`v2`): este fichero y los tres documentos de `docs/`.
+La única fuente de información válida es el estado actual de la rama de trabajo (`v2`): este fichero y los cuatro documentos de `docs/`.
 
 - **No se consulta el historial de git**, ni ramas anteriores, ni commits previos, ni ficheros borrados.
 - **No se reintroduce** nada que existiera en una versión anterior por el hecho de haber existido. Si algo hace falta, se justifica desde cero contra los documentos de hoy.
@@ -187,38 +220,51 @@ Los diagramas son parte del contenido, no decoración. Reglas para que renderice
 
 ## 6. Procesos de cambio
 
-Hay tres clases de cambio en este repositorio y cada una tiene su proceso. El eje que las separa es el radio de impacto: un término mal puesto en `definitions.md` contamina los tres documentos y todo el código que venga después; un bug en una función no sale de su fichero.
+Hay tres clases de cambio en este repositorio y cada una tiene su proceso. El eje que las separa es el radio de impacto: un término mal puesto en `definitions.md` contamina los cuatro documentos y todo el código que venga después; un bug en una función no sale de su fichero.
 
-| Proceso | Qué se toca | Radio de impacto |
-|---|---|---|
-| **A** | `definitions.md`, `domain-knowledge.md` | Máximo: la ontología la consume todo lo demás |
-| **B** | `architecture.md`, `verification.md` | Alto: fija cómo se construye y cómo se comprueba |
-| **C** | `backend/`, `frontend/` | Local, pero puede revelar que la spec está mal |
+| Proceso | Qué se toca | Radio de impacto | Skill |
+|---|---|---|---|
+| **A** | `definitions.md`, `domain-knowledge.md` | Máximo: la ontología la consume todo lo demás | `proceso-a` |
+| **B** | `architecture.md`, `verification.md` | Alto: fija cómo se construye y cómo se comprueba | `proceso-b` |
+| **C** | `backend/`, `frontend/` | Local, pero puede revelar que la spec está mal | `proceso-c` |
 
-### 6.1 El interrogatorio previo es obligatorio y bloqueante
+Los tres están escritos como skills en `.claude/skills/`, junto a tres skills de tecnología — `fastapi`, `react` y `sqlite` — que dicen cómo se escribe el código de cada mitad. Las de proceso dicen **qué pasos seguir**; las de tecnología, **cómo escribir**. Las secciones siguientes son la versión canónica: **si una skill y este documento discrepan, manda este documento** y la skill se corrige.
 
-**Los tres procesos empiezan igual: el agente te interroga antes de editar nada.** Invoca la skill `grilling`, que abre una entrevista por rondas: cada pregunta numerada con la respuesta que el agente recomienda, y espera a que contestes antes de la siguiente ronda.
+### 6.1 El interrogatorio previo
+
+**Los tres procesos empiezan igual: si el cambio cruza el umbral, el agente te interroga antes de editar nada.** Invoca la skill `grilling`, que abre una entrevista por rondas: cada pregunta numerada con la respuesta que el agente recomienda, y espera a que contestes antes de la siguiente ronda.
 
 Detalle de implementación que importa: se invoca **`grilling`**, no `grill-me`. `grill-me` y `grill-with-docs` llevan `disable-model-invocation: true`, así que solo tú puedes lanzarlas con `/grill-me`; el agente no puede. En el proceso A se invoca además `domain-modeling`, que es la que trabaja terminología de dominio.
 
-**Bloqueante sin excepciones.** Sin tus respuestas no se edita. Ni en documentación fundamental, ni en specs, ni en código, ni para cambios que parezcan triviales. El agente no puede proceder declarando supuestos: si no hay respuesta, no hay cambio.
+**Bloqueante cuando el cambio cruza el umbral.** El umbral es este, y es el mismo en los tres procesos:
 
-Esto no contradice §5.3.1. La restricción de cero intervención humana rige **dentro del sistema que se especifica**, donde no hay a quién preguntar. Aquí estás tú, eres el autor de la spec, y preguntarte es lo contrario de un fallo de diseño.
+> El cambio **introduce una decisión con dueño, un número nuevo, un ID nuevo o una frontera nueva**.
 
-| Plano | Quién decide | Regla |
+Si lo cruza, sin tus respuestas no se edita: el agente no puede proceder declarando supuestos. Si no lo cruza — una errata, un enlace roto, un reformateo, renombrar un fichero — se hace y se dice, sin entrevista.
+
+Un solo criterio gobierna las dos puertas: **si un cambio merece quedar registrado como decisión, merece que te pregunten antes de tomarla.** Dos criterios distintos para lo mismo se desincronizan a la tercera vez que alguien los aplica.
+
+El interrogatorio no tiene tope de preguntas, por diseño de la skill: termina cuando no queda ninguna decisión sin resolver y tú lo confirmas. Si se alarga más de lo que el cambio merece, la salida es decirlo en lenguaje natural, no un contador.
+
+Esto no contradice §5.3.1, porque son dos momentos distintos de la vida del sistema:
+
+| Momento | Qué se decide | Quién decide |
 |---|---|---|
-| El ciclo de generación de la novela | El sistema, solo | Cero intervención humana. §5.3.1 |
-| El trabajo sobre este repositorio | Tú | Interrogatorio previo obligatorio. §6.1 |
+| **Crear y desarrollar el sistema** | Qué término entra en la ontología, qué agente hace qué, qué método lo verifica, qué código se escribe | **Tú.** El agente pregunta antes de decidir. §6.1 |
+| **Generar la novela** | Si una escena pasa, si un veredicto vale, si un delta entra en canon | **El sistema, solo.** Cero intervención humana en la revisión del texto. §5.3.1 |
+
+Dicho corto: **el agente pregunta para crear y desarrollar; nadie revisa el texto mientras la novela se escribe.**
+
+Cuando el sistema está generando no hay a quién preguntar, y por eso toda decisión necesita regla de precedencia, umbral o agente responsable. Mientras se construye sí hay a quién preguntar: tú eres el autor de la spec, y consultarte es lo contrario de un fallo de diseño.
 
 ### 6.2 Proceso A · Documentación fundamental
 
 Para `definitions.md` y `domain-knowledge.md`. Es el proceso más caro, porque es el único cuyo error no se nota hasta tres documentos más tarde.
 
-1. **Interrogar.** `grilling` más `domain-modeling`. El agente debe sacarte, como mínimo: ¿es un término nuevo o el renombre de uno existente? ¿qué ID de qué familia le toca? ¿qué invariante verificable añade? ¿qué se rompe si no existe? ¿en qué se distingue del término vecino que ya está en el glosario? Bloqueante.
+1. **Interrogar.** `grilling` más `domain-modeling`. El agente debe sacarte, como mínimo: ¿es un término nuevo o el renombre de uno existente? ¿qué ID de qué familia le toca? ¿qué invariante verificable añade? ¿qué se rompe si no existe? ¿en qué se distingue del término vecino que ya está en el glosario? Bloqueante si cruza el umbral de §6.1.
 2. **Inventariar el impacto.** Antes de escribir, la lista completa de dónde se referencia ese ID: diagramas, tablas, métodos de `verification.md`, secciones de `architecture.md`.
-3. **Editar y propagar en la misma entrega.** Un cambio de ontología toca los tres documentos o ninguno (§5.2). No se parte en dos entregas.
+3. **Editar y propagar en la misma entrega.** Un cambio de ontología toca los cuatro documentos o ninguno (§5.2). No se parte en dos entregas.
 4. **Verificar.** Los diagramas Mermaid afectados renderizan (§5.7) y no queda ninguna referencia a un ID inexistente.
-5. **Registrar.** Entrada de changelog con el porqué del cambio, no solo el qué.
 
 **Nunca** se recicla ni se renumera un ID (§5.1). Retirar un término es marcarlo obsoleto con su sustituto, jamás borrarlo.
 
@@ -227,10 +273,9 @@ Para `definitions.md` y `domain-knowledge.md`. Es el proceso más caro, porque e
 Para `architecture.md` y `verification.md`.
 
 1. **Leer antes de preguntar.** Las secciones que indica §4.1 para esa tarea. El agente no te interroga sobre algo que el documento ya responde.
-2. **Interrogar.** `grilling`. Preguntas obligadas: ¿qué decisión nueva introduce este cambio y quién es su dueño, regla de precedencia, umbral o agente? ¿de dónde sale cada número nuevo? ¿qué método de `verification.md` comprueba que funciona? ¿cabe en el presupuesto de tokens de su agente? Bloqueante.
+2. **Interrogar.** `grilling`. Preguntas obligadas: ¿qué decisión nueva introduce este cambio y quién es su dueño, regla de precedencia, umbral o agente? ¿de dónde sale cada número nuevo? ¿qué método de `verification.md` comprueba que funciona? ¿cabe en el presupuesto de tokens de su agente? Bloqueante si cruza el umbral de §6.1.
 3. **Editar quirúrgicamente** (§5.6) y propagar según la tabla de §5.2.
 4. **Contrastar** con la Definición de terminado, §10.
-5. **Registrar** en el changelog con su porqué.
 
 Si durante el interrogatorio aparece un término que no está en `definitions.md`, se para y se ejecuta el proceso A. Colar vocabulario nuevo dentro de un cambio de spec es como se degrada una ontología.
 
@@ -239,11 +284,11 @@ Si durante el interrogatorio aparece un término que no está en `definitions.md
 Para `backend/` y `frontend/`. Hoy no aplica: el repositorio está en fase de especificación (§2) y las dos carpetas están vacías.
 
 1. **Comprobar que hay spec.** Ninguna línea de código sin una sección de `architecture.md` que la autorice. Si no la hay, se para y se ejecuta el proceso B.
-2. **Interrogar.** `grilling`. Preguntas obligadas: ¿qué sección de la spec implementa esto? ¿qué método `VER-NN` lo verifica y de qué clase TAIDU es? ¿qué contrato cruza aquí, HTTP o agente a agente? ¿va en `backend/` o en `frontend/`, y respeta la frontera de `architecture.md` §2.2? Bloqueante.
+2. **Interrogar.** `grilling`. Preguntas obligadas: ¿qué sección de la spec implementa esto? ¿qué método `VER-NN` lo verifica y de qué clase TAIDU es? ¿qué contrato cruza aquí, HTTP o agente a agente? ¿va en `backend/` o en `frontend/`, y respeta la frontera de `architecture.md` §2.2? Bloqueante si cruza el umbral de §6.1.
 3. **Elegir el método de verificación antes de escribir**, con el procedimiento de `verification.md` §8. Si no hay método, va al registro de riesgo aceptado antes de escribir el código, nunca después.
 4. **Escribir la prueba o la propiedad primero** cuando el método sea VER-05 o VER-06.
 5. **Pasar la puerta de CI**: VER-01, VER-02, VER-05, VER-06 y VER-08 en verde (VER-15).
-6. **Sincronizar la documentación.** Ver §6.5. Es un paso del proceso, no una tarea aparte.
+6. **Sincronizar la documentación.** Skill `sync-docs`, ver §6.5. Es un paso del proceso, no una tarea aparte.
 
 Si al implementar descubres que la spec está mal, **paras y ejecutas el proceso B**. No se corrige en el código dejando la spec mintiendo: así es como los documentos dejan de describir el sistema.
 
@@ -309,7 +354,7 @@ Los pasos 1 a 6 producen una novela coherente sin intervención. Del 7 al 10 se 
 
 ## 9. Cómo trabajar
 
-- **Primero el interrogatorio de §6.1, siempre.** Es la única puerta que no se salta. Una vez respondido, ejecuta el cambio entero sin volver a pedir confirmación paso a paso.
+- **Si el cambio cruza el umbral de §6.1, primero el interrogatorio.** Es la única puerta que no se salta. Una vez respondido, ejecuta el cambio entero sin volver a pedir confirmación paso a paso. Si no lo cruza, hazlo y dilo.
 - Toda pregunta va con la respuesta que recomiendas y su porqué. Devolver la pregunta en crudo traslada el trabajo en vez de hacerlo.
 - Señala las inconsistencias que encuentres de paso, aunque estén fuera del encargo. No las arregles sin decirlo.
 - Di lo que no hiciste y por qué. Un cambio incompleto anunciado es recuperable; uno silencioso, no.
@@ -322,10 +367,10 @@ Un cambio está listo cuando:
 
 - [ ] Usa el vocabulario y los IDs de `definitions.md`
 - [ ] Respeta las seis restricciones de §5.3
-- [ ] Ha seguido el proceso de §6 que le corresponde, con su interrogatorio previo respondido
-- [ ] Cabe en 100.000 tokens con el presupuesto de su agente
+- [ ] Ha seguido el proceso de §6 que le corresponde y, si cruza el umbral, su interrogatorio previo está respondido
+- [ ] Si toca un agente o un paquete de contexto del sistema, cabe en 100.000 tokens con su presupuesto
 - [ ] Tiene un método de `verification.md` que compruebe que funciona, o consta en su registro de riesgo aceptado
-- [ ] Los tres documentos de `docs/` siguen coherentes entre sí y con este fichero
+- [ ] Los cuatro documentos de `docs/` siguen coherentes entre sí y con este fichero
 - [ ] Los diagramas Mermaid afectados renderizan
 - [ ] No ha introducido ningún paso de aprobación manual **dentro del sistema especificado** (§5.3, §6.1)
 - [ ] Se apoya solo en el estado actual de esta rama, sin recuperar nada de versiones anteriores (§5.5)
@@ -336,7 +381,7 @@ Un cambio está listo cuando:
 
 - Crear agentes, skills o código de implementación sin petición explícita.
 - Reescribir un documento entero por un cambio local.
-- Introducir revisión humana **dentro del ciclo del sistema**, en cualquier forma. En el trabajo sobre el repositorio ocurre lo contrario: §6.1 es obligatorio.
-- Editar documentación, spec o código sin haber pasado el interrogatorio de §6.1.
-- Llenar la ventana de contexto porque quepa: 100.000 tokens es un techo, no un objetivo.
+- Introducir revisión humana del texto en el ciclo de generación, en cualquier forma. En el trabajo de crear y desarrollar ocurre lo contrario: preguntar es obligatorio (§6.1).
+- Editar documentación, spec o código saltándose el interrogatorio de §6.1 cuando el cambio cruza su umbral.
+- Diseñar un paquete de contexto que llene la ventana porque quepa: en cada llamada del sistema, 100.000 tokens es un techo, no un objetivo. Para trabajar sobre el repositorio no hay techo: lee lo que haga falta.
 - Dar por buena una comprobación sin evidencia localizable.

@@ -429,7 +429,7 @@ Todo setup en estado `Plantado`, `Reforzado` o `Vencido` al llegar al desenlace 
 
 ## 12. Árbol de contexto
 
-La ventana es de 100.000 tokens y es fija. La ocupación operativa (CTX-18) que se permite usar es menor: el límite útil lo marca la atención del modelo, no el límite del proveedor.
+Dos techos de 100.000 tokens que no son el mismo: la ventana física de una llamada (CTX-01) y el techo de concurrencia del sistema (CTX-20), que suma todo lo que está en vuelo a la vez. Dentro de una llamada, la ocupación operativa (CTX-18) que se permite usar es aún menor: el límite útil lo marca la atención del modelo, no el del proveedor.
 
 ```mermaid
 graph TD
@@ -441,6 +441,7 @@ graph TD
   LIM --> L3["Ocupación operativa · CTX-18"]
   LIM --> L4["Desbordamiento y compactación · CTX-19"]
   LIM --> L5["Sesgo de recencia · CTX-16"]
+  LIM --> L6["Techo de concurrencia · CTX-20"]
 
   CTX --> FUE["Fuentes de material"]
   FUE --> F1["Canon estructurado · CAN-03"]
@@ -475,10 +476,12 @@ graph TD
   SEL --> Q1["Consulta estructurada al canon"]
   SEL --> Q2["Búsqueda semántica en prosa previa"]
   SEL --> Q3["Búsqueda léxica por nombres propios"]
+  SEL --> Q4["Consulta al grafo de entidades"]
 
   Q1 --> FUS["Fusión y deduplicación"]
   Q2 --> FUS
   Q3 --> FUS
+  Q4 --> FUS
 
   FUS --> PRI["Priorización por presupuesto · CTX-02"]
   PRI --> COMP["Compactación de excedente · CTX-10"]
@@ -486,19 +489,22 @@ graph TD
 
   ORD --> PK["Paquete de contexto · CTX-03"]
 
-  PK --> B1["1 · Ancla de estilo e invariantes"]
-  PK --> B2["2 · Fichas del elenco activo"]
-  PK --> B3["3 · Estado del mundo en t"]
-  PK --> B4["4 · Resumen del arco y del capítulo"]
-  PK --> B5["5 · Prosa literal de la escena anterior"]
-  PK --> B6["6 · Setups abiertos relevantes"]
-  PK --> B7["7 · Lista de proscripción"]
-  PK --> B8["8 · Especificación de la escena"]
+  PK --> B1["1 · Ancla de estilo e invariantes · CTX-17"]
+  PK --> B2["2 · Fichas del elenco activo · CTX-05"]
+  PK --> B3["3 · Estado del mundo en t · MUN-10"]
+  PK --> B4["4 · Conocimiento del POV · PER-10"]
+  PK --> B5["5 · Resúmenes jerárquicos · CTX-06"]
+  PK --> B6["6 · Prosa literal de la escena anterior · CTX-07"]
+  PK --> B7["7 · Recuperación puntual · CTX-08"]
+  PK --> B8["8 · Setups abiertos relevantes · CAN-08"]
+  PK --> B9["9 · Lista de proscripción · POE-12"]
+  PK --> B10["10 · Muestra modélica de voz"]
+  PK --> B11["11 · Especificación de la escena"]
 
-  B8 --> GEN["Llamada de generación"]
+  B11 --> GEN["Llamada de generación"]
 ```
 
-La especificación de la escena va **al final** por CTX-16. Las anclas van al principio porque deben sobrevivir a la compactación.
+Los once bloques y su orden son los de [`architecture.md`](architecture.md) §4.3, que es donde viven sus presupuestos en tokens. La especificación de la escena va **al final** por CTX-16. Las anclas van al principio porque deben sobrevivir a la compactación.
 
 ---
 

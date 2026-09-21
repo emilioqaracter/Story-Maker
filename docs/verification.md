@@ -13,7 +13,7 @@ Regla de fondo: en un sistema sin intervención humana (PRO-11), la verificació
 
 | Eje | Pregunta | Objeto | Cuándo corre |
 |---|---|---|---|
-| **Producto** | ¿El código hace lo que dice? | `backend/` en Python y FastAPI, `frontend/` en React y Three.js | En CI, antes de desplegar |
+| **Producto** | ¿El código hace lo que dice? | `backend/` en Python y FastAPI, `frontend/` en React | En CI, antes de desplegar |
 | **Proceso** | ¿El agente se comporta de forma fiable? | Trayectoria, llamadas a skills, prosa, delta canónico | En cada ejecución, y de forma agregada |
 
 Los dos ejes son independientes. Un backend sin un solo bug puede orquestar agentes que escriben basura coherente, y un agente impecable no salva a un simulador de partidos con un error de signo. Verificar solo uno es el modo de fallo característico de los sistemas agénticos.
@@ -34,7 +34,7 @@ Todo elemento verificable recibe **una** clase. La clase dice cómo se obtiene l
 
 **Reglas de asignación**
 
-1. **A antes que T antes que D antes que I.** Si algo se puede decidir con tipos o con un solver, no se le pregunta a un modelo. Es la restricción «determinista antes que modelo» de `AGENTS.md` §5.3.4 aplicada a la verificación.
+1. **A antes que T antes que D antes que I.** Si algo se puede decidir con tipos o con un solver, no se le pregunta a un modelo. Es la restricción «determinista antes que modelo» de `AGENTS.md` §5.3, punto 4, aplicada a la verificación.
 2. **I solo para lo irreductiblemente subjetivo.** Tensión, subtexto y resonancia temática. Todo lo demás que caiga en I es un fallo de diseño: significa que no se ha sabido enunciar la regla.
 3. **U se declara, no se hereda.** Un elemento no entra en U por olvido. Entra por decisión escrita, con motivo y con la señal que se vigilará en su lugar.
 4. **Fallo cerrado.** Un método que no puede ejecutarse cuenta como fallado, nunca como pasado.
@@ -87,12 +87,15 @@ Escaneo del código fuente sin ejecutarlo, contra patrones conocidos como malos:
 
 | Atributo | Valor |
 |---|---|
-| **Qué verifica aquí** | Inyección en las consultas al almacén canónico, secretos en el repositorio, `eval` sobre texto generado, rutas de fichero construidas con salida de modelo, dependencias con CVE |
+| **Qué verifica aquí** | Inyección en las consultas al almacén canónico, secretos en el repositorio, `eval` sobre texto generado, rutas de fichero construidas con salida de modelo, dependencias con CVE, y **la frontera entre funcionalidades** de `architecture.md` §2.3 |
 | **Clase** | A |
 | **Herramienta** | `ruff` y `bandit` en `backend/`; `eslint` en `frontend/`; `semgrep` con reglas propias; `gitleaks` para secretos; `pip-audit` y `npm audit` para dependencias |
 | **Límite** | Solo encuentra lo que alguien ya catalogó. Cero garantía sobre lógica de dominio |
 
-Regla propia que conviene escribir como patrón de `semgrep`: **ninguna cadena procedente de un modelo puede alcanzar una operación de sistema de ficheros, red o base de datos sin pasar antes por un validador de esquema.**
+Dos reglas propias que conviene escribir como patrón, porque ninguna herramienta las trae de serie:
+
+1. **Ninguna cadena procedente de un modelo puede alcanzar una operación de sistema de ficheros, red o base de datos sin pasar antes por un validador de esquema.** Patrón de `semgrep`.
+2. **Ninguna funcionalidad importa de otra funcionalidad**, solo de `commons/`, con `orchestration/` como única excepción (`architecture.md` §2.3). Se comprueba con `import-linter` en `backend/` y con la regla de fronteras de `eslint` en `frontend/`. Se deja en CI y no en convención porque es lo único que impide que el paquete por funcionalidad se convierta en capas técnicas con otro nombre al cabo de veinte ficheros.
 
 ### 4.3 VER-03 · Symbolic execution
 
@@ -139,7 +142,7 @@ Enunciar una propiedad general que debe cumplirse para cualquier entrada, y gene
 
 | Atributo | Valor |
 |---|---|
-| **Qué verifica aquí** | «El recálculo de la clasificación es invariante a la permutación de los encuentros»; «el paquete de contexto nunca supera 70.000 tokens de entrada»; «fusionar dos deltas canónicos es asociativo»; «todo setup insertado aparece en la lista de deuda hasta cobrarse» |
+| **Qué verifica aquí** | «El recálculo de la clasificación es invariante a la permutación de los encuentros»; «el paquete de contexto nunca supera 70.000 tokens de entrada»; «la suma de las llamadas en vuelo nunca supera CTX-20, sea cual sea el orden de llegada» (CTX-I1); «fusionar dos deltas canónicos es asociativo»; «todo setup insertado aparece en la lista de deuda hasta cobrarse» |
 | **Clase** | T |
 | **Herramienta** | `hypothesis` en `backend/`, con `fast-check` en `frontend/` si la lógica de proyección lo justifica |
 | **Límite** | Encuentra contraejemplos, no demuestra ausencia. Y solo prueba lo que la propiedad enuncia |
@@ -202,7 +205,12 @@ Pruebas estructuradas del comportamiento de un modelo o agente contra un conjunt
 | Adversarial | Entradas de VER-17 convertidas en casos fijos del conjunto |
 | Live u online | Puntuación agregada por capítulo sobre ejecuciones reales, vigilada por el Supervisor |
 
-Clase **T** cuando la puntuación es determinista, **I** cuando la da un juez. El conjunto dorado existe justamente porque detecta que un juez ha dejado de detectar: es lo que sustituye a la calibración por revisión manual.
+| Atributo | Valor |
+|---|---|
+| **Clase** | T cuando la puntuación es determinista, I cuando la da un juez |
+| **Límite** | Mide contra el conjunto que alguien eligió. Un eval en verde dice que el sistema sigue haciendo lo que ese conjunto cubre, nunca que la novela sea buena |
+
+El conjunto dorado existe justamente porque detecta que un juez ha dejado de detectar: es lo que sustituye a la calibración por revisión manual.
 
 ### 5.3 VER-11 · Sandboxed execution
 
@@ -222,11 +230,17 @@ Políticas o filtros que acotan qué acciones y qué salidas puede producir un a
 |---|---|
 | Esquema de salida | Toda respuesta valida contra su esquema JSON o se rechaza sin parsear |
 | Lista de skills permitidas | Cada agente declara las suyas; una llamada fuera de lista se rechaza y se traza |
-| Techo de tokens | Entrada ≤70.000, entrada más salida ≤85.000, comprobado antes de llamar |
+| Techo de tokens por llamada | Entrada ≤70.000, entrada más salida ≤85.000, comprobado antes de llamar |
+| Techo de concurrencia (CTX-20) | La llamada se admite solo si lo que está en vuelo más su presupuesto no supera 100.000. Si no cabe, se encola en FIFO estricta. Si el presupuesto no se puede estimar, no se admite |
 | Léxico proscrito | La lista de proscripción de la capa POE se filtra en la salida del Estilista |
 | Canon de solo lectura | Ningún agente salvo el Archivero puede emitir una escritura canónica |
 
-Clase **A**: son comprobaciones estáticas sobre la acción propuesta, no pruebas. Es la capa más barata y la que más incidentes evita, porque actúa antes de gastar la llamada.
+| Atributo | Valor |
+|---|---|
+| **Clase** | A. Son comprobaciones estáticas sobre la acción propuesta, no pruebas |
+| **Límite** | Acotan la **forma** de la acción, nunca su contenido. Un delta canónico con la forma correcta y los hechos falsos pasa todos los guardarraíles sin que salte ninguno |
+
+Es la capa más barata y la que más incidentes evita, porque actúa antes de gastar la llamada.
 
 ### 5.5 VER-13 · Human-in-the-loop review — excluido
 
@@ -234,15 +248,11 @@ Una persona aprueba, rechaza o edita las acciones de alto impacto, y su decisió
 
 **Este método está excluido de este sistema.** No por coste ni por preferencia: contradice PRO-11 y la primera restricción de `AGENTS.md` §5.3. Se documenta aquí porque forma parte del catálogo y porque conviene que quede escrito qué ocupa su lugar.
 
-| Lo que haría la persona | Sustituto autónomo |
-|---|---|
-| Aprobar un capítulo | Puertas con umbral por dimensión, CAL-09 |
-| Resolver una contradicción | Árbitro con precedencia PRO-10, probada en VER-04 |
-| Recalibrar a los jueces | Conjunto dorado CAL-10 más dispersión del jurado CAL-11 |
-| Parar una tirada mala | Cuarentena CAL-13 y replanificación PRO-12 |
-| Decidir si está terminada | Condición de cierre verificable |
+La tabla de sustitutos vive en [`architecture.md`](architecture.md) §8 y no se repite aquí: mantener dos copias de la misma tabla es garantizar que una se quede atrás. En corto: lo que haría la persona lo hacen las puertas con umbral (CAL-09), el Árbitro con la precedencia PRO-10, el conjunto dorado (CAL-10) con la dispersión del jurado (CAL-11), y la cuarentena (CAL-13) con la replanificación (PRO-12).
 
 La única entrada humana del sistema es el brief inicial (PRO-01). Eso es un encargo, no una revisión: ocurre antes del ciclo y no lo interrumpe.
+
+Es el único método del catálogo sin línea de límite, y es correcto que no la tenga: un método excluido no cubre nada, así que no hay cobertura que acotar.
 
 ### 5.6 VER-14 · Multi-agent verification
 
@@ -256,7 +266,12 @@ Verificación por modelos que se vigilan entre sí.
 | Reflection | Regeneración dirigida CAL-08: el agente reescribe con el defecto y su evidencia delante |
 | Ensembles | Jurado CAL-11 con rúbricas o semillas distintas; la dispersión alta invalida el veredicto |
 
-Clase **I**. Dos condiciones innegociables, o el método produce confianza falsa: **aislamiento**, el verificador no ve el razonamiento del generador, y **evidencia**, todo veredicto cita el fragmento exacto o se descarta.
+| Atributo | Valor |
+|---|---|
+| **Clase** | I |
+| **Límite** | El verificador es otro modelo, así que comparte modos de fallo con el generador. Detecta lo que el generador hizo mal, no lo que ambos entienden mal igual |
+
+Dos condiciones innegociables, o el método produce confianza falsa: **aislamiento**, el verificador no ve el razonamiento del generador, y **evidencia**, todo veredicto cita el fragmento exacto o se descarta.
 
 ### 5.7 VER-15 · CI/CD integration
 
@@ -296,7 +311,12 @@ Sondear fallos a propósito bajo un modelo de amenaza adversario, no solo error 
 
 La última es la amenaza propia de este sistema y la más difícil de ver, porque después del ataque todo valida. La contramedida es estructural, no un filtro: el canon es de escritura exclusiva del Archivero (VER-11), todo delta pasa por arbitraje, y el retcon exige que el hecho no esté cobrado en ningún payoff.
 
-Clase **T**: cada hallazgo se convierte en caso fijo del conjunto de VER-10, o la campaña no deja residuo.
+| Atributo | Valor |
+|---|---|
+| **Clase** | T |
+| **Límite** | Solo encuentra lo que la campaña buscó. Una amenaza que nadie llegó a enunciar no aparece, y la cobertura caduca en cuanto cambian los prompts o el modelo |
+
+Cada hallazgo se convierte en caso fijo del conjunto de VER-10, o la campaña no deja residuo.
 
 ### 5.10 VER-18 · Model checking
 
@@ -305,7 +325,7 @@ Explorar de forma exhaustiva los estados y transiciones alcanzables del flujo pa
 | Atributo | Valor |
 |---|---|
 | **Qué verifica aquí** | La máquina de estados del ciclo de vida del capítulo de `architecture.md` §7 |
-| **Invariantes** | «Nunca se congela sin superar todas las puertas»; «nunca se escribe canon antes de congelar»; «toda reparación revalida desde la primera puerta»; «no hay ciclo que evite la cuarentena para siempre» |
+| **Invariantes** | «Nunca se congela sin superar todas las puertas»; «nunca se escribe canon antes de congelar»; «toda reparación revalida desde la primera puerta»; «no hay ciclo que evite la cuarentena para siempre»; «nunca hay más de CTX-20 tokens en vuelo», que es CTX-I1 |
 | **Clase** | A |
 | **Herramienta** | `TLA+` con TLC sobre el modelo de estados |
 | **Límite** | Prueba el flujo modelado, no el orquestador que lo implementa. Esa distancia la cubre VER-05 |
@@ -358,6 +378,7 @@ El eje de producto y el de proceso se cruzan en un solo punto: los evals agregad
 | Prosa generada | VER-10, 14 | I |
 | Delta canónico | VER-08, 12, 14, 17 | A · I |
 | Trayectoria de ejecución | VER-09, 11, 12 | D |
+| Controlador de admisión CTX-20 | VER-06, 12, 18 | A |
 
 Toda fila tiene al menos un método. Cuando una fila nueva no lo tenga, va a §9 antes de escribir el código, no después.
 
@@ -386,3 +407,33 @@ Lo que este catálogo **no** verifica, dicho de forma explícita. Es la clase U 
 | Corrección de la implementación frente al modelo formal de VER-04 y VER-18 | La prueba cubre el modelo; cerrar la distancia exigiría código verificado, que no compensa | Cobertura de mutación de VER-07 sobre los módulos afectados |
 
 Un riesgo en esta tabla es una decisión, no una omisión. Sacar una fila de aquí exige un método; meter una nueva exige motivo y señal.
+
+---
+
+## 10. Referencias canónicas
+
+Un enlace por método, a la **explicación de la metodología**, nunca a la página de un producto. Están aquí y no repetidos en cada apartado de §4 y §5, que es donde se decide qué hace cada método *en este sistema*; esto es lo que el método es en general.
+
+| ID | Método | Referencia |
+|---|---|---|
+| VER-01 | Type checking | [Type system — Wikipedia](https://en.wikipedia.org/wiki/Type_system) |
+| VER-02 | Static analysis y SAST | [Static program analysis — Wikipedia](https://en.wikipedia.org/wiki/Static_program_analysis) |
+| VER-03 | Symbolic execution | [Symbolic execution — Wikipedia](https://en.wikipedia.org/wiki/Symbolic_execution) |
+| VER-04 | Formal verification | [Formal verification — Wikipedia](https://en.wikipedia.org/wiki/Formal_verification) |
+| VER-05 | Unit e integration testing | [Unit testing — Wikipedia](https://en.wikipedia.org/wiki/Unit_testing) |
+| VER-06 | Property-based testing | [QuickCheck — Claessen y Hughes, 2000](https://dl.acm.org/doi/10.1145/351240.351266) |
+| VER-07 | Mutation testing | [Mutation testing — Wikipedia](https://en.wikipedia.org/wiki/Mutation_testing) |
+| VER-08 | Contract testing | [Contract Test — Martin Fowler](https://martinfowler.com/bliki/ContractTest.html) |
+| VER-09 | Runtime observability y tracing | [Observability primer — OpenTelemetry](https://opentelemetry.io/docs/concepts/observability-primer/) |
+| VER-10 | Evals | [Holistic Evaluation of Language Models — Liang et al., 2022](https://arxiv.org/abs/2211.09110) |
+| VER-11 | Sandboxed execution | [Sandbox, computer security — Wikipedia](https://en.wikipedia.org/wiki/Sandbox_(computer_security)) |
+| VER-12 | Guardrails | [AI Risk Management Framework — NIST](https://www.nist.gov/itl/ai-risk-management-framework) |
+| VER-13 | Human-in-the-loop review | [Human-in-the-loop — Wikipedia](https://en.wikipedia.org/wiki/Human-in-the-loop) |
+| VER-14 | Multi-agent verification | [AI Safety via Debate — Irving, Christiano y Amodei, 2018](https://arxiv.org/abs/1805.00899) |
+| VER-15 | CI/CD integration | [Continuous integration — Wikipedia](https://en.wikipedia.org/wiki/Continuous_integration) |
+| VER-16 | Progressive rollout | [Feature toggle — Wikipedia](https://en.wikipedia.org/wiki/Feature_toggle) |
+| VER-17 | Red-teaming | [OWASP Top 10 for LLM Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/) |
+| VER-18 | Model checking | [Model checking — Wikipedia](https://en.wikipedia.org/wiki/Model_checking) |
+| — | Clasificación TAIDU | [Verification and validation — Wikipedia](https://en.wikipedia.org/wiki/Verification_and_validation) |
+
+**Property-based testing y evals no tienen referencia fundacional neutral** como sí la tiene la verificación formal. Los dos enlaces apuntan al trabajo que introdujo o formalizó cada uno, QuickCheck y HELM, que es una elección entre varias posibles y no la única.

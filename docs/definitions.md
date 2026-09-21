@@ -39,7 +39,7 @@ Este documento define **qué existe** en el dominio. No describe cómo se implem
 **Dos restricciones que atraviesan toda la ontología**
 
 - **Autonomía completa (PRO-11)**: no hay validación externa en ningún punto del ciclo. Cada decisión que en otro diseño resolvería una persona necesita aquí una regla de precedencia, un umbral numérico o un agente con responsabilidad asignada. Donde no exista ninguna de las tres cosas, hay un agujero de diseño.
-- **Ventana de 100.000 tokens (CTX-01)**: el techo es físico y fijo. Todo lo que no quepa debe resolverse con jerarquía de resúmenes, recuperación selectiva y aislamiento de subtareas, no con truncamiento.
+- **100.000 tokens, en dos techos distintos**: la ventana física de una llamada (CTX-01) y el techo de concurrencia del sistema (CTX-20), que acota la suma de todo lo que está en vuelo en el mismo instante. Lo que no quepa se resuelve con jerarquía de resúmenes, recuperación selectiva y aislamiento de subtareas, nunca con truncamiento.
 
 ---
 
@@ -207,12 +207,15 @@ Esta capa es un **perfil** de la ontología: especializa las capas anteriores si
 
 Capa que conecta el dominio narrativo con la realidad técnica: **el modelo solo sabe lo que cabe en la llamada**.
 
+Las filas van agrupadas por tema, no por número: los cinco términos de límite abren la tabla aunque sus números no sean correlativos.
+
 | ID | Término | Definición |
 |---|---|---|
 | CTX-01 | **Ventana de contexto** | Límite físico de tokens de una llamada al modelo. En este sistema: **100.000 tokens**, entrada más salida. |
 | CTX-02 | **Presupuesto de contexto** | Asignación deliberada de esa ventana entre categorías de información. Sin presupuesto explícito, el contexto se llena por inercia con lo más reciente. |
 | CTX-18 | **Ocupación operativa** | Fracción de CTX-01 que se permite usar realmente en una llamada. Es deliberadamente inferior al límite físico, porque la distracción (CTX-14) y la dilución de atención aparecen mucho antes de agotar la ventana. |
 | CTX-19 | **Desbordamiento** | Situación en que el material seleccionado supera la ocupación operativa. Dispara compactación (CTX-10) por orden inverso de prioridad, nunca truncamiento ciego por el final. |
+| CTX-20 | **Techo de concurrencia** | Límite agregado de tokens que el sistema puede tener en vuelo en un mismo instante: **100.000**, sumando entrada y salida de todas las llamadas simultáneas. Es una política del sistema, no un dato del proveedor: CTX-01 acota una llamada, CTX-20 acota cuántas se solapan. Su dueño es el Orquestador. |
 | CTX-03 | **Paquete de contexto** | Conjunto ensamblado y ordenado de material que acompaña a una instrucción de generación concreta. Es un artefacto con identidad propia: se versiona, se inspecciona y se depura. |
 | CTX-04 | **Ingeniería de contexto** | Disciplina de decidir qué información entra, en qué forma, en qué orden y con qué prioridad en cada llamada. En obra larga sustituye a la ingeniería de prompts como actividad principal. |
 | CTX-05 | **Ficha compacta** | Faceta (MET-08) de una entidad reducida a lo mínimo accionable para una escena concreta. |
@@ -228,6 +231,8 @@ Capa que conecta el dominio narrativo con la realidad técnica: **el modelo solo
 | CTX-15 | **Conflicto de contexto** | Presencia simultánea de dos versiones incompatibles del mismo hecho, típicamente una obsoleta y una vigente. |
 | CTX-16 | **Sesgo de recencia** | Tendencia a ponderar en exceso lo último del paquete. Se explota colocando la instrucción operativa al final. |
 | CTX-17 | **Ancla** | Elemento repetido en todas las llamadas para frenar la deriva: guía de estilo condensada, ficha de voz del POV, invariantes duros. |
+
+**Invariante CTX-I1**: en todo instante, la suma de las ventanas de las llamadas en vuelo es menor o igual a CTX-20. Una llamada que no quepa se encola; nunca se admite recortándola.
 
 ---
 

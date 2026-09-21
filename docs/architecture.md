@@ -8,7 +8,7 @@ Arquitectura de un sistema **autónomo** de generación de novelas largas, con e
 Dos restricciones fijan todo el diseño:
 
 - **No hay intervención externa en ningún punto del ciclo** (PRO-11). El sistema planifica, escribe, verifica, corrige, arbitra y cierra por sí mismo.
-- **La ventana de contexto es de 100.000 tokens** (CTX-01), entrada más salida, para cualquier llamada de cualquier agente.
+- **100.000 tokens es el techo, en dos planos.** Por llamada, la ventana física (CTX-01). Para el sistema, el techo de concurrencia (CTX-20): la suma de todo lo que está en vuelo en el mismo instante.
 
 ---
 
@@ -64,7 +64,7 @@ El repositorio es un monorepo con dos artefactos desplegables.
 | Carpeta | Stack | Contiene |
 |---|---|---|
 | `backend/` | Python y FastAPI | Orquestador, los 13 agentes, el catálogo de skills, los cinco almacenes de la capa de memoria y las puertas de calidad |
-| `frontend/` | React y Three.js | Lectura del manuscrito y visualización del estado: grafo de entidades, curva de tensión, deuda narrativa y salud de la tirada |
+| `frontend/` | React | Lectura del manuscrito y visualización del estado: grafo de entidades, curva de tensión, deuda narrativa y salud de la tirada |
 
 **El frontend es un observador de solo lectura.** No aprueba, no corrige, no desbloquea y no escribe canon. El motivo no es de alcance sino de diseño: cualquier interacción de la interfaz que condicione el ciclo reintroduce la aprobación manual que PRO-11 prohíbe, y lo hace por la puerta de atrás, sin regla de precedencia ni agente responsable.
 
@@ -81,7 +81,65 @@ De ahí se sigue una prueba barata de que el diseño se respeta: **el sistema co
 
 El contrato es el esquema OpenAPI que genera FastAPI, y es el único punto de acoplamiento entre las dos mitades. Se verifica con VER-08 de [`verification.md`](verification.md): el cliente del frontend se genera desde ese mismo esquema, de modo que un cambio incompatible rompe la compilación en vez de romper la pantalla.
 
-Three.js se reserva para lo que lo justifica — el grafo de entidades y la curva de tensión a lo largo de la obra son estructuras que no se leen bien en una tabla — y no como envoltorio de todo lo demás.
+El grafo de entidades y la curva de tensión a lo largo de la obra no se leen bien en una tabla, así que necesitan representación gráfica. Con qué librería se dibujan es una decisión abierta: no está fijada y no condiciona nada del backend, porque el contrato entre las dos mitades es el esquema OpenAPI y no la tecnología de pintado.
+
+---
+
+### 2.3 Organización interna: paquete por funcionalidad
+
+Las dos mitades se organizan **por funcionalidad, no por capa técnica**. Una funcionalidad es una carpeta que contiene todo lo suyo (modelos, lógica, rutas, persistencia y sus tests), y lo compartido vive en `commons/`.
+
+El motivo es el mismo a los dos lados: agrupar por capa técnica, con un `models/` y un `services/` y un `routers/`, obliga a tocar cinco carpetas para cambiar una sola cosa y deja invisible dónde empieza y dónde acaba cada pieza. Agrupar por funcionalidad hace el cambio local y la frontera visible.
+
+#### Backend
+
+Las funcionalidades son las seis capas del diagrama de §2, más el Orquestador:
+
+```
+backend/
+├── commons/         · lo que usan dos o más funcionalidades
+├── orchestration/   · agente 0, raíz de composición
+├── planning/        · agentes 1 y 2
+├── context/         · agente 3 y el catálogo de skills de contexto
+├── generation/      · agentes 4 y 5
+├── verification/    · agentes 6, 7, 8 y 9
+├── canon/           · agentes 10 y 11, más los cinco almacenes de §3
+└── supervision/     · agente 12
+```
+
+| Carpeta | Agentes de §6 | Skills de §5 |
+|---|---|---|
+| `orchestration/` | 0 Orquestador | Presupuestos, admisión CTX-20, recuento de reintentos |
+| `planning/` | 1 Arquitecto, 2 Planificador | `outline.plan`, `scene.spec`, `replan.arc` |
+| `context/` | 3 Documentalista | `context.*`, `prose.retrieve`, `canon.query` |
+| `generation/` | 4 Escritor, 5 Especialista deportivo | `scene.write`, `match.simulate`, `match.narrate` |
+| `verification/` | 6 Continuista, 7 Jurado, 8 Reparador, 9 Estilista | `check.*`, `*.audit`, `revise.targeted`, `style.*` |
+| `canon/` | 10 Archivero, 11 Árbitro | `delta.extract`, `summarize.hierarchical`, `retcon.propose` |
+| `supervision/` | 12 Supervisor | `setup.ledger`, `metrics.report` |
+
+#### Frontend
+
+Paquete por funcionalidad también, y **explícitamente no Feature-Sliced Design**: nada de `app/`, `pages/`, `widgets/`, `features/`, `entities/` y `shared/` como capas. Las funcionalidades son las vistas de §2.2:
+
+```
+frontend/
+├── commons/         · cliente generado desde el OpenAPI, tipos y componentes compartidos
+├── manuscript/      · lectura de capítulos congelados
+├── entity-graph/    · grafo de entidades con vigencia
+├── tension-curve/   · curva de tensión de la obra
+├── narrative-debt/  · setups abiertos sin payoff
+└── run-health/      · métricas de §11
+```
+
+El cliente generado vive en `commons/` y no en cada funcionalidad: es uno solo, sale del esquema OpenAPI (§2.2) y duplicarlo rompería la garantía de VER-08 de que un cambio incompatible rompe la compilación.
+
+#### Las tres reglas que evitan que esto se degrade
+
+1. **Una funcionalidad no importa de otra funcionalidad.** Solo de `commons/`. Si dos se necesitan entre sí, o lo común baja a `commons/` o la frontera está mal puesta.
+2. **La excepción es `orchestration/`**, que es la raíz de composición: conoce a todas las funcionalidades y ninguna lo conoce a él. Es la forma en código de la regla de §6.2, «todo entra y sale por el Orquestador».
+3. **A `commons/` se entra por uso, no por previsión.** Algo baja cuando lo usan dos funcionalidades, nunca cuando parece que podría usarse. Sin esa regla, `commons/` acaba siendo el vertedero donde cae todo y la organización por funcionalidad deja de significar nada.
+
+La regla 1 y su excepción son estáticamente comprobables, así que no se dejan en convención: son un patrón de análisis estático en la puerta de CI (VER-02).
 
 ---
 
@@ -89,13 +147,17 @@ Three.js se reserva para lo que lo justifica — el grafo de entidades y la curv
 
 Cinco almacenes con responsabilidades separadas. Unificarlos en un único índice vectorial es el error estructural más frecuente en este tipo de sistema.
 
-| Almacén | Contenido | Tecnología típica | Consulta que resuelve |
+**Todos viven en SQLite, en local, con un fichero por novela.** Separación lógica, no física: cinco conjuntos de tablas en la misma base. El motivo está en `AGENTS.md` §3.2.
+
+| Almacén | Contenido | Implementación en SQLite | Consulta que resuelve |
 |---|---|---|---|
-| **Canon estructurado** | Entidades, atributos, fichas, guía de estilo, escaleta | Documento estructurado o BD relacional, versionado | "Dame la ficha del entrenador" |
-| **Registro de eventos** | Hechos canónicos fechados, append-only | Tabla de eventos + proyecciones materializadas | "Qué sabía el protagonista en la jornada 14" |
-| **Grafo de entidades** | Relaciones tipadas con vigencia | Grafo o tablas de aristas | "Quién tiene conflicto abierto con quién" |
-| **Índice de prosa** | Texto congelado, troceado por escena | Vectorial + léxico (BM25) | "Cómo describí el estadio la primera vez" |
-| **Resúmenes jerárquicos** | Escena → capítulo → arco → obra | Documentos enlazados | "Resume los actos I y II en 400 palabras" |
+| **Canon estructurado** | Entidades, atributos, fichas, guía de estilo, escaleta | Tablas relacionadas con columna de versión | "Dame la ficha del entrenador" |
+| **Registro de eventos** | Hechos canónicos fechados, append-only | Tabla de eventos con inserción única, más vistas materializadas por proyección | "Qué sabía el protagonista en la jornada 14" |
+| **Grafo de entidades** | Relaciones tipadas con vigencia | Tabla de aristas con vigencia desde y hasta, recorrida con CTE recursivo | "Quién tiene conflicto abierto con quién" |
+| **Índice de prosa** | Texto congelado, troceado por escena | FTS5 para el léxico, que ya trae BM25. La parte vectorial es **decisión abierta**: ver abajo | "Cómo describí el estadio la primera vez" |
+| **Resúmenes jerárquicos** | Escena → capítulo → arco → obra | Tabla con nivel y referencia al padre | "Resume los actos I y II en 400 palabras" |
+
+**Lo único que SQLite no resuelve de serie es la búsqueda vectorial del índice de prosa.** FTS5 cubre el lado léxico con BM25 incluido, pero la recuperación híbrida (CTX-08) necesita además similitud semántica. Ninguna de las salidas posibles está elegida: es la decisión abierta nº 7 de §13, no un detalle de implementación.
 
 **Troceado del índice de prosa**: la unidad es la escena, no un bloque de N tokens. Cada trozo lleva metadatos de capítulo, POV, lugar, instante de mundo y personajes presentes, de modo que la recuperación se filtre antes de puntuarse.
 
@@ -109,7 +171,7 @@ Cinco almacenes con responsabilidades separadas. Unificarlos en un único índic
 
 100.000 tokens es el techo del proveedor, no el objetivo de llenado. La distracción (CTX-14) y la dilución de atención aparecen mucho antes de agotar la ventana, y en generación de prosa el coste se paga en cada escena de cada capítulo.
 
-Reglas duras de ocupación (CTX-18):
+Reglas duras de ocupación (CTX-18) y de concurrencia (CTX-20):
 
 | Regla | Valor | Motivo |
 |---|---|---|
@@ -117,6 +179,8 @@ Reglas duras de ocupación (CTX-18):
 | Entrada + salida máximas | 85.000 tokens | Deja margen para reintentos que añaden el defecto y su evidencia |
 | Margen reservado | 15.000 tokens | Absorbe regeneración dirigida sin rehacer el paquete |
 | Acción al desbordar | Compactación por prioridad inversa (CTX-19) | Nunca truncamiento por el final |
+| Techo concurrente del sistema | 100.000 tokens (CTX-20) | Suma de entrada y salida de todo lo que está en vuelo. **Sin margen reservado**: los 15.000 de arriba son por llamada, para que el defecto y su evidencia quepan al reintentar |
+| Política de admisión | FIFO estricta | El Orquestador no arranca una llamada si no cabe: la encola. Sin reordenar por hueco, que mataría de hambre al Arquitecto y al Continuista, que son las llamadas grandes |
 
 **Orden de compactación** cuando el material excede el presupuesto: primero los fragmentos recuperados, después la prosa literal previa, después los resúmenes, después las fichas secundarias. Nunca se tocan las anclas, el conocimiento del POV ni la especificación de la escena.
 
@@ -135,6 +199,19 @@ Reglas duras de ocupación (CTX-18):
 | Archivero | 22.000 | 5.000 | 27 % | Por capítulo |
 | Árbitro | 15.000 | 2.000 | 17 % | Por conflicto |
 | Supervisor | 30.000 | 3.000 | 33 % | Por capítulo cerrado |
+
+**Qué corre en paralelo.** Solo el Jurado: sus tres instancias son deliberadamente independientes entre sí (§9.2), así que se lanzan a la vez y suman 31.500 tokens. Todo lo demás va en serie. Las escenas de un capítulo **no** se paralelizan, y no por coste: el bloque 6 del paquete del Escritor es la prosa literal de la escena anterior (§4.3), no compactable, así que escribir la escena *n* exige tener escrita la *n−1*. Paralelizarlas compraría velocidad rompiendo justo el bloque que sostiene la voz.
+
+Con eso, las combinaciones que CTX-20 llega a acotar son estas:
+
+| Concurrencia | Suma | Cabe |
+|---|---:|:-:|
+| Jurado ×3 | 31.500 | Sí |
+| Continuista más Jurado ×3 | 81.500 | Sí, deja 18.500 |
+| Arquitecto más Supervisor | 103.000 | No |
+| Escritores de escena en paralelo | 20.000 cada uno | Máximo 5, 4 con margen |
+
+Las dos últimas filas no ocurren en el flujo de §7: el Supervisor corre sobre capítulo cerrado y el Arquitecto solo al planificar, y las escenas van en serie. CTX-20 está para que sigan sin ocurrir cuando el paralelismo crezca, no para describir lo que pasa hoy.
 
 El agente caro no es el que más escribe, es el **Continuista**: necesita el capítulo entero más el canon que podría contradecir. Es también el primero que tocará el techo cuando la novela crezca, y el que justifica la recuperación selectiva.
 
@@ -205,7 +282,9 @@ Esto es lo que mantiene la memoria completa dentro de 100.000 tokens cuando la n
 
 ### 4.7 Aislamiento (CTX-11)
 
-Cada agente corre en su propia ventana limpia y devuelve solo salida estructurada. El Escritor nunca ve los informes de defectos de otros capítulos, el Juez nunca ve el paquete del Escritor y el Archivero nunca ve las rúbricas. Es lo que permite que doce agentes trabajen sobre una novela de 200.000 palabras sin que ninguno necesite más de 70.000 tokens.
+Cada agente corre en su propia ventana limpia y devuelve solo salida estructurada. El Escritor nunca ve los informes de defectos de otros capítulos, el Juez nunca ve el paquete del Escritor y el Archivero nunca ve las rúbricas. Es lo que permite que trece agentes trabajen sobre una novela de 200.000 palabras sin que ninguno necesite más de 70.000 tokens; once consumen ventana, porque el Orquestador y el Documentalista son código.
+
+El aislamiento acota **lo que cada agente ve**, no **cuántos corren a la vez**. Eso segundo lo acota CTX-20, y lo hace cumplir la admisión del Orquestador (§4.1).
 
 ---
 
@@ -266,7 +345,7 @@ Una **skill** es una capacidad reutilizable con contrato fijo de entrada y salid
 
 | # | Agente | Misión | Skills principales | Criterio de salida |
 |---|---|---|---|---|
-| 0 | **Orquestador** | Dirige el flujo, aplica presupuestos y cuenta reintentos. Es código, no modelo. | Todas las deterministas | — |
+| 0 | **Orquestador** | Dirige el flujo, aplica presupuestos, admite o encola llamadas contra CTX-20 y cuenta reintentos. Es código, no modelo. | Todas las deterministas | — |
 | 1 | **Arquitecto narrativo** | Arcos, doble arco (DEP-20), curva de tensión, escaleta de obra | `outline.plan`, `canon.query` | Escaleta que supera el verificador estructural |
 | 2 | **Planificador de capítulo** | Convierte el tramo de escaleta en especificaciones de escena | `scene.spec`, `canon.state-at`, `setup.ledger` | Todas las escenas con función y cambio de valor declarados |
 | 3 | **Documentalista** | Ensambla el paquete de contexto de cada llamada. Es código. | `context.pack`, `prose.retrieve`, `canon.*`, `context.audit` | Paquete válido dentro de presupuesto |
@@ -342,6 +421,38 @@ graph LR
   A12 --> S16
   A12 --> S17
 ```
+
+---
+
+### 6.2 Contrato de entrada y salida por agente
+
+**Todo entra y sale por el Orquestador**, que es el único que conoce el flujo (§7.2), con una sola excepción documentada al pie de esta sección. Las columnas de abajo dicen qué artefacto recibe y qué artefacto devuelve cada agente, no con quién se comunica.
+
+Los artefactos se nombran por la skill que los produce (`scene.spec`, `delta.extract`) o por su ID de `definitions.md` cuando ya existe (CTX-03, CAN-11). No hay una familia de IDs propia para artefactos: duplicaría el espacio de nombres.
+
+| # | Agente | **Entrada** | **Salida** |
+|---|---|---|---|
+| 0 | **Orquestador** | Brief (PRO-01) | Manuscrito congelado. Es el bus: recibe y despacha todo lo demás |
+| 1 | **Arquitecto narrativo** | Brief (PRO-01) · canon existente si lo hay | Escaleta de obra: arcos, actos y curva de tensión (`outline.plan`) |
+| 2 | **Planificador de capítulo** | Tramo de escaleta congelada · estado del mundo en t (`canon.state-at`) · deuda narrativa vigente (`setup.ledger`) | Especificaciones de escena 1..k (`scene.spec`), cada una con función y cambio de valor |
+| 3 | **Documentalista** | Una `scene.spec` · presupuesto en tokens del agente destino | Paquete de contexto válido (CTX-03) dentro de presupuesto |
+| 4 | **Escritor de escena** | Paquete de contexto (CTX-03) | Prosa de la escena (`scene.write`) |
+| 5 | **Especialista deportivo** | Paquete de contexto (CTX-03) · estado de la plantilla | Cronología y resultado del encuentro (`match.simulate`) · prosa de la secuencia (`match.narrate`) |
+| 6 | **Continuista** | Capítulo completo (PRO-06) · canon que podría contradecirlo | Informe de continuidad: defectos (CAL-05) con cita localizable |
+| 7 | **Jurado** (×3) | Capítulo (PRO-06) · rúbricas (CAL-02) | Puntuación por dimensión con evidencia · dispersión entre instancias |
+| 8 | **Reparador** | Fragmento · defecto (CAL-05) · su evidencia | Fragmento o capítulo corregido (`revise.targeted`) |
+| 9 | **Estilista** | Capítulo aprobado por Jurado y Continuista | Capítulo pulido (`style.polish`) · huella estilística (`style.fingerprint`) |
+| 10 | **Archivero** | Capítulo final, aún sin congelar | Delta canónico (CAN-11, `delta.extract`) · resúmenes jerárquicos (`summarize.hierarchical`) |
+| 11 | **Árbitro** | Conflicto: dos afirmaciones incompatibles con su procedencia | Afirmación vigente según precedencia (PRO-10) · registro del arbitraje |
+| 12 | **Supervisor** | Métricas del capítulo cerrado · deuda narrativa · curva de tensión acumulada | Veredicto de salud y, si hay deriva, tramo replanificado (`replan.arc`) |
+
+**Dos entradas que conviene no confundir.** Lo que el Orquestador entrega a un agente de modelo es una `scene.spec` o un capítulo; lo que entra de verdad en la ventana es el paquete de contexto (CTX-03) que el Documentalista ensambla a partir de eso. La tabla recoge el contrato lógico. La composición real del paquete está en §4.3 para el Escritor de escena, que es la llamada que más veces se ejecuta y la única que hoy la justifica.
+
+**Los dos agentes que son código.** El Orquestador y el Documentalista no consumen ventana y por eso no aparecen en la tabla de presupuestos de §4.2. Su contrato es igual de vinculante: un Documentalista que devuelve un paquete fuera de presupuesto rompe la restricción de contexto antes de que ningún modelo llegue a verla.
+
+El Orquestador lleva además **el contador de CTX-20**. Es el único que sabe qué hay en vuelo, así que es el único que puede admitir o encolar una llamada. Dos reglas: la admisión es FIFO estricta, y si no puede estimar el presupuesto de una llamada no la admite, por la regla de fallo cerrado.
+
+**El Árbitro entra por dos puertas.** Lo llama el Orquestador cuando el delta del Archivero choca con el canon, y lo llama el Documentalista cuando `context.audit` detecta hechos en conflicto dentro del paquete, antes de generar (§7.2). Es el único agente al que invoca alguien distinto del Orquestador, y es deliberado: arbitrar antes de generar es mucho más barato que reparar después.
 
 ---
 
@@ -449,7 +560,7 @@ sequenceDiagram
     O->>C: reverificación
   end
 
-  O->>J: capítulo + rúbricas
+  O->>J: capítulo + rúbricas · 3 instancias en paralelo · 31.500 tokens
   J-->>O: puntuaciones con evidencia y dispersión
   alt bajo umbral y reintentos disponibles
     O->>R: defectos S2 y S3
@@ -588,7 +699,7 @@ Reglas duras: el delta se propone y se valida, nunca se aplica en bruto; todo he
 
 ## 11. Observabilidad
 
-Por cada fragmento se guarda: versión del paquete de contexto, ocupación real en tokens por bloque, agente, skill, parámetros, defectos, puntuaciones con evidencia y decisiones de arbitraje.
+Por cada fragmento se guarda: versión del paquete de contexto, ocupación real en tokens por bloque, ocupación concurrente en el momento de admitir la llamada, tiempo en cola, agente, skill, parámetros, defectos, puntuaciones con evidencia y decisiones de arbitraje.
 
 En un sistema sin supervisión externa, la observabilidad no es un extra: es el único mecanismo para detectar que algo se ha estado degradando durante diez capítulos.
 
@@ -601,6 +712,7 @@ En un sistema sin supervisión externa, la observabilidad no es un extra: es el 
 | Deuda narrativa | Crece sin plan de cierre |
 | Dispersión del jurado | Alta y creciente: rúbricas mal definidas |
 | Ocupación real por bloque | Un bloque desplaza sistemáticamente a otro |
+| Ocupación concurrente máxima (CTX-20) | Roza los 100.000 de forma sostenida, o la cola crece: el paralelismo está mal dimensionado |
 | Aciertos sobre el conjunto dorado | Caída: los jueces han derivado |
 
 ---
@@ -627,6 +739,7 @@ En un sistema sin supervisión externa, la observabilidad no es un extra: es el 
 4. Umbral de dispersión que invalida un veredicto.
 5. Si `match.simulate` debe modelar el encuentro minuto a minuto o solo sus hitos.
 6. Punto a partir del cual conviene reescribir un capítulo en vez de repararlo.
+7. Cómo se resuelve la mitad vectorial del índice de prosa sobre SQLite (§3): extensión vectorial, embeddings en tabla con cálculo en Python, o prescindir de lo semántico y quedarse en FTS5 más filtro por metadatos.
 
 ---
 
@@ -643,5 +756,7 @@ En un sistema sin supervisión externa, la observabilidad no es un extra: es el 
 9. Jurado, conjunto dorado y Estilista.
 10. Supervisor, replanificación y métricas de salud.
 11. Frontend de lectura y visualización.
+
+El orden recorre **funcionalidades de §2.3**, no capas técnicas: los pasos 1 y 5 llenan `canon/`, el 2 `planning/`, el 3 `context/`, el 4 `generation/`, el 6 cierra `canon/`, el 9 `verification/`, el 10 `supervision/` y el 11 el frontend entero. Es la consecuencia práctica de organizar por funcionalidad: cada paso entrega una carpeta que funciona, no un estrato horizontal que todavía no hace nada.
 
 Los pasos 1 a 6 producen una novela coherente sin intervención. Del 7 al 10 se gana escala y calidad, no viabilidad. El paso 11 está fuera del camino crítico por definición (§2.1) y solo tiene sentido cuando el paso 10 ya produce métricas que mostrar.
