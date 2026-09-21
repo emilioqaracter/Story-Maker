@@ -17,6 +17,13 @@ El loop de automejora de los jueces tiene su propia especificación, aparte:
 - [docs/SPEC-AUTOMEJORA-FUNCIONAL.md](docs/SPEC-AUTOMEJORA-FUNCIONAL.md): qué mide, qué mueve y cuándo para.
 - [docs/SPEC-AUTOMEJORA-TECNICO.md](docs/SPEC-AUTOMEJORA-TECNICO.md): órdenes, evaluador y bitácora.
 
+Y el tablero, la interfaz que deja ver todo esto sin abrir una carpeta. Está en
+[ui/](ui/), y se puede borrar entero sin que el sistema se entere:
+
+- [docs/SPEC-UI-FUNCIONAL.md](docs/SPEC-UI-FUNCIONAL.md): qué enseña y qué no hace nunca.
+- [docs/SPEC-UI-TECNICO.md](docs/SPEC-UI-TECNICO.md): librerías, el modelo y el reloj del replay.
+- [ui/README.md](ui/README.md): cómo se arranca y cómo se graba.
+
 ## Cómo se usa
 
 Se le pide a Claude Code, en la terminal o en VS Code:

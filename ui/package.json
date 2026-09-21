@@ -1,0 +1,29 @@
+{
+  "name": "story-maker-ui",
+  "version": "1.1.0",
+  "private": true,
+  "type": "module",
+  "description": "El tablero de Story-Maker. Mira books/ y lo dibuja. No decide nada.",
+  "workspaces": [
+    "web",
+    "servidor"
+  ],
+  "scripts": {
+    "predev": "npm run volcar",
+    "dev": "concurrently -n servidor,web -c yellow,cyan \"npm:dev:servidor\" \"npm:dev:web\"",
+    "dev:web": "npm run dev -w story-maker-web",
+    "dev:servidor": "npm run dev -w story-maker-servidor",
+    "prebuild": "npm run volcar",
+    "build": "npm run build -w story-maker-web",
+    "volcar": "node herramientas/volcar.ts",
+    "comprobar": "node herramientas/comprobar-lector.ts",
+    "pretipos": "npm run volcar",
+    "tipos": "npm run tipos -w story-maker-web"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "engines": {
+    "node": ">=22.18"
+  }
+}
