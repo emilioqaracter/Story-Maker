@@ -224,7 +224,7 @@ Agrupados por funcionalidad. El orden sigue el de construcción de `architecture
 | RF-01 | El registro de eventos es append-only. Ningún `UPDATE` ni `DELETE` llega a ejecutarse: lo impiden triggers en el propio esquema | `architecture.md` §3.1 | VER-05 |
 | RF-02 | Todo evento lleva instante de mundo (MUN-05), tipo, al menos una entidad afectada (MET-05), procedencia válida (MET-09) y capítulo de origen. Uno incompleto se rechaza antes de tocar la base | `architecture.md` §10 | VER-01 |
 | RF-03 | `canon.state-at(t)` proyecta solo los eventos con instante ≤ t, e incluye estado físico (DEP-13), clasificación (DEP-08) y estadísticas (DEP-12) recalculadas | MET-06, MUN-10 | VER-06 |
-| RF-04 | La proyección es independiente del orden de inserción de los eventos | MUN-06 | VER-06 |
+| RF-04 | La proyección es independiente del orden de inserción de los eventos. Se sostiene sin condiciones gracias a RD-19: sin empates posibles, `(world_time, world_seq)` ya es un orden total | MUN-06 | VER-06 |
 | RF-05 | El canon estructurado es proyección reconstruible: regenerarlo desde cero es igual a mantenerlo de forma incremental | `architecture.md` §3.1 | VER-06 |
 | RF-06 | Atributos y relaciones tienen vigencia (MET-07) coherente; una consulta en t devuelve solo lo vigente en t | MET-07, PER-11 | VER-06 |
 | RF-07 | `canon.knowledge-of(c, t)` devuelve solo hechos que un evento hizo conocer a `c` en o antes de t, más sus competencias vigentes (PER-09) | PER-10, PER-I1 | VER-06 |
@@ -359,7 +359,7 @@ El corazón de la versión 1 y donde vive el RAG híbrido. Todo lo de esta secci
 
 | RF | Requisito | Fuente | Verificación |
 |---|---|---|---|
-| RF-55 | El Archivero extrae el delta canónico del capítulo aprobado con el paquete de §4.9, dentro de 24.500 de entrada y 5.000 de salida. Todo evento del delta lleva procedencia `prose` o `derived` y su capítulo de origen | `architecture.md` §4.9, §10 | VER-12, VER-08 |
+| RF-55 | El Archivero extrae el delta canónico del capítulo aprobado con el paquete de §4.9, dentro de 24.500 de entrada y 5.000 de salida. Todo evento del delta lleva procedencia `prose` o `derived`, su capítulo de origen y un `world_seq` que no colisione con nada ya registrado (RD-19) | `architecture.md` §4.9, §10 | VER-12, VER-08 |
 | RF-56 | El delta se propone y se valida contra el canon vigente; nunca se aplica en bruto | `architecture.md` §10 | VER-05, VER-18 |
 | RF-57 | La congelación aplica eventos, recalcula proyecciones, escribe el índice y sus vectores, guarda los resúmenes, inserta en la lista de proscripción (RF-108) y purga la memoria de trabajo en una sola transacción. Tras congelar no queda ninguna fila de memoria de trabajo del capítulo | PRO-I1; `architecture.md` §3.3 | VER-06 |
 | RF-58 | La congelación es la única operación que escribe canon y solo `canon/` la ejecuta | `architecture.md` §10 | VER-02, VER-05 |
@@ -420,7 +420,8 @@ Un fichero SQLite por novela, sin extensiones nativas. Separación lógica de lo
 |---|---|---|---|
 | RD-01 | Tabla `event`: identificador autoincremental, `world_time` en ISO 8601, `world_seq` de desempate, `type`, `payload` JSON validado por tipo, `provenance` acotada a los cuatro valores de MET-09, `chapter_origin`, `recorded_at`. Triggers que abortan `UPDATE` y `DELETE` | MET-05, MET-09 | VER-05 |
 | RD-02 | Tabla `event_entity` que relaciona cada evento con las entidades que modifica, con al menos una fila por evento | MET-05 | VER-05 |
-| RD-03 | Orden de proyección `(world_time, world_seq, id)`. El orden de inserción no participa | MUN-05, MUN-06 | VER-06 |
+| RD-03 | Orden de proyección `(world_time, world_seq)`, **total por construcción**: el par es único en la tabla de eventos, así que no hay empates que desempatar y el orden de inserción no participa en ningún caso | MUN-05, MUN-06 | VER-06 |
+| RD-19 | La pareja `(world_time, world_seq)` es única. Un evento que colisione con otro ya registrado se rechaza: el registro no elige por su cuenta quién va primero, porque esa decisión es de causalidad narrativa y la tiene quien construye el delta, no quien lo escribe | RD-03; `architecture.md` §10 | VER-05, VER-06 |
 | RD-04 | Canon estructurado como tablas proyectadas y versionadas: `entity`, `entity_alias`, `attribute` y `relation` con vigencia, `knowledge`, `competence`, `document_version` | `architecture.md` §3.1 | VER-06 |
 | RD-05 | Clasificación y estadísticas no se materializan: se calculan al pedirlas desde los eventos de resultado | DEP-I1 | VER-06 |
 | RD-06 | Índice de prosa, nivel escena: una fila por escena congelada con capítulo, POV, lugar, instante, personajes presentes, función, resumen y vector del resumen | `architecture.md` §3.1 | VER-05 |
@@ -592,6 +593,7 @@ Ninguna introduce un término ni un número nuevo. Todas eligen entre formas de 
 | D-11 | Langfuse caído | Encolar en local y continuar | La observabilidad observa, no gobierna |
 | D-12 | Búsqueda vectorial | Vectores en tabla y similitud en Python, sin extensión | 200 a 400 escenas y 600 a 1.200 fragmentos por obra: el recorrido exhaustivo es exacto e inmediato. El fichero sigue siendo un SQLite corriente |
 | D-13 | Cuándo se calculan los embeddings | Al congelar, desde la versión 1 | Evita que el afinado del paso 8 reindexe la novela entera |
+| D-34 | Desempate entre eventos del mismo instante | `(world_time, world_seq)` único; la colisión se rechaza y la resuelve el Archivero | Ver §9.1 |
 | D-30 | Dueño de la memoria de trabajo | Dos fábricas de escritura: canon en `canon/db/`, memoria de trabajo en `commons/db/` acotada a `wm_*` | Son dos escrituras distintas que comparten fichero por comodidad. Relajar la regla de `canon/` para que quepa el estado efímero habría desprotegido lo único que esa regla existe para proteger |
 | D-31 | Dueño de `setup.ledger` | `planning/`, no `supervision/` | `planning/` planta los setups al escribir la escaleta y los cobra al especificar escenas. Y el Supervisor no existe en la v1, así que dejarlo ahí era dejar la deuda narrativa sin nadie justo donde hace falta. Corrige `architecture.md` §2.3 |
 | D-32 | Quién inserta en la lista de proscripción | La congelación, en su transacción | La lista es una proyección de la prosa congelada. Insertarla desde el verificador la alimentaría con borradores que pueden acabar en cuarentena |
@@ -612,6 +614,37 @@ Ninguna introduce un término ni un número nuevo. Todas eligen entre formas de 
 | D-19 | Empuje o tirón de contexto | Híbrido por agente: empuje para todos, tirón además para cinco | El Escritor se ejecuta cientos de veces y su paquete ya está afinado; el Continuista investiga y es el primero que deja de caber. El coste del tirón se paga por capítulo, no por escena |
 | D-20 | Tope de salida | Guardarraíl en `dispatch`, no herramienta del agente | Un tope que el modelo decide si invoca no es un tope |
 | D-21 | Cupo de tirón | Se reserva entero en la admisión y no se amplía | Admitir por lo que ocupa al empezar y dejar que crezca es romper el techo sin que salte nada: cuando la llamada se pasa, ya está en vuelo |
+
+---
+
+### 9.1 Por qué RD-03 decía lo que decía
+
+La versión anterior fijaba el orden en `(world_time, world_seq, id)` y afirmaba
+a la vez que el orden de inserción no participaba. Las dos cosas no podían ser
+ciertas: **`id` es el orden de inserción**, así que participaba exactamente
+cuando las dos primeras claves empataban.
+
+No fue un descuido, fue una costura entre dos preocupaciones razonables que se
+escribieron por separado. `world_seq` nació para ordenar hechos dentro de un
+mismo día, que es un problema de cronología narrativa. El `id` se añadió después
+para que el orden fuera **total** y una consulta no dependiera de cómo la base
+devolviera las filas, que es un problema de determinismo de lectura. Cada uno
+resolvía lo suyo; juntos, el segundo se comía la garantía del primero.
+
+Lo destapó una prueba de propiedad al implementar el tramo 1, generando dos
+eventos en el mismo instante y el mismo `seq` sobre el mismo atributo.
+
+**La salida elegida** hace el orden total sin recurrir al `id`: la pareja
+`(world_time, world_seq)` es única y una colisión se rechaza. Así el `id` deja
+de decidir nada y RF-04 se sostiene tal como estaba escrita, que importa porque
+es lo que hace que copiar el fichero sea copiar la novela.
+
+**Y se rechaza en vez de asignar un hueco libre**, que era la alternativa cómoda.
+Elegir qué hecho va primero cuando dos caen en el mismo instante es una decisión
+de causalidad narrativa: si el Archivero vio que el gol fue antes de la lesión,
+lo sabe él, no el código que escribe filas. Un registro que desempata solo
+tomaría esa decisión en silencio y siempre igual, que es como se cuelan los
+hechos en el orden equivocado sin que nada lo señale.
 
 ---
 

@@ -31,10 +31,12 @@ _INSERT_LINK = "INSERT INTO event_entity (event_id, entity_id) VALUES (?, ?)"
 
 _COLUMNS = "id, world_time, world_seq, type, payload, provenance, chapter_origin"
 
-# RD-03: el orden de insercion NO participa. Ordenar aqui, y no en quien lee, es
-# lo que hace que la proyeccion sea independiente del orden de llegada sin que
-# cada consumidor tenga que acordarse.
-_ORDER = "ORDER BY world_time, world_seq, id"
+# RD-03: el orden de proyeccion es `(world_time, world_seq)` y es TOTAL, porque
+# el par es unico en la tabla (RD-19). El `id` ya no participa, y ese es el
+# arreglo: mientras estuvo ahi como ultimo desempate, el orden de insercion
+# decidia el resultado cada vez que las dos primeras claves empataban, y eso
+# contradecia la promesa de que no participaba.
+_ORDER = "ORDER BY world_time, world_seq"
 
 _SELECT_ALL = f"SELECT {_COLUMNS} FROM event {_ORDER}"  # nosec B608
 _SELECT_UNTIL = (
@@ -42,25 +44,63 @@ _SELECT_UNTIL = (
 )
 
 
+class InstantCollisionError(RuntimeError):
+    """Dos eventos caen en el mismo instante y el mismo desempate.
+
+    Se rechaza en vez de asignarle un hueco libre, que era la alternativa
+    comoda. Elegir que hecho va primero cuando dos caen en el mismo instante es
+    una decision de **causalidad narrativa**: si el gol fue antes de la lesion,
+    eso lo sabe el Archivero al construir el delta, no el codigo que escribe
+    filas. Un registro que desempatara solo tomaria esa decision en silencio y
+    siempre igual, que es como se cuelan hechos en el orden equivocado sin que
+    nada lo señale.
+    """
+
+
+def next_seq(con: sqlite3.Connection, stamp: str) -> int:
+    """Primer desempate libre para ese instante.
+
+    Existe para que resolver una colision sea trivial para quien SI sabe el
+    orden. Rechazar sin dar una salida facil solo consigue que alguien acabe
+    poniendo un numero al azar.
+    """
+    row = con.execute(
+        "SELECT coalesce(max(world_seq), -1) AS s FROM event WHERE world_time = ?",
+        (stamp,),
+    ).fetchone()
+    return int(row["s"]) + 1
+
+
 def append(con: sqlite3.Connection, events: Iterable[Event]) -> list[int]:
     """Anade eventos al registro y devuelve sus identificadores.
 
     No hace commit: quien llama decide la frontera de la transaccion, y en la
     congelacion esa frontera abarca mucho mas que esto (RF-57).
+
+    Rechaza colisiones de instante (RD-19). Ver `InstantCollisionError`.
     """
     ids: list[int] = []
     for ev in events:
-        cur = con.execute(
-            _INSERT_EVENT,
-            (
-                ev.world_time.stamp,
-                ev.world_time.seq,
-                str(ev.payload.type),
-                ev.payload.model_dump_json(exclude={"type"}),
-                str(ev.provenance),
-                ev.chapter_origin,
-            ),
-        )
+        try:
+            cur = con.execute(
+                _INSERT_EVENT,
+                (
+                    ev.world_time.stamp,
+                    ev.world_time.seq,
+                    str(ev.payload.type),
+                    ev.payload.model_dump_json(exclude={"type"}),
+                    str(ev.provenance),
+                    ev.chapter_origin,
+                ),
+            )
+        except sqlite3.IntegrityError as exc:
+            if "world_time" not in str(exc):
+                raise
+            raise InstantCollisionError(
+                f"ya hay un evento en {ev.world_time.stamp!r} con desempate "
+                f"{ev.world_time.seq}. Quien construye el delta tiene que decir "
+                "cual va primero: `next_seq` da el siguiente hueco libre"
+            ) from exc
         event_id = cur.lastrowid
         if event_id is None:  # pragma: no cover - sqlite siempre lo da en INSERT
             raise RuntimeError("sqlite no devolvio identificador de evento")

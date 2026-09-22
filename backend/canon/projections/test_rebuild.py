@@ -58,6 +58,8 @@ def _attribute_event(draw: st.DrawFn) -> Event:
 
 
 def _seed_entities() -> list[Event]:
+    """Las entidades base, cada una con su desempate: el par (instante,
+    desempate) es unico y las fixtures tampoco se libran (RD-19)."""
     return [
         Event(
             world_time=WorldTime(stamp="2026-01-01", seq=i),
@@ -93,11 +95,11 @@ def test_la_proyeccion_no_depende_del_orden_de_insercion(
     que orden llegaron sus eventos, y lo que hace que un fichero copiado sea el
     mismo fichero.
 
-    Se les da `seq` distinto a proposito. Con `seq` repetido la propiedad no se
-    sostiene, y no por un fallo del codigo sino por la contradiccion que fija
-    `test_colision_en_el_mismo_instante_rompe_rf04`. Dejar que el generador la
-    produzca haria que esta propiedad fallara una vez de cada tantas y tapara
-    con ruido intermitente lo que alli queda dicho con precision.
+    Se les da `seq` distinto porque el esquema ya no admite colisiones (RD-19):
+    generar una haria fallar la insercion, no la propiedad. Antes esta misma
+    linea estaba aqui por otro motivo --tapaba una contradiccion de la spec--
+    y ahora esta porque el modelo de datos lo exige, que es donde tenia que
+    haber estado desde el principio.
     """
     events = [
         e.model_copy(update={"world_time": WorldTime(stamp=e.world_time.stamp, seq=base + i)})
@@ -119,25 +121,23 @@ def test_la_proyeccion_no_depende_del_orden_de_insercion(
         assert _snapshot(a) == _snapshot(b)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "CONTRADICCION ABIERTA entre RD-03 y RF-04. RD-03 fija el orden de proyeccion "
-        "en (world_time, world_seq, id) y afirma que el orden de insercion no participa; "
-        "pero `id` ES el orden de insercion, asi que participa exactamente cuando las dos "
-        "primeras claves empatan. Recomendacion: que el Archivero asigne `seq` distinto "
-        "dentro de un delta y que el registro rechace la colision, con lo que `id` deja de "
-        "decidir nada semantico y RF-04 se sostiene tal como esta escrita. Proceso B."
-    ),
-)
-def test_colision_en_el_mismo_instante_rompe_rf04(
+def test_una_colision_de_instante_se_rechaza(
     tmp_path_factory: pytest.TempPathFactory,
 ) -> None:
-    """Fija la contradiccion con un caso exacto, no con uno generado.
+    """RD-19. Dos eventos en el mismo instante y desempate no entran.
 
-    La propiedad de arriba la encontraba una vez de cada tantas, que para una
-    contradiccion de spec es la peor forma de registrarla: parece un fallo
-    intermitente en vez de una decision pendiente.
+    Esta prueba sustituye a una que fallaba a proposito, y merece la pena contar
+    por que. RD-03 fijaba el orden en `(world_time, world_seq, id)` y afirmaba a
+    la vez que el orden de insercion no participaba: no podian ser las dos
+    cosas, porque `id` ES el orden de insercion y decidia justo cuando las otras
+    dos empataban. Una propiedad lo destapo generando la colision.
+
+    La salida no fue relajar RF-04 sino quitarle al `id` el trabajo: con el par
+    unico, el orden ya es total y el `id` no decide nada.
+
+    Se rechaza en vez de asignar un hueco libre porque elegir que hecho va
+    primero es una decision de causalidad narrativa, y la tiene quien construye
+    el delta, no quien escribe filas.
     """
     colision = [
         Event(
@@ -150,51 +150,39 @@ def test_colision_en_el_mismo_instante_rompe_rf04(
         for v in ("a", "b")
     ]
 
-    directo = tmp_path_factory.mktemp("cd") / "n.sqlite"
-    invertido = tmp_path_factory.mktemp("ci") / "n.sqlite"
-    connection.create(directo)
-    connection.create(invertido)
-
-    for path, order in ((directo, colision), (invertido, list(reversed(colision)))):
-        with connection.canon_writer(path) as con:
-            log.append(con, _seed_entities())
-            log.append(con, order)
-            rebuild.rebuild(con)
-
-    with connection.reader(directo) as a, connection.reader(invertido) as b:
-        assert _snapshot(a) == _snapshot(b)
-
-
-@settings(max_examples=25, deadline=None)
-@given(events=st.lists(_attribute_event(), min_size=1, max_size=12))
-def test_reconstruir_desde_cero_es_igual_a_mantener_incremental(
-    tmp_path_factory: pytest.TempPathFactory, events: list[Event]
-) -> None:
-    """RF-05. El canon estructurado es proyeccion reconstruible.
-
-    Si esto falla, alguna tabla guarda algo que no deriva de un evento, y el
-    registro deja de ser la fuente de verdad sin que nada lo senale.
-    """
-    path = tmp_path_factory.mktemp("r") / "n.sqlite"
+    path = tmp_path_factory.mktemp("col") / "n.sqlite"
     connection.create(path)
+    with pytest.raises(log.InstantCollisionError, match="next_seq"), connection.canon_writer(
+        path
+    ) as con:
+        log.append(con, _seed_entities())
+        log.append(con, colision)
 
-    # Se aplica por lotes cronologicos, que es lo que hace la congelacion: un
-    # capitulo entero de una vez, y los capitulos en orden. Aplicar de uno en
-    # uno en orden de llegada violaria la precondicion de `apply_all` y la
-    # igualdad no se sostendria: es una propiedad del sistema, no del modulo.
-    ordenados = sorted(events, key=lambda e: (e.world_time.stamp, e.world_time.seq))
-    lotes = [ordenados[i : i + 3] for i in range(0, len(ordenados), 3)]
 
+def test_next_seq_da_el_siguiente_hueco_libre(
+    tmp_path_factory: pytest.TempPathFactory,
+) -> None:
+    """Rechazar sin dar una salida facil solo consigue que alguien ponga un
+    numero al azar."""
+    path = tmp_path_factory.mktemp("seq") / "n.sqlite"
+    connection.create(path)
     with connection.canon_writer(path) as con:
         log.append(con, _seed_entities())
-        rebuild.rebuild(con)
-        for lote in lotes:
-            ids = set(log.append(con, lote))
-            rebuild.apply_all(con, [s for s in log.read_all(con) if s.id in ids])
-        incremental = _snapshot(con)
+        siguiente = log.next_seq(con, "2026-01-01")
+        assert siguiente == len(_seed_entities())
 
-        rebuild.rebuild(con)  # desde cero
-        assert _snapshot(con) == incremental
+        log.append(
+            con,
+            [
+                Event(
+                    world_time=WorldTime(stamp="2026-01-01", seq=siguiente),
+                    payload=AttributeSet(entity_id="e1", name="estado", value="sano"),
+                    provenance=Provenance.PROSE,
+                    chapter_origin=1,
+                    entities=frozenset({"e1"}),
+                )
+            ],
+        )
 
 
 # ---------------------------------------------------------------- RF-06

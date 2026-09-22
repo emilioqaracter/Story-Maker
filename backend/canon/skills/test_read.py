@@ -31,9 +31,18 @@ T_MID = WorldTime(stamp="2026-03-01")
 T_LATE = WorldTime(stamp="2026-09-01")
 
 
+# Contador de desempate por instante. El esquema exige que la pareja
+# (instante, desempate) sea unica (RD-19), asi que las fixtures tampoco pueden
+# apoyarse en el empate: antes se apoyaban, y por eso esta restriccion las
+# rompio al entrar. Que las rompiera es la restriccion haciendo su trabajo.
+_SEQ: dict[str, int] = {}
+
+
 def _ev(payload: object, stamp: str, ent: set[str], chapter: int | None = 1) -> Event:
+    seq = _SEQ.get(stamp, 0)
+    _SEQ[stamp] = seq + 1
     return Event(
-        world_time=WorldTime(stamp=stamp),
+        world_time=WorldTime(stamp=stamp, seq=seq),
         payload=payload,  # type: ignore[arg-type]
         provenance=Provenance.BRIEF if chapter is None else Provenance.PROSE,
         chapter_origin=chapter,
@@ -43,6 +52,7 @@ def _ev(payload: object, stamp: str, ent: set[str], chapter: int | None = 1) -> 
 
 @pytest.fixture
 def novela(tmp_path: Path) -> Path:
+    _SEQ.clear()
     path = tmp_path / "n.sqlite"
     connection.create(path)
     with connection.canon_writer(path) as con:

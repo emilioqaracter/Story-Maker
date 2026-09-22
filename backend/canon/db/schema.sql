@@ -36,12 +36,19 @@ CREATE TABLE IF NOT EXISTS event (
     CHECK (provenance IN ('brief', 'prose', 'derived', 'arbitration')),
     CHECK (json_valid(payload)),
     -- El brief es el unico sin capitulo de origen (RF-11).
-    CHECK ((provenance = 'brief') = (chapter_origin IS NULL))
+    CHECK ((provenance = 'brief') = (chapter_origin IS NULL)),
+
+    -- RD-19. El par es unico, y eso es lo que hace TOTAL el orden de
+    -- proyeccion sin recurrir al `id`. Antes el orden era
+    -- (world_time, world_seq, id) y se afirmaba a la vez que el orden de
+    -- insercion no participaba: no podian ser las dos cosas, porque `id` ES
+    -- el orden de insercion y decidia justo cuando las otras dos empataban.
+    -- Con el par unico no hay empates que desempatar.
+    UNIQUE (world_time, world_seq)
 );
 
--- RD-03: el orden de proyeccion es (world_time, world_seq, id). El de insercion
--- no participa, y este indice es lo que hace barata esa lectura.
-CREATE INDEX IF NOT EXISTS idx_event_world ON event (world_time, world_seq, id);
+-- RD-03: el orden de proyeccion es (world_time, world_seq), y lo cubre ya el
+-- indice unico de la restriccion de arriba. No hace falta otro.
 
 CREATE TRIGGER IF NOT EXISTS event_no_update
 BEFORE UPDATE ON event

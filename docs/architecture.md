@@ -165,7 +165,7 @@ Cinco almacenes con responsabilidades separadas. Unificarlos en un único índic
 | Almacén | Contenido | Implementación en SQLite | Consulta que resuelve |
 |---|---|---|---|
 | **Canon estructurado** | Entidades, atributos, fichas, guía de estilo, escaleta | Tablas relacionadas con columna de versión | "Dame la ficha del entrenador" |
-| **Registro de eventos** | Hechos canónicos fechados, append-only | Tabla de eventos con inserción única, más vistas materializadas por proyección | "Qué sabía el protagonista en la jornada 14" |
+| **Registro de eventos** | Hechos canónicos fechados, append-only | Tabla de eventos con inserción única y con `(instante, desempate)` único, más vistas materializadas por proyección | "Qué sabía el protagonista en la jornada 14" |
 | **Grafo de entidades** | Relaciones tipadas con vigencia | Tabla de aristas con vigencia desde y hasta, recorrida con CTE recursivo | "Quién tiene conflicto abierto con quién" |
 | **Índice de prosa** | Texto congelado, en dos niveles: escena y fragmento | FTS5 para el léxico, que ya trae BM25, más una tabla de vectores con el embedding de cada fila de los dos niveles | "Cómo describí el estadio la primera vez" |
 | **Resúmenes jerárquicos** | Escena → capítulo → arco → obra | Tabla con nivel y referencia al padre | "Resume los actos I y II en 400 palabras" |
