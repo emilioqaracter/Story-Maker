@@ -261,7 +261,7 @@ Reglas duras de ocupación (CTX-18) y de concurrencia (CTX-20):
 
 **Consecuencia que conviene ver.** Con la salida fuera del recuento y el único paralelismo real siendo los tres jueces, que suman 27.000 de entrada, el techo concurrente deja de morder en el flujo de hoy. Sigue escrito porque es un guardarraíl para cuando el paralelismo crezca, no una descripción de lo que ocurre ahora.
 
-**El contador de tokens se calibra por modelo.** Los modelos de Claude no comparten tokenizador: entre generaciones, el mismo texto puede dar hasta un 30 % más de fichas. Un presupuesto medido contra un modelo no vale para otro. El contador local de §4.8 mantiene por tanto un factor por modelo, contrastado contra el recuento real que devuelve el proveedor, y si un agente usa un modelo sin factor conocido su llamada no se admite, por la regla de fallo cerrado. Los tokens servidos desde caché ocupan ventana igual que los demás: el caché cambia lo que se paga, no lo que ocupa.
+**Estos números se miden, no se estiman.** Con qué se miden está en §4.8, y hay dos cosas que conviene saber ya: **el recuento es específico del modelo**, porque los tokenizadores difieren entre generaciones hasta un 30 % sobre el mismo texto, así que un presupuesto medido contra un modelo no vale para otro; y **los tokens servidos desde caché ocupan ventana igual** que los demás, porque el caché cambia lo que se paga, no lo que ocupa.
 
 **Orden de compactación** cuando el material excede el presupuesto: primero los fragmentos recuperados, después la prosa literal previa, después los resúmenes, después las fichas secundarias. Nunca se tocan las anclas, el conocimiento del POV ni la especificación de la escena.
 
@@ -465,18 +465,57 @@ Esto no cambia que el Orquestador y el Documentalista sean código (§6): Claude
 
 **Por qué dos proveedores y no uno.** La prosa es donde se juega la calidad de la obra, así que va a Claude sin intermediario. Los embeddings son una pieza intercambiable y de coste marginal, y OpenRouter da acceso a varios modelos de embedding con una sola cuenta, de modo que cerrar la mitad vectorial del índice (§3.1) no ata al sistema a un proveedor concreto.
 
-#### Contador de tokens
+#### Medición de tokens
 
-Uno solo, **local y determinista**, en `commons/`. Lo usan las tres cosas que cuentan tokens: el empaquetado (§4.3), la admisión de CTX-20 (§7.4) y el guardarraíl de `verification.md` §5.4. Dos contadores distintos harían que CTX-I1 dejara de ser comprobable.
+Todos los techos de §4.1 son números, y un número que no se puede medir no es un techo. Esta sección fija **con qué se mide**, y parte de un hecho que condiciona el resto.
 
-| Regla | Valor | Motivo |
-|---|---|---|
-| Implementación | Tokenizador local con codificación fija, por el factor de seguridad de abajo, redondeado hacia arriba | La admisión corre antes de cada llamada. Una consulta de red ahí añade un modo de fallo a un ciclo que debe terminar sin que nadie intervenga (PRO-11), y con la regla de fallo cerrado una red intermitente pararía la tirada |
-| Factor de seguridad | **Propuesta: 1,15** | Sale del margen reservado de §4.1: 15.000 sobre 85.000, algo menos del 18 %. El error de estimación tiene que caber dentro de ese margen, para que una cuenta corta la absorba la reserva en lugar de romper el techo |
-| Contraste | El recuento real que devuelve el proveedor en cada respuesta va a la traza (§11) | Es lo que permite comprobar el estimador en vez de confiar en él |
-| Corrección | Si alguna llamada real supera al estimado, el factor sube | La propiedad que lo vigila está en `verification.md` §4.6, y su incumplimiento es un fallo de CI, no un aviso |
+**No existe un tokenizador local oficial para los modelos de Claude.** No hay librería que reproduzca offline el recuento del proveedor. Y el sustituto que se usa por costumbre, `tiktoken`, es el tokenizador de OpenAI: **infracuenta el texto de Claude entre un 15 y un 20 % en prosa corriente, y mucho más en código y en texto que no es inglés**. Esta novela se escribe entera en español, así que el error cae del lado peor en todas y cada una de las llamadas, y cae **por debajo**, que es la única dirección que los techos no perdonan. Queda prohibido: ni `tiktoken`, ni `gpt-tokenizer`, ni ningún derivado.
 
-El estimador no pretende acertar el número del proveedor. Pretende **no quedarse corto nunca**, que es lo único que los techos de §4.1 necesitan de él.
+**El framework es el SDK oficial de Anthropic**, el mismo que ya sirve el puerto de `commons/`. No entra una dependencia nueva: entran dos capacidades del SDK que hasta ahora no se usaban.
+
+##### Las tres capas de medición
+
+| Capa | Cuándo | Con qué | Exactitud | Sale a la red |
+|---|---|---|---|---|
+| **Estimación de admisión** | Antes de ensamblar el paquete | El presupuesto declarado del agente en §4.2 más su cupo de tirón de §6.3 | Por exceso, a propósito | No |
+| **Medición del paquete** | Ensamblado el paquete, antes de llamar | `messages.count_tokens`, con **el mismo identificador de modelo** que se va a usar | Exacta | Sí |
+| **Recuento real** | Con la respuesta en la mano | El bloque `usage` que devuelve toda respuesta | Exacta, **entrada y salida** | No: viene de vuelta |
+
+Cada capa hace un trabajo que las otras no pueden.
+
+**La estimación de admisión no mide texto, reserva sitio.** Cuando el Orquestador decide si una llamada cabe, el paquete todavía no existe: construirlo para saber si cabe y descubrir que no, sería tirar el trabajo. Así que reserva por lo declarado, que es un número fijo y conocido. Por eso no necesita red y por eso puede ser generosa.
+
+**La medición del paquete es la que hace cumplir el techo.** Se ejecuta con el paquete ya montado y antes de gastar la llamada, con el mismo modelo con el que se va a inferir, porque **el recuento es específico del modelo**: los tokenizadores difieren entre generaciones hasta un 30 % sobre el mismo texto. Un presupuesto medido contra un modelo no vale para otro, y el sistema prevé modelos distintos por rol (§13).
+
+**El recuento real cierra el lazo, y es gratis.** Toda respuesta trae su `usage`. La entrada es la suma de sus tres campos —lo no cacheado, lo que se escribió en caché y lo que se leyó de ella—, porque **lo servido desde caché ocupa ventana igual** (§4.1). La salida viene aparte y exacta. Es el número que va a la traza de §11 y el que contrasta las dos capas de arriba.
+
+##### Por qué la red aquí no añade un modo de fallo
+
+La objeción evidente es que medir por red en el camino crítico rompe la promesa de que el ciclo termina sin que nadie intervenga. No la rompe, y el motivo es simple: **lo siguiente que ocurre tras medir el paquete es llamar al mismo proveedor con ese paquete.** Si la red no da para medir, tampoco da para generar. No es una dependencia nueva, es la misma, medio segundo antes.
+
+Lo que sí cambia es el orden en que se descubre el fallo, y eso juega a favor: se descubre **antes** de haber gastado una generación.
+
+Aplica el fallo cerrado sin excepción: si la medición no se puede ejecutar, la llamada no se admite y consume un reintento. No se cae a una estimación local, porque una estimación local exacta no existe y aceptar una aproximada aquí sería tener un techo que a veces no es un techo.
+
+##### La medición en el camino de tirón
+
+En una llamada con herramientas, el contador **no estima nada**: cada respuesta del turno trae en su `usage` el tamaño exacto del prompt en ese punto. `context.budget` (§5.3) devuelve ese número medido, no una cuenta propia, y por eso es fiable sin coste.
+
+Lo único que hay que medir por adelantado es **el candidato**: antes de entregar un resultado, `canon.lookup` lo cuenta y comprueba que lo consumido más el candidato siga bajo el techo. Es una medición por consulta, y se paga sin discusión porque solo cinco agentes tienen herramientas y ninguno se ejecuta más de una vez por capítulo.
+
+##### Quién lleva el contador
+
+Uno solo, en `commons/`, y lo consumen las cuatro cosas que cuentan tokens: el empaquetado (§4.3), la admisión (§7.4), las herramientas (§5.3) y el guardarraíl de `verification.md` §5.4. Dos contadores distintos harían que CTX-I1 dejara de ser comprobable.
+
+| Regla | Valor |
+|---|---|
+| Implementación | SDK oficial de Anthropic: `messages.count_tokens` para medir, `usage` para contrastar |
+| Tokenizadores de terceros | Prohibidos, por el error sistemático por debajo en español |
+| Identificador de modelo | Obligatorio y el mismo en medición y en inferencia. Sin correspondencia conocida, no se admite la llamada |
+| Contraste | Todo `usage` va a la traza (§11) y se compara con lo medido antes de llamar |
+| Discrepancia | Que el real supere a lo medido es un fallo de CI, no un aviso. La propiedad vive en `verification.md` §4.6 |
+
+**Queda por confirmar** el coste y el límite de peticiones de `count_tokens`, que no se ha verificado al escribir esto. Si resultara caro o limitado, la salida es medir una vez por paquete y no por candidato en el camino de tirón, aceptando un margen en las herramientas.
 
 ---
 

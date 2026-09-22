@@ -125,7 +125,7 @@ No hay actor «revisor». Cualquier requisito que lo necesite es un error de est
 | Aislamiento | Contenedor sin más red que las APIs de Claude, OpenRouter y Langfuse; ficheros acotados al directorio de la tirada | `verification.md` §5.3 |
 | Proveedor de los agentes de modelo | Claude, API de Anthropic | `architecture.md` §4.8 |
 | Proveedor de embeddings | OpenRouter | `architecture.md` §4.8 |
-| Contador de tokens | Local, determinista y offline, en `commons/` | `architecture.md` §4.8 |
+| Contador de tokens | SDK oficial de Anthropic en `commons/`: `count_tokens` para medir, `usage` para contrastar. Sin tokenizadores de terceros | `architecture.md` §4.8 |
 | Observabilidad | Langfuse con su SDK de Python | `verification.md` §5.1 |
 
 ### 2.5 Restricciones de diseño
@@ -144,7 +144,7 @@ Las seis de `AGENTS.md` §5.3, que aquí se convierten en requisitos no funciona
 | La API de Claude está accesible y su ventana es ≥ 100.000 tokens | El sistema no arranca: fallo cerrado en el arranque |
 | La API de embeddings está accesible al congelar | El capítulo agota reintentos y va a cuarentena (RF-68) |
 | La API de embeddings está accesible al recuperar | La recuperación se degrada a solo léxica, se marca en la auditoría y se traza (RF-78). No detiene la tirada |
-| El contador local nunca estima por debajo del recuento real del proveedor | Una llamada rompería el techo de 70.000 u 85.000 sin que salte el guardarraíl. Lo vigila una propiedad de CI (RNF-19) |
+| `count_tokens` está accesible antes de cada llamada | La llamada no se admite y consume un reintento. No se cae a estimación local: no existe un tokenizador offline exacto para Claude (RNF-19) |
 | El brief llega ya estructurado, con sus entidades identificadas | Un brief en texto libre no se acepta en la versión 1 |
 
 ---
@@ -176,7 +176,7 @@ Requisitos transversales de la API:
 - **RI-11** El acceso a los proveedores pasa por un **puerto** en `commons/` con dos operaciones. `complete`: dada una instrucción, un paquete de contexto (CTX-03) y un esquema de salida, devuelve texto; lo sirve Claude. `embed`: dado un texto, devuelve vector con su modelo y dimensión; lo sirve OpenRouter. Ningún agente importa el SDK de un proveedor directamente (`architecture.md` §4.8).
 - **RI-12** Toda respuesta de `complete` devuelve además el recuento real de tokens del proveedor, que se traza y se contrasta con el estimado (RNF-19).
 - **RI-13** El puerto no reintenta por su cuenta. Los reintentos son del Orquestador y se cuentan contra el presupuesto de `architecture.md` §7.3.
-- **RI-20** El contador de tokens de `commons/` es local, determinista y offline. Es el único que usan el empaquetado, la admisión y el guardarraíl. Si no puede estimar una llamada, el Orquestador no la admite (RNF-05).
+- **RI-20** El contador de tokens de `commons/` es el SDK oficial de Anthropic, y es el único que usan el empaquetado, la admisión, las herramientas y el guardarraíl. Mide el paquete con `messages.count_tokens` pasando el mismo identificador de modelo que la inferencia, y contrasta con los tres campos de entrada de `usage` más su salida. Queda prohibido `tiktoken` o cualquier tokenizador de terceros. Si la medición no se puede ejecutar, la llamada no se admite (RNF-05).
 - **RI-21** Un cambio de modelo, de proveedor o de codificación del contador es un cambio de configuración del puerto, nunca una edición en un agente.
 - **RI-22** `embed` es la única operación del puerto que puede fallar sin detener la tirada, y sus dos rutas de fallo son distintas porque las consecuencias lo son: al congelar agota reintentos y cuarentena el capítulo (RF-68), porque escribir mal el índice es permanente; al recuperar degrada la búsqueda a solo léxica (RF-78), porque recuperar peor una vez no lo es.
 
@@ -441,7 +441,7 @@ Un fichero SQLite por novela, sin extensiones nativas. Separación lógica de lo
 |---|---|---|---|
 | RNF-13 | Toda llamada, defecto, reintento, admisión y arbitraje se traza en Langfuse. Si Langfuse no responde, la traza se encola en local y la tirada continúa | `verification.md` §5.1; PRO-09 | VER-09 |
 | RNF-14 | Todo fragmento congelado es trazable a la versión del paquete y a la llamada que lo produjo | PRO-09 | VER-09 |
-| RNF-19 | Hay un solo contador de tokens y su estimación nunca queda por debajo del recuento real del proveedor. Si alguna llamada lo supera, CI falla y el factor de seguridad sube | `architecture.md` §4.8 | VER-06, VER-09 |
+| RNF-19 | Hay un solo contador de tokens y lo medido con `count_tokens` nunca queda por debajo del recuento real de `usage`, sumados sus tres campos de entrada. Si alguna llamada lo supera, CI falla | `architecture.md` §4.8 | VER-06, VER-09 |
 
 ### 6.6 Mantenibilidad
 
@@ -499,7 +499,7 @@ Los invariantes ya escritos como propiedades universales, más las que el RAG a�
 | §4.4 | La fusión es determinista: mismo canon, mismo paquete | RF-77 |
 | §4.4 | Ningún fragmento repite texto ya presente en el paquete | RF-83 |
 | §4.9 | Ningún paquete supera el presupuesto de su agente | RF-86 |
-| §4.8 | El contador nunca estima por debajo del real | RNF-19 |
+| §4.8 | Lo medido nunca queda por debajo del recuento real | RNF-19 |
 
 ### 7.4 Riesgo aceptado propio de la versión 1
 
@@ -549,7 +549,7 @@ Ninguna introduce un término ni un número nuevo. Todas eligen entre formas de 
 | D-11 | Langfuse caído | Encolar en local y continuar | La observabilidad observa, no gobierna |
 | D-12 | Búsqueda vectorial | Vectores en tabla y similitud en Python, sin extensión | 200 a 400 escenas y 600 a 1.200 fragmentos por obra: el recorrido exhaustivo es exacto e inmediato. El fichero sigue siendo un SQLite corriente |
 | D-13 | Cuándo se calculan los embeddings | Al congelar, desde la versión 1 | Evita que el afinado del paso 8 reindexe la novela entera |
-| D-14 | Contador de tokens | Uno solo, local y determinista, contrastado contra el recuento real | Una consulta de red en la admisión añadiría un modo de fallo al ciclo que debe terminar solo |
+| D-14 | Contador de tokens | Uno solo, el SDK oficial: `count_tokens` mide el paquete antes de llamar, `usage` lo contrasta | No hay tokenizador offline exacto para Claude, y `tiktoken` infracuenta en español. La red no añade un modo de fallo: lo siguiente tras medir es llamar al mismo proveedor |
 | D-15 | Grafo de entidades | Se construye en el paso 1, con su recorrido recursivo | La tabla de aristas ya la crea ese paso; lo único que añade es la consulta |
 | D-16 | Dónde viven las skills de prosa | En `canon/`, con el almacén que manejan | Poner la búsqueda en `context/` obligaría a esa carpeta a abrir la base |
 | D-17 | Recuperación del Continuista | Dirigida por afirmaciones, sin cupos y con la pierna léxica al frente | Busca recuerdo, no variedad, y CTX-09 dice que los nombres propios fallan en semántica |

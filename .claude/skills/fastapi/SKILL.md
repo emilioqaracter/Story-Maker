@@ -68,8 +68,10 @@ Ese techo es del sistema al redactar la novela. No limita el código, limita lo 
 Los dos proveedores están fijados en `architecture.md` §4.8: **Claude** para los once agentes de modelo, **OpenRouter** para los embeddings del índice de prosa.
 
 - **Nadie importa el SDK de un proveedor fuera del puerto de `commons/`**, que expone `complete` y `embed`. Un agente que importe el SDK ata once ficheros a un proveedor y convierte un cambio de modelo, que `verification.md` §5.8 trata como un despliegue, en una refactorización.
-- **Hay un solo contador de tokens**, local y determinista, en `commons/`. Lo usan el empaquetado, la admisión y el guardarraíl. Dos contadores distintos dejan CTX-I1 sin forma de comprobarse.
-- **El recuento real que devuelve el proveedor se traza siempre** y se contrasta con el estimado. Que el estimado nunca se quede corto es una propiedad de `hypothesis`, no una confianza.
+- **Hay un solo contador de tokens**, en `commons/`, y es el SDK oficial de Anthropic: `messages.count_tokens` para medir el paquete antes de llamar, `usage` para el recuento real. Lo usan el empaquetado, la admisión, las herramientas y el guardarraíl. Dos contadores distintos dejan CTX-I1 sin forma de comprobarse.
+- **Prohibido `tiktoken` y cualquier tokenizador de terceros.** Es el de OpenAI e infracuenta a Claude entre un 15 y un 20 % en prosa, y más en español. El error cae por debajo, que es la dirección que rompe el techo.
+- **La medición se hace con el mismo identificador de modelo que la inferencia.** Los tokenizadores difieren hasta un 30 % entre generaciones.
+- **El recuento real que devuelve el proveedor se traza siempre** y se contrasta con lo medido. Que lo medido nunca se quede corto es una propiedad de `hypothesis`, no una confianza.
 
 ## 5. Agentes que son código
 
