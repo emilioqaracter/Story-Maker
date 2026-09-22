@@ -71,7 +71,7 @@ def lexical(con: sqlite3.Connection, req: RetrievalRequest, *, limit: int = LEG_
          WHERE prose_chunk_fts MATCH ? AND {clause}
          ORDER BY bm25(prose_chunk_fts)
          LIMIT ?
-        """,  # nosec B608
+        """,
         [match, *params, limit],
     ).fetchall()
     return [r["id"] for r in rows]
@@ -102,7 +102,7 @@ def semantic(
         SELECT c.id AS id, c.vector AS vector, c.vector_dim AS dim
           FROM prose_chunk c JOIN prose_scene s ON s.id = c.scene_id
          WHERE c.vector IS NOT NULL AND {clause}
-        """,  # nosec B608
+        """,
         params,
     ).fetchall()
 

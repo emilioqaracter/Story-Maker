@@ -17,6 +17,7 @@ integracion continua por su cuenta.
 from __future__ import annotations
 
 import argparse
+import json
 
 # Solo ejecuta la lista fija de CHECKS; no entra nada del exterior.
 import subprocess  # nosec B404
@@ -31,6 +32,9 @@ class Check:
     what: str
     command: list[str]
     slow: bool = False
+    #: Como se decide si paso. Por defecto, el codigo de salida. Algunas
+    #: herramientas necesitan otra cosa: ver `seguridad del codigo`.
+    judge: str = "returncode"
 
 
 CHECKS: tuple[Check, ...] = (
@@ -54,13 +58,24 @@ CHECKS: tuple[Check, ...] = (
         name="seguridad del codigo",
         what="Busca patrones inseguros: consultas concatenadas, secretos, "
         "aleatoriedad debil",
-        # B101 es `assert`, que en un fichero de pruebas no es un problema sino
-        # la forma de escribirlas.
+        # Se juzga por HALLAZGOS y no por codigo de salida. Bandit sale con 1
+        # tambien cuando encuentra una supresion que funciono: con sentencias
+        # multilinea reporta el problema en una linea y la supresion va en otra,
+        # asi que avisa de ella *porque* surtio efecto. Es circular y no hay
+        # forma de evitarlo colocando mejor el comentario. Lo que importa es si
+        # queda algun hallazgo real, y eso se lee de su JSON.
         command=[
             "python", "-m", "bandit", "-q", "-r", ".",
-            "--skip", "B101",
+            # B101 es `assert`, que en pruebas es la forma de escribirlas.
+            # B608 lo sustituye `commons/test_sql_safety.py`, que comprueba QUE
+            # se interpola en cada consulta en vez de si se usa f-string. Mas
+            # estricta, no menos: la generica se silencia por linea y se olvida;
+            # la nuestra obliga a declarar cada caso en un sitio visible.
+            "--skip", "B101,B608",
             "--exclude", "./.venv,./build",
+            "-f", "json",
         ],
+        judge="bandit",
     ),
     Check(
         name="pruebas y propiedades",
@@ -82,11 +97,37 @@ def run(check: Check) -> tuple[bool, float]:
     # Los comandos son constantes de este modulo; no entra nada del exterior.
     result = subprocess.run(check.command, capture_output=True, text=True)  # nosec B603
     elapsed = time.monotonic() - start
+
+    if check.judge == "bandit":
+        ok, detalle = _judge_bandit(result.stdout)
+        if not ok:
+            sys.stdout.write(detalle)
+        return ok, elapsed
+
     ok = result.returncode == 0
     if not ok:
         sys.stdout.write(result.stdout)
         sys.stderr.write(result.stderr)
     return ok, elapsed
+
+
+def _judge_bandit(raw: str) -> tuple[bool, str]:
+    """Pasa si no queda ningun hallazgo, aunque el codigo de salida sea 1."""
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        return False, f"bandit no devolvio JSON:\n{raw[:500]}\n"
+
+    hallazgos = data.get("results", [])
+    if not hallazgos:
+        return True, ""
+
+    lineas = [
+        f"  [{h['issue_severity']}] {h['test_id']} {h['filename']}:{h['line_number']}"
+        f"\n      {h['issue_text']}"
+        for h in hallazgos
+    ]
+    return False, "\n".join(lineas) + "\n"
 
 
 def main() -> int:

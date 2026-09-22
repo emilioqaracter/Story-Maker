@@ -182,7 +182,7 @@ def related(
                  WHERE reach.depth < ?
           )
         SELECT DISTINCT id FROM reach
-    """  # nosec B608
+    """
 
     t = at.stamp
     rows = con.execute(sql, (*seeds, t, t, t, t, max_depth)).fetchall()

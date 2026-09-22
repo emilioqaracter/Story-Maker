@@ -26,7 +26,10 @@ from __future__ import annotations
 
 import json
 import shutil
-import subprocess
+
+# La lista de comandos se arma en este modulo y no entra nada del exterior:
+# el unico dato variable es la ruta que resuelve `shutil.which`.
+import subprocess  # nosec B404
 from collections.abc import Sequence
 from dataclasses import dataclass
 
