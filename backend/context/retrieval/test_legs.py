@@ -14,8 +14,9 @@ import pytest
 
 from canon.db import connection
 from commons.types.primitives import WorldTime
+from commons.types.vectors import cosine, pack_vector, unpack_vector
 from context.query.build import RetrievalRequest
-from context.retrieval.legs import cosine, lexical, pack_vector, semantic, unpack_vector
+from context.retrieval.legs import lexical, semantic
 
 DIM = 4
 

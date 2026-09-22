@@ -16,40 +16,16 @@ descartan por capitulo, lugar o instante y se puntua el resto, que es un punado.
 
 from __future__ import annotations
 
-import math
 import sqlite3
-import struct
 from collections.abc import Sequence
 
+from commons.types.vectors import cosine, unpack_vector
 from context.query.build import RetrievalRequest
 
 #: Cuantos fragmentos devuelve cada pierna antes de fusionar. Mas que los cupos
 #: a proposito: la fusion necesita margen para que aparecer en las dos listas
 #: signifique algo, y con listas de cinco casi todo coincide.
 LEG_SIZE = 30
-
-
-def pack_vector(values: Sequence[float]) -> bytes:
-    """Serializa un vector para guardarlo en la base."""
-    return struct.pack(f"<{len(values)}f", *values)
-
-
-def unpack_vector(blob: bytes) -> tuple[float, ...]:
-    return struct.unpack(f"<{len(blob) // 4}f", blob)
-
-
-def cosine(a: Sequence[float], b: Sequence[float]) -> float:
-    """Similitud de coseno, en Python.
-
-    Sin extension nativa (D-12): una obra da 600 a 1.200 fragmentos, y la
-    recuperacion filtra antes por metadatos, asi que el conjunto a puntuar es
-    todavia menor. Sobre esas cifras el recorrido exhaustivo es exacto e
-    inmediato, y un indice aproximado solo anadiria error.
-    """
-    num = sum(x * y for x, y in zip(a, b, strict=True))
-    na = math.sqrt(sum(x * x for x in a))
-    nb = math.sqrt(sum(y * y for y in b))
-    return 0.0 if na == 0 or nb == 0 else num / (na * nb)
 
 
 def _filter_clause(req: RetrievalRequest) -> tuple[str, list[object]]:

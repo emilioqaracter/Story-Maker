@@ -61,3 +61,29 @@ jobs:
       # va por calendario y no por commit.
       - name: Puerta completa
         run: python gate.py --full
+
+      # Pruebas de mutacion sobre los verificadores deterministas, y solo
+      # sobre ellos. Estropean el codigo a proposito --cambian un `<` por un
+      # `<=`-- y comprueban que alguna prueba se entera. Si nadie se entera,
+      # esa prueba no vale nada.
+      #
+      # Corren AQUI y no en la puerta local por dos motivos: tardan minutos, y
+      # la herramienta no funciona de forma nativa en Windows, que es donde se
+      # desarrolla. Este trabajo corre en Linux, asi que es su sitio.
+      - name: Mutacion sobre los verificadores
+        run: |
+          python -m mutmut run --max-children 4 || true
+          python -m mutmut results
+          python - <<'EOF'
+          import subprocess, sys, re
+          out = subprocess.run([sys.executable, "-m", "mutmut", "results"],
+                               capture_output=True, text=True).stdout
+          vivos = len(re.findall(r"survived", out))
+          muertos = len(re.findall(r"killed", out))
+          total = vivos + muertos
+          if total:
+              cobertura = muertos / total
+              print(f"cobertura de mutacion: {cobertura:.0%} ({muertos}/{total})")
+              # RF-50 pide 90 %. Se falla el trabajo por debajo.
+              sys.exit(0 if cobertura >= 0.90 else 1)
+          EOF

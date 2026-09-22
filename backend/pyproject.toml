@@ -111,3 +111,19 @@ forbidden_modules = [
 name = "Ninguna funcionalidad importa de otra funcionalidad"
 type = "independence"
 modules = ["planning", "context", "generation", "verification"]
+
+# ---------------------------------------------------------------- mutmut
+#
+# Pruebas de mutacion: estropean el codigo a proposito --cambian un `<` por un
+# `<=`-- y comprueban que alguna prueba se entera. Si nadie se entera, esa
+# prueba no vale nada.
+#
+# Acotadas a los verificadores deterministas, y solo a ellos. Son la red de
+# seguridad del sistema entero: un verificador cuyas pruebas no detectan su
+# ruptura es PEOR que no tener verificador, porque produce confianza falsa.
+# Exigirle el 90 % al resto del codigo costaria horas de maquina para proteger
+# cosas que, si se rompen, rompen una prueba normal.
+
+[tool.mutmut]
+paths_to_mutate = ["verification/checks/"]
+tests_dir = ["verification/checks/"]

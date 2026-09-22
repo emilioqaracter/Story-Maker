@@ -1,0 +1,270 @@
+"""Los verificadores deterministas del texto.
+
+RF-46 a RF-50. `architecture.md` §9.1. Corren **siempre antes que cualquier
+juez**: coste despreciable y cero falsos positivos si estan bien escritos.
+
+Todos devuelven defectos con **cita localizable**. Un defecto sin cita se
+descarta, y ademas el Reparador necesita saber que arreglar, no que algo esta
+mal.
+
+Estos siete son la red de seguridad del sistema entero, y por eso son los unicos
+a los que se les exige cobertura de mutacion: un verificador cuyas pruebas no
+detectan su ruptura es **peor** que no tener verificador, porque produce
+confianza falsa.
+"""
+
+from __future__ import annotations
+
+import re
+import unicodedata
+from collections.abc import Sequence
+
+from commons.types.primitives import Defect, Evidence, Severity
+
+
+def _cite(text: str, needle: str) -> Evidence:
+    """Cita con su posicion. Si no se encuentra, cita el principio.
+
+    Nunca devuelve una cita vacia: un defecto sin evidencia se descarta, asi que
+    un verificador que no sepa citar seria un verificador que no sirve.
+    """
+    pos = text.find(needle)
+    if pos < 0:
+        return Evidence(quote=text[:80] or needle, offset=0)
+    return Evidence(quote=needle, offset=pos)
+
+
+def _normalize(word: str) -> str:
+    """Minuscula y sin tildes, para comparar terminos.
+
+    En espanol hace falta: "el Chino" y "el chino" son el mismo nombre para un
+    lector y dos cadenas distintas para un `in`.
+    """
+    sin_tildes = unicodedata.normalize("NFD", word.lower())
+    return "".join(c for c in sin_tildes if unicodedata.category(c) != "Mn")
+
+
+# ------------------------------------------------------------ check.timeline
+
+_DATE = re.compile(r"\b(\d{1,2})\s+de\s+([a-zA-Zñáéíóú]+)\b|\b(\d{4}-\d{2}-\d{2})\b")
+
+
+def check_timeline(text: str, *, allowed_dates: Sequence[str]) -> list[Defect]:
+    """Fechas mencionadas frente al calendario de la obra.
+
+    Solo marca fechas en formato explicito: una fecha escrita en prosa
+    --"el martes siguiente"-- no se puede contrastar sin entender el texto, y
+    eso es trabajo del Continuista, no de un verificador determinista.
+    """
+    permitidas = {_normalize(d) for d in allowed_dates}
+    out: list[Defect] = []
+    for match in _DATE.finditer(text):
+        mencion = match.group(0)
+        if _normalize(mencion) not in permitidas:
+            out.append(
+                Defect(
+                    kind="check.timeline",
+                    severity=Severity.S1,
+                    evidence=_cite(text, mencion),
+                    rule=f"la fecha {mencion!r} no esta en el calendario de la obra",
+                )
+            )
+    return out
+
+
+# -------------------------------------------------------------- check.ledger
+
+def check_ledger(text: str, *, expected_score: str, team_names: Sequence[str]) -> list[Defect]:
+    """El marcador narrado cuadra con el que resolvio el motor de reglas.
+
+    Marca **S1** toda cifra narrada que no cuadre: un marcador equivocado
+    contradice el canon y rompe la clasificacion de toda la temporada, no es un
+    matiz de estilo.
+    """
+    marcadores = re.findall(r"\b(\d{1,2})\s*[-a]\s*(\d{1,2})\b", text)
+    esperado = tuple(expected_score.split("-"))
+    out: list[Defect] = []
+    for local, visitante in marcadores:
+        if (local, visitante) != esperado:
+            out.append(
+                Defect(
+                    kind="check.ledger",
+                    severity=Severity.S1,
+                    evidence=_cite(text, f"{local}-{visitante}"),
+                    rule=f"el encuentro acabo {expected_score}, no {local}-{visitante}",
+                )
+            )
+    return out
+
+
+# -------------------------------------------------------- check.availability
+
+def check_availability(
+    text: str, *, unavailable: Sequence[tuple[str, str]]
+) -> list[Defect]:
+    """Nadie actua estando indisponible en esa fecha (DEP-I2).
+
+    `unavailable` son pares (nombre, motivo). Se pasa ya resuelto porque quien
+    sabe quien estaba lesionado es el canon, y este modulo no abre la base.
+    """
+    plano = _normalize(text)
+    return [
+        Defect(
+            kind="check.availability",
+            severity=Severity.S1,
+            evidence=_cite(text, nombre),
+            rule=f"{nombre} esta {motivo} en esa fecha y no puede aparecer actuando",
+        )
+        for nombre, motivo in unavailable
+        if _normalize(nombre) in plano
+    ]
+
+
+# -------------------------------------------------------------- check.format
+
+_FIRST_PERSON = re.compile(r"\b(yo|me|mi|conmigo|nosotros|nuestro)\b", re.IGNORECASE)
+_PRESENT_HINT = re.compile(r"\b\w+(amos|emos|imos)\b", re.IGNORECASE)
+
+
+def check_format(
+    text: str, *, person: str = "tercera", word_range: tuple[int, int] | None = None
+) -> list[Defect]:
+    """Persona, tiempo verbal y longitud.
+
+    La longitud es S2 y no S1 a proposito: una escena larga de mas degrada el
+    ritmo pero no contradice nada. La persona equivocada si es S1, porque rompe
+    el punto de vista unico, que es una invariante estructural.
+    """
+    out: list[Defect] = []
+
+    if person == "tercera":
+        primera = _FIRST_PERSON.search(text)
+        # El dialogo va en primera persona con toda naturalidad: solo se marca
+        # fuera de comillas, o el verificador dispararia en cada conversacion.
+        if primera and not _inside_quotes(text, primera.start()):
+            out.append(
+                Defect(
+                    kind="check.format",
+                    severity=Severity.S1,
+                    evidence=_cite(text, primera.group(0)),
+                    rule="la narracion es en tercera persona; esto esta en primera "
+                    "y fuera de dialogo",
+                )
+            )
+
+    if word_range is not None:
+        palabras = len(text.split())
+        low, high = word_range
+        if not low <= palabras <= high:
+            out.append(
+                Defect(
+                    kind="check.format",
+                    severity=Severity.S2,
+                    evidence=Evidence(quote=text[:80], offset=0),
+                    rule=f"la escena tiene {palabras} palabras y el rango es {low}-{high}",
+                )
+            )
+    return out
+
+
+def _inside_quotes(text: str, position: int) -> bool:
+    """Si una posicion cae dentro de un dialogo.
+
+    Cuenta las aperturas antes de esa posicion: en numero impar, esta dentro.
+    Cubre comillas latinas, inglesas y raya de dialogo, que es como se escribe
+    dialogo en espanol.
+    """
+    antes = text[:position]
+    if antes.count("«") > antes.count("»"):
+        return True
+    if antes.count('"') % 2 == 1:
+        return True
+    ultima_linea = antes.rsplit("\n", 1)[-1]
+    return ultima_linea.lstrip().startswith(("—", "-"))
+
+
+# ---------------------------------------------------------- check.repetition
+
+def check_repetition(
+    text: str, *, frozen_ngrams: Sequence[str], proscribed: Sequence[str], n: int = 4
+) -> list[Defect]:
+    """N-gramas ya usados en prosa congelada, y terminos proscritos.
+
+    Los dos son **S2**: repetir una imagen degrada la calidad sin contradecir
+    nada. Marcarlos S1 pararia el capitulo por algo que el Estilista arregla en
+    un pase.
+    """
+    out: list[Defect] = []
+    palabras = [_normalize(w) for w in re.findall(r"\w+", text)]
+    presentes = {" ".join(palabras[i : i + n]) for i in range(len(palabras) - n + 1)}
+
+    for ngrama in frozen_ngrams:
+        if _normalize(ngrama) in presentes:
+            out.append(
+                Defect(
+                    kind="check.repetition",
+                    severity=Severity.S2,
+                    evidence=_cite(text, ngrama),
+                    rule=f"la secuencia {ngrama!r} ya se uso en prosa congelada",
+                )
+            )
+
+    plano = _normalize(text)
+    out.extend(
+        Defect(
+            kind="check.repetition",
+            severity=Severity.S2,
+            evidence=_cite(text, termino),
+            rule=f"{termino!r} esta en la lista de proscripcion",
+        )
+        for termino in proscribed
+        if _normalize(termino) in plano
+    )
+    return out
+
+
+# ------------------------------------------------------------- check.lexicon
+
+def check_lexicon(text: str, *, known_names: Sequence[str], candidates: Sequence[str]) -> list[Defect]:
+    """Nombres propios que no estan en el canon.
+
+    `candidates` son los nombres que aparecen en el texto, ya extraidos. Se pasa
+    resuelto porque extraerlos bien exige analisis morfologico, y este modulo
+    tiene que poder comprobarse sin dependencias pesadas.
+    """
+    conocidos = {_normalize(n) for n in known_names}
+    return [
+        Defect(
+            kind="check.lexicon",
+            severity=Severity.S1,
+            evidence=_cite(text, nombre),
+            rule=f"{nombre!r} no es una entidad del canon ni un alias vigente",
+        )
+        for nombre in candidates
+        if _normalize(nombre) not in conocidos
+    ]
+
+
+# ----------------------------------------------------------- check.knowledge
+
+def check_knowledge(
+    text: str, *, pov_knows: Sequence[str], mentioned_facts: Sequence[tuple[str, str]]
+) -> list[Defect]:
+    """Menciones de hechos que el POV todavia no conoce (PER-I1).
+
+    `mentioned_facts` son pares (clave del hecho, cita en el texto), ya
+    extraidos. **S1 siempre**: que un personaje sepa algo que no puede saber no
+    es un desliz de estilo, es una contradiccion del canon, y ademas de las que
+    un lector detecta.
+    """
+    sabe = set(pov_knows)
+    return [
+        Defect(
+            kind="check.knowledge",
+            severity=Severity.S1,
+            evidence=_cite(text, cita),
+            rule=f"el POV no conoce {clave!r} en este instante",
+        )
+        for clave, cita in mentioned_facts
+        if clave not in sabe
+    ]
