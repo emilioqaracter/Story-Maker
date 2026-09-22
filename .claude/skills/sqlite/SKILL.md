@@ -15,7 +15,7 @@ El esquema vive en `backend/canon/`, que es la funcionalidad dueña de los cinco
 
 Sin servidor. La tirada entera cabe en un fichero, y copiarlo es copiar el estado completo: eso es lo que hace reproducible una tirada, y lo que sirve al conjunto dorado (CAL-10) y a los evals (VER-10).
 
-No hay concurrencia entre tiradas. Dentro de una, **el Archivero es el único que escribe canon**, y solo al congelar un capítulo. Todo lo demás abre en solo lectura (VER-11).
+No hay concurrencia entre tiradas. Dentro de una, **el Archivero es el único que escribe canon**, y solo al congelar un capítulo. El estado efímero es otra cosa: las tablas `wm_*` las escribe quien produce ese estado, por una fábrica de conexión distinta que tiene prohibido nombrar cualquier tabla sin ese prefijo (`architecture.md` §3.2). Todo lo demás abre en solo lectura (VER-11).
 
 ## 2. Cinco almacenes, una base
 

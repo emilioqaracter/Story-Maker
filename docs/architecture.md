@@ -110,12 +110,12 @@ backend/
 | Carpeta | Agentes de §6 | Skills de §5 |
 |---|---|---|
 | `orchestration/` | 0 Orquestador | Presupuestos, admisión CTX-20, recuento de reintentos |
-| `planning/` | 1 Arquitecto, 2 Planificador | `outline.plan`, `outline.check`, `scene.spec`, `replan.arc` |
+| `planning/` | 1 Arquitecto, 2 Planificador | `outline.plan`, `outline.check`, `scene.spec`, `replan.arc`, `setup.ledger` |
 | `context/` | 3 Documentalista | `context.*` |
 | `generation/` | 4 Escritor, 5 Especialista deportivo | `scene.write`, `match.simulate`, `match.narrate` |
 | `verification/` | 6 Continuista, 7 Jurado, 8 Reparador, 9 Estilista | `check.*`, `*.audit`, `revise.targeted`, `style.*` |
 | `canon/` | 10 Archivero, 11 Árbitro | `canon.*`, `prose.*`, `delta.extract`, `summarize.hierarchical`, `retcon.propose` |
-| `supervision/` | 12 Supervisor | `setup.ledger`, `metrics.report` |
+| `supervision/` | 12 Supervisor | `metrics.report`. **Lee** `setup.ledger` de `planning/` |
 
 #### Frontend
 
@@ -211,6 +211,20 @@ Todo lo que el sistema sostiene mientras produce un capítulo y que **no es verd
 2. **Se purga al congelar** (PRO-I1). La prosa aprobada pasa al índice; defectos, veredictos y cola desaparecen.
 3. **Lo que se purga no se pierde: se traza.** §11 exige conservar defectos, puntuaciones y arbitrajes, y eso es trabajo de la observabilidad (VER-09), no del fichero de la novela. **SQLite guarda lo que es verdad; la traza guarda lo que pasó.** Duplicarlo en tablas históricas haría crecer el fichero con material que ya nadie consulta.
 
+**Quién escribe cada tabla, y por qué eso obliga a separar las fábricas de conexión.**
+
+Las cinco tablas no tienen una funcionalidad dueña, y no es un descuido: cada una la escribe quien produce ese estado. `orchestration/` escribe `run_state` y `admission`, `generation/` escribe `draft`, `verification/` escribe `defect` y `verdict`.
+
+Eso choca de frente con la regla de que la escritura a la base solo sale de `canon/` (§2.3). La salida no es relajar esa regla, porque es la que protege el canon, sino **separar dos escrituras que solo comparten fichero por comodidad**:
+
+| Fábrica | Dónde vive | Quién la importa | Qué puede tocar |
+|---|---|---|---|
+| **Escritura de canon** | `canon/db/` | Solo `canon/` | Todo menos `wm_*`. En la práctica, solo la congelación |
+| **Escritura de memoria de trabajo** | `commons/db/` | Cualquier funcionalidad | **Solo** tablas con prefijo `wm_` |
+| **Lectura** | `canon/db/` | Cualquiera, por la excepción de lectura de §2.3 | Todo, sin escribir |
+
+El prefijo `wm_` no es una convención de nombres: es lo que hace **comprobable** la separación. Que la fábrica de memoria de trabajo no nombre jamás una tabla sin ese prefijo es un patrón de análisis estático en la puerta de CI, igual que la regla de imports. Sin eso, «el canon solo lo escribe la congelación» sería una promesa y no un invariante.
+
 **Por qué en SQLite y no en memoria del proceso.** `AGENTS.md` §3.2 promete que copiar el fichero es copiar el estado completo, y de ahí salen la reproducibilidad de una tirada, el conjunto dorado (CAL-10) y los evals (VER-10). Con el estado de trabajo en el proceso esa promesa deja de ser cierta, y una caída en el capítulo 28 se lleva el capítulo entero.
 
 
@@ -230,7 +244,8 @@ La congelación (CAN-12) es el único momento en que el índice de prosa crece, 
 5. Recalcular las proyecciones del canon estructurado y del grafo.
 6. Insertar las filas de escena y de fragmento con sus vectores y sus entradas de FTS5.
 7. Escribir los resúmenes en su almacén y regenerar los de nivel superior que toque, según §4.5.
-8. Purgar la memoria de trabajo del capítulo (PRO-I1).
+8. **Insertar en la lista de proscripción** (POE-12) los n-gramas e imágenes que este capítulo hace repetidos, según §4.6.
+9. Purgar la memoria de trabajo del capítulo (PRO-I1).
 
 La razón de partirlo en dos mitades es que la red y la transacción no se llevan bien: una transacción abierta esperando a un proveedor externo bloquea el fichero durante segundos y deja el estado a medias si el proceso cae. Con este orden, un fallo de red no deja rastro y un fallo de escritura revierte entero.
 
@@ -439,10 +454,12 @@ Esto es lo que mantiene la memoria completa dentro de 100.000 tokens cuando la n
 
 - **Anclas fijas** en toda llamada: guía de estilo condensada e invariantes.
 - **Huella estilística (POE-13)** por capítulo: longitud media y varianza de frase, ratio adjetivo/sustantivo, n-gramas de 4 más frecuentes, riqueza léxica. Se compara contra la referencia de los primeros capítulos congelados. Desviación sostenida dispara un pase de estilo automático.
-- **Lista de proscripción dinámica**: todo n-grama o imagen usado dos veces entra automáticamente en POE-12.
+- **Lista de proscripción dinámica**: todo n-grama o imagen usado dos veces entra automáticamente en POE-12. **La inserta la congelación**, dentro de su transacción (§3.3), no el verificador que lo detecta: `check.repetition` opera sobre borradores, y proscribir un término desde un borrador significaría condicionar toda la obra por un texto que aún puede acabar en cuarentena. La lista es una proyección de la prosa congelada, igual que el índice.
 - **Muestra modélica rotativa**: un fragmento congelado de alta puntuación, distinto del inmediatamente anterior, para que la referencia de voz no sea siempre la última salida del propio sistema (POE-14).
 
 ### 4.7 Aislamiento (CTX-11)
+
+**Cómo se comprueba**, porque hasta aquí era una intención sin forma de verificarse: el paquete se construye siempre desde cero en `context/` y **nunca se muta ni se reutiliza entre llamadas**. No hace falta un módulo de aislamiento; hace falta que el ensamblador sea una función pura de su petición y del canon, y eso es una propiedad comprobable. Si dos llamadas comparten un objeto de paquete, el aislamiento ya está roto aunque nadie lo note.
 
 Cada agente corre en su propia ventana limpia y devuelve solo salida estructurada. El Escritor nunca ve los informes de defectos de otros capítulos, el Juez nunca ve el paquete del Escritor y el Archivero nunca ve las rúbricas. Es lo que permite que trece agentes trabajen sobre una novela de 200.000 palabras sin que ninguno necesite acercarse al techo de 100.000; once consumen ventana, porque el Orquestador y el Documentalista son código.
 

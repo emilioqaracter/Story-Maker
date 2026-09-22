@@ -93,9 +93,9 @@ Una fila por funcionalidad de `architecture.md` §2.3. Las funcionalidades son c
 
 | Carpeta | Función en la versión 1 | Agentes |
 |---|---|---|
-| `commons/` | Puerto de proveedor con `complete` y `embed`, contador de tokens, tipos compartidos por dos o más funcionalidades | — |
+| `commons/` | Puerto de proveedor con `complete` y `embed`, contador de tokens, fábrica de escritura de memoria de trabajo, cliente de trazas, y tipos compartidos por dos o más funcionalidades | — |
 | `orchestration/` | Bucle de capítulo y de escena, admisión CTX-20, reintentos, punto de reanudación, despacho y validación de salidas. Además compone la aplicación FastAPI montando el router de cada funcionalidad | 0 |
-| `planning/` | Escaleta de obra, verificación estructural, especificación de escenas, registro de setups | 1, 2 |
+| `planning/` | Escaleta de obra, verificación estructural, especificación de escenas, registro de setups, puerta de cierre de acto y replanificación | 1, 2 |
 | `context/` | Construcción de la consulta, ensamblaje del paquete según la receta del agente destino, compactación y auditoría | 3 |
 | `generation/` | Prosa de escena; simulación y narración de encuentros | 4, 5 |
 | `verification/` | Verificadores deterministas; revisión de continuidad; reparación dirigida | 6, 8 |
@@ -183,7 +183,7 @@ Requisitos transversales de la API:
 ### 3.3 Persistencia
 
 - **RI-14** Un fichero SQLite por novela, en el directorio de la tirada. Copiar el fichero es copiar el estado completo, vectores incluidos.
-- **RI-15** Dos fábricas de conexión: lectura y escritura. La de escritura solo es importable desde `canon/` (RD-09).
+- **RI-15** Tres fábricas de conexión: lectura, escritura de canon y escritura de memoria de trabajo (RD-09). La separación es comprobable por análisis estático, no una convención de nombres: es lo que convierte «el canon solo lo escribe la congelación» en un invariante.
 
 ### 3.4 Observabilidad
 
@@ -327,6 +327,7 @@ El corazón de la versión 1 y donde vive el RAG híbrido. Todo lo de esta secci
 | RF-35 | `context.audit` comprueba antes de la llamada: no hay dos versiones del mismo hecho (CTX-15), todo el elenco activo tiene ficha, las anclas están completas, el total no excede el presupuesto, y cada fragmento tiene cupo y procedencia | `architecture.md` §4.4 | VER-05 |
 | RF-36 | Si `context.audit` detecta un conflicto de hechos, no se genera: el Documentalista llama al Árbitro, incorpora la afirmación vigente y vuelve a auditar | `architecture.md` §6.2, §7.2 | VER-05 |
 | RF-37 | La memoria de trabajo (PRO-13) nunca entra en un paquete. Un borrador rechazado no llega al Escritor | `architecture.md` §3.2 | VER-05 |
+| RF-109 | El ensamblador de paquetes es una función pura de su petición y del canon: construye cada paquete desde cero y **nunca lo muta ni lo reutiliza entre llamadas**. Es la forma comprobable del aislamiento (CTX-11), y no requiere módulo propio | CTX-11; `architecture.md` §4.7 | VER-03, VER-06 |
 | RF-39 | Cada paquete lleva versión propia y recuento real por bloque, que se traza junto con el cupo y la procedencia de cada fragmento | CTX-03, PRO-08 | VER-09 |
 
 ### 4.6 `generation/` · prosa y encuentros (paso 4)
@@ -360,7 +361,7 @@ El corazón de la versión 1 y donde vive el RAG híbrido. Todo lo de esta secci
 |---|---|---|---|
 | RF-55 | El Archivero extrae el delta canónico del capítulo aprobado con el paquete de §4.9, dentro de 24.500 de entrada y 5.000 de salida. Todo evento del delta lleva procedencia `prose` o `derived` y su capítulo de origen | `architecture.md` §4.9, §10 | VER-12, VER-08 |
 | RF-56 | El delta se propone y se valida contra el canon vigente; nunca se aplica en bruto | `architecture.md` §10 | VER-05, VER-18 |
-| RF-57 | La congelación aplica eventos, recalcula proyecciones, escribe el índice y sus vectores, guarda los resúmenes y purga la memoria de trabajo en una sola transacción. Tras congelar no queda ninguna fila de memoria de trabajo del capítulo | PRO-I1; `architecture.md` §3.3 | VER-06 |
+| RF-57 | La congelación aplica eventos, recalcula proyecciones, escribe el índice y sus vectores, guarda los resúmenes, inserta en la lista de proscripción (RF-108) y purga la memoria de trabajo en una sola transacción. Tras congelar no queda ninguna fila de memoria de trabajo del capítulo | PRO-I1; `architecture.md` §3.3 | VER-06 |
 | RF-58 | La congelación es la única operación que escribe canon y solo `canon/` la ejecuta | `architecture.md` §10 | VER-02, VER-05 |
 | RF-59 | Con contradicción, el Árbitro aplica la precedencia PRO-10 con el paquete de §4.9: canon congelado sobre delta nuevo; brief sobre canon derivado; invariante duro sobre preferencia estética; hecho con payoff cobrado sobre hecho sin cobrar. Todo arbitraje se registra con la regla aplicada | `architecture.md` §8, §10 | VER-04, VER-05 |
 | RF-60 | En la versión 1, si el canon previo gana, el delta se rechaza y el capítulo vuelve al Reparador con la contradicción como defecto S1. El retcon no está implementado | `architecture.md` §8, §10 | VER-05 |
@@ -368,6 +369,7 @@ El corazón de la versión 1 y donde vive el RAG híbrido. Todo lo de esta secci
 | RF-62 | Fusionar dos deltas canónicos es asociativo | `verification.md` §4.6 | VER-06 |
 | RF-63 | El Árbitro atiende dos entradas: la del Orquestador al validar el delta y la del Documentalista desde `context.audit`. Su presupuesto es 17.500 de entrada y 2.000 de salida | `architecture.md` §4.2, §6.2 | VER-12 |
 | RF-90 | Los resúmenes de escena y de capítulo se generan al congelar, según `architecture.md` §4.5. El de escena es lo que se embebe en el nivel de escena del índice | `architecture.md` §3.3, §4.5 | VER-05 |
+| RF-108 | La lista de proscripción (POE-12) la **inserta la congelación**, dentro de su transacción. `check.repetition` detecta, no inserta: opera sobre borradores, y proscribir desde un borrador condicionaría la obra por un texto que aún puede acabar en cuarentena | `architecture.md` §3.3, §4.6; POE-12 | VER-05, VER-06 |
 
 ### 4.9 Rutas HTTP (dentro de cada funcionalidad)
 
@@ -429,7 +431,8 @@ Un fichero SQLite por novela, sin extensiones nativas. Separación lógica de lo
 | RD-17 | La similitud se calcula en Python sobre el conjunto ya filtrado por metadatos. No se carga ninguna extensión vectorial de SQLite | `architecture.md` §3.1 | VER-02, VER-05 |
 | RD-07 | Tablas de memoria de trabajo `wm_run_state`, `wm_draft`, `wm_defect`, `wm_verdict`, `wm_admission`. `wm_verdict` se crea aunque la versión 1 no tenga Jurado, para que el fichero sea completo | PRO-13 | VER-05 |
 | RD-08 | Ninguna consulta de `canon.*` ni de `prose.*` nombra una tabla `wm_*` | `architecture.md` §3.2 | VER-02 |
-| RD-09 | La fábrica de conexión de escritura solo es importable desde `canon/`; una conexión de lectura no puede escribir | `architecture.md` §2.3 | VER-02, VER-05 |
+| RD-09 | Hay **dos** fábricas de escritura. La de canon vive en `canon/db/`, solo es importable desde `canon/` y tiene prohibido tocar tablas `wm_*`. La de memoria de trabajo vive en `commons/db/`, la importa cualquier funcionalidad y **solo** puede nombrar tablas con prefijo `wm_`. Una conexión de lectura no escribe | `architecture.md` §2.3, §3.2 | VER-02, VER-05 |
+| RD-18 | Cada tabla de memoria de trabajo la escribe quien produce ese estado: `orchestration/` las de `run_state` y `admission`, `generation/` la de `draft`, `verification/` las de `defect` y `verdict`. Ninguna otra funcionalidad las escribe | `architecture.md` §3.2 | VER-02, VER-05 |
 | RD-10 | El fichero lleva versión de esquema. Abrir una versión anterior migra hacia adelante en escritura; abrir una desconocida falla | Skill `sqlite` §6 | VER-05 |
 | RD-11 | Ninguna consulta se construye concatenando texto. Todo valor va como parámetro | `verification.md` §4.2 | VER-02 |
 | RD-12 | Abrir una copia del fichero devuelve las mismas proyecciones y la misma recuperación que el original | `AGENTS.md` §3.2 | VER-05 |
@@ -499,11 +502,11 @@ Un fichero SQLite por novela, sin extensiones nativas. Separación lógica de lo
 | Método | Requisitos que cubre como método principal |
 |---|---|
 | VER-01 Type checking | RF-02, RF-21, RF-29, RF-64, RNF-16 |
-| VER-02 Static analysis | RF-58, RF-64, RF-96, RD-08, RD-09, RD-11, RD-17, RNF-10, RNF-15, RNF-21 |
-| VER-03 Symbolic execution | RNF-18: proyecciones, calendario, clasificación, corte de fragmentos, fusión y empaquetador |
+| VER-02 Static analysis | RF-58, RF-64, RF-96, RD-08, RD-09, RD-11, RD-17, RD-18, RNF-10, RNF-15, RNF-21 |
+| VER-03 Symbolic execution | RF-109; RNF-18: proyecciones, calendario, clasificación, corte de fragmentos, fusión y empaquetador |
 | VER-04 Formal verification | RF-59, RF-61 |
-| VER-05 Unit e integration | RF-01, RF-10, RF-11, RF-12, RF-15, RF-27, RF-30, RF-34, RF-35, RF-36, RF-37, RF-41, RF-48, RF-49, RF-52, RF-56, RF-60, RF-65, RF-66, RF-67, RF-68, RF-71, RF-72, RF-73, RF-74, RF-75, RF-78, RF-79, RF-80, RF-81, RF-82, RF-87, RF-88, RF-89, RF-90, RF-91, RF-92, RF-93, RF-95, RF-98, RF-99, RF-101, RF-102, RF-103, RF-104, RF-105, RF-106, RD-01, RD-02, RD-06, RD-07, RD-10, RD-12, RD-13, RD-14, RD-15, RNF-05, RNF-07, RNF-09, RNF-17, RNF-22 |
-| VER-06 Property-based | RF-03 a RF-09, RF-14, RF-16, RF-20, RF-31, RF-32, RF-33, RF-42, RF-43, RF-47, RF-57, RF-62, RF-69, RF-70, RF-76, RF-77, RF-83, RF-84, RF-85, RF-86, RF-93, RF-94, RF-97, RF-103, RF-104, RD-03, RD-04, RD-05, RD-16, RNF-04, RNF-06, RNF-08, RNF-19, RNF-23, RNF-25 |
+| VER-05 Unit e integration | RF-01, RF-10, RF-11, RF-12, RF-15, RF-27, RF-30, RF-34, RF-35, RF-36, RF-37, RF-41, RF-48, RF-49, RF-52, RF-56, RF-60, RF-65, RF-66, RF-67, RF-68, RF-71, RF-72, RF-73, RF-74, RF-75, RF-78, RF-79, RF-80, RF-81, RF-82, RF-87, RF-88, RF-89, RF-90, RF-91, RF-92, RF-93, RF-95, RF-98, RF-99, RF-101, RF-102, RF-103, RF-104, RF-105, RF-106, RF-108, RD-01, RD-02, RD-06, RD-07, RD-10, RD-12, RD-13, RD-14, RD-15, RNF-05, RNF-07, RNF-09, RNF-17, RNF-22 |
+| VER-06 Property-based | RF-03 a RF-09, RF-14, RF-16, RF-20, RF-31, RF-32, RF-33, RF-42, RF-43, RF-47, RF-57, RF-62, RF-69, RF-70, RF-76, RF-77, RF-83, RF-84, RF-85, RF-86, RF-93, RF-94, RF-97, RF-103, RF-104, RF-108, RF-109, RD-03, RD-04, RD-05, RD-16, RNF-04, RNF-06, RNF-08, RNF-19, RNF-23, RNF-25 |
 | VER-07 Mutation | RF-46, RF-50 |
 | VER-08 Contract | RI-08, RI-11, RI-21, RI-24, RF-28, RF-55, RF-64 |
 | VER-09 Observability | RI-12, RI-16, RI-23, RF-24, RF-39, RF-100, RNF-13, RNF-14, RNF-19, RNF-20, RNF-24 |
@@ -589,6 +592,10 @@ Ninguna introduce un término ni un número nuevo. Todas eligen entre formas de 
 | D-11 | Langfuse caído | Encolar en local y continuar | La observabilidad observa, no gobierna |
 | D-12 | Búsqueda vectorial | Vectores en tabla y similitud en Python, sin extensión | 200 a 400 escenas y 600 a 1.200 fragmentos por obra: el recorrido exhaustivo es exacto e inmediato. El fichero sigue siendo un SQLite corriente |
 | D-13 | Cuándo se calculan los embeddings | Al congelar, desde la versión 1 | Evita que el afinado del paso 8 reindexe la novela entera |
+| D-30 | Dueño de la memoria de trabajo | Dos fábricas de escritura: canon en `canon/db/`, memoria de trabajo en `commons/db/` acotada a `wm_*` | Son dos escrituras distintas que comparten fichero por comodidad. Relajar la regla de `canon/` para que quepa el estado efímero habría desprotegido lo único que esa regla existe para proteger |
+| D-31 | Dueño de `setup.ledger` | `planning/`, no `supervision/` | `planning/` planta los setups al escribir la escaleta y los cobra al especificar escenas. Y el Supervisor no existe en la v1, así que dejarlo ahí era dejar la deuda narrativa sin nadie justo donde hace falta. Corrige `architecture.md` §2.3 |
+| D-32 | Quién inserta en la lista de proscripción | La congelación, en su transacción | La lista es una proyección de la prosa congelada. Insertarla desde el verificador la alimentaría con borradores que pueden acabar en cuarentena |
+| D-33 | Forma del aislamiento | Una propiedad sobre el ensamblador, no un módulo | Si el paquete se construye desde cero y no se muta, el aislamiento se cumple por construcción y se comprueba. Un módulo de aislamiento sería una pieza que vigila algo que no debería poder ocurrir |
 | D-29 | Modelo de embeddings | `intfloat/multilingual-e5-large`, 1024 dimensiones | Se elige por su entrenamiento, no por tamaño: es de recuperación y los otros candidatos multilingües de `fastembed` son de paráfrasis. Aquí la consulta es una especificación de escena y el resultado son fragmentos de prosa, que es recuperación asimétrica |
 | D-23 | Modelo de los once agentes | Claude Haiku 4.5 para todos | Decisión de coste del autor. Cierra la decisión abierta nº 8. El puerto sigue permitiendo modelos distintos por rol si la medición lo pidiera |
 | D-24 | Tamaño del ancla | Crece de 2.000 a 4.500 y pasa a ser prefijo cacheable | Haiku no cachea por debajo de 4.096 y no avisa. Por debajo del mínimo, comprimir el ancla es una economía falsa: 4.500 cacheados salen varias veces más baratos que 2.000 sin cachear, y el ancla viaja en todas las llamadas |

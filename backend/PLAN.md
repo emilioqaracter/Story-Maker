@@ -44,7 +44,7 @@ Están aquí porque las diez producen código que **funciona en la demo y falla 
 
 1. **`tiktoken` crudo.** Infracuenta en español. Todo lo que devuelve va multiplicado por el factor y redondeado hacia arriba. Un solo sitio que lo llame directo rompe el techo (RI-20).
 2. **Algo voluble delante del prefijo cacheable.** Una marca de tiempo, un identificador de tirada, un contador de intento. El caché casa por prefijo: un byte distinto y se pierde la llamada entera, sin error (RF-103).
-3. **La conexión de escritura fuera de `canon/`.** Ponla en `canon/db/` desde el principio; si vive en `commons/` alguien la importará (RD-09).
+3. **Confundir las dos fábricas de escritura.** La de canon vive en `canon/db/` y no sale de ahí; la de memoria de trabajo vive en `commons/db/` y **solo** puede nombrar tablas `wm_*`. Usar la de canon para guardar un borrador desprotege lo único que esa regla existe para proteger (RD-09, RD-18).
 4. **Proyecciones que dependen del orden de inserción.** Ordena siempre por `(world_time, world_seq, id)`. La propiedad que lo detecta va en el tramo 1, no después (RD-03, RF-04).
 5. **Fragmentos que cruzan la frontera de su escena.** Rompe el filtrado por metadatos, que es lo que hace barata la recuperación (RD-16, RF-70).
 6. **Truncar.** Ni un fragmento, ni un paquete, ni un resultado de herramienta. Se sustituye por resumen o se niega (RF-84, RF-94).
@@ -75,13 +75,18 @@ commons/
 │   ├── counter.py        · tiktoken × factor, redondeo hacia arriba
 │   ├── factors.py        · un factor por modelo; sin factor, no se admite
 │   └── calibration.py    · llamada de calibración al arrancar
+├── db/
+│   └── working_memory.py · fábrica de escritura acotada a tablas wm_*
+├── tracing/
+│   ├── langfuse.py    · un span por llamada
+│   └── queue.py       · cola local para cuando Langfuse no responde
 └── types/                · artefactos que cruzan dos o más funcionalidades
     ├── outline.py  scene_spec.py  context_package.py
     ├── defect.py   canon_delta.py  arbitration.py
     └── prose.py
 ```
 
-| Requisitos | RI-11 a RI-13, RI-20 a RI-22, RI-24, RNF-16, RNF-19 |
+| Requisitos | RI-11 a RI-13, RI-15, RI-20 a RI-22, RI-24, RD-09, RD-18, RNF-13, RNF-16, RNF-19 |
 |---|---|
 | **Puerta** | `mypy --strict` limpio; el contador contrastado contra un `usage` de doble |
 
@@ -92,18 +97,20 @@ commons/
 ```
 canon/
 ├── db/
-│   ├── connection.py     · dos fábricas: lectura y escritura. La de escritura NO sale de aquí
+│   ├── connection.py     · lectura, y escritura DE CANON. Esta última no sale de aquí
 │   ├── schema.sql        · las tablas de los cinco almacenes
 │   ├── triggers.sql      · abortan UPDATE y DELETE sobre event
 │   └── migrations/       · versión de esquema; hacia delante en escritura
 ├── events/               · inserción y lectura del registro
 ├── projections/          · entity, alias, attribute, relation, knowledge, competence, document_version
 ├── graph/                · recorrido recursivo sobre aristas vigentes
-└── skills/
-    ├── query.py  state_at.py  knowledge_of.py  related.py
+├── skills/
+│   ├── query.py  state_at.py  knowledge_of.py  related.py
+├── brief.py               · carga el brief como eventos al crear el fichero
+└── routes.py              · POST /novels; GET de capítulos y estado del mundo
 ```
 
-| Requisitos | RD-01 a RD-17, RF-01 a RF-11, RF-67 |
+| Requisitos | RD-01 a RD-18, RF-01 a RF-11, RF-67, RI-01, RI-04 a RI-06 |
 |---|---|
 | **Puerta** | Independencia del orden de inserción; reconstruibilidad desde cero; vigencia correcta en cualquier instante |
 
@@ -119,10 +126,11 @@ planning/
 ├── scene_spec/           · conversión de tramo a especificaciones
 ├── ledger/               · registro de setups y su máquina de estados
 ├── act_gate/             · puerta de cierre de acto
+├── replan/               · replan.arc: recalcula un tramo tras un bloqueo
 └── routes.py             · GET /novels/{id}/debt
 ```
 
-| Requisitos | RF-25 a RF-31, RF-105, RF-106 |
+| Requisitos | RF-25 a RF-31, RF-105, RF-106; RF-19 en su parte de replanificación |
 |---|---|
 | **Puerta** | `outline.check` rechaza una escaleta con un arco sin resolución y acepta una válida |
 
@@ -147,9 +155,11 @@ context/
 └── audit/                · context.audit
 ```
 
-| Requisitos | RF-32 a RF-39, RF-72 a RF-89, RF-103, RNF-20, RNF-23 |
+| Requisitos | RF-32 a RF-39, RF-72 a RF-89, RF-103, RF-109, RNF-20, RNF-23 |
 |---|---|
 | **Puerta** | La fusión es determinista sobre el mismo canon; ningún paquete supera el presupuesto de su agente destino |
+
+**El ensamblador es una función pura** de su petición y del canon: construye cada paquete desde cero y no lo muta ni lo reutiliza. Eso es el aislamiento (CTX-11) en forma comprobable, y por eso no hay módulo de aislamiento (RF-109).
 
 **Cero llamadas de modelo en todo el tramo**, salvo el vector de la consulta, que además ahora es local. Si aparece una, algo está mal planteado: los sinónimos salen de la tabla de alias y la consulta semántica es la propia especificación de escena.
 
@@ -193,11 +203,12 @@ canon/
 │   ├── embed.py          · llama al modelo local de commons/
 │   └── index.py          · dos niveles: escena y fragmento; FTS5 y vectores
 ├── summaries/            · escena y capítulo
+├── proscription/         · inserta en POE-12 lo que este capítulo hace repetido
 ├── archivist/            · delta.extract
 └── freeze/               · la transacción
 ```
 
-| Requisitos | RF-12, RF-55 a RF-58, RF-68 a RF-71, RF-90, RNF-21 |
+| Requisitos | RF-12, RF-55 a RF-58, RF-68 a RF-71, RF-90, RF-108, RNF-21 |
 |---|---|
 | **Puerta** | Congelar no deja ninguna fila de memoria de trabajo; un fallo de embeddings no escribe nada |
 
@@ -270,7 +281,7 @@ El cuarto es el que cuenta. Los demás comprueban que el camino existe; ese comp
 
 ## 5. Cobertura de `architecture.md`
 
-Qué secciones de la arquitectura tienen sitio en este plan, cuáles no lo tienen **porque quedan fuera de la versión 1**, y cuáles no lo tienen **porque falta especificarlas**. La tercera columna es la única que importa: es la lista de trabajo pendiente.
+Una fila por sección de la arquitectura. Lo único que queda sin sitio es lo que está **fuera de la versión 1**; los cinco huecos que esta revisión destapó están resueltos en §6.
 
 | Sección de `architecture.md` | Dónde cae en el plan | Estado |
 |---|---|---|
@@ -279,20 +290,20 @@ Qué secciones de la arquitectura tienen sitio en este plan, cuáles no lo tiene
 | §2.2 Frontera con el frontend | — | **Fuera de v1** |
 | §2.3 Paquete por funcionalidad | §1.2 y el árbol de cada tramo | Cubierto salvo `supervision/`, que es del paso 10 |
 | §3.1 Los cinco almacenes | T1 y T6 | Cubierto |
-| §3.2 Memoria de trabajo | Trampa 10 | **Hueco A**: sin carpeta dueña ni módulo |
+| §3.2 Memoria de trabajo | T0 `commons/db/`, trampa 10 | Cubierto (D-30) |
 | §3.3 Escritura del índice | T6, `freeze/` | Cubierto |
 | §4.1 Techos de ocupación | T0 `tokens/`, T8 `admission.py` | Cubierto |
 | §4.2 Presupuesto por agente | T3 `recipes/` | Cubierto |
 | §4.3 Paquete del Escritor | T3 `recipes/` | Cubierto |
 | §4.4 Recuperación híbrida | T3 entero | Cubierto |
 | §4.5 Resúmenes jerárquicos | T6 `summaries/` | Cubierto en sus dos niveles bajos; arco y obra son del paso 7 |
-| §4.6 Control de deriva | — | **Hueco B**: la lista de proscripción no tiene quién la mantenga |
-| §4.7 Aislamiento | — | **Hueco C**: sin módulo ni comprobación |
+| §4.6 Control de deriva | T6 `proscription/` | Cubierto (D-32) |
+| §4.7 Aislamiento | T3, como propiedad del ensamblador | Cubierto (D-33) |
 | §4.8 Proveedores, caché y medición | T0 entero | Cubierto |
 | §4.9 Recetas por agente | T3 `recipes/` | Cubierto |
 | §4.10 Gestión del contexto en el ciclo | T8 | Cubierto |
 | §5.1 Skills deterministas | Repartidas por tramo | Cubierto salvo `style.fingerprint` y `metrics.report`, de pasos posteriores |
-| §5.2 Skills de modelo | Repartidas por tramo | **Hueco D**: falta `replan.arc`, que la v1 sí usa |
+| §5.2 Skills de modelo | Repartidas por tramo; `replan.arc` en T2 | Cubierto |
 | §5.3 Herramientas | T8 `tools/` | Cubierto |
 | §6.1 Matriz agente × skill | Implícita en el reparto por tramo | Cubierto |
 | §6.2 Contratos de entrada y salida | T0 `types/` | Cubierto |
@@ -305,59 +316,33 @@ Qué secciones de la arquitectura tienen sitio en este plan, cuáles no lo tiene
 | §9.2 Jurado | — | **Fuera de v1** |
 | §9.3 Puertas | T2 `act_gate/`, T8 | Cubierto |
 | §10 Escritura de canon | T6 y T7 | Cubierto |
-| §11 Observabilidad | §3, como transversal | **Hueco E**: declarada sin módulo ni fichero |
+| §11 Observabilidad | T0 `commons/tracing/`, más §3 | Cubierto |
 | §12 Riesgos | — | No es implementable; vive en el SRS §7.4 |
-| §13 Decisiones abiertas | §6 | Cubierto |
+| §13 Decisiones abiertas | §7 | Cubierto |
 | §14 Orden de construcción | §2 | Cubierto |
 
 ---
 
-## 6. Lo que falta por especificar
+## 6. Los huecos, resueltos
 
-Cinco huecos y una contradicción. **Los dos primeros bloquean**: no se puede escribir el tramo al que pertenecen sin resolverlos, porque no es un detalle lo que falta, es un dueño.
+Las seis recomendaciones de la revisión de cobertura están aplicadas. Quedan aquí con su resolución porque el **porqué** importa más que el qué: son las decisiones que un implementador estaría tentado de tomar al revés.
 
-### Hueco A · La memoria de trabajo no tiene carpeta dueña — bloqueante
+| Hueco | Resuelto así | Dec. |
+|---|---|---|
+| La memoria de trabajo no tenía carpeta dueña, y quien la escribe no podía importar la fábrica de escritura | **Dos fábricas**: canon en `canon/db/`, memoria de trabajo en `commons/db/` acotada a `wm_*` por análisis estático. Cada tabla la escribe quien produce ese estado | D-30, RD-09, RD-18 |
+| `setup.ledger` tenía dos dueños, y el que fijaba la arquitectura no existe en la v1 | Vive en **`planning/`**. `supervision/` lo leerá cuando llegue | D-31 |
+| La lista de proscripción tenía quien la detectara y nadie que la insertara | La inserta **la congelación**, en su transacción | D-32, RF-108 |
+| El aislamiento no tenía comprobación | Una **propiedad**: el ensamblador es puro, construye desde cero y no muta. Sin módulo | D-33, RF-109 |
+| `replan.arc` no estaba en ningún tramo | `planning/replan/`, en T2 | — |
+| Faltaban las rutas de `canon/` y la carga del brief | En T1 | — |
 
-Las cinco tablas `wm_*` existen en el esquema (RD-07) y nadie las posee. Peor: **contradicen la regla de escritura**. RD-09 dice que la fábrica de conexión de escritura solo es importable desde `canon/`, pero quien escribe `wm_run_state` al cerrar cada escena es `orchestration/`, quien escribe `wm_draft` es `generation/` y quien escribe `wm_defect` es `verification/`. Con la regla tal cual, ninguno de los tres puede hacer su trabajo.
+**Las tres decisiones que más fácil es tomar al revés**, y por qué la otra lectura falla:
 
-**Recomendación:** separar las dos escrituras, porque son dos cosas distintas que comparten fichero por comodidad, no por naturaleza. Una fábrica de escritura **de canon**, exclusiva de `canon/`, y otra **de memoria de trabajo**, en `commons/db/`, que cualquiera puede usar y que tiene prohibido por análisis estático tocar una tabla que no empiece por `wm_`. Así la regla que de verdad importa —que el canon solo lo escribe la congelación— queda intacta y comprobable, y el estado efímero deja de ser un caso especial sin dueño.
+**No se relaja la regla de escritura de `canon/` para que quepa el estado efímero.** Es la salida obvia y desprotege justo lo único que esa regla existe para proteger. Dos fábricas cuesta más escribir y mantiene el invariante comprobable.
 
-### Contradicción · `setup.ledger` tiene dos dueños — bloqueante
+**La proscripción no la inserta `check.repetition` aunque sea quien detecta.** El verificador opera sobre borradores, y un borrador puede acabar en cuarentena: proscribir desde ahí condicionaría toda la obra por un texto que nunca existió. La lista es una proyección de la prosa **congelada**, igual que el índice.
 
-`architecture.md` §2.3 y §6.1 lo asignan a `supervision/` y al agente 12, el Supervisor. El SRS lo mete en `planning/` (RF-31, dentro de §4.4). **Y el Supervisor no existe en la versión 1**, así que la asignación de la arquitectura deja el registro de setups sin nadie justo en la versión que lo necesita: sin él no hay deuda narrativa, y sin deuda narrativa no hay ni puerta de cierre de acto (RF-105) ni condición de cierre de obra (RF-23).
-
-**Recomendación:** el SRS tiene razón y la arquitectura se corrige. `setup.ledger` vive en `planning/`, que es quien planta los setups al escribir la escaleta y quien los cobra al especificar escenas. El Supervisor lo **lee** cuando llegue, por la misma vía por la que todos leen del canon. Esto es un cambio de `architecture.md` y por tanto proceso B.
-
-### Hueco B · La lista de proscripción no tiene quién la mantenga
-
-El bloque 9 del paquete del Escritor son los 30 términos proscritos más recientes (§4.6), y la regla dice que todo n-grama o imagen usado dos veces entra automáticamente en la lista (RF-49). `check.repetition` los **detecta**; nadie los **inserta**.
-
-**Recomendación:** que los inserte la congelación, en `canon/`, en la misma transacción que escribe el índice. La lista es una proyección de la prosa congelada, exactamente igual que el índice de prosa, y mantenerla fuera de la transacción abre la puerta a que proscriba términos de un capítulo que acabó en cuarentena.
-
-### Hueco C · El aislamiento no tiene comprobación
-
-CTX-11 dice que cada agente corre en su ventana propia y limpia, y §4.7 lo desarrolla: el Continuista no ve el paquete que generó la prosa, el Jurado no ve el del Escritor. En el SRS solo existe como RF-52, para el Continuista. No hay nada que impida que un paquete arrastre restos de otro.
-
-**Recomendación:** no hace falta módulo, hace falta una propiedad. El paquete se construye siempre desde cero en `context/` y nunca se muta ni se reutiliza entre llamadas; que lo sea es comprobable con una propiedad sobre el ensamblador. Es barato y cierra el hueco sin inventar una pieza.
-
-### Hueco D · `replan.arc` no aparece en ningún tramo
-
-La versión 1 lo usa: RF-19 dice que el Arquitecto replanifica el tramo cuando un capítulo agota sus reintentos, y RF-106 que replanifica el tramo siguiente cuando falla la puerta de acto. `architecture.md` §2.3 lo pone en `planning/`. El plan lo omitió.
-
-**Recomendación:** añadir `planning/replan/` al tramo T2. No es una decisión, es un olvido de este documento.
-
-### Hueco E · La observabilidad no tiene módulo
-
-§3 la declara transversal y RNF-13 exige que toda llamada, defecto, reintento, admisión y arbitraje se trace. Ningún tramo nombra un fichero.
-
-**Recomendación:** `commons/tracing/`, con el cliente de Langfuse y la cola local de RNF-13 para cuando no responda. Va en `commons/` y no en `orchestration/` porque lo usan todas las funcionalidades, que es exactamente el criterio de entrada a `commons/`.
-
-### También faltan, y son menores
-
-| Qué | Dónde va |
-|---|---|
-| `canon/routes.py` | T1 y T6: RI-01, RI-04, RI-05 y RI-06 son suyas y el plan no las lista |
-| Carga del brief como eventos | T1: la ejecuta `canon/` al crear el fichero (D-09) |
+**El aislamiento no necesita un módulo que lo vigile.** Si el paquete se construye desde cero y no se muta, se cumple por construcción. Un vigilante sería una pieza que comprueba algo que no debería poder ocurrir.
 
 ---
 
