@@ -269,17 +269,17 @@ Reglas duras de ocupación (CTX-18) y de concurrencia (CTX-20):
 
 | Agente | Entrada | Salida | Ocupación de la ventana | Frecuencia |
 |---|---:|---:|---:|---|
-| Arquitecto narrativo | 55.000 | 15.000 | 70 % | Una vez por obra y por replanificación de arco |
-| Planificador de capítulo | 28.000 | 6.000 | 34 % | Una vez por capítulo |
-| Escritor de escena | 17.200 | 3.000 | 20 % | Por escena |
-| Especialista deportivo | 12.000 | 3.000 | 15 % | Por encuentro |
-| Continuista | 45.000 | 5.000 | 50 % | Por capítulo |
+| Arquitecto narrativo | 57.500 | 15.000 | 58 % | Una vez por obra y por replanificación de arco |
+| Planificador de capítulo | 30.500 | 6.000 | 31 % | Una vez por capítulo |
+| Escritor de escena | 19.700 | 3.000 | 20 % | Por escena |
+| Especialista deportivo | 14.500 | 3.000 | 15 % | Por encuentro |
+| Continuista | 47.500 | 5.000 | 48 % | Por capítulo |
 | Estilista | 20.000 | 7.000 | 27 % | Por capítulo |
 | Juez (por instancia) | 9.000 | 1.500 | 11 % | 3 instancias por capítulo |
-| Reparador | 12.000 | 3.000 | 15 % | Por defecto agrupado |
-| Archivero | 22.000 | 5.000 | 27 % | Por capítulo |
-| Árbitro | 15.000 | 2.000 | 17 % | Por conflicto |
-| Supervisor | 30.000 | 3.000 | 33 % | Por capítulo cerrado |
+| Reparador | 14.500 | 3.000 | 15 % | Por defecto agrupado |
+| Archivero | 24.500 | 5.000 | 25 % | Por capítulo |
+| Árbitro | 17.500 | 2.000 | 18 % | Por conflicto |
+| Supervisor | 32.500 | 3.000 | 33 % | Por capítulo cerrado |
 
 **Qué corre en paralelo.** Solo el Jurado: sus tres instancias son deliberadamente independientes entre sí (§9.2), así que se lanzan a la vez y suman 27.000 tokens de entrada. Todo lo demás va en serie. Las escenas de un capítulo **no** se paralelizan, y no por coste: el bloque 6 del paquete del Escritor es la prosa literal de la escena anterior (§4.3), no compactable, así que escribir la escena *n* exige tener escrita la *n−1*. Paralelizarlas compraría velocidad rompiendo justo el bloque que sostiene la voz.
 
@@ -288,9 +288,9 @@ Con eso, las combinaciones que CTX-20 llega a acotar son estas. **Se suma entrad
 | Concurrencia | Suma de entrada | Cabe |
 |---|---:|:-:|
 | Jurado ×3 | 27.000 | Sí, de sobra |
-| Continuista con su cupo, más Jurado ×3 | 97.000 | Sí, justo |
-| Arquitecto con su cupo, más Supervisor con el suyo | 125.000 | No |
-| Escritores de escena en paralelo | 17.200 cada uno | Máximo 5 |
+| Continuista con su cupo, más Jurado ×3 | 99.500 | Sí, al borde |
+| Arquitecto con su cupo, más Supervisor con el suyo | 130.000 | No |
+| Escritores de escena en paralelo | 19.700 cada uno | Máximo 5 |
 
 Las dos últimas filas no ocurren en el flujo de §7: el Supervisor corre sobre capítulo cerrado y el Arquitecto solo al planificar, y las escenas van en serie. CTX-20 está para que sigan sin ocurrir cuando el paralelismo crezca, no para describir lo que pasa hoy. Con la salida fuera del recuento, la única concurrencia real —los tres jueces— ocupa poco más de la cuarta parte del techo.
 
@@ -302,7 +302,7 @@ Es la llamada que más veces se ejecuta, así que es donde el presupuesto import
 
 | # | Bloque | Tokens | Compactable | Notas |
 |---|---|---:|---|---|
-| 1 | Ancla: guía de estilo condensada e invariantes (CTX-17) | 2.000 | No | Idéntica en todas las llamadas |
+| 1 | **Prefijo cacheable** (CTX-23): instrucción, guía de estilo completa, invariantes duros y léxico del mundo | 4.500 | No | Idéntico en todas las llamadas de este agente. Ver §4.8 |
 | 2 | Fichas del elenco activo (CTX-05) | 1.600 | Sí | 4–6 personajes × ~280 tokens |
 | 3 | Estado del mundo en t (MUN-10) | 1.200 | Parcial | Incluye estado físico y clasificación |
 | 4 | Conocimiento del POV (PER-10) | 600 | No | Solo deltas respecto al estado público |
@@ -313,10 +313,10 @@ Es la llamada que más veces se ejecuta, así que es donde el presupuesto import
 | 9 | Lista de proscripción (POE-12) | 500 | Sí | 30 elementos más recientes |
 | 10 | Muestra modélica de voz | 800 | Sí | Rotativa, nunca la escena anterior |
 | 11 | Especificación de la escena | 900 | No | Va al final por CTX-16 |
-| — | **Total entrada** | **17.200** | | 17 % de la ventana |
+| — | **Total entrada** | **19.700** | | 20 % del techo de entrada |
 | — | Reserva de salida | 3.000 | | Escena de hasta 1.500 palabras (EST-08), con margen |
 
-El 80 % restante de la ventana no es espacio libre que llenar. Es margen deliberado: si esos 17.200 tokens están bien elegidos, añadir 50.000 más de canon tangencial empeora el resultado.
+El 80 % restante del techo no es espacio libre que llenar. Es margen deliberado: si esos 19.700 tokens están bien elegidos, añadir 50.000 más de canon tangencial empeora el resultado.
 
 ### 4.4 Recuperación híbrida y ensamblaje del paquete
 
@@ -456,7 +456,7 @@ El sistema depende de **un solo proveedor externo** y de un contador de tokens q
 
 | Uso | Proveedor | Quién lo consume |
 |---|---|---|
-| Los once agentes de modelo | **Claude**, API de Anthropic | `planning/`, `generation/`, `verification/` y `canon/`, siempre a través del puerto de `commons/` |
+| Los once agentes de modelo | **Claude Haiku 4.5**, API de Anthropic | `planning/`, `generation/`, `verification/` y `canon/`, siempre a través del puerto de `commons/` |
 | Embeddings del índice de prosa | **Modelo local con `fastembed`** | `canon/` al congelar, `context/` al recuperar |
 
 Esto no cambia que el Orquestador y el Documentalista sean código (§6): Claude es el modelo que hay detrás de los once agentes que sí consumen ventana, no el que dirige el flujo.
@@ -485,6 +485,24 @@ Un modelo cuantizado de unos 30 a 130 MB, cargado en proceso. Lo que compra, en 
 **El fallo local es distinto del fallo de red, y por eso se trata distinto.** Que un proveedor no responda es intermitente y reintentar tiene sentido; que el modelo no cargue —fichero ausente, memoria insuficiente, dimensión que no cuadra con la del índice— **es determinista: si falla una vez, falla siempre**. Reintentarlo es perder tiempo. Por eso la comprobación se mueve al arranque: **el modelo se carga y se contrasta su dimensión con la del índice antes de admitir la primera llamada**, y si no carga, la tirada no empieza. Durante la tirada ya no puede fallar, y la ruta de degradación a solo léxico de §4.4 deja de activarse por causas externas.
 
 Cada vector sigue guardando el identificador del modelo que lo produjo y su dimensión (§3.1). Con un modelo local eso importa **más**, no menos: cambiarlo es sustituir un fichero, así que mezclar vectores incomparables pasa a ser un error fácil de cometer, y la detección es lo único que lo impide.
+
+#### Caché de prompt y el prefijo cacheable
+
+Haiku 4.5 **no cachea prefijos de menos de 4.096 tokens**, y no avisa: por debajo de esa cifra el prefijo simplemente se cobra entero, llamada tras llamada, sin error ni señal.
+
+El ancla de §4.3 medía 2.000 tokens, así que caería justo debajo. Y aquí hay una inversión que conviene ver: **por debajo del mínimo cacheable, comprimir el ancla es una economía falsa.** Una lectura de caché cuesta del orden de una décima parte de la entrada normal, así que 4.500 tokens cacheados salen varias veces más baratos que 2.000 sin cachear — y el ancla viaja en **todas** las llamadas del sistema.
+
+Por eso el bloque 1 pasa de 2.000 a **4.500 tokens** y se redefine como **prefijo cacheable** (CTX-23): instrucción del agente, guía de estilo completa en lugar de condensada, invariantes duros y léxico del mundo. El presupuesto de cada agente en §4.2 sube en esos 2.500, que caben de sobra por debajo del techo de §4.1.
+
+Tres reglas, y las tres salen de cómo funciona el caché:
+
+| Regla | Por qué |
+|---|---|
+| **Nada voluble delante del prefijo** | El caché casa por prefijo: un solo byte distinto invalida todo lo que viene detrás. Una marca de tiempo o un identificador de tirada al principio del paquete anula el caché de la llamada entera |
+| **El prefijo es por agente, no global** | Contiene la instrucción del agente, que difiere. Cada agente tiene su prefijo estable y su entrada de caché |
+| **Cachear no libera ventana** | Los tokens servidos desde caché **ocupan igual** (§4.1). El caché cambia lo que se paga, no lo que ocupa, así que el prefijo cuenta entero contra el techo y contra CTX-20 |
+
+La señal que delata que esto se ha roto está en §11: si las lecturas de caché son cero llamada tras llamada, algo voluble se ha colado en el prefijo.
 
 #### Medición de tokens
 
@@ -548,10 +566,13 @@ Uno solo, en `commons/`, y lo consumen las cuatro cosas que cuentan tokens: el e
 | Fuente de verdad | El bloque `usage` de cada respuesta, sumados sus tres campos de entrada |
 | Factor por modelo | Uno por cada modelo en uso. Los tokenizadores de Claude difieren entre generaciones hasta un 30 %, así que un factor calibrado contra un modelo no vale para otro |
 | Modelo sin factor | No se admite la llamada, por fallo cerrado |
+| Calibración inicial | **Al arrancar**, antes de la primera llamada real: se envía una muestra de prosa en español del propio brief, se compara lo que dice `tiktoken` con el `usage` que devuelve el proveedor, y el factor se fija en la razón observada más un margen. Es una llamada pequeña y se paga una vez por tirada |
 | Contraste | Estimado y real se trazan emparejados en toda llamada |
 | Discrepancia | Que el real supere al estimado es un fallo de CI, no un aviso |
 
-**Riesgo aceptado, declarado aquí y no en otro sitio.** El estimador es inexacto por construcción y su sesgo se corrige con un factor que al principio es una conjetura. Mientras el factor no esté calibrado contra tiradas reales, los paquetes pueden salir mayores de lo previsto. **No es un fallo técnico**: el techo de 100.000 es propio y la ventana física de los modelos es de 1.000.000 (§4.1), así que un desvío no rompe ninguna llamada. Lo que produce es deriva de coste y de calidad, y la señal que lo delata está en §11: que el recuento real supere al estimado en alguna llamada.
+**Por qué la calibración se hace antes y no sobre la marcha.** Con una ventana de 1.000.000 el error del estimador era irrelevante: sobraban 900.000 tokens. Con Haiku 4.5 la ventana es de **200.000**, y el peor caso —100.000 de entrada más 50.000 de salida— ocupa 150.000, así que el colchón baja de 900.000 a 50.000. Sigue cabiendo, pero el margen deja de absorber cualquier desvió: para romper la ventana bastaría que `tiktoken` se quedara corto **más de un tercio** con el paquete en el techo. El factor deja de ser una formalidad y pasa a ser la pieza que sostiene el sistema, y por eso se mide antes de empezar en vez de corregirse después.
+
+**Riesgo aceptado, declarado aquí y no en otro sitio.** El estimador es inexacto por construcción y su sesgo se corrige con un factor calibrado sobre una muestra, no sobre la obra entera. Mientras el factor no esté calibrado contra tiradas reales, los paquetes pueden salir mayores de lo previsto. Con la calibración inicial y el margen de 50.000 que deja Haiku, un desvío moderado produce deriva de coste y de calidad, no una llamada rota. Uno grande **sí** rompe la llamada, y por eso la señal de §11 —que el recuento real supere al estimado— no es un aviso de higiene: es una alarma.
 
 ---
 
@@ -565,7 +586,7 @@ Todas las recetas son recuento por coste unitario. Los unitarios salen de seccio
 
 | Pieza | Tokens | De dónde sale |
 |---|---|---|
-| Ancla de estilo e invariantes | 2.000 | §4.3, bloque 1. Idéntica en toda llamada |
+| Prefijo cacheable (CTX-23) | 4.500 | §4.3, bloque 1, y §4.8. Idéntico en toda llamada del mismo agente |
 | Ficha compacta de entidad | 280 | §4.3, bloque 2 |
 | Ficha completa de entidad | **Propuesta: 800** | La compacta más su historial de versiones y el juego completo de atributos, estimado en el triple. Si resulta mayor, sale del margen de la receta que la use |
 | Resumen de escena | 130 | §4.5, 60 a 100 palabras |
@@ -580,11 +601,11 @@ Todas las recetas son recuento por coste unitario. Los unitarios salen de seccio
 
 Esa conversión explica de paso el bloque 6 del Escritor: 4.500 tokens dan para la escena anterior completa en su tamaño típico más la cola de la anterior, que es lo que sostiene la voz al cruzar una frontera de escena.
 
-#### Arquitecto narrativo · 55.000
+#### Arquitecto narrativo · 57.500
 
 | Bloque | Tokens | Nota |
 |---|---:|---|
-| Ancla | 2.000 | |
+| Prefijo cacheable (CTX-23) | 4.500 | |
 | Brief completo | 4.000 | PRO-01, literal |
 | Fichas completas de las entidades del brief | 16.000 | 20 × 800 |
 | Reglamento y reglas del mundo | 3.000 | DEP-02, MUN-04 |
@@ -593,15 +614,15 @@ Esa conversión explica de paso el bloque 6 del Escritor: 4.500 tokens dan para 
 | Deuda narrativa completa | 2.000 | CAN-08 |
 | Curva de tensión planificada y realizada | 1.500 | |
 | Instrucción | 1.500 | Al final, por CTX-16 |
-| **Total** | **52.500** | 95 % del presupuesto |
+| **Total** | **55.000** | 96 % del presupuesto |
 
 Es el único agente que ve el brief entero y el único que no recupera prosa: en la primera llamada no hay ninguna, y al replanificar le importa la forma del plan, no cómo quedó escrito.
 
-#### Planificador de capítulo · 28.000
+#### Planificador de capítulo · 30.500
 
 | Bloque | Tokens | Nota |
 |---|---:|---|
-| Ancla | 2.000 | |
+| Prefijo cacheable (CTX-23) | 4.500 | |
 | Tramo de escaleta del capítulo | 3.000 | |
 | Fichas compactas del elenco previsto | 2.800 | 10 × 280 |
 | Estado del mundo en el instante inicial | 1.500 | MUN-10 |
@@ -612,15 +633,15 @@ Es el único agente que ve el brief entero y el único que no recupera prosa: en
 | Reglamento y calendario, si el capítulo tiene encuentro | 1.500 | |
 | Curva de tensión del acto | 500 | |
 | Instrucción | 1.000 | |
-| **Total** | **17.800** | 64 % del presupuesto |
+| **Total** | **20.300** | 67 % del presupuesto |
 
 La holgura es deliberada, igual que la del Escritor: si el tramo de escaleta y el estado están bien elegidos, añadir capítulos anteriores enteros empeora la especificación en vez de mejorarla.
 
-#### Especialista deportivo · 12.000
+#### Especialista deportivo · 14.500
 
 | Bloque | Tokens | Nota |
 |---|---:|---|
-| Ancla | 2.000 | |
+| Prefijo cacheable (CTX-23) | 4.500 | |
 | Especificación de la escena de encuentro | 900 | |
 | Cronología ya resuelta por `match.simulate` | 1.200 | El marcador entra como dato, no se inventa |
 | Reglamento de la disciplina | 2.000 | DEP-02 |
@@ -630,17 +651,17 @@ La holgura es deliberada, igual que la del Escritor: si el tramo de escaleta y e
 | Fichas compactas del foco | 1.100 | 4 × 280 |
 | Muestra modélica de voz | 800 | |
 | Instrucción | 500 | |
-| **Total** | **11.700** | 98 % del presupuesto |
+| **Total** | **14.200** | 98 % del presupuesto |
 
 Su llamada de modelo es solo `match.narrate`. `match.simulate` es código y no consume ventana, y por eso el resultado llega como cronología cerrada.
 
-#### Continuista · 45.000
+#### Continuista · 47.500
 
 El agente caro, y el que justifica la recuperación selectiva. Su recuperación no se parece a la del Escritor: no busca material que inspire, busca **todo lo que podría contradecir**.
 
 | Bloque | Tokens | Nota |
 |---|---:|---|
-| Ancla | 2.000 | |
+| Prefijo cacheable (CTX-23) | 4.500 | |
 | Capítulo completo | 8.000 | Sin compactar: es el objeto que se verifica |
 | Fichas completas de toda entidad mencionada | 12.000 | 15 × 800. Completas, no compactas: el detalle es justo donde está la contradicción |
 | Estado del mundo al inicio y al final del capítulo | 3.000 | Dos fotos, para detectar cambios no declarados |
@@ -651,7 +672,7 @@ El agente caro, y el que justifica la recuperación selectiva. Su recuperación 
 | Fragmentos recuperados por afirmación | 7.200 | 16 × 450 |
 | Setups abiertos con su estado | 1.500 | |
 | Rúbrica de continuidad e instrucción | 1.500 | |
-| **Total** | **44.700** | 99 % del presupuesto |
+| **Total** | **47.200** | 99 % del presupuesto |
 
 **Recuperación dirigida por afirmaciones.** En vez de construir la consulta desde una especificación de escena, se extraen del capítulo las afirmaciones comprobables —nombres propios, fechas, cifras, competencias ejercidas, estados físicos— y cada una genera su consulta. Dos diferencias con la del Escritor, y las dos importan:
 
@@ -660,11 +681,11 @@ El agente caro, y el que justifica la recuperación selectiva. Su recuperación 
 
 Es también el agente que primero tocará el techo cuando la obra crezca. Lo que lo mantiene dentro es que las fichas y los eventos se filtran por lo que el capítulo menciona, no por lo que existe.
 
-#### Reparador · 12.000
+#### Reparador · 14.500
 
 | Bloque | Tokens | Nota |
 |---|---:|---|
-| Ancla | 2.000 | |
+| Prefijo cacheable (CTX-23) | 4.500 | |
 | Escena completa que contiene el fragmento | 3.000 | Se repara con la escena delante, no el fragmento suelto |
 | Defectos agrupados con su evidencia citada | 2.000 | Sin cita no hay defecto |
 | Hechos canónicos que el defecto viola | 1.500 | Lo que debe ser cierto tras la corrección |
@@ -672,7 +693,7 @@ Es también el agente que primero tocará el techo cuando la obra crezca. Lo que
 | Especificación de la escena | 900 | Para no reparar rompiendo la función |
 | Cola de la escena anterior | 700 | Para no romper la juntura |
 | Instrucción | 500 | |
-| **Total** | **11.700** | 98 % del presupuesto |
+| **Total** | **14.200** | 98 % del presupuesto |
 
 No ve el paquete que generó el texto ni los veredictos de otros capítulos: repara con el defecto y su evidencia delante, que es la reflexión de `verification.md` §5.6.
 
@@ -690,11 +711,11 @@ No ve el paquete que generó el texto ni los veredictos de otros capítulos: rep
 | Instrucción | 800 | |
 | **Total** | **19.700** | 99 % del presupuesto |
 
-#### Archivero · 22.000
+#### Archivero · 24.500
 
 | Bloque | Tokens | Nota |
 |---|---:|---|
-| Ancla | 2.000 | |
+| Prefijo cacheable (CTX-23) | 4.500 | |
 | Capítulo final completo | 8.000 | |
 | Estado del mundo antes del capítulo | 3.000 | El delta es la diferencia contra esto |
 | Fichas compactas de las entidades presentes | 2.800 | 10 × 280 |
@@ -703,15 +724,15 @@ No ve el paquete que generó el texto ni los veredictos de otros capítulos: rep
 | Esquema del delta con sus tipos de evento | 1.500 | El contrato de salida, literal |
 | Resúmenes de escena del capítulo | 800 | 6 × 130, para regenerar los de nivel superior |
 | Instrucción | 1.000 | |
-| **Total** | **21.600** | 98 % del presupuesto |
+| **Total** | **24.100** | 98 % del presupuesto |
 
 Nunca ve rúbricas ni veredictos: extrae hechos, no juzga calidad.
 
-#### Árbitro · 15.000
+#### Árbitro · 17.500
 
 | Bloque | Tokens | Nota |
 |---|---:|---|
-| Ancla | 2.000 | |
+| Prefijo cacheable (CTX-23) | 4.500 | |
 | Las dos afirmaciones en conflicto con su procedencia | 1.000 | MET-09 decide la precedencia |
 | Fragmentos donde aparece cada una | 2.700 | 6 × 450, la evidencia textual de ambas |
 | Estado del mundo en el instante de cada una | 2.000 | |
@@ -720,7 +741,7 @@ Nunca ve rúbricas ni veredictos: extrae hechos, no juzga calidad.
 | Política de precedencia PRO-10, literal | 800 | La regla entra en la ventana, no se asume aprendida |
 | Si el hecho está cobrado en algún payoff | 700 | Condición dura del retcon, §8 |
 | Instrucción | 700 | |
-| **Total** | **13.500** | 90 % del presupuesto |
+| **Total** | **16.000** | 91 % del presupuesto |
 
 #### Jurado · 9.000 por instancia
 
@@ -735,11 +756,11 @@ Nunca ve rúbricas ni veredictos: extrae hechos, no juzga calidad.
 
 **No recibe el paquete del Escritor, ni su razonamiento, ni los defectos ya detectados** (§9.2). Un capítulo en el techo de EST-07 no cabe en este presupuesto: cómo se resuelve es la decisión abierta nº 9 de §13, y no bloquea nada hasta el paso 9 del orden de construcción.
 
-#### Supervisor · 30.000
+#### Supervisor · 32.500
 
 | Bloque | Tokens | Nota |
 |---|---:|---|
-| Ancla | 2.000 | |
+| Prefijo cacheable (CTX-23) | 4.500 | |
 | Métricas del capítulo cerrado | 1.500 | §11 |
 | Serie histórica de métricas | 3.000 | La tendencia, que es lo que detecta deriva |
 | Deuda narrativa completa con estados | 3.000 | |
@@ -748,7 +769,7 @@ Nunca ve rúbricas ni veredictos: extrae hechos, no juzga calidad.
 | Escaleta del tramo restante | 4.000 | |
 | Umbrales de §11 | 500 | |
 | Instrucción | 1.000 | |
-| **Total** | **29.000** | 97 % del presupuesto |
+| **Total** | **31.500** | 97 % del presupuesto |
 
 Pasados los 30 capítulos, el bloque de resúmenes desborda. Se compacta como cualquier otro: los resúmenes de los capítulos de un arco ya cerrado se sustituyen por el resumen del arco, que es exactamente para lo que existe la jerarquía de §4.5.
 
@@ -1155,7 +1176,7 @@ sequenceDiagram
   loop por cada escena
     O->>D: especificación de escena
     D->>D: canon.query · state-at · knowledge-of · prose.retrieve
-    D->>D: context.pack a 17.200 tokens + context.audit
+    D->>D: context.pack a 19.700 tokens + context.audit
     alt conflicto de hechos en el paquete
       D->>B: conflicto detectado
       B-->>D: hecho vigente según precedencia
@@ -1231,6 +1252,19 @@ stateDiagram-v2
 
 **Presupuestos de reintento por defecto**: 3 a nivel de escena, 2 a nivel de capítulo, 1 replanificación de tramo. Al agotarse la tercera, se replanifica el arco completo. No hay cuarto nivel: si un arco falla dos veces, el problema está en la escaleta y se recalcula desde el Arquitecto.
 
+#### La cuarentena significa cosas distintas según el nivel
+
+«La producción no se detiene» (CAL-13) quiere decir que **nadie tiene que intervenir**, no que el sistema salte por encima de lo que ha fallado. Y lo que puede saltarse depende del nivel:
+
+| Nivel | Qué hace la cuarentena | Por qué |
+|---|---|---|
+| **Escena** | La escena se marca, vuelve al Planificador, que reescribe su especificación más estricta, y se regenera **en su sitio**. Las escenas ya cerradas del capítulo se conservan | La escena es la unidad de reintento y de reanudación. Rehacerla no toca nada de lo anterior |
+| **Capítulo** | El capítulo se rehace **de inmediato**: vuelve al Arquitecto, que replanifica su tramo, y se regenera. **No se difiere ni se salta al siguiente** | Un capítulo cuarentenado no está congelado, y sin congelar no existe para el sistema |
+
+La segunda fila es la que hay que tener clara, porque la lectura contraria parece razonable y no funciona. Escribir el capítulo N+1 exige dos cosas del N: **su prosa literal**, que ocupa el bloque 6 del paquete del Escritor y no es compactable (§4.3), y **su estado del mundo**, que solo existe tras congelar (§10). Si el N está cuarentenado no hay ni una ni otra, así que el N+1 se escribiría como si el N no hubiera ocurrido — y cuando el N se rehiciera, lo haría contra un canon donde el N+1 ya está congelado ignorándolo. Eso no es continuar la producción: es fabricar una contradicción que ninguna puerta detecta.
+
+**La tirada avanza igual**, que es lo que CAL-13 protege: no hay espera, no hay a quién preguntar y el ciclo sigue solo. Lo que no hay es avance *hacia delante* mientras queda algo sin cerrar detrás.
+
 ### 7.4 Ejecución: el Orquestador como código
 
 §7.1 a §7.3 dicen **qué pasa**. Esta sección dice **cómo se ejecuta**, que es lo que hace falta para escribir `backend/orchestration/`.
@@ -1296,7 +1330,7 @@ Tres reglas que no se negocian: **FIFO estricta**, porque reordenar por hueco ma
 | Autorizar un retcon | `retcon.propose` más regla dura: solo procede si el hecho afectado no ha sido cobrado en ningún payoff y el número de pasajes que habría que tocar es igual o menor que 3. En caso contrario se regenera el capítulo nuevo. |
 | Cerrar un capítulo | Puertas automáticas con umbrales por dimensión (CAL-09). |
 | Calibrar a los jueces | Conjunto dorado con defectos sembrados (CAL-10) ejecutado cada 5 capítulos, más dispersión del jurado (CAL-11) como señal de fiabilidad por veredicto. |
-| Rechazar y parar | No existe. Cuarentena (CAL-13) más replanificación (PRO-12). La producción continúa con el siguiente capítulo y el tramo cuarentenado se rehace. |
+| Rechazar y parar | No existe. Cuarentena (CAL-13) más replanificación (PRO-12). El artefacto cuarentenado se rehace de inmediato, sin esperar a nadie; a nivel de capítulo no se salta al siguiente (§7.3). |
 | Decidir que la novela está terminada | Condición de cierre verificable: deuda narrativa cero, todos los arcos con estado resuelto, curva de tensión completada, longitud dentro del rango del brief. |
 
 **Lo que se pierde y hay que compensar con medición**: el criterio de gusto. Un sistema autónomo puede garantizar coherencia, verosimilitud y ausencia de defectos, pero no puede decidir por sí mismo que una escena es memorable. La contramedida practicable es el conjunto dorado, que fija un suelo conocido, y la vigilancia de la huella estilística, que detecta el aplanamiento antes de que se acumule.
@@ -1335,8 +1369,21 @@ Tres instancias con rúbricas distintas y semillas distintas. Reglas:
 | Escena generada | Cero defectos S1 deterministas |
 | Capítulo verificado | Cero S1, máximo 2 S2, continuidad y voz sobre umbral |
 | Capítulo cerrado | Puertas anteriores más huella estilística dentro de tolerancia y delta canónico integrado |
-| Cierre de acto | Deuda narrativa dentro del margen planificado; curva de tensión conforme |
+| Cierre de acto | Deuda narrativa dentro del margen planificado; curva de tensión conforme. Ver abajo qué parte se comprueba hoy |
 | Cierre de obra | Deuda narrativa cero; todos los arcos resueltos; longitud en rango |
+
+#### La puerta de cierre de acto
+
+Es la única de las cinco que no se evalúa por capítulo, y por eso se le escapa a quien la lee de pasada. Corre **al congelar el último capítulo de un acto**, es determinista y la ejecuta `planning/`, que es quien tiene el registro de setups y la escaleta.
+
+| | |
+|---|---|
+| **Qué comprueba** | Que todo setup (CAN-08) cuyo payoff estaba **planificado dentro de este acto** aparece cobrado. El umbral no es un número nuevo: lo fija la propia escaleta, que ya declara dónde se cobra cada promesa |
+| **Qué no comprueba todavía** | Que la curva de tensión realizada se parezca a la planificada. Medirla exige juicio, y el juicio llega con el Jurado. Queda en riesgo aceptado hasta entonces |
+| **Si falla** | El Arquitecto replanifica el tramo **siguiente** para dar payoff a lo que quedó sin cobrar |
+| **Qué no hace nunca** | Tocar el acto que se acaba de cerrar. El canon congelado gana (PRO-10), así que el remedio solo puede mirar hacia delante |
+
+**Por qué existe pese a que el cierre de obra ya comprueba deuda cero.** Porque comprobarlo solo al final es comprobarlo cuando ya no se puede arreglar barato: una deuda que se desmadra en el acto II y se detecta en el cierre obliga a replanificar la obra entera. Esta puerta la detecta un acto antes, cuando queda sitio por delante para cobrarla.
 
 ---
 
@@ -1422,7 +1469,7 @@ En un sistema sin supervisión externa, la observabilidad no es un extra: es el 
 5. Si `match.simulate` debe modelar el encuentro minuto a minuto o solo sus hitos.
 6. Punto a partir del cual conviene reescribir un capítulo en vez de repararlo.
 7. Con qué modelo multilingüe de `fastembed` se puebla el índice de prosa. El mecanismo está fijado (§4.8) y el esquema guarda modelo y dimensión, así que cambiarlo es reindexar, no rediseñar. Lo único abierto es el identificador.
-8. Qué modelo de Claude usa cada rol. §12 prevé modelos distintos por agente; cuál va a cuál se decide midiendo con `verification.md` §5.8, no por adelantado.
+8. ~~Qué modelo de Claude usa cada rol.~~ **Cerrada: los once agentes de modelo corren sobre Claude Haiku 4.5** (§4.8). El puerto sigue permitiendo modelos distintos por agente si midiendo con `verification.md` §5.8 se viera que alguno lo necesita; hoy no se usa esa posibilidad. Consecuencias ya recogidas: ventana de 200.000 en vez de 1.000.000, mínimo cacheable de 4.096 y un factor de contador por modelo.
 9. Cómo evalúa el Jurado un capítulo en el techo de EST-07, que no cabe en los 9.000 tokens que §4.2 le da (§4.9). Las salidas: subir su presupuesto, evaluarlo por mitades, o acotar el capítulo por debajo de 4.000 palabras en la escaleta.
 10. Constante de la fusión recíproca de rangos (§4.4). Se usa 60 por venir del trabajo original; ajustarla exige medir con el conjunto dorado, que llega en el paso 9.
 

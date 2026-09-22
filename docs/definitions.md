@@ -39,7 +39,7 @@ Este documento define **qué existe** en el dominio. No describe cómo se implem
 **Dos restricciones que atraviesan toda la ontología**
 
 - **Autonomía completa (PRO-11)**: no hay validación externa en ningún punto del ciclo. Cada decisión que en otro diseño resolvería una persona necesita aquí una regla de precedencia, un umbral numérico o un agente con responsabilidad asignada. Donde no exista ninguna de las tres cosas, hay un agujero de diseño.
-- **100.000 tokens, en dos techos distintos**: la ventana física de una llamada (CTX-01) y el techo de concurrencia del sistema (CTX-20), que acota la suma de todo lo que está en vuelo en el mismo instante. Lo que no quepa se resuelve con jerarquía de resúmenes, recuperación selectiva y aislamiento de subtareas, nunca con truncamiento.
+- **100.000 tokens de entrada, en dos techos distintos**: el de una llamada (CTX-01) y el de concurrencia del sistema (CTX-20), que acota la suma de todo lo que está en vuelo en el mismo instante. Los fija el proyecto, no el proveedor. Lo que no quepa se resuelve con jerarquía de resúmenes, recuperación selectiva y aislamiento de subtareas, nunca con truncamiento.
 
 ---
 
@@ -211,11 +211,14 @@ Las filas van agrupadas por tema, no por número: los cinco términos de límite
 
 | ID | Término | Definición |
 |---|---|---|
-| CTX-01 | **Ventana de contexto** | Límite físico de tokens de una llamada al modelo. En este sistema: **100.000 tokens**, entrada más salida. |
+| CTX-01 | **Ventana de contexto** | Techo de tokens de **entrada** de una llamada al modelo. En este sistema: **100.000 tokens**, fijados por el proyecto y no por el proveedor, cuyos modelos ofrecen entre 200.000 y 1.000.000. La salida no cuenta contra él y tiene tope propio. |
 | CTX-02 | **Presupuesto de contexto** | Asignación deliberada de esa ventana entre categorías de información. Sin presupuesto explícito, el contexto se llena por inercia con lo más reciente. |
 | CTX-18 | **Ocupación operativa** | Fracción de CTX-01 que se permite usar realmente en una llamada. Es deliberadamente inferior al límite físico, porque la distracción (CTX-14) y la dilución de atención aparecen mucho antes de agotar la ventana. |
 | CTX-19 | **Desbordamiento** | Situación en que el material seleccionado supera la ocupación operativa. Dispara compactación (CTX-10) por orden inverso de prioridad, nunca truncamiento ciego por el final. |
-| CTX-20 | **Techo de concurrencia** | Límite agregado de tokens que el sistema puede tener en vuelo en un mismo instante: **100.000**, sumando entrada y salida de todas las llamadas simultáneas. Es una política del sistema, no un dato del proveedor: CTX-01 acota una llamada, CTX-20 acota cuántas se solapan. Su dueño es el Orquestador. |
+| CTX-20 | **Techo de concurrencia** | Límite agregado de tokens de **entrada** que el sistema puede tener en vuelo en un mismo instante: **100.000**, sumando todas las llamadas simultáneas y sus cupos de tirón (CTX-22). Es una política del sistema, no un dato del proveedor: CTX-01 acota una llamada, CTX-20 acota cuántas se solapan. Con las llamadas en serie, cada una dispone del techo entero. Su dueño es el Orquestador. |
+| CTX-21 | **Herramienta** | Capacidad que un agente de modelo invoca **durante su propio turno**, a diferencia de una skill, que ejecuta el código antes o después de la llamada. Ocupa ventana dos veces: su definición y el resultado de cada consulta. La lista de herramientas de un agente es cerrada. |
+| CTX-22 | **Cupo de tirón** | Máximo de tokens que un agente puede acumular llamando a sus herramientas (CTX-21) durante un turno. Se reserva entero en la admisión y no se amplía en caliente; agotado, las herramientas niegan toda consulta y el agente concluye con lo que tiene. |
+| CTX-23 | **Prefijo cacheable** | Tramo inicial de un paquete, idéntico en todas las llamadas de un agente, colocado al principio para que el proveedor lo sirva desde caché. Dos condiciones: nada voluble delante, porque el caché casa por prefijo y un byte distinto invalida todo lo que sigue; y tamaño por encima del mínimo cacheable del modelo, por debajo del cual no cachea y no avisa. |
 | CTX-03 | **Paquete de contexto** | Conjunto ensamblado y ordenado de material que acompaña a una instrucción de generación concreta. Es un artefacto con identidad propia: se versiona, se inspecciona y se depura. |
 | CTX-04 | **Ingeniería de contexto** | Disciplina de decidir qué información entra, en qué forma, en qué orden y con qué prioridad en cada llamada. En obra larga sustituye a la ingeniería de prompts como actividad principal. |
 | CTX-05 | **Ficha compacta** | Faceta (MET-08) de una entidad reducida a lo mínimo accionable para una escena concreta. |
@@ -230,9 +233,9 @@ Las filas van agrupadas por tema, no por número: los cinco términos de límite
 | CTX-14 | **Distracción de contexto** | Degradación por exceso de material irrelevante: el modelo atiende a lo accesorio y pierde la instrucción. |
 | CTX-15 | **Conflicto de contexto** | Presencia simultánea de dos versiones incompatibles del mismo hecho, típicamente una obsoleta y una vigente. |
 | CTX-16 | **Sesgo de recencia** | Tendencia a ponderar en exceso lo último del paquete. Se explota colocando la instrucción operativa al final. |
-| CTX-17 | **Ancla** | Elemento repetido en todas las llamadas para frenar la deriva: guía de estilo condensada, ficha de voz del POV, invariantes duros. |
+| CTX-17 | **Ancla** | Elemento repetido en todas las llamadas para frenar la deriva: guía de estilo, ficha de voz del POV, invariantes duros. Ocupa el prefijo cacheable (CTX-23). |
 
-**Invariante CTX-I1**: en todo instante, la suma de las ventanas de las llamadas en vuelo es menor o igual a CTX-20. Una llamada que no quepa se encola; nunca se admite recortándola.
+**Invariante CTX-I1**: en todo instante, la suma de la entrada de las llamadas en vuelo, cupos de tirón (CTX-22) incluidos, es menor o igual a CTX-20. Una llamada que no quepa se encola; nunca se admite recortándola.
 
 ---
 

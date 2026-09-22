@@ -123,7 +123,7 @@ No hay actor «revisor». Cualquier requisito que lo necesite es un error de est
 | Ejecución | Un solo proceso, un bucle `asyncio`, sin cola de trabajos ni workers | `architecture.md` §7.4 |
 | Persistencia | SQLite en local, un fichero por novela, sin extensiones nativas | `AGENTS.md` §3.2; `architecture.md` §3.1 |
 | Aislamiento | Contenedor sin más red que las APIs de Claude y Langfuse; ficheros acotados al directorio de la tirada | `verification.md` §5.3 |
-| Proveedor de los agentes de modelo | Claude, API de Anthropic | `architecture.md` §4.8 |
+| Modelo de los once agentes | **Claude Haiku 4.5**, API de Anthropic. Ventana de 200.000, salida máxima de 64.000, mínimo cacheable de 4.096 | `architecture.md` §4.8 |
 | Embeddings | Modelo multilingüe local con `fastembed`, empaquetado en la imagen | `architecture.md` §4.8 |
 | Contador de tokens | `tiktoken` local con factor de seguridad en `commons/`, contrastado contra el `usage` de cada respuesta | `architecture.md` §4.8 |
 | Observabilidad | Langfuse con su SDK de Python | `verification.md` §5.1 |
@@ -254,10 +254,13 @@ Agrupados por funcionalidad. El orden sigue el de construcción de `architecture
 | RF-16 | Ninguna llamada supera 100.000 tokens de entrada, contando el paquete base más lo que acumule con herramientas; ningún paquete supera 85.000 al ensamblarse; ninguna salida supera 50.000. Se comprueba antes de llamar | `architecture.md` §4.1 | VER-12, VER-06 |
 | RF-17 | Cada agente tiene una lista de skills permitidas. Una llamada fuera de lista se rechaza y se traza | `verification.md` §5.4 | VER-12 |
 | RF-18 | Presupuesto de reintentos: 3 por escena, 2 por capítulo, 1 replanificación de tramo. Agotado el tercero, se recalcula el arco desde el Arquitecto | `architecture.md` §7.3 | VER-05, VER-18 |
-| RF-19 | Al agotar reintentos el artefacto entra en cuarentena (CAL-13); la producción no se detiene y el tramo se replanifica (PRO-12). En la versión 1 replanifica el Planificador a nivel de escena y el Arquitecto a nivel de tramo, porque el Supervisor no está | `architecture.md` §7.3, §8 | VER-05, VER-18 |
+| RF-19 | Al agotar reintentos el artefacto entra en cuarentena (CAL-13) y se rehace **de inmediato**, sin esperar a nadie. A nivel de escena la replanifica el Planificador con una especificación más estricta y se regenera en su sitio; a nivel de capítulo la replanifica el Arquitecto y el capítulo se regenera. **En ningún caso se salta al capítulo siguiente** | `architecture.md` §7.3, §8 | VER-05, VER-18 |
+| RF-107 | No se empieza un capítulo mientras el anterior no esté congelado. Escribir el N+1 exige del N su prosa literal, que no es compactable, y su estado del mundo, que solo existe tras congelar | `architecture.md` §4.3, §7.3, §10 | VER-18 |
 | RF-20 | El punto de reanudación (PRO-14) se escribe en `run_state` al cerrar cada escena. Al arrancar con un capítulo sin congelar, se reanuda desde la última escena cerrada y se descarta todo borrador posterior | PRO-I2 | VER-06, VER-18 |
 | RF-21 | `dispatch` valida toda salida de agente contra su esquema antes de devolverla. Es la frontera de confianza | `verification.md` §4.1 | VER-01, VER-05 |
 | RF-22 | Cada capítulo pasa las puertas de la versión 1 en este orden: escena generada con cero S1 deterministas; capítulo verificado con cero S1 y máximo 2 S2 del Continuista; capítulo cerrado con delta canónico integrado | `architecture.md` §9.3 | VER-18 |
+| RF-105 | Al congelar el último capítulo de un acto corre la **puerta de cierre de acto**, determinista y ejecutada por `planning/`: todo setup cuyo payoff estaba planificado dentro de ese acto aparece cobrado. El umbral lo fija la escaleta, no un número nuevo | `architecture.md` §9.3; CAN-08 | VER-05, VER-18 |
+| RF-106 | Si la puerta de cierre de acto falla, el Arquitecto replanifica el tramo **siguiente** para dar payoff a lo que quedó sin cobrar. Nunca se toca el acto ya congelado: el canon congelado gana | `architecture.md` §9.3, §10; PRO-10 | VER-05, VER-18 |
 | RF-23 | Condición de cierre de obra: deuda narrativa cero (CAN-I2), todos los arcos resueltos (EST-I2), curva de tensión completada y longitud dentro del rango del brief. Se evalúa tras cada congelación | `architecture.md` §8 | VER-05 |
 | RF-24 | Toda decisión del Orquestador queda en la traza con su regla aplicada. Ninguna espera a una persona | PRO-11 | VER-09 |
 
@@ -265,10 +268,10 @@ Agrupados por funcionalidad. El orden sigue el de construcción de `architecture
 
 | RF | Requisito | Fuente | Verificación |
 |---|---|---|---|
-| RF-25 | El Arquitecto produce la escaleta (`outline.plan`) con el paquete de `architecture.md` §4.9, dentro de 55.000 tokens de entrada y 15.000 de salida | `architecture.md` §4.2, §4.9 | VER-12, VER-10 |
+| RF-25 | El Arquitecto produce la escaleta (`outline.plan`) con el paquete de `architecture.md` §4.9, dentro de 57.500 tokens de entrada y 15.000 de salida | `architecture.md` §4.2, §4.9 | VER-12, VER-10 |
 | RF-26 | `outline.check` es determinista y comprueba: todo arco tiene inicio, crisis y resolución planificados; el doble arco (DEP-20) resuelve el competitivo y el interno en escenas distintas; la curva de tensión es monótona por acto; todo setup planificado tiene payoff planificado; la suma de palabras por capítulo cae en el rango del brief y cada capítulo en el de EST-07 | `architecture.md` §5.1, §8 | VER-05, VER-06 |
 | RF-27 | Una escaleta que no pasa `outline.check` vuelve al Arquitecto con los defectos y su evidencia; pasa, se congela y ya no cambia salvo replanificación | `architecture.md` §7.1 | VER-05 |
-| RF-28 | El Planificador convierte el tramo de escaleta de un capítulo en especificaciones de escena (`scene.spec`) con los cinco bloques de `domain-knowledge.md` §4, dentro de 28.000 de entrada y 6.000 de salida | `architecture.md` §4.2, §4.9 | VER-12, VER-08 |
+| RF-28 | El Planificador convierte el tramo de escaleta de un capítulo en especificaciones de escena (`scene.spec`) con los cinco bloques de `domain-knowledge.md` §4, dentro de 30.500 de entrada y 6.000 de salida | `architecture.md` §4.2, §4.9 | VER-12, VER-08 |
 | RF-29 | Toda `scene.spec` declara exactamente un POV, un capítulo y al menos un cambio de valor. Una que no, se rechaza en el parseo | EST-I1 | VER-01 |
 | RF-30 | Toda escena de la escaleta que sea un encuentro (DEP-06) se marca como tal en su `scene.spec` | `architecture.md` §7.1 | VER-05 |
 | RF-31 | `setup.ledger` mantiene el estado de cada setup según la máquina de `domain-knowledge.md` §11. Todo setup insertado aparece en la deuda hasta cobrarse | CAN-08 | VER-06 |
@@ -295,6 +298,8 @@ El corazón de la versión 1 y donde vive el RAG híbrido. Todo lo de esta secci
 | RF-78 | Si la pierna semántica devuelve vacío —fragmentos sin vector o indexados con otro modelo— la fusión sigue con una sola pierna, el paquete se marca como degradado y se traza. No aplica el fallo cerrado: la recuperación no es una comprobación | `architecture.md` §3.1, §4.4, §4.8 | VER-05, VER-09 |
 | RF-101 | Al arrancar, el modelo de embeddings se carga y su dimensión se contrasta con la del índice de la novela. Si no carga o no coincide, la tirada no empieza. No se reintenta: el fallo es determinista | `architecture.md` §4.8 | VER-05 |
 | RF-102 | El modelo de embeddings es multilingüe y viaja dentro de la imagen. Ni se descarga en ejecución ni se elige en caliente | `architecture.md` §4.8 | VER-11, VER-05 |
+| RF-103 | Todo paquete abre con el prefijo cacheable (CTX-23) de 4.500 tokens: instrucción del agente, guía de estilo completa, invariantes duros y léxico del mundo. Es idéntico en todas las llamadas de ese agente y **nada voluble va delante** | `architecture.md` §4.3, §4.8 | VER-05, VER-06 |
+| RF-104 | Al arrancar se calibra el factor del contador: se mide una muestra de prosa en español del brief con `tiktoken` y contra el `usage` real, y el factor se fija en la razón observada más margen. Sin calibración no se admite ninguna llamada | `architecture.md` §4.8 | VER-05, VER-06 |
 
 #### Selección y ajuste
 
@@ -312,7 +317,7 @@ El corazón de la versión 1 y donde vive el RAG híbrido. Todo lo de esta secci
 
 | RF | Requisito | Fuente | Verificación |
 |---|---|---|---|
-| RF-32 | El paquete del Escritor tiene los once bloques de `architecture.md` §4.3, en ese orden y con esos presupuestos, hasta 17.200 tokens. En la versión 1 el bloque 5 lleva los resúmenes de obra y de capítulo, porque los de arco llegan en el paso 7 | `architecture.md` §4.3 | VER-06 |
+| RF-32 | El paquete del Escritor tiene los once bloques de `architecture.md` §4.3, en ese orden y con esos presupuestos, hasta 19.700 tokens. En la versión 1 el bloque 5 lleva los resúmenes de obra y de capítulo, porque los de arco llegan en el paso 7 | `architecture.md` §4.3 | VER-06 |
 | RF-86 | El Documentalista ensambla el paquete de cada agente según su receta de `architecture.md` §4.9. Ningún paquete supera el presupuesto de entrada que §4.2 da a su agente destino | `architecture.md` §4.2, §4.9 | VER-06, VER-12 |
 | RF-87 | El paquete del Continuista se construye con recuperación dirigida por afirmaciones: se extraen del capítulo los nombres propios, fechas, cifras, competencias ejercidas y estados físicos, y cada uno genera su consulta. Sin cupos y con la pierna léxica al frente | `architecture.md` §4.9 | VER-05 |
 | RF-88 | Cada bloque del paquete declara su procedencia: canon, prosa congelada con su capítulo, o plan. Donde canon y prosa discrepen, manda el canon (PRO-10) | CTX-13; `architecture.md` §4.4 | VER-05 |
@@ -332,7 +337,7 @@ El corazón de la versión 1 y donde vive el RAG híbrido. Todo lo de esta secci
 | RF-41 | La prosa respeta el POV único, el tiempo verbal y la persona de la guía de estilo. Lo comprueba `check.format` | EST-I1, POE-06 | VER-05 |
 | RF-42 | `match.simulate` resuelve el encuentro completo con reglas antes de que se narre: cronología de hitos, resultado (DEP-07), participantes y cambios de estado físico. Es determinista dada una semilla | `architecture.md` §5.1 | VER-05, VER-06 |
 | RF-43 | `match.simulate` no alinea a nadie cuya disponibilidad (DEP-13, DEP-14) lo impida en esa fecha | DEP-I2 | VER-06 |
-| RF-44 | `match.narrate` dramatiza la cronología sin alterar resultado ni hitos, con el paquete de §4.9 y dentro de 12.000 de entrada y 3.000 de salida | `architecture.md` §4.2, §4.9 | VER-05, VER-10 |
+| RF-44 | `match.narrate` dramatiza la cronología sin alterar resultado ni hitos, con el paquete de §4.9 y dentro de 14.500 de entrada y 3.000 de salida | `architecture.md` §4.2, §4.9 | VER-05, VER-10 |
 | RF-45 | Al escribir la escena n, el bloque de prosa literal contiene la escena n−1 completa y, si cabe en sus 4.500 tokens, la cola de la n−2. Por eso las escenas de un capítulo van en serie | `architecture.md` §4.2, §4.9 | VER-18 |
 
 ### 4.7 `verification/` · verificadores, continuidad y reparación (paso 4)
@@ -344,16 +349,16 @@ El corazón de la versión 1 y donde vive el RAG híbrido. Todo lo de esta secci
 | RF-48 | `check.knowledge` marca S1 toda mención de un hecho canónico por un personaje cuyo `canon.knowledge-of` en ese instante no lo incluye | PER-I1 | VER-05 |
 | RF-49 | `check.repetition` marca los n-gramas de 4 o más ya usados en prosa congelada y los términos proscritos. Todo n-grama o imagen usado dos veces entra automáticamente en la lista de proscripción | `architecture.md` §4.6, §9.1 | VER-05 |
 | RF-50 | Los verificadores deterministas tienen cobertura de mutación ≥ 90 % | `verification.md` §4.7 | VER-07 |
-| RF-51 | El Continuista recibe el paquete de §4.9, dentro de 45.000 de entrada y 5.000 de salida, y devuelve defectos con cita para lo que los deterministas no cubren. Su criterio de salida es cero S1 | `architecture.md` §4.2, §4.9 | VER-12, VER-10 |
+| RF-51 | El Continuista recibe el paquete de §4.9, dentro de 47.500 de entrada y 5.000 de salida, y devuelve defectos con cita para lo que los deterministas no cubren. Su criterio de salida es cero S1 | `architecture.md` §4.2, §4.9 | VER-12, VER-10 |
 | RF-52 | El Continuista no ve el paquete que generó la prosa ni el razonamiento del Escritor | `architecture.md` §1, §4.7 | VER-05 |
-| RF-53 | El Reparador recibe fragmento, defectos agrupados y su evidencia, con el paquete de §4.9, dentro de 12.000 de entrada y 3.000 de salida | `architecture.md` §4.2, §4.9 | VER-12, VER-10 |
+| RF-53 | El Reparador recibe fragmento, defectos agrupados y su evidencia, con el paquete de §4.9, dentro de 14.500 de entrada y 3.000 de salida | `architecture.md` §4.2, §4.9 | VER-12, VER-10 |
 | RF-54 | Toda reparación revalida desde la primera puerta. Una reparación que abre defectos nuevos se revierte | `architecture.md` §7.3; `verification.md` §5.10 | VER-05, VER-18 |
 
 ### 4.8 `canon/` · delta, arbitraje y congelación (pasos 5 y 6)
 
 | RF | Requisito | Fuente | Verificación |
 |---|---|---|---|
-| RF-55 | El Archivero extrae el delta canónico del capítulo aprobado con el paquete de §4.9, dentro de 22.000 de entrada y 5.000 de salida. Todo evento del delta lleva procedencia `prose` o `derived` y su capítulo de origen | `architecture.md` §4.9, §10 | VER-12, VER-08 |
+| RF-55 | El Archivero extrae el delta canónico del capítulo aprobado con el paquete de §4.9, dentro de 24.500 de entrada y 5.000 de salida. Todo evento del delta lleva procedencia `prose` o `derived` y su capítulo de origen | `architecture.md` §4.9, §10 | VER-12, VER-08 |
 | RF-56 | El delta se propone y se valida contra el canon vigente; nunca se aplica en bruto | `architecture.md` §10 | VER-05, VER-18 |
 | RF-57 | La congelación aplica eventos, recalcula proyecciones, escribe el índice y sus vectores, guarda los resúmenes y purga la memoria de trabajo en una sola transacción. Tras congelar no queda ninguna fila de memoria de trabajo del capítulo | PRO-I1; `architecture.md` §3.3 | VER-06 |
 | RF-58 | La congelación es la única operación que escribe canon y solo `canon/` la ejecuta | `architecture.md` §10 | VER-02, VER-05 |
@@ -361,7 +366,7 @@ El corazón de la versión 1 y donde vive el RAG híbrido. Todo lo de esta secci
 | RF-60 | En la versión 1, si el canon previo gana, el delta se rechaza y el capítulo vuelve al Reparador con la contradicción como defecto S1. El retcon no está implementado | `architecture.md` §8, §10 | VER-05 |
 | RF-61 | La política de precedencia es total y sin ciclos: todo conflicto tiene exactamente un ganador | `verification.md` §4.4 | VER-04 |
 | RF-62 | Fusionar dos deltas canónicos es asociativo | `verification.md` §4.6 | VER-06 |
-| RF-63 | El Árbitro atiende dos entradas: la del Orquestador al validar el delta y la del Documentalista desde `context.audit`. Su presupuesto es 15.000 de entrada y 2.000 de salida | `architecture.md` §4.2, §6.2 | VER-12 |
+| RF-63 | El Árbitro atiende dos entradas: la del Orquestador al validar el delta y la del Documentalista desde `context.audit`. Su presupuesto es 17.500 de entrada y 2.000 de salida | `architecture.md` §4.2, §6.2 | VER-12 |
 | RF-90 | Los resúmenes de escena y de capítulo se generan al congelar, según `architecture.md` §4.5. El de escena es lo que se embebe en el nivel de escena del índice | `architecture.md` §3.3, §4.5 | VER-05 |
 
 ### 4.9 Rutas HTTP (dentro de cada funcionalidad)
@@ -497,8 +502,8 @@ Un fichero SQLite por novela, sin extensiones nativas. Separación lógica de lo
 | VER-02 Static analysis | RF-58, RF-64, RF-96, RD-08, RD-09, RD-11, RD-17, RNF-10, RNF-15, RNF-21 |
 | VER-03 Symbolic execution | RNF-18: proyecciones, calendario, clasificación, corte de fragmentos, fusión y empaquetador |
 | VER-04 Formal verification | RF-59, RF-61 |
-| VER-05 Unit e integration | RF-01, RF-10, RF-11, RF-12, RF-15, RF-27, RF-30, RF-34, RF-35, RF-36, RF-37, RF-41, RF-48, RF-49, RF-52, RF-56, RF-60, RF-65, RF-66, RF-67, RF-68, RF-71, RF-72, RF-73, RF-74, RF-75, RF-78, RF-79, RF-80, RF-81, RF-82, RF-87, RF-88, RF-89, RF-90, RF-91, RF-92, RF-93, RF-95, RF-98, RF-99, RF-101, RF-102, RD-01, RD-02, RD-06, RD-07, RD-10, RD-12, RD-13, RD-14, RD-15, RNF-05, RNF-07, RNF-09, RNF-17, RNF-22 |
-| VER-06 Property-based | RF-03 a RF-09, RF-14, RF-16, RF-20, RF-31, RF-32, RF-33, RF-42, RF-43, RF-47, RF-57, RF-62, RF-69, RF-70, RF-76, RF-77, RF-83, RF-84, RF-85, RF-86, RF-93, RF-94, RF-97, RD-03, RD-04, RD-05, RD-16, RNF-04, RNF-06, RNF-08, RNF-19, RNF-23, RNF-25 |
+| VER-05 Unit e integration | RF-01, RF-10, RF-11, RF-12, RF-15, RF-27, RF-30, RF-34, RF-35, RF-36, RF-37, RF-41, RF-48, RF-49, RF-52, RF-56, RF-60, RF-65, RF-66, RF-67, RF-68, RF-71, RF-72, RF-73, RF-74, RF-75, RF-78, RF-79, RF-80, RF-81, RF-82, RF-87, RF-88, RF-89, RF-90, RF-91, RF-92, RF-93, RF-95, RF-98, RF-99, RF-101, RF-102, RF-103, RF-104, RF-105, RF-106, RD-01, RD-02, RD-06, RD-07, RD-10, RD-12, RD-13, RD-14, RD-15, RNF-05, RNF-07, RNF-09, RNF-17, RNF-22 |
+| VER-06 Property-based | RF-03 a RF-09, RF-14, RF-16, RF-20, RF-31, RF-32, RF-33, RF-42, RF-43, RF-47, RF-57, RF-62, RF-69, RF-70, RF-76, RF-77, RF-83, RF-84, RF-85, RF-86, RF-93, RF-94, RF-97, RF-103, RF-104, RD-03, RD-04, RD-05, RD-16, RNF-04, RNF-06, RNF-08, RNF-19, RNF-23, RNF-25 |
 | VER-07 Mutation | RF-46, RF-50 |
 | VER-08 Contract | RI-08, RI-11, RI-21, RI-24, RF-28, RF-55, RF-64 |
 | VER-09 Observability | RI-12, RI-16, RI-23, RF-24, RF-39, RF-100, RNF-13, RNF-14, RNF-19, RNF-20, RNF-24 |
@@ -506,7 +511,7 @@ Un fichero SQLite por novela, sin extensiones nativas. Separación lógica de lo
 | VER-11 Sandbox | RNF-11 |
 | VER-12 Guardrails | RF-16, RF-17, RF-25, RF-28, RF-40, RF-44, RF-51, RF-53, RF-55, RF-63, RF-86, RF-91, RI-25 |
 | VER-17 Red-teaming | RNF-12, RNF-22 |
-| VER-18 Model checking | RF-13, RF-14, RF-18, RF-19, RF-20, RF-22, RF-45, RF-54, RF-56, RF-97, RNF-01, RNF-02, RNF-03, RNF-24 |
+| VER-18 Model checking | RF-13, RF-14, RF-18, RF-19, RF-20, RF-22, RF-45, RF-54, RF-56, RF-97, RF-105, RF-106, RF-107, RNF-01, RNF-02, RNF-03, RNF-24 |
 
 VER-13 está excluido. VER-14 entra con el Jurado, VER-15 es la puerta de §7.2 y VER-16 se aplica al cambiar un prompt.
 
@@ -541,6 +546,8 @@ Filas que se añaden al registro de `verification.md` §9 mientras dure esta ver
 | Riesgo | Por qué queda en U | Señal que se vigila |
 |---|---|---|
 | Calidad literaria de la prosa: tensión, subtexto, voz | Sin Jurado ni Estilista no hay quien la mida | Ninguna hasta la versión 2. Riesgo aceptado |
+| Conformidad de la curva de tensión realizada con la planificada, en la puerta de cierre de acto | Medirla exige juicio, y el juicio llega con el Jurado. La mitad determinista de la puerta —la deuda— sí se comprueba (RF-105) | Setups sin cobrar al cierre de cada acto, en la traza |
+| Que el factor del contador calibrado sobre una muestra valga para la obra entera | La muestra es del brief y la obra son 200.000 palabras de registros distintos | Que el recuento real supere al estimado en alguna llamada. Con Haiku es alarma, no aviso (RNF-19) |
 | Aplanamiento estilístico y autosimilitud | Sin huella estilística el defecto no es observable en el agregado | Recuento de `check.repetition` por capítulo, y el cupo de voz que excluye lo ya usado (RF-82) |
 | Que los cupos traigan lo relevante | Sin conjunto dorado no hay contra qué medir la recuperación | Cupos vacíos por capítulo y fragmentos sustituidos por resumen, en la traza (`architecture.md` §11) |
 | Que la constante de fusión y el tamaño de fragmento sean los adecuados | Ajustarlos exige medir, y la medición llega en el paso 8 | Las mismas señales de la fila anterior |
@@ -582,6 +589,12 @@ Ninguna introduce un término ni un número nuevo. Todas eligen entre formas de 
 | D-11 | Langfuse caído | Encolar en local y continuar | La observabilidad observa, no gobierna |
 | D-12 | Búsqueda vectorial | Vectores en tabla y similitud en Python, sin extensión | 200 a 400 escenas y 600 a 1.200 fragmentos por obra: el recorrido exhaustivo es exacto e inmediato. El fichero sigue siendo un SQLite corriente |
 | D-13 | Cuándo se calculan los embeddings | Al congelar, desde la versión 1 | Evita que el afinado del paso 8 reindexe la novela entera |
+| D-23 | Modelo de los once agentes | Claude Haiku 4.5 para todos | Decisión de coste del autor. Cierra la decisión abierta nº 8. El puerto sigue permitiendo modelos distintos por rol si la medición lo pidiera |
+| D-24 | Tamaño del ancla | Crece de 2.000 a 4.500 y pasa a ser prefijo cacheable | Haiku no cachea por debajo de 4.096 y no avisa. Por debajo del mínimo, comprimir el ancla es una economía falsa: 4.500 cacheados salen varias veces más baratos que 2.000 sin cachear, y el ancla viaja en todas las llamadas |
+| D-25 | Presupuestos por agente | Suben 2.500 cada uno, los que llevan ancla | Es el crecimiento del prefijo, no un ensanche. Caben de sobra bajo el techo de 100.000 |
+| D-26 | Cuarentena de capítulo | Se rehace de inmediato; no se salta al siguiente | Sin congelar, el capítulo no existe para el sistema, y el siguiente necesita de él la prosa literal y el estado del mundo. Saltar fabrica una contradicción que ninguna puerta detecta |
+| D-27 | Puerta de cierre de acto | Entra en la versión 1, solo con la mitad determinista | La deuda se comprueba contra la escaleta, sin número nuevo. La curva de tensión exige juicio y queda en riesgo aceptado hasta el Jurado |
+| D-28 | Calibración del contador | Al arrancar, no sobre la marcha | Con Haiku el colchón baja de 900.000 a 50.000. El factor deja de ser una formalidad |
 | D-22 | Quién calcula los embeddings | Modelo multilingüe local con `fastembed`, en el mismo proceso | Quita el único modo de fallo intermitente del ciclo, hace los vectores deterministas, baja el coste por vector a cero y cierra el contenedor a un solo proveedor externo. El identificador del modelo queda por fijar; nada más depende de él |
 | D-14 | Contador de tokens | `tiktoken` local con factor de seguridad de 1,35 por modelo, calibrado contra el `usage` real | Mantiene la admisión offline y sin dependencias nuevas en el camino crítico. El sesgo de `tiktoken` es conocido y va siempre hacia abajo, así que se acota con el factor y se corrige con lo medido, que llega gratis en cada respuesta |
 | D-15 | Grafo de entidades | Se construye en el paso 1, con su recorrido recursivo | La tabla de aristas ya la crea ese paso; lo único que añade es la consulta |
@@ -599,7 +612,7 @@ Ninguna introduce un término ni un número nuevo. Todas eligen entre formas de 
 | Decisión | Dónde está | Efecto en la versión 1 |
 |---|---|---|
 | Nº 7 de `architecture.md` §13: qué modelo multilingüe de `fastembed` puebla el índice | Abierta, y es la única de esta lista que hay que cerrar antes de indexar el primer capítulo | El mecanismo está fijado (D-22). Elegir otro después es reindexar, no rediseñar, pero arrancar con uno monolingüe inglés degrada la pierna semántica desde el capítulo 1 |
-| Nº 8 de `architecture.md` §13: qué modelo de Claude usa cada rol | Abierta | Ninguno de diseño. El puerto lo aísla |
+| ~~Nº 8: qué modelo de Claude usa cada rol~~ | **Cerrada**: Haiku 4.5 para los once (D-23) | Ventana de 200.000 en vez de 1.000.000, mínimo cacheable de 4.096 y menos colchón para el error del contador. Todo ello ya recogido |
 | Nº 9 de `architecture.md` §13: capítulo en el techo de EST-07 que no cabe en el presupuesto del Jurado | Abierta | Ninguno: el Jurado no está en la versión 1 |
 | Nº 10 de `architecture.md` §13: constante de la fusión por rangos | Abierta | Se usa 60; medirla es el paso 8 |
 | Nº 1 de `architecture.md` §13: tamaño del bloque de prosa literal | Abierta | Se usan los 4.500 tokens de §4.3 |
@@ -665,7 +678,7 @@ IDs que la versión 1 realiza. Un ID que no aparece aquí no está implementado 
 | DEP | 01, 02, 03, 06, 07, 08, 09, 12, 13, 14, 20; invariantes I1, I2 |
 | POE | 06, 12 |
 | CAN | 01, 02, 03, 04, 05, 06, 07, 08, 11, 12; invariantes I1, I2 |
-| CTX | 01, 02, 03, 05, 06, 07, 08, 09, 10, 11, 15, 16, 17, 18, 19, 20; invariante I1 |
+| CTX | 01, 02, 03, 05, 06, 07, 08, 09, 10, 11, 15, 16, 17, 18, 19, 20, 21, 22, 23; invariante I1 |
 | CAL | 03, 05, 06, 07, 08, 09, 12, 13 |
 | PRO | 01, 06, 08, 09, 10, 11, 12, 13, 14; invariantes I1, I2 |
 
