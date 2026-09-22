@@ -1,0 +1,113 @@
+[project]
+name = "story-maker-backend"
+version = "0.1.0"
+description = "Sistema autonomo de generacion de novelas largas"
+requires-python = ">=3.12"
+
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "pydantic>=2.9",
+    "anthropic>=0.40",
+    "fastembed>=0.4",
+    "tiktoken>=0.8",
+    "langfuse>=2.53",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "hypothesis>=6.112",
+    "mypy>=1.13",
+    "ruff>=0.7",
+    "import-linter>=2.1",
+    "schemathesis>=3.38",
+    "bandit>=1.7",
+    "pip-audit>=2.7",
+    "mutmut>=3.0",
+]
+
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["commons*", "orchestration*", "planning*", "context*", "generation*", "verification*", "canon*"]
+
+# ---------------------------------------------------------------- ruff
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "A", "C4", "SIM", "RUF"]
+ignore = ["E501"]
+
+# ---------------------------------------------------------------- mypy
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unreachable = true
+# `disallow_any_explicit` queda FUERA a proposito: marca los `Any` internos de
+# los stubs de pydantic, asi que con el activo toda `class X(BaseModel)` es un
+# error y el stack que la spec fija seria inusable. Lo que el SRS pide --nada
+# de `dict` ni `Any` en firma publica (RF-64)-- ya lo cubre `strict`, que trae
+# disallow_untyped_defs, disallow_any_generics y warn_return_any.
+plugins = []
+
+[[tool.mypy.overrides]]
+module = ["fastembed.*", "tiktoken.*", "langfuse.*"]
+ignore_missing_imports = true
+
+# ---------------------------------------------------------------- pytest
+
+[tool.pytest.ini_options]
+testpaths = ["commons", "orchestration", "planning", "context", "generation", "verification", "canon"]
+python_files = ["test_*.py"]
+asyncio_mode = "auto"
+
+# ---------------------------------------------------------------- import-linter
+#
+# Las tres reglas de architecture.md 2.3, en CI desde el primer commit.
+# Tres pisos: canon/ abajo, funcionalidades en medio, orchestration/ arriba.
+
+[tool.importlinter]
+root_packages = [
+    "commons",
+    "orchestration",
+    "planning",
+    "context",
+    "generation",
+    "verification",
+    "canon",
+]
+
+[[tool.importlinter.contracts]]
+name = "Tres pisos: orchestration -> funcionalidades -> canon -> commons"
+type = "layers"
+layers = [
+    "orchestration",
+    "planning | context | generation | verification",
+    "canon",
+    "commons",
+]
+
+[[tool.importlinter.contracts]]
+name = "canon/ no importa de ninguna funcionalidad"
+type = "forbidden"
+source_modules = ["canon"]
+forbidden_modules = [
+    "orchestration",
+    "planning",
+    "context",
+    "generation",
+    "verification",
+]
+
+[[tool.importlinter.contracts]]
+name = "Ninguna funcionalidad importa de otra funcionalidad"
+type = "independence"
+modules = ["planning", "context", "generation", "verification"]
