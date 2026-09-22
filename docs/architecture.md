@@ -295,6 +295,9 @@ Reglas duras de ocupación (CTX-18) y de concurrencia (CTX-20):
 | Archivero | 24.500 | 5.000 | 25 % | Por capítulo |
 | Árbitro | 17.500 | 2.000 | 18 % | Por conflicto |
 | Supervisor | 32.500 | 3.000 | 33 % | Por capítulo cerrado |
+| Lector del examen · `quiz.answer` | 9.000 | 1.000 | 10 % | Por capítulo |
+
+La última fila **no es un agente**: es una llamada de modelo que despacha el Orquestador en código, sin misión ni criterio de salida propios, igual que el tope de salida lo aplica `dispatch` y no el modelo (§5.3). Su entrada sale de números que ya están en este documento: 8.000 del capítulo completo —el mismo bloque que ya ocupan el Estilista y el Archivero en §4.9—, más 500 de preguntas y 500 de instrucción. La salida es menor que la de un juez porque son respuestas breves y no hay evidencia que citar.
 
 **Qué corre en paralelo.** Solo el Jurado: sus tres instancias son deliberadamente independientes entre sí (§9.2), así que se lanzan a la vez y suman 27.000 tokens de entrada. Todo lo demás va en serie. Las escenas de un capítulo **no** se paralelizan, y no por coste: el bloque 6 del paquete del Escritor es la prosa literal de la escena anterior (§4.3), no compactable, así que escribir la escena *n* exige tener escrita la *n−1*. Paralelizarlas compraría velocidad rompiendo justo el bloque que sostiene la voz.
 
@@ -885,6 +888,9 @@ Una **skill** es una capacidad reutilizable con contrato fijo de entrada y salid
 | `check.repetition` | N-gramas repetidos y términos proscritos | Lista con recuento |
 | `check.lexicon` | Nombres, alias y léxico del mundo | Defectos con evidencia |
 | `check.knowledge` | Menciones de hechos canónicos por personajes cuyo PER-10 no los incluye en ese instante (PER-I1) | Defectos con evidencia |
+| `check.evidence` | Comprueba que la cita de un veredicto existe literal y una sola vez en la escena citada, con 8 palabras o más (`verification.md` §5.11) | Cita anclada con su posición, o veredicto descartado |
+| `quiz.build` | Genera preguntas y solucionario desde la especificación de escena y el canon vigente: lo que el capítulo **debía** transmitir | Examen con su clave de corrección |
+| `quiz.grade` | Corrige las respuestas contra el solucionario | Defectos S2 por cada respuesta errónea |
 | `outline.check` | Verificador estructural de la escaleta: cobertura de arcos, doble arco resuelto en momentos distintos (DEP-20), curva de tensión monótona por acto, todo setup con payoff planificado, reparto de palabras por capítulo | Defectos con evidencia |
 | `match.simulate` | Motor de reglas que resuelve un encuentro completo | Cronología del encuentro y resultado |
 | `style.fingerprint` | Calcula la huella estilística del texto | Vector de métricas y desviación |
@@ -913,12 +919,15 @@ Las tres skills de prosa viven en `canon/` con el almacén que manejan, y `conte
 | `revise.targeted` | Corrige un fragmento dado el defecto y su evidencia | Fragmento corregido |
 | `dialogue.pass` | Pase específico sobre diálogo | Prosa revisada |
 | `style.polish` | Pase de estilo, poda y proscripción | Prosa pulida |
+| `quiz.answer` | Responde el examen viendo **solo el capítulo**: sin canon, sin fichas, sin rúbrica y sin prefijo cacheable | Respuestas breves |
 | `delta.extract` | Extrae hechos, eventos y cambios de estado | Delta canónico estructurado |
 | `summarize.hierarchical` | Resume al nivel pedido | Resumen |
 | `retcon.propose` | Propone reinterpretación de canon con pasajes afectados | Propuesta arbitrable |
 | `replan.arc` | Recalcula un tramo de escaleta tras un bloqueo | Escaleta parcial |
 
-**Contrato común de las skills de auditoría**: toda puntuación llega acompañada de la cita textual que la justifica. Sin evidencia, la puntuación se descarta automáticamente. Es lo que impide que un juez sin supervisión externa apruebe por inercia.
+**Contrato común de las skills de auditoría**: toda puntuación llega acompañada de la cita textual que la justifica, y **esa cita se comprueba con `check.evidence` antes de evaluar la puntuación** (`verification.md` §5.11). Sin evidencia, o con evidencia que no aparece en el texto, la puntuación se descarta automáticamente y el descarte se anota contra la instancia que lo produjo. Pedir la cita sin comprobarla deja el requisito en manos del propio modelo que debería cumplirlo.
+
+`quiz.answer` es la única skill de modelo que **no** recibe prefijo cacheable, y no es un olvido de presupuesto: su valor entero depende de que el lector no tenga delante nada más que el capítulo. Compartir prefijo con el resto del sistema sería darle el canon por la puerta de atrás y convertir el examen en una tautología.
 
 ### 5.3 Herramientas
 
@@ -1071,6 +1080,8 @@ graph LR
   A12 --> S21
   A12 --> S17
 ```
+
+**Tres skills no aparecen aquí porque no tienen agente**: `quiz.build`, `quiz.answer` y `quiz.grade` las ejecuta el Orquestador en código, como el resto del examen de comprensión de `verification.md` §5.12. `check.evidence` sí está, dentro de `check.*`, aunque corra sobre la salida de un juez y no sobre la prosa.
 
 ---
 
@@ -1382,12 +1393,13 @@ Coste despreciable, cero falsos positivos si están bien escritos. Se ejecutan s
 - Restricciones formales: tiempo verbal, persona, POV único por escena, longitud.
 - Repetición: n-gramas de 4 o más ya usados; frecuencia de términos proscritos.
 - Conocimiento (`check.knowledge`): menciones de hechos canónicos por personajes cuyo PER-10 no los incluye.
+- Anclaje de la evidencia (`check.evidence`): toda cita que acompaña a un defecto o a una puntuación existe literal y una sola vez en la escena que nombra. Corre sobre la salida de los jueces, no sobre la prosa.
 
 ### 9.2 Jurado
 
 Tres instancias con rúbricas distintas y semillas distintas. Reglas:
 
-- Toda puntuación cita el fragmento que la justifica. Sin cita, se descarta.
+- Toda puntuación cita el fragmento que la justifica, y la cita **se comprueba** con `check.evidence`. Sin cita, o con una cita que no aparece en el texto, se descarta y el descarte se anota contra esa instancia.
 - Contexto mínimo: escena, especificación y ficha de voz. Nunca el paquete del Escritor.
 - Dispersión alta entre instancias invalida el veredicto y fuerza una verificación adicional en lugar de promediar. Promediar jueces que no se ponen de acuerdo produce un número sin significado.
 
@@ -1396,7 +1408,7 @@ Tres instancias con rúbricas distintas y semillas distintas. Reglas:
 | Puerta | Condición de paso |
 |---|---|
 | Escena generada | Cero defectos S1 deterministas |
-| Capítulo verificado | Cero S1, máximo 2 S2, continuidad y voz sobre umbral |
+| Capítulo verificado | Cero S1, máximo 2 S2, continuidad y voz sobre umbral. Las respuestas erróneas del examen de comprensión (`verification.md` §5.12) entran aquí como S2, sin umbral propio |
 | Capítulo cerrado | Puertas anteriores más huella estilística dentro de tolerancia y delta canónico integrado |
 | Cierre de acto | Deuda narrativa dentro del margen planificado; curva de tensión conforme. Ver abajo qué parte se comprueba hoy |
 | Cierre de obra | Deuda narrativa cero; todos los arcos resueltos; longitud en rango |

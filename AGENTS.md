@@ -140,7 +140,7 @@ Reparto físico del monorepo, capa de memoria en cinco almacenes, ingeniería de
 
 ### [`docs/verification.md`](docs/verification.md) · Verificación
 
-18 métodos con ID `VER-NN`, repartidos en dos ejes: verificación de **producto**, que el código hace lo que dice, y de **proceso**, que el agente se comporta de forma fiable. Cada uno clasificado en TAIDU, con herramienta, límite y puerta. Incluye el registro de riesgo aceptado.
+20 métodos con ID `VER-NN`, repartidos en dos ejes: verificación de **producto**, que el código hace lo que dice, y de **proceso**, que el agente se comporta de forma fiable. Cada uno clasificado en TAIDU, con herramienta, límite y puerta. Incluye el registro de riesgo aceptado.
 
 **Consúltalo cuando**: vayas a escribir código o un test, o necesites saber con qué método se comprueba un artefacto y qué garantía da.
 

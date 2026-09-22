@@ -123,11 +123,33 @@ def check_availability(
 # -------------------------------------------------------------- check.format
 
 _FIRST_PERSON = re.compile(r"\b(yo|me|mi|conmigo|nosotros|nuestro)\b", re.IGNORECASE)
-_PRESENT_HINT = re.compile(r"\b\w+(amos|emos|imos)\b", re.IGNORECASE)
+
+#: Formas verbales frecuentes en narracion, en pasado y en presente.
+#:
+#: Se comparan LISTAS CERRADAS de verbos comunes en vez de intentar deducir el
+#: tiempo por terminaciones. En espanol las terminaciones no separan: "mira" es
+#: presente y "la puerta" acaba igual, asi que una regla por sufijo marcaria
+#: sustantivos. Con verbos concretos el reconocimiento es exacto aunque no sea
+#: exhaustivo, y para decidir en que tiempo esta una escena entera basta con
+#: cual de los dos grupos domina.
+_PAST_FORMS = frozenset(["era", "eran", "estaba", "estaban", "habia", "habian", "tenia", "tenian", "fue", "fueron", "dijo", "dijeron", "miro", "miraron", "hizo", "hicieron", "vio", "vieron", "entro", "entraron", "salio", "salieron", "sintio", "sintieron", "supo", "supieron", "quiso", "quisieron", "pudo", "pudieron", "llego", "llegaron", "penso", "pensaron", "volvio", "volvieron", "paso", "pasaron", "dejo", "dejaron", "cogio", "cogieron"])
+
+_PRESENT_FORMS = frozenset(["es", "son", "esta", "estan", "hay", "ha", "han", "tiene", "tienen", "va", "van", "dice", "dicen", "mira", "miran", "hace", "hacen", "ve", "ven", "entra", "entran", "sale", "salen", "siente", "sienten", "sabe", "saben", "quiere", "quieren", "puede", "pueden", "llega", "llegan", "piensa", "piensan", "vuelve", "vuelven", "pasa", "pasan", "deja", "dejan", "coge", "cogen"])
+
+#: Cuantas formas del tiempo equivocado hacen falta para marcar, y cuanto tiene
+#: que dominar. Un pasaje en pasado puede llevar presentes legitimos --una
+#: verdad general, un pensamiento-- asi que marcar al primero daria falsos
+#: positivos en prosa correcta.
+_TENSE_MIN_EVIDENCE = 4
+_TENSE_RATIO = 2.0
 
 
 def check_format(
-    text: str, *, person: str = "tercera", word_range: tuple[int, int] | None = None
+    text: str,
+    *,
+    person: str = "tercera",
+    tense: str = "pasado",
+    word_range: tuple[int, int] | None = None,
 ) -> list[Defect]:
     """Persona, tiempo verbal y longitud.
 
@@ -136,6 +158,7 @@ def check_format(
     el punto de vista unico, que es una invariante estructural.
     """
     out: list[Defect] = []
+    out += _check_tense(text, tense=tense)
 
     if person == "tercera":
         primera = _FIRST_PERSON.search(text)
@@ -165,6 +188,51 @@ def check_format(
                 )
             )
     return out
+
+
+def _check_tense(text: str, *, tense: str) -> list[Defect]:
+    """Tiempo verbal de la narracion.
+
+    **Solo fuera de dialogo.** Los personajes hablan en presente con toda
+    naturalidad aunque la narracion vaya en pasado; contar sus verbos haria que
+    una escena con mucho dialogo se marcara siempre.
+
+    Es **S1**: el tiempo verbal equivocado no es un matiz, rompe la guia de
+    estilo en algo que un lector nota en la primera linea, y ademas afecta a la
+    escena entera, no a un pasaje.
+
+    Lo escribi sin esta comprobacion y la primera escena real que genero el
+    sistema salio en presente sin que nada la marcara. De ahi que este aqui.
+    """
+    if tense != "pasado":
+        return []
+
+    narracion = [
+        (m.group(0), m.start())
+        for m in re.finditer(r"\w+", text)
+        if not _inside_quotes(text, m.start())
+    ]
+
+    pasados = [w for w, _ in narracion if _normalize(w) in _PAST_FORMS]
+    presentes = [(w, i) for w, i in narracion if _normalize(w) in _PRESENT_FORMS]
+
+    if len(presentes) < _TENSE_MIN_EVIDENCE:
+        return []
+    if len(presentes) < max(1, len(pasados)) * _TENSE_RATIO:
+        return []
+
+    palabra, _pos = presentes[0]
+    return [
+        Defect(
+            kind="check.format",
+            severity=Severity.S1,
+            evidence=_cite(text, palabra),
+            rule=(
+                f"la narracion va en presente y la guia pide pasado: "
+                f"{len(presentes)} formas en presente frente a {len(pasados)} en pasado"
+            ),
+        )
+    ]
 
 
 def _inside_quotes(text: str, position: int) -> bool:

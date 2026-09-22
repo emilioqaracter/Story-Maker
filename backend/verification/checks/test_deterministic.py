@@ -94,6 +94,53 @@ def test_la_raya_de_dialogo_tambien_cuenta() -> None:
     assert check_format("El tecnico callo.\n\u2014Yo no lo vi \u2014dijo.") == []
 
 
+def test_la_narracion_en_presente_es_grave() -> None:
+    """Rompe la guia de estilo en algo que un lector nota en la primera linea, y
+    afecta a la escena entera y no a un pasaje.
+
+    Esta comprobacion no estaba, y la PRIMERA escena que el sistema genero de
+    verdad salio en presente sin que nada la marcara. De ahi que exista.
+    """
+    presente = (
+        "Marcos abre la puerta. El tecnico esta cerca de los bancos. "
+        "Lo ve de reojo y sabe que algo pasa. Nadie dice nada. "
+        "Marcos sale y va hacia el pasillo."
+    )
+    [d] = [x for x in check_format(presente) if "presente" in x.rule]
+    assert d.severity is Severity.S1
+
+
+def test_la_narracion_en_pasado_no_se_marca() -> None:
+    pasado = (
+        "Marcos entro por la puerta. El tecnico estaba cerca de los bancos. "
+        "Lo vio de reojo y supo que algo pasaba. Nadie dijo nada. "
+        "Marcos salio y fue hacia el pasillo."
+    )
+    assert not [x for x in check_format(pasado) if "presente" in x.rule]
+
+
+def test_el_presente_en_dialogo_no_cuenta() -> None:
+    """Los personajes hablan en presente con toda naturalidad; contar sus verbos
+    haria que una escena con mucho dialogo se marcara siempre."""
+    mixto = "\n".join([
+        "Marcos entro en el vestuario. El tecnico estaba de espaldas.",
+        "\u2014Esto no es lo que parece. Yo se lo que hay y se que va a pasar",
+        "\u2014dijo\u2014. Nadie sale de aqui, nadie dice nada, nadie tiene la culpa.",
+        "Marcos lo miro y no contesto. Salio despacio.",
+    ])
+    assert not [x for x in check_format(mixto) if "presente" in x.rule]
+
+
+def test_un_presente_suelto_en_pasado_no_marca() -> None:
+    """Un pasaje en pasado puede llevar presentes legitimos --una verdad general,
+    un pensamiento-- y marcarlos daria falsos positivos en prosa correcta."""
+    con_general = (
+        "Marcos entro en el vestuario. Estaba vacio. Miro la lista y penso que "
+        "el futbol es asi. Salio sin decir nada. Volvio al pasillo."
+    )
+    assert not [x for x in check_format(con_general) if "presente" in x.rule]
+
+
 def test_una_escena_fuera_de_rango_es_menos_grave() -> None:
     """Degrada el ritmo pero no contradice nada: marcarla grave pararia el
     capitulo por algo que se arregla en un pase."""

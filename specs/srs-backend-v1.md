@@ -209,7 +209,7 @@ Los artefactos se nombran por la skill que los produce o por su ID (`architectur
 | Arbitraje (PRO-10) | Árbitro | Orquestador, traza | Las dos afirmaciones, la regla aplicada, la ganadora, los pasajes afectados |
 
 - **RI-18** Todo artefacto de salida de un agente de modelo se valida contra su esquema antes de devolverse al Orquestador. Si no valida, la llamada cuenta como fallida y consume un reintento.
-- **RI-19** Todo veredicto, defecto o puntuación sin cita localizable se descarta (`AGENTS.md` §5.3 punto 5).
+- **RI-19** Todo veredicto, defecto o puntuación sin cita localizable se descarta (`AGENTS.md` §5.3 punto 5). **La cita no se acepta por declarada: se comprueba** con `check.evidence` antes de evaluar el veredicto (RF-110). Una cita que no aparece en la escena que nombra invalida el veredicto y se anota como defecto de proceso de esa instancia.
 
 ---
 
@@ -354,6 +354,12 @@ El corazón de la versión 1 y donde vive el RAG híbrido. Todo lo de esta secci
 | RF-52 | El Continuista no ve el paquete que generó la prosa ni el razonamiento del Escritor | `architecture.md` §1, §4.7 | VER-05 |
 | RF-53 | El Reparador recibe fragmento, defectos agrupados y su evidencia, con el paquete de §4.9, dentro de 14.500 de entrada y 3.000 de salida | `architecture.md` §4.2, §4.9 | VER-12, VER-10 |
 | RF-54 | Toda reparación revalida desde la primera puerta. Una reparación que abre defectos nuevos se revierte | `architecture.md` §7.3; `verification.md` §5.10 | VER-05, VER-18 |
+| RF-110 | `check.evidence` comprueba toda cita que acompaña a un defecto o a una puntuación: normalizada —espacios, comillas tipográficas, guiones de diálogo y mayúsculas— debe aparecer **exactamente una vez** en la escena citada, con **8 palabras o más**. Sin lematización ni coincidencia difusa. La cita válida devuelve además su posición, que es lo que recibe el Reparador | `verification.md` §5.11; RI-19 | VER-05, VER-06 |
+| RF-111 | Una cita que no ancla invalida el veredicto sin evaluarlo y se anota como defecto de proceso de la instancia que lo emitió, no como defecto del texto. No consume reintento del artefacto ni detiene la producción | `verification.md` §5.11 | VER-05, VER-09 |
+| RF-112 | Al cerrar el capítulo y antes de su puerta, el Orquestador ejecuta el examen de comprensión: `quiz.build` genera preguntas y solucionario desde la especificación de escena y el canon vigente, `quiz.answer` responde con un paquete de 9.000 de entrada y 1.000 de salida que contiene solo capítulo, preguntas e instrucción, y `quiz.grade` corrige | `verification.md` §5.12; `architecture.md` §4.2 | VER-05, VER-20 |
+| RF-113 | Las preguntas se generan desde lo que se **encargó**, nunca desde el delta extraído del propio capítulo, y nunca las escribe un modelo. Una pregunta sin solucionario garantizado no entra en el examen | `verification.md` §5.12 | VER-05 |
+| RF-114 | El paquete de `quiz.answer` no lleva prefijo cacheable, canon, fichas ni rúbrica. Un lector con canon delante examina lo que ya sabía | `verification.md` §5.12; `architecture.md` §4.7 | VER-06, VER-12 |
+| RF-115 | Cada respuesta errónea del examen es un defecto S2 y entra en el bucle de reparación por la puerta de capítulo de RF-22. Sin puerta nueva y sin umbral propio | `architecture.md` §9.3; CAL-06 | VER-05, VER-20 |
 
 ### 4.8 `canon/` · delta, arbitraje y congelación (pasos 5 y 6)
 
@@ -516,8 +522,12 @@ Un fichero SQLite por novela, sin extensiones nativas. Separación lógica de lo
 | VER-12 Guardrails | RF-16, RF-17, RF-25, RF-28, RF-40, RF-44, RF-51, RF-53, RF-55, RF-63, RF-86, RF-91, RI-25 |
 | VER-17 Red-teaming | RNF-12, RNF-22 |
 | VER-18 Model checking | RF-13, RF-14, RF-18, RF-19, RF-20, RF-22, RF-45, RF-54, RF-56, RF-97, RF-105, RF-106, RF-107, RNF-01, RNF-02, RNF-03, RNF-24 |
+| VER-19 Anclaje de evidencia | RI-19, RF-110, RF-111 |
+| VER-20 Examen de comprensión | RF-112, RF-115 |
 
 VER-13 está excluido. VER-14 entra con el Jurado, VER-15 es la puerta de §7.2 y VER-16 se aplica al cambiar un prompt.
+
+**VER-19 y VER-20 entran ya en la versión 1 aunque el Jurado no esté.** VER-19 porque esta versión ya produce veredictos con cita —los del Continuista (RF-51) y los de los verificadores (RF-46)—, y sin él RI-19 sería un requisito que nada comprueba. VER-20 porque lo que mide es coherencia factual transmitida, no calidad literaria: cae de lleno en lo que esta versión sí garantiza, y no necesita ninguno de los tres agentes que faltan.
 
 ### 7.2 Puerta de CI
 

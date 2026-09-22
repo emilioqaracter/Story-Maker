@@ -63,6 +63,8 @@ Todo elemento verificable recibe **una** clase. La clase dice cómo se obtiene l
 | VER-16 | Progressive rollout | Proceso | D | Al cambiar prompt o modelo |
 | VER-17 | Red-teaming | Proceso | T | Por campaña |
 | VER-18 | Model checking | Proceso | A | Al cambiar el flujo |
+| VER-19 | Anclaje de evidencia | Proceso | A | En línea, antes de aceptar cada veredicto |
+| VER-20 | Examen de comprensión sin contexto | Proceso | T | Por capítulo, antes de su puerta |
 
 ---
 
@@ -230,7 +232,7 @@ Políticas o filtros que acotan qué acciones y qué salidas puede producir un a
 |---|---|
 | Esquema de salida | Toda respuesta valida contra su esquema JSON o se rechaza sin parsear |
 | Lista de skills permitidas | Cada agente declara las suyas; una llamada fuera de lista se rechaza y se traza |
-| Techo de tokens por llamada | Entrada ≤70.000, entrada más salida ≤85.000, comprobado antes de llamar |
+| Techo de tokens por llamada | Entrada ≤100.000 por llamada y ≤85.000 al ensamblarse el paquete; salida ≤50.000, que no cuenta contra el techo de entrada. Comprobado antes de llamar |
 | Techo de concurrencia (CTX-20) | La llamada se admite solo si lo que está en vuelo más su presupuesto no supera 100.000. Si no cabe, se encola en FIFO estricta. Si el presupuesto no se puede estimar, no se admite |
 | Léxico proscrito | La lista de proscripción de la capa POE se filtra en la salida del Estilista |
 | Canon de solo lectura | Ningún agente salvo el Archivero puede emitir una escritura canónica |
@@ -332,6 +334,48 @@ Explorar de forma exhaustiva los estados y transiciones alcanzables del flujo pa
 
 El tercer invariante es el que más se rompe en la práctica: revalidar solo desde el punto que falló deja pasar la corrección de estilo que rompió la continuidad.
 
+### 5.11 VER-19 · Anclaje de evidencia
+
+Comprobar que la cita con la que un modelo justifica un veredicto **existe de verdad** en el texto que dice citar.
+
+| Atributo | Valor |
+|---|---|
+| **Qué verifica aquí** | Toda salida que este sistema exige acompañada de evidencia: los defectos del Continuista, las puntuaciones de las skills `*.audit`, los veredictos del Jurado y los defectos que devuelven los verificadores deterministas |
+| **Clase** | A. Es una coincidencia de cadenas sobre la acción propuesta, no una prueba ni un juicio |
+| **Herramienta** | `check.evidence` en `backend/`, contra la escena congelada que la cita nombra |
+| **Regla de coincidencia** | La cita se normaliza —espacios, comillas tipográficas, guiones de diálogo y mayúsculas— y debe aparecer **exactamente una vez** en la escena citada, con **8 palabras o más**. Nada de lematización ni de coincidencia difusa |
+| **Si falla** | El veredicto se descarta sin evaluarlo y se anota como **defecto de proceso** de esa instancia, nunca como defecto del texto. No detiene la producción |
+| **Límite** | Comprueba que la cita existe, jamás que sostenga lo que se afirma con ella. Un pasaje real citado para justificar algo que no dice pasa entero |
+
+Por qué merece método propio y no una línea dentro de VER-12: hoy «sin cita no hay defecto» es **una instrucción de prompt**, y una instrucción de prompt la cumple formalmente cualquier modelo inventándose la cita. Sin esta comprobación, el requisito de evidencia que atraviesa el sistema entero —CAL-04, el contrato de las skills de auditoría, `AGENTS.md` §5.3 punto 5— no está verificado por nada: solo pedido con educación.
+
+Los dos fallos que evita son simétricos y los dos son caros. Una **cita falsa que acusa** hace que el sistema repare una escena sana, gaste presupuesto de reintentos (CAL-12) y con frecuencia la empeore. Una **cita falsa que absuelve** deja pasar un defecto real hasta canon, donde ya solo lo saca un retcon.
+
+De dónde salen sus dos números. El **8** no es nuevo: `check.repetition` ya trata el n-grama de 4 como unidad detectable, y dos de esos localizan sin ambigüedad. La **unicidad** no es rigor por gusto, es lo que convierte la cita en una posición: si aparece una sola vez, el sistema sabe dónde reparar sin preguntárselo a ningún modelo, y el Reparador recibe el fragmento exacto. Si aparece dos veces, la cita es inválida y el juez tiene que alargarla, que le cuesta cero.
+
+Es el método más barato del catálogo —una búsqueda de texto— y el que convierte en clase A un requisito que hasta ahora dependía de la buena fe de un modelo.
+
+### 5.12 VER-20 · Examen de comprensión sin contexto
+
+Dar el capítulo a un modelo que **no tiene nada más delante** y preguntarle por los hechos que ese capítulo debía transmitir, corrigiendo sus respuestas contra un solucionario construido de antemano.
+
+| Atributo | Valor |
+|---|---|
+| **Qué verifica aquí** | Que la información que la escaleta encargó al capítulo llegó a la página, y no solo al estado del mundo |
+| **Clase** | T. Entradas concretas con respuesta esperada. El modelo es el instrumento que lee; la corrección es determinista |
+| **Herramienta** | `quiz.build` genera preguntas y solucionario desde la especificación de escena y el canon vigente en ese punto; `quiz.answer` responde viendo solo el capítulo; `quiz.grade` corrige |
+| **Aislamiento** | El paquete de `quiz.answer` es el capítulo, las preguntas y la instrucción. **Sin prefijo cacheable, sin canon, sin fichas, sin rúbrica.** Un lector que ve el canon examina lo que ya sabía |
+| **Si falla** | Cada respuesta errónea es un defecto **S2** y entra en el bucle de reparación por la puerta de capítulo que ya existe. Sin puerta nueva y sin umbral nuevo |
+| **Límite** | Mide que la información llegue, nunca que llegue bien contada. Un capítulo plomizo y clarísimo saca un diez |
+
+**Las preguntas salen de lo que se encargó, nunca de lo que el capítulo dijo.** Es la decisión que sostiene el método. Generadas desde el delta extraído del propio capítulo, la pregunta sería «¿dijiste lo que dijiste?»: circular, y aprueba siempre. Generadas desde la especificación de escena, la pregunta es «¿entregaste lo que se te pidió?». Y por el mismo motivo no las escribe un modelo: **una pregunta sin solucionario garantizado devuelve esto a la condición de juez**, que es justo lo que se estaba evitando.
+
+Qué modo de fallo ataca, y que ningún otro método ve. Todo lo que revisa este sistema lo revisa **con el canon delante**, así que aprueba un capítulo que resulta coherente para quien ya sabe la respuesta y opaco para quien solo tiene el texto. El hecho vive en el estado del mundo y no en la página, y ningún revisor con contexto puede notar la diferencia, porque comparte exactamente la misma ventaja. Es el defecto que convierte una novela correcta en una novela ilegible, y es invisible para VER-14 por construcción.
+
+Es además lo más cerca que llega el catálogo de la fila «que la novela interese a un lector real» de §9. No mide el interés —eso sigue en U— pero sí una condición **necesaria** para que lo haya: que se entienda.
+
+**Quién lo dispara.** El Orquestador, en código, al cerrar el capítulo y antes de su puerta. No lo invoca un agente por el mismo motivo por el que el tope de salida lo aplica `dispatch` y no el modelo (`architecture.md` §5.3): **un examen que el examinado decide si se presenta no es un examen.**
+
 ---
 
 ## 6. Cascada de verificación
@@ -352,10 +396,15 @@ graph TD
   G1 -->|rechaza| TRZ["VER-09 · trazar y reintentar"]
   G1 -->|permite| SBX["VER-11 · sandbox"]
   SBX --> OUT["Artefacto"]
-  OUT --> V14{"VER-14 · verificador y jurado"}
-  V14 -->|defecto| REP["Regeneración dirigida · CAL-08"]
+  OUT --> V20{"VER-20 · examen de comprensión"}
+  V20 -->|respuesta fallada| REP["Regeneración dirigida · CAL-08"]
+  V20 -->|examen superado| V14{"VER-14 · verificador y jurado"}
+  V14 --> V19{"VER-19 · la cita existe"}
+  V19 -->|cita inexistente| DESC["Veredicto descartado · defecto de proceso"]
+  DESC --> TRZ
+  V19 -->|defecto anclado| REP
   REP --> G1
-  V14 -->|limpio| FZ["Congelar"]
+  V19 -->|sin defectos| FZ["Congelar"]
   OUT --> TRZ
   TRZ --> EV["VER-10 · evals agregados"]
   RT["VER-17 · campaña adversaria"] --> EV
@@ -363,9 +412,13 @@ graph TD
 
 El eje de producto y el de proceso se cruzan en un solo punto: los evals agregados (VER-10) son lo que decide si un cambio de código o de prompt se promociona en VER-16.
 
+Dos detalles de orden que no son decorativos. **VER-20 corre antes que VER-14**, porque es más barato y porque un capítulo que no transmite lo que debía no merece que se le mida la voz. Y **VER-19 corre después de VER-14 y antes del bucle de reparación**, que es el único sitio donde sirve: filtra los veredictos antes de que cuesten una regeneración.
+
 ---
 
-## 7. Matriz método × artefacto
+## 7. Matrices de cobertura
+
+### 7.1 Método × artefacto
 
 | Artefacto | Métodos que lo cubren | Clase dominante |
 |---|---|---|
@@ -377,8 +430,9 @@ El eje de producto y el de proceso se cruzan en un solo punto: los evals agregad
 | Memoria de trabajo PRO-13 | VER-01, 05, 06 | T |
 | Reanudación de una tirada | VER-06, 18 | A |
 | Prompt de un agente | VER-10, 16, 17 | T · D |
-| Prosa generada | VER-10, 14 | I |
+| Prosa generada | VER-10, 14, 20 | T · I |
 | Delta canónico | VER-08, 12, 14, 17 | A · I |
+| Veredicto de un juez o del Continuista | VER-09, 19 | A |
 | Trayectoria de ejecución | VER-09, 11, 12 | D |
 | Controlador de admisión CTX-20 | VER-06, 12, 18 | A |
 | Contador de tokens | VER-06, 09, 12 | T · A |
@@ -388,6 +442,37 @@ El eje de producto y el de proceso se cruzan en un solo punto: los evals agregad
 
 Toda fila tiene al menos un método. Cuando una fila nueva no lo tenga, va a §9 antes de escribir el código, no después.
 
+### 7.2 Punto ciego × método que lo tapa
+
+La matriz anterior responde «¿está cubierto este artefacto?». Esta responde la pregunta que de verdad decide cuánta confianza hay: **«¿está cubierto el punto ciego de este método?»**. Cada fila cruza la línea **Límite** que el propio método ya declara en §4 y §5 con quién se hace cargo de ella.
+
+| Método | Su punto ciego, tal como él mismo lo declara | Qué lo tapa |
+|---|---|---|
+| VER-01 | Tipo correcto con valor imposible | VER-03, VER-06 y los verificadores CAL-03 vía VER-05 |
+| VER-02 | Solo encuentra lo ya catalogado; nada sobre lógica de dominio | VER-03, VER-05, VER-06 |
+| VER-03 | Explota en coste con bucles y estado | VER-06 sobre lo que no es función pura |
+| VER-04 | Prueba el modelo, no la implementación | VER-07 sobre los módulos afectados, y §9 |
+| VER-05 | Solo los ejemplos elegidos | VER-06, VER-07 |
+| VER-06 | Encuentra contraejemplos, no demuestra ausencia | VER-03, y VER-04 en sus dos propiedades |
+| VER-07 | Caro y lento; solo cubre el módulo crítico | **§9, riesgo aceptado** |
+| VER-08 | Verifica la forma, no el significado | VER-19 para lo citable, VER-14 para el resto |
+| VER-09 | Observa, no juzga | VER-10, VER-14 |
+| VER-10 | Mide contra el conjunto elegido, que caduca | VER-17, que le añade casos por campaña |
+| VER-11 | Contiene el daño, no lo previene | VER-12 |
+| VER-12 | Acota la forma de la acción, no su contenido | VER-19, VER-20, VER-14 |
+| VER-13 | Excluido; no cubre nada | — |
+| VER-14 | El verificador comparte modos de fallo con el generador | CAL-10 dentro de VER-10, y VER-19, que es código y no comparte ninguno |
+| VER-15 | Verifica el código, no la novela que produce | VER-10, VER-14, VER-20 |
+| VER-16 | El aplanamiento lento cae bajo el radar en 3 capítulos | **§9, riesgo aceptado**, con la huella estilística como señal |
+| VER-17 | Solo lo que la campaña buscó, y caduca al cambiar prompts | VER-10, si cada hallazgo deja caso fijo |
+| VER-18 | Prueba el flujo modelado, no el orquestador | VER-05 |
+| VER-19 | La cita existe pero no sostiene lo que se afirma | VER-14, que lee cita y veredicto juntos, y **§9** |
+| VER-20 | Mide que la información llegue, no que esté bien contada | VER-14, VER-10 |
+
+**La regla que impone esta matriz**: todo punto ciego declarado tiene al menos otro método que lo tapa, o una fila propia en §9. Un método nuevo entra aquí en el mismo cambio en que entra en §3. Un límite sin cobertura y sin fila en §9 es una zona de confianza sin fundamento, que es exactamente lo que este documento existe para que no ocurra.
+
+Y la lectura que da de un vistazo: las tres casillas cuya única cobertura es «riesgo aceptado» —VER-07, VER-16 y el límite semántico de VER-19— son, por construcción, los tres sitios por donde este sistema fallará primero.
+
 ---
 
 ## 8. Cómo se elige el método
@@ -396,7 +481,7 @@ Toda fila tiene al menos un método. Cuando una fila nueva no lo tenga, va a §9
 2. Aplicar la clase más alta posible según §2: primero A, luego T, luego D, y solo entonces I.
 3. Si la clase resultante es I, comprobar que la dimensión es de verdad subjetiva. Casi nunca lo es.
 4. Si ningún método aplica, registrarlo en §9 con su motivo y la señal sustitutiva. No dejarlo en blanco.
-5. Asignar ID `VER-NN` con el siguiente número libre y añadirlo a la tabla de §3 y a la matriz de §7.
+5. Asignar ID `VER-NN` con el siguiente número libre y añadirlo a la tabla de §3, a la matriz de §7.1 y a la de §7.2 **con su línea de límite ya escrita**. Un método sin punto ciego declarado no está entendido: significa que todavía no se sabe qué deja pasar.
 
 ---
 
@@ -408,7 +493,8 @@ Lo que este catálogo **no** verifica, dicho de forma explícita. Es la clase U 
 |---|---|---|
 | Que una escena sea memorable | No hay criterio operativo de gusto, y el sistema no tiene a quién preguntárselo | Suelo del conjunto dorado CAL-10 y huella estilística |
 | Aplanamiento estilístico lento a lo largo de 40 capítulos | Cada capítulo aislado pasa todas las puertas; el defecto solo existe en el agregado | Deriva de la huella estilística vigilada por el Supervisor |
-| Que la novela interese a un lector real | Fuera del alcance de cualquier método automático | Ninguna. Riesgo aceptado, declarado aquí |
+| Que la novela interese a un lector real | Fuera del alcance de cualquier método automático | VER-20 vigila la condición **necesaria**: que el texto se entienda sin el canon delante. El interés en sí, ninguna |
+| Que una cita real sostenga de verdad la afirmación que la acompaña | Comprobarlo exige entender el texto, y eso devuelve el problema a un modelo con los mismos modos de fallo que el que citó. VER-19 llega hasta la existencia literal y ahí se para | La cita es literal y única, así que el pasaje siempre se puede contrastar; y la tasa de citas descartadas por VER-19, por instancia, queda en la traza de VER-09 |
 | Que el modelo cambie de comportamiento tras una actualización del proveedor | No es observable por adelantado | Conjunto dorado ejecutado en cada cambio de versión de modelo, más VER-16 |
 | Que el proveedor de embeddings cambie el modelo y los vectores dejen de ser comparables entre sí | El cambio ocurre fuera del sistema y no se anuncia | Cada vector guarda su modelo y dimensión (`architecture.md` §3.1); una mezcla dispara reindexación completa |
 | Corrección de la implementación frente al modelo formal de VER-04 y VER-18 | La prueba cubre el modelo; cerrar la distancia exigiría código verificado, que no compensa | Cobertura de mutación de VER-07 sobre los módulos afectados |
@@ -441,6 +527,10 @@ Un enlace por método, a la **explicación de la metodología**, nunca a la pág
 | VER-16 | Progressive rollout | [Feature toggle — Wikipedia](https://en.wikipedia.org/wiki/Feature_toggle) |
 | VER-17 | Red-teaming | [OWASP Top 10 for LLM Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/) |
 | VER-18 | Model checking | [Model checking — Wikipedia](https://en.wikipedia.org/wiki/Model_checking) |
+| VER-19 | Anclaje de evidencia | [Measuring Attribution in Natural Language Generation — Rashkin et al., 2021](https://arxiv.org/abs/2112.12870) |
+| VER-20 | Examen de comprensión sin contexto | [SQuAD: 100,000+ Questions for Machine Comprehension of Text — Rajpurkar et al., 2016](https://arxiv.org/abs/1606.05250) |
 | — | Clasificación TAIDU | [Verification and validation — Wikipedia](https://en.wikipedia.org/wiki/Verification_and_validation) |
+
+Las referencias de VER-19 y VER-20 son **analogías, no fuentes de la implementación**: aquí el anclaje se resuelve con coincidencia literal y no con un modelo de atribución, y el examen se corrige contra un solucionario propio y no contra un conjunto público. Están porque nombran el problema, que es lo que hace falta para buscar más.
 
 **Property-based testing y evals no tienen referencia fundacional neutral** como sí la tiene la verificación formal. Los dos enlaces apuntan al trabajo que introdujo o formalizó cada uno, QuickCheck y HELM, que es una elección entre varias posibles y no la única.
