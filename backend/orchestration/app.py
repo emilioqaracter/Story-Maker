@@ -13,6 +13,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 
 from canon.routes import router as canon_router
+from planning.routes import router as planning_router
 
 
 def create_app() -> FastAPI:
@@ -25,6 +26,7 @@ def create_app() -> FastAPI:
         ),
     )
     app.include_router(canon_router)
+    app.include_router(planning_router)
     return app
 
 

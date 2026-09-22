@@ -24,7 +24,7 @@ def novela(tmp_path: Path) -> Path:
     con = sqlite3.connect(path)
     con.executescript(
         """
-        CREATE TABLE wm_run_state (chapter INTEGER, scene INTEGER);
+        CREATE TABLE wm_run_state (chapter INTEGER PRIMARY KEY, scene INTEGER);
         CREATE TABLE wm_draft (id INTEGER PRIMARY KEY, text TEXT);
         CREATE TABLE event (id INTEGER PRIMARY KEY, kind TEXT);
         CREATE TABLE entity (id INTEGER PRIMARY KEY, name TEXT);
@@ -79,6 +79,21 @@ def test_el_rechazo_revierte_lo_anterior(novela: Path) -> None:
     con = sqlite3.connect(novela)
     assert con.execute("SELECT count(*) FROM wm_draft").fetchone()[0] == 0
     con.close()
+
+
+def test_un_upsert_sobre_memoria_de_trabajo_pasa(novela: Path) -> None:
+    """La clausula `ON CONFLICT ... DO UPDATE SET` no es un UPDATE sobre una
+    tabla llamada `SET`.
+
+    La guarda lo leia asi y bloqueaba upserts legitimos. Lo destapo el punto de
+    reanudacion, que es upsert por naturaleza: escribe la misma fila una y otra
+    vez. Queda esta prueba para que no vuelva.
+    """
+    with working_memory_writer(novela) as wm:
+        wm.execute(
+            "INSERT INTO wm_run_state (chapter, scene) VALUES (1, 1) "
+            "ON CONFLICT(chapter) DO UPDATE SET scene = excluded.scene"
+        )
 
 
 def test_no_hereda_de_connection(novela: Path) -> None:

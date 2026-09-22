@@ -29,10 +29,20 @@ WORKING_MEMORY_TABLES = frozenset(
     {"wm_run_state", "wm_draft", "wm_defect", "wm_verdict", "wm_admission"}
 )
 
-#: Identificadores que aparecen tras INSERT INTO / UPDATE / DELETE FROM.
+#: Tablas que una sentencia escribe, una por rama.
+#:
+#: El `SET` obligatorio en la rama de UPDATE no es adorno. Sin el, la clausula
+#: `ON CONFLICT ... DO UPDATE SET` de un upsert se leia como si `SET` fuera el
+#: nombre de la tabla, y la guarda bloqueaba upserts perfectamente legitimos
+#: sobre tablas `wm_`. Lo destapo el punto de reanudacion, que es upsert por
+#: naturaleza: escribe la misma fila una y otra vez.
 _TARGET = re.compile(
-    r"\b(?:insert\s+(?:or\s+\w+\s+)?into|update|delete\s+from)\s+[\"'`\[]?(\w+)",
-    re.IGNORECASE,
+    r"""
+      \b insert \s+ (?: or \s+ \w+ \s+ )? into \s+ ["'`\[]? (?P<ins>\w+)
+    | \b update \s+ (?: or \s+ \w+ \s+ )? ["'`\[]? (?P<upd>\w+) ["'`\]]? \s+ set \b
+    | \b delete \s+ from \s+ ["'`\[]? (?P<dele>\w+)
+    """,
+    re.IGNORECASE | re.VERBOSE,
 )
 
 
@@ -45,7 +55,13 @@ class ForbiddenTableError(RuntimeError):
 
 
 def _targets(sql: str) -> Sequence[str]:
-    return [m.group(1).lower() for m in _TARGET.finditer(sql)]
+    """Las tablas que una sentencia escribe. Una por grupo alternativo."""
+    return [
+        g.lower()
+        for m in _TARGET.finditer(sql)
+        for g in m.groups()
+        if g is not None
+    ]
 
 
 class WorkingMemoryConnection:
