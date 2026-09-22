@@ -68,7 +68,12 @@ class Quota(StrEnum):
 
 # --------------------------------------------------------------- MUN-05, D-07
 
-_ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2})?)?$")
+#: Publico porque las rutas HTTP lo declaran en su contrato. Mientras la regla
+#: vivio solo aqui, el esquema prometia aceptar cualquier texto y la ruta
+#: rechazaba casi todos.
+ISO_INSTANT_PATTERN = r"^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2})?)?$"
+
+_ISO_DATE = re.compile(ISO_INSTANT_PATTERN)
 
 
 class WorldTime(BaseModel):

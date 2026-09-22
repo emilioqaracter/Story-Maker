@@ -64,7 +64,8 @@ CHECKS: tuple[Check, ...] = (
     ),
     Check(
         name="pruebas y propiedades",
-        what="Casos concretos, y reglas que la maquina intenta romper generando cientos",
+        what="Casos concretos, reglas que la maquina intenta romper generando cientos, "
+        "y peticiones generadas desde el propio contrato de la API",
         command=["python", "-m", "pytest", "-q"],
     ),
     Check(
