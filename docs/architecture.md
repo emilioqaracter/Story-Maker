@@ -261,7 +261,7 @@ Reglas duras de ocupación (CTX-18) y de concurrencia (CTX-20):
 
 **Consecuencia que conviene ver.** Con la salida fuera del recuento y el único paralelismo real siendo los tres jueces, que suman 27.000 de entrada, el techo concurrente deja de morder en el flujo de hoy. Sigue escrito porque es un guardarraíl para cuando el paralelismo crezca, no una descripción de lo que ocurre ahora.
 
-**Estos números se miden, no se estiman.** Con qué se miden está en §4.8, y hay dos cosas que conviene saber ya: **el recuento es específico del modelo**, porque los tokenizadores difieren entre generaciones hasta un 30 % sobre el mismo texto, así que un presupuesto medido contra un modelo no vale para otro; y **los tokens servidos desde caché ocupan ventana igual** que los demás, porque el caché cambia lo que se paga, no lo que ocupa.
+**Antes de llamar, estos números se estiman; después, se miden.** Con qué, en §4.8. Dos cosas que conviene saber ya: **la cuenta es específica del modelo**, porque los tokenizadores difieren entre generaciones hasta un 30 % sobre el mismo texto, así que una calibración hecha contra un modelo no vale para otro; y **los tokens servidos desde caché ocupan ventana igual** que los demás, porque el caché cambia lo que se paga, no lo que ocupa.
 
 **Orden de compactación** cuando el material excede el presupuesto: primero los fragmentos recuperados, después la prosa literal previa, después los resúmenes, después las fichas secundarias. Nunca se tocan las anclas, el conocimiento del POV ni la especificación de la escena.
 
@@ -469,39 +469,53 @@ Esto no cambia que el Orquestador y el Documentalista sean código (§6): Claude
 
 Todos los techos de §4.1 son números, y un número que no se puede medir no es un techo. Esta sección fija **con qué se mide**, y parte de un hecho que condiciona el resto.
 
-**No existe un tokenizador local oficial para los modelos de Claude.** No hay librería que reproduzca offline el recuento del proveedor. Y el sustituto que se usa por costumbre, `tiktoken`, es el tokenizador de OpenAI: **infracuenta el texto de Claude entre un 15 y un 20 % en prosa corriente, y mucho más en código y en texto que no es inglés**. Esta novela se escribe entera en español, así que el error cae del lado peor en todas y cada una de las llamadas, y cae **por debajo**, que es la única dirección que los techos no perdonan. Queda prohibido: ni `tiktoken`, ni `gpt-tokenizer`, ni ningún derivado.
+**No existe un tokenizador local oficial para los modelos de Claude.** Ninguna librería reproduce offline el recuento del proveedor. Hay dos formas de obtener un número y el sistema usa las dos, porque hacen cosas distintas:
 
-**El framework es el SDK oficial de Anthropic**, el mismo que ya sirve el puerto de `commons/`. No entra una dependencia nueva: entran dos capacidades del SDK que hasta ahora no se usaban.
+| | `tiktoken` | El bloque `usage` de la respuesta |
+|---|---|---|
+| Cuándo está disponible | Antes de llamar | Solo después de llamar |
+| Exactitud sobre Claude | **Aproximada y corta**: infracuenta entre un 15 y un 20 % en prosa inglesa, y más fuera del inglés | Exacta |
+| Coste | Ninguno, es local | Ninguno, viene en toda respuesta |
+| Para qué sirve | **Decidir** si una llamada cabe | **Comprobar** lo que ocupó de verdad, y corregir al estimador |
 
-##### Las tres capas de medición
+**El estimador es `tiktoken`, local y sin red**, con una codificación fija para que sea determinista. Se elige por encima de una consulta al proveedor porque la admisión corre antes de cada llamada y mantenerla offline deja el ciclo sin una dependencia más en el camino crítico.
 
-| Capa | Cuándo | Con qué | Exactitud | Sale a la red |
-|---|---|---|---|---|
-| **Estimación de admisión** | Antes de ensamblar el paquete | El presupuesto declarado del agente en §4.2 más su cupo de tirón de §6.3 | Por exceso, a propósito | No |
-| **Medición del paquete** | Ensamblado el paquete, antes de llamar | `messages.count_tokens`, con **el mismo identificador de modelo** que se va a usar | Exacta | Sí |
-| **Recuento real** | Con la respuesta en la mano | El bloque `usage` que devuelve toda respuesta | Exacta, **entrada y salida** | No: viene de vuelta |
+**El estimador se queda corto por diseño, y por eso no se usa crudo.** El error de `tiktoken` sobre texto de Claude no es aleatorio: va siempre en la misma dirección, hacia abajo, y esta novela se escribe entera en español, donde el desvío es mayor que el 15-20 % de la prosa inglesa. Un estimador sesgado es utilizable siempre que el sesgo esté acotado y corregido; usarlo sin corregir sería tener un techo que a veces no es un techo.
 
-Cada capa hace un trabajo que las otras no pueden.
+##### El factor de seguridad
 
-**La estimación de admisión no mide texto, reserva sitio.** Cuando el Orquestador decide si una llamada cabe, el paquete todavía no existe: construirlo para saber si cabe y descubrir que no, sería tirar el trabajo. Así que reserva por lo declarado, que es un número fijo y conocido. Por eso no necesita red y por eso puede ser generosa.
+Todo lo que mide `tiktoken` se multiplica por un factor y se redondea hacia arriba antes de compararlo con cualquier techo de §4.1.
 
-**La medición del paquete es la que hace cumplir el techo.** Se ejecuta con el paquete ya montado y antes de gastar la llamada, con el mismo modelo con el que se va a inferir, porque **el recuento es específico del modelo**: los tokenizadores difieren entre generaciones hasta un 30 % sobre el mismo texto. Un presupuesto medido contra un modelo no vale para otro, y el sistema prevé modelos distintos por rol (§13).
+| | |
+|---|---|
+| **Factor** | **Propuesta: 1,35** |
+| **De dónde sale** | Del desvío documentado de `tiktoken` sobre Claude. Partiendo de un 25 % de infracuento para prosa en español —el extremo alto del 15-20 % inglés, porque el desvío crece fuera del inglés—, recuperar la cuenta exige dividir por 0,75, que es 1,33. Se redondea a 1,35 |
+| **Qué es** | Un punto de partida declarado, **no un dato medido**. El número bueno lo da el lazo de calibración de abajo, no esta estimación |
+| **Qué protege** | Que lo estimado nunca quede por debajo de lo real, que es lo único que los techos necesitan del estimador |
 
-**El recuento real cierra el lazo, y es gratis.** Toda respuesta trae su `usage`. La entrada es la suma de sus tres campos —lo no cacheado, lo que se escribió en caché y lo que se leyó de ella—, porque **lo servido desde caché ocupa ventana igual** (§4.1). La salida viene aparte y exacta. Es el número que va a la traza de §11 y el que contrasta las dos capas de arriba.
+Este factor sustituye al 1,15 anterior, que salía del margen de reintento y no del error del tokenizador. Eran dos cosas distintas confundidas en un número: **el margen de §4.1 absorbe lo que añade un reintento; el factor absorbe el sesgo del estimador.** Con 1,15 el factor habría cancelado justo el desvío mínimo en inglés y habría dejado cero margen para el español.
 
-##### Por qué la red aquí no añade un modo de fallo
+##### El lazo de calibración
 
-La objeción evidente es que medir por red en el camino crítico rompe la promesa de que el ciclo termina sin que nadie intervenga. No la rompe, y el motivo es simple: **lo siguiente que ocurre tras medir el paquete es llamar al mismo proveedor con ese paquete.** Si la red no da para medir, tampoco da para generar. No es una dependencia nueva, es la misma, medio segundo antes.
+Es lo que convierte una aproximación en un número fiable, y funciona porque **la verdad llega gratis en cada respuesta**.
 
-Lo que sí cambia es el orden en que se descubre el fallo, y eso juega a favor: se descubre **antes** de haber gastado una generación.
+1. Antes de llamar, se estima con `tiktoken` por el factor y se decide si la llamada cabe.
+2. Con la respuesta, `usage` da el recuento real. La entrada es la **suma de sus tres campos** —lo no cacheado, lo escrito en caché y lo leído de ella—, porque lo servido desde caché ocupa ventana igual (§4.1). La salida viene aparte y exacta.
+3. Los dos números van a la traza (§11), emparejados.
+4. **Si algún real supera a su estimado, el factor sube.** No es un aviso: es un fallo de integración continua, y la propiedad que lo vigila está en `verification.md` §4.6.
 
-Aplica el fallo cerrado sin excepción: si la medición no se puede ejecutar, la llamada no se admite y consume un reintento. No se cae a una estimación local, porque una estimación local exacta no existe y aceptar una aproximada aquí sería tener un techo que a veces no es un techo.
+Por eso el factor no tiene que acertar a la primera. Tiene que empezar por encima y corregirse con lo medido, que es lo contrario de confiar en una constante.
 
 ##### La medición en el camino de tirón
 
-En una llamada con herramientas, el contador **no estima nada**: cada respuesta del turno trae en su `usage` el tamaño exacto del prompt en ese punto. `context.budget` (§5.3) devuelve ese número medido, no una cuenta propia, y por eso es fiable sin coste.
+Aquí hay una asimetría que conviene aprovechar: **dentro de una llamada con herramientas, el número exacto ya está disponible sin estimar nada.** Cada respuesta del turno trae en su `usage` el tamaño real del prompt en ese punto.
 
-Lo único que hay que medir por adelantado es **el candidato**: antes de entregar un resultado, `canon.lookup` lo cuenta y comprueba que lo consumido más el candidato siga bajo el techo. Es una medición por consulta, y se paga sin discusión porque solo cinco agentes tienen herramientas y ninguno se ejecuta más de una vez por capítulo.
+| Qué se pregunta | Con qué se responde |
+|---|---|
+| Cuánto llevo ocupado — `context.budget` | El `usage` de la última respuesta del turno. **Exacto** |
+| Me cabe este resultado — `canon.lookup` | `tiktoken` por el factor sobre el candidato. **Estimado por exceso** |
+
+Es decir: lo que el agente sabe de sí mismo es exacto, y solo lo que todavía no ha entrado se estima. Que el candidato se sobreestime es el lado bueno del error: como mucho se niega un resultado que habría cabido, y el agente pide uno más corto.
 
 ##### Quién lleva el contador
 
@@ -509,13 +523,14 @@ Uno solo, en `commons/`, y lo consumen las cuatro cosas que cuentan tokens: el e
 
 | Regla | Valor |
 |---|---|
-| Implementación | SDK oficial de Anthropic: `messages.count_tokens` para medir, `usage` para contrastar |
-| Tokenizadores de terceros | Prohibidos, por el error sistemático por debajo en español |
-| Identificador de modelo | Obligatorio y el mismo en medición y en inferencia. Sin correspondencia conocida, no se admite la llamada |
-| Contraste | Todo `usage` va a la traza (§11) y se compara con lo medido antes de llamar |
-| Discrepancia | Que el real supere a lo medido es un fallo de CI, no un aviso. La propiedad vive en `verification.md` §4.6 |
+| Estimador | `tiktoken`, local, codificación fija, resultado por el factor y redondeado hacia arriba |
+| Fuente de verdad | El bloque `usage` de cada respuesta, sumados sus tres campos de entrada |
+| Factor por modelo | Uno por cada modelo en uso. Los tokenizadores de Claude difieren entre generaciones hasta un 30 %, así que un factor calibrado contra un modelo no vale para otro |
+| Modelo sin factor | No se admite la llamada, por fallo cerrado |
+| Contraste | Estimado y real se trazan emparejados en toda llamada |
+| Discrepancia | Que el real supere al estimado es un fallo de CI, no un aviso |
 
-**Queda por confirmar** el coste y el límite de peticiones de `count_tokens`, que no se ha verificado al escribir esto. Si resultara caro o limitado, la salida es medir una vez por paquete y no por candidato en el camino de tirón, aceptando un margen en las herramientas.
+**Riesgo aceptado, declarado aquí y no en otro sitio.** El estimador es inexacto por construcción y su sesgo se corrige con un factor que al principio es una conjetura. Mientras el factor no esté calibrado contra tiradas reales, los paquetes pueden salir mayores de lo previsto. **No es un fallo técnico**: el techo de 100.000 es propio y la ventana física de los modelos es de 1.000.000 (§4.1), así que un desvío no rompe ninguna llamada. Lo que produce es deriva de coste y de calidad, y la señal que lo delata está en §11: que el recuento real supere al estimado en alguna llamada.
 
 ---
 
