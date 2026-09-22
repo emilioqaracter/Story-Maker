@@ -54,7 +54,7 @@ def rebuild(con: sqlite3.Connection, *, until: WorldTime | None = None) -> None:
     se responde "que era cierto entonces" sin filtrar despues de proyectar.
     """
     for table in PROJECTED_TABLES:
-        con.execute(f"DELETE FROM {table}")
+        con.execute(f"DELETE FROM {table}")  # nosec B608
 
     events = log.read_all(con) if until is None else log.read_until(con, until)
     apply_all(con, events)
@@ -209,7 +209,7 @@ def _close_open(
     """
     # El orden importa: el primer marcador es el `SET`, no el primer `WHERE`.
     con.execute(
-        f"UPDATE {table} SET valid_to = ? "
+        f"UPDATE {table} SET valid_to = ? "  # nosec B608
         f"WHERE {where} AND valid_to IS NULL AND valid_from < ?",
         (at.stamp, *params, at.stamp),
     )

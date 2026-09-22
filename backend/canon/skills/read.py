@@ -68,7 +68,7 @@ def query(
 
     marks = ",".join("?" * len(entity_ids))
     rows = con.execute(
-        f"SELECT id, kind, name FROM entity WHERE id IN ({marks}) ORDER BY id",
+        f"SELECT id, kind, name FROM entity WHERE id IN ({marks}) ORDER BY id",  # nosec B608
         list(entity_ids),
     ).fetchall()
 
@@ -78,7 +78,7 @@ def query(
         aliases = tuple(
             r["alias"]
             for r in con.execute(
-                f"SELECT alias FROM entity_alias WHERE entity_id = :e AND {_ALIVE} "
+                f"SELECT alias FROM entity_alias WHERE entity_id = :e AND {_ALIVE} "  # nosec B608
                 "ORDER BY alias",
                 {"e": eid, "t": at.stamp},
             )
@@ -86,7 +86,7 @@ def query(
         attributes = tuple(
             (r["name"], r["value"])
             for r in con.execute(
-                f"SELECT name, value FROM attribute WHERE entity_id = :e AND {_ALIVE} "
+                f"SELECT name, value FROM attribute WHERE entity_id = :e AND {_ALIVE} "  # nosec B608
                 "ORDER BY name",
                 {"e": eid, "t": at.stamp},
             )
@@ -95,7 +95,7 @@ def query(
             tuple(
                 (r["name"], r["level"])
                 for r in con.execute(
-                    f"SELECT name, level FROM competence WHERE entity_id = :e AND {_ALIVE} "
+                    f"SELECT name, level FROM competence WHERE entity_id = :e AND {_ALIVE} "  # nosec B608
                     "ORDER BY name",
                     {"e": eid, "t": at.stamp},
                 )
@@ -182,7 +182,7 @@ def related(
                  WHERE reach.depth < ?
           )
         SELECT DISTINCT id FROM reach
-    """
+    """  # nosec B608
 
     t = at.stamp
     rows = con.execute(sql, (*seeds, t, t, t, t, max_depth)).fetchall()

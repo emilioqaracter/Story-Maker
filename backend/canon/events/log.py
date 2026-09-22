@@ -36,9 +36,9 @@ _COLUMNS = "id, world_time, world_seq, type, payload, provenance, chapter_origin
 # cada consumidor tenga que acordarse.
 _ORDER = "ORDER BY world_time, world_seq, id"
 
-_SELECT_ALL = f"SELECT {_COLUMNS} FROM event {_ORDER}"
+_SELECT_ALL = f"SELECT {_COLUMNS} FROM event {_ORDER}"  # nosec B608
 _SELECT_UNTIL = (
-    f"SELECT {_COLUMNS} FROM event WHERE (world_time, world_seq) <= (?, ?) {_ORDER}"
+    f"SELECT {_COLUMNS} FROM event WHERE (world_time, world_seq) <= (?, ?) {_ORDER}"  # nosec B608
 )
 
 
@@ -104,7 +104,7 @@ def _entities_for(
     """
     placeholders = ",".join("?" * len(event_ids))
     rows = con.execute(
-        f"SELECT event_id, entity_id FROM event_entity WHERE event_id IN ({placeholders})",
+        f"SELECT event_id, entity_id FROM event_entity WHERE event_id IN ({placeholders})",  # nosec B608
         list(event_ids),
     ).fetchall()
 

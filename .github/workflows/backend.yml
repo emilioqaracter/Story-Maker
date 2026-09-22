@@ -1,0 +1,63 @@
+name: backend
+
+# Existe para que "la puerta pasa" deje de significar "paso cuando la ejecute
+# alguien". Mientras la puerta fue una lista de comandos a mano, bastaba
+# olvidarse de uno para que entrara codigo roto sin que nadie se enterara.
+
+on:
+  push:
+    branches: [main, v2, v2-oneshot]
+    paths: ["backend/**", ".github/workflows/backend.yml"]
+  pull_request:
+    paths: ["backend/**", ".github/workflows/backend.yml"]
+  schedule:
+    # Lo lento, una vez al dia: tarda minutos y correria decenas de veces
+    # al dia sin encontrar nada nuevo.
+    - cron: "0 3 * * *"
+
+defaults:
+  run:
+    working-directory: backend
+
+jobs:
+  puerta:
+    name: Puerta
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Puerta
+        run: python gate.py
+
+  lento:
+    name: Comprobaciones lentas
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      # Auditoria de dependencias: contrasta lo instalado contra
+      # vulnerabilidades publicadas. Cambia sin que el codigo cambie, por eso
+      # va por calendario y no por commit.
+      - name: Puerta completa
+        run: python gate.py --full
