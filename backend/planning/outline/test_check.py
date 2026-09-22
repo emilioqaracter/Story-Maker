@@ -10,6 +10,7 @@ from __future__ import annotations
 import pytest
 
 from commons.types.primitives import WorldTime
+from commons.types.scene import SceneFunction
 from planning.outline.check import check
 from planning.outline.types import (
     ActPlan,
@@ -17,7 +18,6 @@ from planning.outline.types import (
     ArcKind,
     Outline,
     SceneEntry,
-    SceneFunction,
     Setup,
 )
 

@@ -16,28 +16,13 @@ from typing import Self
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from commons.types.primitives import WorldTime
+from commons.types.scene import SceneFunction
 
 #: EST-07. Rango de longitud de un capitulo.
 CHAPTER_WORDS = (1_500, 4_000)
 
 #: EST-08. Rango de longitud de una escena.
 SCENE_WORDS = (400, 1_500)
-
-
-class SceneFunction(StrEnum):
-    """EST-14. Rol de la escena en el arco.
-
-    Cerrada porque el cupo de espejo de la recuperacion busca escenas con la
-    misma funcion: si el conjunto fuera libre, dos escenas equivalentes con
-    nombres distintos nunca se encontrarian.
-    """
-
-    ESTABLISH = "establecer"
-    COMPLICATE = "complicar"
-    REVEAL = "revelar"
-    DECIDE = "decidir"
-    CULMINATE = "culminar"
-    ASSIMILATE = "asimilar"
 
 
 class ArcKind(StrEnum):
