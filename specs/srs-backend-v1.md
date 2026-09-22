@@ -26,7 +26,7 @@ La versión 1 es el **sistema mínimo autónomo**: los pasos 1 a 6 del orden de 
 | Continuista y Reparador, que cierran el bucle de §7.1 | Retcon sobre capítulos congelados (CAN-10): aquí el canon congelado siempre gana |
 | Archivero y congelación (paso 5) | |
 | Árbitro y política de precedencia (paso 6) | |
-| Orquestador, admisión CTX-20 y reanudación | |
+| Orquestador, admisión CTX-20, reanudación y bucle de herramientas | |
 | Rutas HTTP mínimas dentro de cada funcionalidad | |
 | Observabilidad con Langfuse desde el primer día | |
 
@@ -79,7 +79,7 @@ graph LR
   OP["Quien encarga la novela"] -->|brief · PRO-01| API["API HTTP"]
   API --> ORQ["Orquestador"]
   ORQ <--> CLA["Claude · agentes de modelo"]
-  ORQ <--> OR["OpenRouter · embeddings"]
+  ORQ <--> OR["fastembed · embeddings locales"]
   ORQ --> DB["Fichero SQLite de la novela"]
   ORQ --> LF["Langfuse"]
   API -->|manuscrito congelado| OP
@@ -109,7 +109,7 @@ Una fila por funcionalidad de `architecture.md` §2.3. Las funcionalidades son c
 |---|---|---|
 | Quien encarga la novela | Entrega el brief (PRO-01) y lee el manuscrito congelado | Antes del ciclo y después de cada congelación. **Nunca dentro** (PRO-11) |
 | Claude | Responde a las llamadas de los agentes de modelo | En cada llamada admitida |
-| OpenRouter | Calcula los embeddings del índice y de las consultas | Al congelar y al recuperar |
+| Modelo local de `fastembed` | Calcula los embeddings del índice y de las consultas. **No es un actor externo**: corre en el mismo proceso | Al congelar y al recuperar |
 | Langfuse | Recibe la traza de cada ejecución | Siempre |
 | Frontend | Lee proyecciones y manuscrito | Fuera de la versión 1; la API ya le sirve |
 
@@ -122,9 +122,9 @@ No hay actor «revisor». Cualquier requisito que lo necesite es un error de est
 | Lenguaje y framework | Python y FastAPI | `AGENTS.md` §3.1 |
 | Ejecución | Un solo proceso, un bucle `asyncio`, sin cola de trabajos ni workers | `architecture.md` §7.4 |
 | Persistencia | SQLite en local, un fichero por novela, sin extensiones nativas | `AGENTS.md` §3.2; `architecture.md` §3.1 |
-| Aislamiento | Contenedor sin más red que las APIs de Claude, OpenRouter y Langfuse; ficheros acotados al directorio de la tirada | `verification.md` §5.3 |
+| Aislamiento | Contenedor sin más red que las APIs de Claude y Langfuse; ficheros acotados al directorio de la tirada | `verification.md` §5.3 |
 | Proveedor de los agentes de modelo | Claude, API de Anthropic | `architecture.md` §4.8 |
-| Proveedor de embeddings | OpenRouter | `architecture.md` §4.8 |
+| Embeddings | Modelo multilingüe local con `fastembed`, empaquetado en la imagen | `architecture.md` §4.8 |
 | Contador de tokens | `tiktoken` local con factor de seguridad en `commons/`, contrastado contra el `usage` de cada respuesta | `architecture.md` §4.8 |
 | Observabilidad | Langfuse con su SDK de Python | `verification.md` §5.1 |
 
@@ -134,7 +134,7 @@ Las seis de `AGENTS.md` §5.3, que aquí se convierten en requisitos no funciona
 
 1. **Paquete por funcionalidad.** Ninguna funcionalidad importa de otra, solo de `commons/`. Dos excepciones: `orchestration/` importa de todas; de `canon/` importan todas en lectura.
 2. **El OpenAPI es el contrato.** Todo endpoint declara modelos de entrada y salida. Nada de `dict` ni `Any` en firma pública.
-3. **La frontera de confianza está en el parseo.** Toda salida de modelo se valida contra su modelo pydantic antes de tocar nada.
+3. **La frontera de confianza está en el parseo, en los dos sentidos.** Toda salida de modelo se valida contra su modelo pydantic antes de tocar nada, y toda llamada a herramienta se valida contra la lista cerrada de su agente y contra el presupuesto de la llamada antes de ejecutarse.
 4. **La recuperación no llama a ningún modelo.** La consulta se construye con datos del canon, la fusión es aritmética y la selección va por cupos. Lo único que sale a la red es el vector de la consulta.
 
 ### 2.6 Supuestos y dependencias
@@ -142,8 +142,8 @@ Las seis de `AGENTS.md` §5.3, que aquí se convierten en requisitos no funciona
 | Supuesto | Consecuencia si falla |
 |---|---|
 | La API de Claude está accesible y su ventana es ≥ 100.000 tokens | El sistema no arranca: fallo cerrado en el arranque |
-| La API de embeddings está accesible al congelar | El capítulo agota reintentos y va a cuarentena (RF-68) |
-| La API de embeddings está accesible al recuperar | La recuperación se degrada a solo léxica, se marca en la auditoría y se traza (RF-78). No detiene la tirada |
+| El modelo de embeddings carga al arrancar y su dimensión coincide con la del índice | La tirada no empieza. Es fallo cerrado en el arranque, no durante el ciclo (RF-101) |
+| Existe una variante multilingüe de `fastembed` adecuada para prosa en español | La pierna semántica devolvería ruido y la recuperación quedaría de hecho en una sola pierna. Es la única pieza sin fijar de la decisión D-22 |
 | El factor de seguridad de §4.8 cubre el infracuento de `tiktoken` sobre prosa en español | Los paquetes salen mayores de lo previsto. No rompe ninguna llamada, porque el techo es propio y la ventana física es de 1.000.000; produce deriva de coste y calidad. Lo vigila una propiedad de CI (RNF-19) |
 | El brief llega ya estructurado, con sus entidades identificadas | Un brief en texto libre no se acepta en la versión 1 |
 
@@ -173,12 +173,12 @@ Requisitos transversales de la API:
 
 ### 3.2 Proveedores
 
-- **RI-11** El acceso a los proveedores pasa por un **puerto** en `commons/` con dos operaciones. `complete`: dada una instrucción, un paquete de contexto (CTX-03) y un esquema de salida, devuelve texto; lo sirve Claude. `embed`: dado un texto, devuelve vector con su modelo y dimensión; lo sirve OpenRouter. Ningún agente importa el SDK de un proveedor directamente (`architecture.md` §4.8).
+- **RI-11** El acceso a los proveedores pasa por un **puerto** en `commons/` con dos operaciones. `complete`: dada una instrucción, un paquete de contexto (CTX-03) y un esquema de salida, devuelve texto; lo sirve Claude. `embed`: dado un texto, devuelve vector con su modelo y dimensión; lo sirve un modelo multilingüe local a través de `fastembed`, sin salir a la red. Ningún agente importa el SDK de un proveedor directamente (`architecture.md` §4.8).
 - **RI-12** Toda respuesta de `complete` devuelve además el recuento real de tokens del proveedor, que se traza y se contrasta con el estimado (RNF-19).
 - **RI-13** El puerto no reintenta por su cuenta. Los reintentos son del Orquestador y se cuentan contra el presupuesto de `architecture.md` §7.3.
 - **RI-20** El contador de tokens de `commons/` es `tiktoken` con codificación fija, local y sin red, y es el único que usan el empaquetado, la admisión, las herramientas y el guardarraíl. Su resultado nunca se usa crudo: se multiplica por el factor de seguridad de `architecture.md` §4.8, que es uno por modelo, y se redondea hacia arriba. La fuente de verdad es el bloque `usage` de cada respuesta, cuya entrada es la suma de sus tres campos. Si el modelo de una llamada no tiene factor conocido, no se admite (RNF-05).
 - **RI-21** Un cambio de modelo, de proveedor o de codificación del contador es un cambio de configuración del puerto, nunca una edición en un agente.
-- **RI-22** `embed` es la única operación del puerto que puede fallar sin detener la tirada, y sus dos rutas de fallo son distintas porque las consecuencias lo son: al congelar agota reintentos y cuarentena el capítulo (RF-68), porque escribir mal el índice es permanente; al recuperar degrada la búsqueda a solo léxica (RF-78), porque recuperar peor una vez no lo es.
+- **RI-22** `embed` no sale a la red: lo sirve un modelo local. Su fallo es **determinista** —fichero ausente, memoria insuficiente, dimensión que no cuadra— así que reintentarlo no arregla nada y la comprobación se hace **una vez, al arrancar** (RF-101). Durante la tirada, `embed` no puede fallar por causas externas. La ruta degradada de RF-78 sigue existiendo para el caso de un fragmento sin vector o indexado con otro modelo.
 
 ### 3.3 Persistencia
 
@@ -249,9 +249,9 @@ Agrupados por funcionalidad. El orden sigue el de construcción de `architecture
 | RF | Requisito | Fuente | Verificación |
 |---|---|---|---|
 | RF-13 | El Orquestador ejecuta los bucles de capítulo y de escena de `architecture.md` §7.1, reducidos a los agentes de la versión 1: sin Jurado, sin Estilista, sin Supervisor. El paso «capítulo aprobado» sale directamente de la reverificación del Continuista al Archivero | `architecture.md` §7.1, §7.2 | VER-05, VER-18 |
-| RF-14 | Admisión por semáforo de tokens: una llamada se admite si lo en vuelo más su presupuesto ≤ 100.000. Si no cabe, se encola en FIFO estricta, sin reordenar por hueco | CTX-20, CTX-I1 | VER-06, VER-18 |
+| RF-14 | Admisión por semáforo de tokens de **entrada**: una llamada se admite si lo en vuelo más su reserva ≤ 100.000, donde la reserva es la entrada del paquete más el cupo de tirón del agente, reservado entero desde el principio. Si no cabe, se encola en FIFO estricta, sin reordenar por hueco | CTX-20, CTX-I1; `architecture.md` §7.4 | VER-06, VER-18 |
 | RF-15 | Si el presupuesto de una llamada no se puede estimar, no se admite | `architecture.md` §7.4 | VER-05 |
-| RF-16 | Ninguna llamada supera 70.000 tokens de entrada ni 85.000 de entrada más salida; se comprueba antes de llamar | `architecture.md` §4.1 | VER-12, VER-06 |
+| RF-16 | Ninguna llamada supera 100.000 tokens de entrada, contando el paquete base más lo que acumule con herramientas; ningún paquete supera 85.000 al ensamblarse; ninguna salida supera 50.000. Se comprueba antes de llamar | `architecture.md` §4.1 | VER-12, VER-06 |
 | RF-17 | Cada agente tiene una lista de skills permitidas. Una llamada fuera de lista se rechaza y se traza | `verification.md` §5.4 | VER-12 |
 | RF-18 | Presupuesto de reintentos: 3 por escena, 2 por capítulo, 1 replanificación de tramo. Agotado el tercero, se recalcula el arco desde el Arquitecto | `architecture.md` §7.3 | VER-05, VER-18 |
 | RF-19 | Al agotar reintentos el artefacto entra en cuarentena (CAL-13); la producción no se detiene y el tramo se replanifica (PRO-12). En la versión 1 replanifica el Planificador a nivel de escena y el Arquitecto a nivel de tramo, porque el Supervisor no está | `architecture.md` §7.3, §8 | VER-05, VER-18 |
@@ -292,7 +292,9 @@ El corazón de la versión 1 y donde vive el RAG híbrido. Todo lo de esta secci
 | RF-75 | La consulta estructurada al canon y la del grafo alimentan los bloques de canon del paquete y **no se fusionan** con los resultados de prosa | `architecture.md` §4.4 | VER-05 |
 | RF-76 | Las piernas léxica (FTS5 con BM25) y semántica (coseno sobre los vectores de fragmento) se fusionan por rangos: cada fragmento suma, por cada pierna en que aparece, uno partido por 60 más su posición | `architecture.md` §4.4 | VER-06 |
 | RF-77 | La fusión es determinista: el mismo canon y la misma petición producen el mismo orden | `architecture.md` §4.4; PRO-09 | VER-06 |
-| RF-78 | Si `embed` falla al recuperar, la pierna semántica devuelve vacío, la fusión sigue con una sola pierna, el paquete se marca como degradado y se traza. No aplica el fallo cerrado: la recuperación no es una comprobación | `architecture.md` §3.1, §4.4 | VER-05, VER-09 |
+| RF-78 | Si la pierna semántica devuelve vacío —fragmentos sin vector o indexados con otro modelo— la fusión sigue con una sola pierna, el paquete se marca como degradado y se traza. No aplica el fallo cerrado: la recuperación no es una comprobación | `architecture.md` §3.1, §4.4, §4.8 | VER-05, VER-09 |
+| RF-101 | Al arrancar, el modelo de embeddings se carga y su dimensión se contrasta con la del índice de la novela. Si no carga o no coincide, la tirada no empieza. No se reintenta: el fallo es determinista | `architecture.md` §4.8 | VER-05 |
+| RF-102 | El modelo de embeddings es multilingüe y viaja dentro de la imagen. Ni se descarga en ejecución ni se elige en caliente | `architecture.md` §4.8 | VER-11, VER-05 |
 
 #### Selección y ajuste
 
@@ -370,6 +372,37 @@ El corazón de la versión 1 y donde vive el RAG híbrido. Todo lo de esta secci
 | RF-65 | Las rutas de lectura solo devuelven capítulos congelados y proyecciones derivadas. Ninguna expone borradores, defectos, veredictos, la cola de admisión ni el registro de eventos en crudo | `architecture.md` §2.2 | VER-05 |
 | RF-66 | RI-02 es idempotente y arranca la tirada en el bucle `asyncio` del proceso, sin proceso ni cola adicionales | `architecture.md` §7.4 | VER-05 |
 
+### 4.10 Herramientas de agente (transversal)
+
+Refina `architecture.md` §5.3, §6.3 y §4.10. Una herramienta la invoca el propio agente durante su turno; una skill la ejecuta el código. La diferencia manda en todo lo que sigue.
+
+| RF | Requisito | Fuente | Verificación |
+|---|---|---|---|
+| RF-91 | Cada agente de modelo declara una lista **cerrada** de herramientas, la de la matriz de `architecture.md` §6.3. Una llamada a algo fuera de su lista se rechaza, consume un reintento y se traza | `architecture.md` §5.3, §6.3 | VER-05, VER-12 |
+| RF-92 | `context.budget` devuelve consumido, disponible y techo. El consumido es el recuento real del `usage` de la última respuesta del turno, **no una estimación** | `architecture.md` §4.8, §5.3 | VER-05 |
+| RF-93 | `canon.lookup` estima el candidato antes de entregarlo. Si lo consumido más el candidato supera el techo de la llamada, no lo entrega: devuelve su tamaño y en qué acotar la consulta | `architecture.md` §5.3 | VER-05, VER-06 |
+| RF-94 | `canon.lookup` nunca trunca un resultado. Si no cabe, se niega entero o se sustituye por el resumen de su escena | CTX-19; `architecture.md` §5.3 | VER-06 |
+| RF-95 | Todo resultado de herramienta llega etiquetado con su procedencia —canon, prosa congelada con su capítulo, o plan— y transporta la precedencia PRO-10: donde canon y prosa discrepen, manda el canon | CTX-13; `architecture.md` §5.3 | VER-05, VER-17 |
+| RF-96 | Ninguna herramienta escribe. La congelación sigue siendo la única operación que escribe canon, y solo `canon/` la ejecuta | `architecture.md` §5.3, §10 | VER-02, VER-05 |
+| RF-97 | El cupo de tirón de cada agente es el de `architecture.md` §6.3, se reserva entero en la admisión y **no se amplía en caliente**. Agotado, `canon.lookup` niega toda consulta y el agente concluye con lo que tiene | `architecture.md` §6.3, §7.4 | VER-06, VER-18 |
+| RF-98 | Todo agente arranca con un paquete empujado por el Documentalista, tenga herramientas o no. Ninguno empieza en blanco | `architecture.md` §4.10 | VER-05 |
+| RF-99 | Los agentes sin herramientas —Escritor, Especialista deportivo, Planificador— resuelven su turno en una sola ida y vuelta, sin bucle | `architecture.md` §4.10, §6.3 | VER-05 |
+| RF-100 | Toda llamada a herramienta se traza con su cupo, su coste real y su resultado o su negativa | PRO-08; `architecture.md` §11 | VER-09 |
+
+**Interfaces que esto añade:**
+
+- **RI-24** El puerto de `commons/` expone dos modos de `complete`. Uno de una sola vuelta, para los agentes sin herramientas, y uno con bucle de herramientas, para los cinco que las declaran. El agente no elige: lo decide su ficha en la matriz de §6.3.
+- **RI-25** El tope de salida de 50.000 tokens lo aplica `dispatch`, en el código. **No es una herramienta**: un tope que el modelo decide si invoca no es un tope.
+- **RI-26** Las herramientas se sirven desde `orchestration/`, que es quien lleva el contador de la llamada. `canon.lookup` delega en las skills `canon.*` y `prose.*` de `canon/` por la excepción de lectura de §2.3; no abre la base por su cuenta.
+
+**No funcionales que esto añade:**
+
+| RNF | Requisito | Fuente | Verificación |
+|---|---|---|---|
+| RNF-23 | El camino de empuje es reproducible: el mismo canon y la misma petición producen el mismo paquete | `architecture.md` §4.4, §4.10 | VER-06 |
+| RNF-24 | El camino de tirón **no** es reproducible, y se verifica por invariantes sobre la traza, no por igualdad de salida: ninguna llamada superó su techo; todo resultado llevó procedencia; ninguno llegó truncado; toda consulta quedó trazada con su coste | `architecture.md` §4.10 | VER-09, VER-18 |
+| RNF-25 | El camino caliente —Escritor, Especialista deportivo y verificadores— no tiene herramientas, así que la generación de prosa sigue siendo determinista y medible contra el conjunto dorado cuando llegue | `architecture.md` §4.10, §6.3 | VER-06, VER-10 |
+
 ---
 
 ## 5. Requisitos de datos
@@ -412,7 +445,7 @@ Un fichero SQLite por novela, sin extensiones nativas. Separación lógica de lo
 
 | RNF | Requisito | Fuente | Verificación |
 |---|---|---|---|
-| RNF-04 | Entrada ≤ 70.000 tokens y entrada más salida ≤ 85.000 en toda llamada; 100.000 es el techo de lo que está en vuelo. Lo que no cabe se compacta o se encola, nunca se trunca | `AGENTS.md` §5.3; CTX-I1 | VER-06, VER-12 |
+| RNF-04 | Entrada ≤ 100.000 tokens en toda llamada y paquete ≤ 85.000 al ensamblarse; la suma de la entrada en vuelo, cupos de tirón incluidos, ≤ 100.000. La salida no cuenta contra el techo y tiene tope propio en 50.000. Lo que no cabe se compacta o se encola, nunca se trunca | `AGENTS.md` §5.3; CTX-I1 | VER-06, VER-12 |
 | RNF-05 | Fallo cerrado en la admisión: sin estimación de presupuesto no hay llamada | `architecture.md` §7.4 | VER-05 |
 | RNF-06 | El paralelismo real de la versión 1 es cero: sin Jurado, todas las llamadas van en serie. La admisión existe igual, porque CTX-20 acota lo que vendrá | `architecture.md` §4.2 | VER-06 |
 | RNF-20 | La recuperación completa de un paquete no gasta ninguna llamada de modelo. Su único coste externo es un vector de consulta | `architecture.md` §4.4 | VER-09 |
@@ -431,7 +464,7 @@ Un fichero SQLite por novela, sin extensiones nativas. Separación lógica de lo
 | RNF | Requisito | Fuente | Verificación |
 |---|---|---|---|
 | RNF-10 | Ninguna cadena procedente de un modelo alcanza sistema de ficheros, red ni base de datos sin pasar por un validador de esquema | `verification.md` §4.2 | VER-02 |
-| RNF-11 | El proceso corre en contenedor sin más red que las APIs de Claude, OpenRouter y Langfuse, con el sistema de ficheros acotado al directorio de la tirada | `verification.md` §5.3 | VER-11 |
+| RNF-11 | El proceso corre en contenedor sin más red que las APIs de Claude y Langfuse, con el sistema de ficheros acotado al directorio de la tirada. El modelo de embeddings viaja en la imagen y no se descarga en ejecución | `verification.md` §5.3; `architecture.md` §4.8 | VER-11 |
 | RNF-12 | El brief se trata como entrada no confiable: sus textos entran a los paquetes como datos, nunca como instrucción | `verification.md` §5.9 | VER-17 |
 | RNF-22 | Un fragmento recuperado entra al paquete como prosa con su procedencia, nunca como instrucción ni como hecho canónico | CTX-13; `verification.md` §5.9 | VER-05, VER-17 |
 
@@ -461,19 +494,19 @@ Un fichero SQLite por novela, sin extensiones nativas. Separación lógica de lo
 | Método | Requisitos que cubre como método principal |
 |---|---|
 | VER-01 Type checking | RF-02, RF-21, RF-29, RF-64, RNF-16 |
-| VER-02 Static analysis | RF-58, RF-64, RD-08, RD-09, RD-11, RD-17, RNF-10, RNF-15, RNF-21 |
+| VER-02 Static analysis | RF-58, RF-64, RF-96, RD-08, RD-09, RD-11, RD-17, RNF-10, RNF-15, RNF-21 |
 | VER-03 Symbolic execution | RNF-18: proyecciones, calendario, clasificación, corte de fragmentos, fusión y empaquetador |
 | VER-04 Formal verification | RF-59, RF-61 |
-| VER-05 Unit e integration | RF-01, RF-10, RF-11, RF-12, RF-15, RF-27, RF-30, RF-34, RF-35, RF-36, RF-37, RF-41, RF-48, RF-49, RF-52, RF-56, RF-60, RF-65, RF-66, RF-67, RF-68, RF-71, RF-72, RF-73, RF-74, RF-75, RF-78, RF-79, RF-80, RF-81, RF-82, RF-87, RF-88, RF-89, RF-90, RD-01, RD-02, RD-06, RD-07, RD-10, RD-12, RD-13, RD-14, RD-15, RNF-05, RNF-07, RNF-09, RNF-17, RNF-22 |
-| VER-06 Property-based | RF-03 a RF-09, RF-14, RF-16, RF-20, RF-31, RF-32, RF-33, RF-42, RF-43, RF-47, RF-57, RF-62, RF-69, RF-70, RF-76, RF-77, RF-83, RF-84, RF-85, RF-86, RD-03, RD-04, RD-05, RD-16, RNF-04, RNF-06, RNF-08, RNF-19 |
+| VER-05 Unit e integration | RF-01, RF-10, RF-11, RF-12, RF-15, RF-27, RF-30, RF-34, RF-35, RF-36, RF-37, RF-41, RF-48, RF-49, RF-52, RF-56, RF-60, RF-65, RF-66, RF-67, RF-68, RF-71, RF-72, RF-73, RF-74, RF-75, RF-78, RF-79, RF-80, RF-81, RF-82, RF-87, RF-88, RF-89, RF-90, RF-91, RF-92, RF-93, RF-95, RF-98, RF-99, RF-101, RF-102, RD-01, RD-02, RD-06, RD-07, RD-10, RD-12, RD-13, RD-14, RD-15, RNF-05, RNF-07, RNF-09, RNF-17, RNF-22 |
+| VER-06 Property-based | RF-03 a RF-09, RF-14, RF-16, RF-20, RF-31, RF-32, RF-33, RF-42, RF-43, RF-47, RF-57, RF-62, RF-69, RF-70, RF-76, RF-77, RF-83, RF-84, RF-85, RF-86, RF-93, RF-94, RF-97, RD-03, RD-04, RD-05, RD-16, RNF-04, RNF-06, RNF-08, RNF-19, RNF-23, RNF-25 |
 | VER-07 Mutation | RF-46, RF-50 |
-| VER-08 Contract | RI-08, RI-11, RI-21, RF-28, RF-55, RF-64 |
-| VER-09 Observability | RI-12, RI-16, RI-23, RF-24, RF-39, RNF-13, RNF-14, RNF-19, RNF-20 |
+| VER-08 Contract | RI-08, RI-11, RI-21, RI-24, RF-28, RF-55, RF-64 |
+| VER-09 Observability | RI-12, RI-16, RI-23, RF-24, RF-39, RF-100, RNF-13, RNF-14, RNF-19, RNF-20, RNF-24 |
 | VER-10 Evals | RF-25, RF-40, RF-44, RF-51, RF-53: calidad de la salida de cada agente de modelo, con dobles en CI y modelo real por lotes |
 | VER-11 Sandbox | RNF-11 |
-| VER-12 Guardrails | RF-16, RF-17, RF-25, RF-28, RF-40, RF-44, RF-51, RF-53, RF-55, RF-63, RF-86 |
+| VER-12 Guardrails | RF-16, RF-17, RF-25, RF-28, RF-40, RF-44, RF-51, RF-53, RF-55, RF-63, RF-86, RF-91, RI-25 |
 | VER-17 Red-teaming | RNF-12, RNF-22 |
-| VER-18 Model checking | RF-13, RF-14, RF-18, RF-19, RF-20, RF-22, RF-45, RF-54, RF-56, RNF-01, RNF-02, RNF-03 |
+| VER-18 Model checking | RF-13, RF-14, RF-18, RF-19, RF-20, RF-22, RF-45, RF-54, RF-56, RF-97, RNF-01, RNF-02, RNF-03, RNF-24 |
 
 VER-13 está excluido. VER-14 entra con el Jurado, VER-15 es la puerta de §7.2 y VER-16 se aplica al cambiar un prompt.
 
@@ -549,11 +582,15 @@ Ninguna introduce un término ni un número nuevo. Todas eligen entre formas de 
 | D-11 | Langfuse caído | Encolar en local y continuar | La observabilidad observa, no gobierna |
 | D-12 | Búsqueda vectorial | Vectores en tabla y similitud en Python, sin extensión | 200 a 400 escenas y 600 a 1.200 fragmentos por obra: el recorrido exhaustivo es exacto e inmediato. El fichero sigue siendo un SQLite corriente |
 | D-13 | Cuándo se calculan los embeddings | Al congelar, desde la versión 1 | Evita que el afinado del paso 8 reindexe la novela entera |
+| D-22 | Quién calcula los embeddings | Modelo multilingüe local con `fastembed`, en el mismo proceso | Quita el único modo de fallo intermitente del ciclo, hace los vectores deterministas, baja el coste por vector a cero y cierra el contenedor a un solo proveedor externo. El identificador del modelo queda por fijar; nada más depende de él |
 | D-14 | Contador de tokens | `tiktoken` local con factor de seguridad de 1,35 por modelo, calibrado contra el `usage` real | Mantiene la admisión offline y sin dependencias nuevas en el camino crítico. El sesgo de `tiktoken` es conocido y va siempre hacia abajo, así que se acota con el factor y se corrige con lo medido, que llega gratis en cada respuesta |
 | D-15 | Grafo de entidades | Se construye en el paso 1, con su recorrido recursivo | La tabla de aristas ya la crea ese paso; lo único que añade es la consulta |
 | D-16 | Dónde viven las skills de prosa | En `canon/`, con el almacén que manejan | Poner la búsqueda en `context/` obligaría a esa carpeta a abrir la base |
 | D-17 | Recuperación del Continuista | Dirigida por afirmaciones, sin cupos y con la pierna léxica al frente | Busca recuerdo, no variedad, y CTX-09 dice que los nombres propios fallan en semántica |
 | D-18 | Fragmento que no cabe | Se sustituye por el resumen de su escena | Es la regla de compactación de §4.1 aplicada al caso, y el resumen ya existe |
+| D-19 | Empuje o tirón de contexto | Híbrido por agente: empuje para todos, tirón además para cinco | El Escritor se ejecuta cientos de veces y su paquete ya está afinado; el Continuista investiga y es el primero que deja de caber. El coste del tirón se paga por capítulo, no por escena |
+| D-20 | Tope de salida | Guardarraíl en `dispatch`, no herramienta del agente | Un tope que el modelo decide si invoca no es un tope |
+| D-21 | Cupo de tirón | Se reserva entero en la admisión y no se amplía | Admitir por lo que ocupa al empezar y dejar que crezca es romper el techo sin que salte nada: cuando la llamada se pasa, ya está en vuelo |
 
 ---
 
@@ -561,7 +598,7 @@ Ninguna introduce un término ni un número nuevo. Todas eligen entre formas de 
 
 | Decisión | Dónde está | Efecto en la versión 1 |
 |---|---|---|
-| Nº 7 de `architecture.md` §13: qué modelo de embedding puebla el índice | Abierta | Ninguno de diseño. El esquema guarda modelo y dimensión, así que elegir otro es reindexar |
+| Nº 7 de `architecture.md` §13: qué modelo multilingüe de `fastembed` puebla el índice | Abierta, y es la única de esta lista que hay que cerrar antes de indexar el primer capítulo | El mecanismo está fijado (D-22). Elegir otro después es reindexar, no rediseñar, pero arrancar con uno monolingüe inglés degrada la pierna semántica desde el capítulo 1 |
 | Nº 8 de `architecture.md` §13: qué modelo de Claude usa cada rol | Abierta | Ninguno de diseño. El puerto lo aísla |
 | Nº 9 de `architecture.md` §13: capítulo en el techo de EST-07 que no cabe en el presupuesto del Jurado | Abierta | Ninguno: el Jurado no está en la versión 1 |
 | Nº 10 de `architecture.md` §13: constante de la fusión por rangos | Abierta | Se usa 60; medirla es el paso 8 |
@@ -570,6 +607,48 @@ Ninguna introduce un término ni un número nuevo. Todas eligen entre formas de 
 | Nº 6 de `architecture.md` §13: cuándo reescribir en vez de reparar | Abierta | Se usa el presupuesto de reintentos sin excepción |
 
 Las decisiones nº 2, nº 3 y nº 4 no afectan a la versión 1: son del Continuista al crecer la obra y del Jurado, que no está.
+
+---
+
+## 11. Plan de ejecución
+
+El orden de `architecture.md` §14 dice **qué se construye antes que qué**. Esta sección lo baja a tramos de trabajo con su contenido, sus requisitos y la puerta que hay que pasar para seguir. Es lo que permite construir el backend entero de una vez sin ir descubriendo dependencias por el camino.
+
+**Regla que gobierna el orden:** un tramo no empieza hasta que el anterior pasa su puerta. No es burocracia: cada puerta comprueba una propiedad de la que depende el tramo siguiente, y descubrir en el tramo 6 que las proyecciones no eran reconstruibles obliga a rehacer todo lo que se apoyó en ellas.
+
+| # | Tramo | Qué entrega | Requisitos | Puerta para seguir |
+|---|---|---|---|---|
+| **T0** | `commons/` | Puerto con `complete` en sus dos modos y `embed` sobre modelo local; contador de tokens con su factor por modelo; tipos de los artefactos que cruzan dos funcionalidades | RI-11 a RI-13, RI-20 a RI-22, RI-24, RNF-16, RNF-19 | `mypy --strict` limpio y el contador contrastado contra un `usage` de doble |
+| **T1** | `canon/` · esquema y lectura | Las tablas de los cinco almacenes con sus triggers append-only y su versión de esquema; proyecciones; grafo con recorrido recursivo; `canon.query`, `state-at`, `knowledge-of`, `related` | RD-01 a RD-17, RF-01 a RF-11, RF-67 | Las propiedades de proyección: independencia del orden de inserción, reconstruibilidad desde cero, vigencia correcta en cualquier instante |
+| **T2** | `planning/` | Escaleta, `outline.check` determinista, especificación de escena, registro de setups | RF-25 a RF-31 | `outline.check` rechaza una escaleta con un arco sin resolución planificada, y acepta una válida |
+| **T3** | `context/` | Construcción de la consulta desde el canon; las dos piernas; fusión por rangos; selección por cupos; ensamblaje por receta; compactación; auditoría | RF-32 a RF-39, RF-72 a RF-89, RNF-20, RNF-23 | La fusión es determinista sobre el mismo canon, y ningún paquete supera el presupuesto de su agente destino |
+| **T4** | `generation/` | `scene.write`; `match.simulate` como motor de reglas; `match.narrate` | RF-40 a RF-45 | `match.simulate` es determinista dada una semilla y no alinea a nadie indisponible |
+| **T5** | `verification/` · determinista | Los siete `check.*`; `continuity.review`; `revise.targeted` con revalidación desde la primera puerta | RF-46 a RF-54 | Cobertura de mutación ≥ 90 % en los verificadores deterministas |
+| **T6** | `canon/` · escritura | `prose.chunk`, `prose.embed`, índice en dos niveles, `delta.extract`, resúmenes, congelación transaccional | RF-12, RF-55 a RF-58, RF-68 a RF-71, RF-90, RNF-21 | Congelar no deja ninguna fila de memoria de trabajo, y un fallo de embeddings no escribe nada |
+| **T7** | `canon/` · arbitraje | Política de precedencia con sus dos puertas de entrada | RF-59 a RF-63 | La precedencia es total y sin ciclos, y fusionar dos deltas es asociativo |
+| **T8** | `orchestration/` | `loop`, `checkpoint`, `admission`, `retries`, `dispatch`, y el servidor de herramientas con su contador por llamada | RF-13 a RF-24, RF-91 a RF-100, RNF-01 a RNF-09, RNF-24 | Los invariantes de `verification.md` §7 comprobados por model checking |
+
+**Las rutas HTTP no son un tramo.** Cada uno añade las suyas dentro de su funcionalidad, y `orchestration/` las monta al componer la aplicación. Concentrarlas al final dejaría los ocho tramos anteriores sin forma de ejercitarse.
+
+### 11.1 Por qué este orden y no el de `architecture.md` §14 tal cual
+
+Dos diferencias, y las dos tienen motivo:
+
+**`commons/` se adelanta a todo (T0).** No aparece en §14 porque §14 ordena funcionalidades y `commons/` no lo es. Pero todas importan de él, así que construirlo después obliga a escribir dos veces las firmas que lo cruzan.
+
+**`canon/` se parte en tres tramos (T1, T6, T7) en lugar de uno.** §14 ya lo hace —sus pasos 1, 5 y 6 son todos `canon/`— y aquí se hace explícito, porque leer el canon hay que tenerlo en el tramo 1 y escribirlo no se puede hasta tener qué escribir, que llega en el 6.
+
+### 11.2 Qué significa que el backend está terminado
+
+No es «los ocho tramos compilan». Es esto:
+
+- [ ] Los ocho tramos pasaron su puerta
+- [ ] La puerta de integración continua de §7.2 está en verde
+- [ ] Todo requisito de §4, §5 y §6 tiene su método principal ejecutándose, o consta en el riesgo aceptado de §7.4
+- [ ] Una tirada completa va del brief al cierre de obra **sin intervención**, que es la condición de RNF-03
+- [ ] Copiar el fichero de la novela y abrirlo devuelve las mismas proyecciones y la misma recuperación, que es RD-12
+
+El cuarto es el que de verdad cuenta. Los otros son comprobaciones de que el camino existe; ese es la comprobación de que funciona.
 
 ---
 

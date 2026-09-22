@@ -218,7 +218,7 @@ Ejecutar el código del agente en un entorno aislado, de modo que una acción ma
 
 | Atributo | Valor |
 |---|---|
-| **Qué verifica aquí** | El backend entero, que es el único proceso (`architecture.md` §7.4) y por tanto toda llamada a agente, corre en un contenedor sin más red que las dos APIs de proveedor de `architecture.md` §4.8, con el sistema de ficheros acotado al directorio de la tirada y con el canon montado en **solo lectura**. La escritura al canon pasa exclusivamente por el Archivero tras congelar |
+| **Qué verifica aquí** | El backend entero, que es el único proceso (`architecture.md` §7.4) y por tanto toda llamada a agente, corre en un contenedor sin más red que la API de Claude y la de Langfuse, porque los embeddings son locales (`architecture.md` §4.8), con el sistema de ficheros acotado al directorio de la tirada y con el canon montado en **solo lectura**. La escritura al canon pasa exclusivamente por el Archivero tras congelar |
 | **Clase** | D |
 | **Límite** | Contiene el daño, no lo previene. Un agente sandboxeado puede seguir escribiendo prosa incoherente con total libertad |
 

@@ -322,6 +322,8 @@ Para `backend/` y `frontend/`. Hoy no aplica: el repositorio está en fase de es
 5. **Pasar la puerta de CI**: VER-01, VER-02, VER-05, VER-06 y VER-08 en verde (VER-15).
 6. **Sincronizar la documentación**, con el procedimiento de §6.5. Es un paso del proceso, no una tarea aparte.
 
+Durante los seis pasos rige §6.6: lo que cruza el umbral se para y se avisa, lo que no, se resuelve.
+
 Si al implementar descubres que la spec está mal, **paras y ejecutas el proceso B**. No se corrige en el código dejando la spec mintiendo: así es como los documentos dejan de describir el sistema.
 
 ### 6.5 Sincronización inversa: el código actualiza los documentos
@@ -340,6 +342,34 @@ Todo cambio de código lanza una **ejecución de sincronización** que revisa y 
 La ejecución **informa y propone; no edita la ontología por su cuenta**. Si detecta que hace falta tocar `definitions.md`, eso dispara el proceso A con su interrogatorio, porque el proceso A es bloqueante y una sincronización automática no puede saltarse esa puerta.
 
 **Por qué existe este paso**: la propagación de §5.2 va de la spec al código. Sin sincronización inversa la deriva ocurre en la otra dirección y nadie la ve: el código avanza, los documentos se quedan quietos, y a los dos meses la spec describe un sistema que ya no existe.
+
+### 6.6 Escalado durante la implementación
+
+§6.1 dice cuándo preguntar **antes** de empezar. Esta sección dice cuándo parar **a mitad**, que es un momento distinto: el interrogatorio ya pasó, el trabajo está en marcha, y aparece algo que no estaba previsto.
+
+**La regla, en una línea: si el problema cruza el umbral de §6.1, se para y se avisa. Si no lo cruza, se resuelve con el mayor esfuerzo posible y se cuenta después.**
+
+El umbral es el mismo a propósito, y no uno nuevo. §6.1 ya lo dice de la otra puerta: dos criterios distintos para lo mismo se desincronizan a la tercera vez que alguien los aplica. Si algo merece quedar registrado como decisión, merece que te avisen antes de tomarla —da igual que aparezca al planificar o al compilar.
+
+| Se para y se avisa | Se resuelve y se cuenta |
+|---|---|
+| Hace falta un número, un ID o un término que no existe | Un test falla, el código no compila, una librería se comporta distinto de lo esperado |
+| Aparece una frontera nueva sin dueño: dos componentes podrían hacer lo mismo y nada dice cuál | La spec no cubre un detalle, pero solo hay una lectura coherente con los cuatro documentos |
+| La spec está mal o se contradice: eso dispara el proceso B (§6.3), no un parche en el código | Nombres, ergonomía, orden de los ficheros, rendimiento |
+| Dos documentos se contradicen y arreglarlo exige elegir cuál gana | Una dependencia no instala y hay alternativa dentro del stack fijado |
+| La decisión es cara de deshacer: destruye datos, o fuerza a reindexar la novela entera | Cualquier cosa recuperable editando código |
+| Cumplirla obligaría a saltarse una de las seis restricciones de §5.3 | Refactorizar algo que ya funciona para que quepa lo siguiente |
+
+**Parar no es parar del todo.** Se sigue con todo lo que no dependa de la respuesta, y la pregunta se hace en el momento en que de verdad bloquea, no al descubrirla. Quedarse quieto esperando una respuesta que afecta a un tramo de ocho es desperdiciar los otros siete.
+
+**Cómo se avisa**, porque un aviso sin esto traslada el trabajo en vez de hacerlo:
+
+1. **Qué está bloqueado** y qué no, en una línea.
+2. **Qué se hizo antes de parar**, para que no haya que reconstruirlo.
+3. **Las salidas posibles**, con la recomendada primera y su porqué.
+4. **Qué se sigue construyendo** mientras tanto.
+
+**Al terminar se dice lo que se resolvió por cuenta propia.** Un problema del lado derecho de la tabla se arregla sin preguntar, pero no en silencio: si se eligió entre dos lecturas posibles, eso consta en el informe final aunque no mereciera una interrupción. Un cambio incompleto anunciado es recuperable; uno silencioso, no (§9).
 
 ---
 

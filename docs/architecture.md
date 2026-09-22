@@ -176,7 +176,7 @@ El motivo es el tamaño real del problema. Una obra de 200.000 palabras troceada
 
 Cada vector se guarda con el identificador del modelo que lo produjo y su dimensión, para que un cambio de modelo de embedding sea detectable y dispare la reindexación en vez de mezclar vectores incomparables. Cuándo se calculan y en qué orden está en §3.3.
 
-Si la recuperación semántica falla en el momento de consultar, `prose.retrieve` devuelve solo resultados léxicos y lo marca en el informe de `context.audit`. No es una comprobación, así que no aplica la regla de fallo cerrado; sí es una señal de §11, porque una tirada entera recuperando solo por léxico produce peor prosa sin que salte nada.
+Con el modelo de embeddings en local (§4.8), la pierna semántica **no falla durante la tirada**: se comprueba al arrancar y, si el modelo no carga, la tirada no empieza. La ruta que deja `prose.retrieve` devolviendo solo resultados léxicos sigue existiendo y sigue marcándose en el informe de `context.audit`, pero pasa a cubrir un caso distinto: el fragmento cuyo vector falta porque se indexó con otro modelo. No es una comprobación, así que no aplica el fallo cerrado; sí es una señal de §11.
 
 **Troceado del índice de prosa: dos niveles.** El almacén guarda la prosa congelada en dos granularidades, porque las dos preguntas que se le hacen son distintas.
 
@@ -222,7 +222,7 @@ La congelación (CAN-12) es el único momento en que el índice de prosa crece, 
 
 1. **Cortar los fragmentos** de cada escena del capítulo, por párrafos completos hasta 450 tokens con un párrafo de solape. Es determinista: el mismo capítulo produce siempre los mismos cortes.
 2. **Generar los resúmenes** de escena y de capítulo con `summarize.hierarchical`, según §4.5. El de escena es lo que se embebe en el nivel de escena.
-3. **Calcular los vectores** de cada resumen de escena y de cada fragmento con `prose.embed`. Es la única parte que sale a la red, y por eso va antes: si el proveedor falla, se reintenta contra el presupuesto de §7.3 y, agotado, el capítulo va a cuarentena sin haber escrito nada.
+3. **Calcular los vectores** de cada resumen de escena y de cada fragmento con `prose.embed`, que es cómputo local (§4.8). Va antes de abrir la transacción porque es la parte cara: cientos de vectores por capítulo, y una transacción abierta mientras se calculan bloquea el fichero sin motivo. Ya no puede fallar por red; si fallara por otra causa, el capítulo va a cuarentena sin haber escrito nada.
 
 **Dentro de la transacción**, todo junto o nada:
 
@@ -358,7 +358,7 @@ Tres motivos por los que encaja aquí y no solo por comodidad:
 
 - **No necesita calibración.** Solo usa posiciones, así que es estable capítulo a capítulo.
 - **Es determinista.** Dos ejecuciones con el mismo canon dan el mismo paquete, que es lo que hace reproducible una tirada y comprobable una propiedad.
-- **Se degrada sola.** Si el proveedor de embeddings falla, la pierna semántica devuelve vacío y la fusión sigue funcionando con una sola pierna, sin caso especial.
+- **Se degrada sola.** Si la pierna semántica devuelve vacío —hoy solo por vectores ausentes o de otro modelo, ya no por red (§4.8)— la fusión sigue funcionando con una sola pierna, sin caso especial.
 
 #### Selección por cupos, no por peso
 
@@ -452,18 +452,39 @@ El aislamiento acota **lo que cada agente ve**, no **cuántos corren a la vez**.
 
 ### 4.8 Proveedores externos y contador de tokens
 
-El sistema depende de dos proveedores, y de un solo contador de tokens que hace cumplir todos los presupuestos de esta sección.
+El sistema depende de **un solo proveedor externo** y de un contador de tokens que hace cumplir todos los presupuestos de esta sección.
 
 | Uso | Proveedor | Quién lo consume |
 |---|---|---|
 | Los once agentes de modelo | **Claude**, API de Anthropic | `planning/`, `generation/`, `verification/` y `canon/`, siempre a través del puerto de `commons/` |
-| Embeddings del índice de prosa | **OpenRouter** | `canon/` al congelar, `context/` al recuperar |
+| Embeddings del índice de prosa | **Modelo local con `fastembed`** | `canon/` al congelar, `context/` al recuperar |
 
 Esto no cambia que el Orquestador y el Documentalista sean código (§6): Claude es el modelo que hay detrás de los once agentes que sí consumen ventana, no el que dirige el flujo.
 
 **Un puerto, dos operaciones.** Ningún agente importa el SDK de un proveedor. `commons/` expone un puerto con `complete`, que recibe instrucción, paquete de contexto y esquema de salida, y `embed`, que recibe texto y devuelve vector. El motivo es que §12 ya prevé modelos distintos por rol y `verification.md` §5.8 trata cambiar de modelo como un despliegue: con el puerto, cambiar de modelo es cambiar una configuración y no tocar once agentes.
 
-**Por qué dos proveedores y no uno.** La prosa es donde se juega la calidad de la obra, así que va a Claude sin intermediario. Los embeddings son una pieza intercambiable y de coste marginal, y OpenRouter da acceso a varios modelos de embedding con una sola cuenta, de modo que cerrar la mitad vectorial del índice (§3.1) no ata al sistema a un proveedor concreto.
+**Solo hay un proveedor externo: Claude.** La prosa es donde se juega la calidad de la obra, así que va a Claude sin intermediario. Los embeddings, en cambio, **no salen de la máquina**: los calcula un modelo local servido por `fastembed`.
+
+#### Embeddings locales
+
+Un modelo cuantizado de unos 30 a 130 MB, cargado en proceso. Lo que compra, en orden de importancia:
+
+| Qué gana | Por qué importa aquí |
+|---|---|
+| **Desaparece un modo de fallo entero** | La red ya no puede tumbar la indexación al congelar ni degradar la recuperación a solo léxico. Era la única pieza del ciclo que fallaba de forma intermitente |
+| **Determinismo real** | Pesos fijos y locales: el mismo texto da el mismo vector siempre. Refuerza la propiedad de §4.4 de que el mismo canon produce el mismo paquete |
+| **Coste cero por vector** | Una obra son 600 a 1.200 fragmentos más sus consultas, recalculados en cada reindexación |
+| **Un servicio externo menos** | El contenedor de `verification.md` §5.3 se cierra más: solo Claude y Langfuse |
+
+**El modelo tiene que ser multilingüe, y esto no es negociable.** La novela se escribe en español. Un modelo entrenado en inglés —como `BAAI/bge-small-en-v1.5`, que lo lleva en el nombre— produce vectores que no separan bien el español, y la pierna semántica es justamente la que existe para encontrar lo que la léxica no encuentra: la escena espejo que no comparte ni una palabra con la consulta. Con un modelo inglés sobre texto español esa pierna devuelve ruido, y la recuperación se queda de hecho con una sola pierna, que es el escenario que §4.4 trata como degradado.
+
+**Propuesta: una variante multilingüe de las que sirve `fastembed`. El identificador concreto está sin fijar**, y es lo único que queda por confirmar de esta decisión; nada de lo demás depende de cuál sea. Se elige midiendo con el conjunto dorado cuando llegue, igual que el resto de parámetros de recuperación.
+
+**El modelo va dentro de la imagen, no se descarga en ejecución.** El contenedor no tiene red general (`verification.md` §5.3), así que bajarlo en el arranque sería añadir una dependencia de red justo donde se acaba de quitar una.
+
+**El fallo local es distinto del fallo de red, y por eso se trata distinto.** Que un proveedor no responda es intermitente y reintentar tiene sentido; que el modelo no cargue —fichero ausente, memoria insuficiente, dimensión que no cuadra con la del índice— **es determinista: si falla una vez, falla siempre**. Reintentarlo es perder tiempo. Por eso la comprobación se mueve al arranque: **el modelo se carga y se contrasta su dimensión con la del índice antes de admitir la primera llamada**, y si no carga, la tirada no empieza. Durante la tirada ya no puede fallar, y la ruta de degradación a solo léxico de §4.4 deja de activarse por causas externas.
+
+Cada vector sigue guardando el identificador del modelo que lo produjo y su dimensión (§3.1). Con un modelo local eso importa **más**, no menos: cambiarlo es sustituir un fichero, así que mezclar vectores incomparables pasa a ser un error fácil de cometer, y la detección es lo único que lo impide.
 
 #### Medición de tokens
 
@@ -1372,7 +1393,7 @@ En un sistema sin supervisión externa, la observabilidad no es un extra: es el 
 | Ocupación concurrente máxima (CTX-20) | Roza los 100.000 de forma sostenida, o la cola crece: el paralelismo está mal dimensionado |
 | Aciertos sobre el conjunto dorado | Caída: los jueces han derivado |
 | Recuento real frente al estimado por el contador (§4.8) | El real supera al estimado en alguna llamada: el factor de seguridad se ha quedado corto |
-| Recuperaciones degradadas a solo léxico | Sostenidas: el proveedor de embeddings falla y la prosa pierde memoria semántica sin que salte ninguna puerta |
+| Recuperaciones degradadas a solo léxico | Cualquiera: con el modelo en local no debería ocurrir nunca durante una tirada. Si ocurre, hay vectores ausentes o indexados con otro modelo |
 | Cupos del bloque 7 que quedan vacíos (§4.4) | Muchos y sostenidos pasado el primer acto: el índice no está encontrando lo que debería, o la escaleta no planta setups |
 | Fragmentos sustituidos por el resumen de su escena | Creciente: los fragmentos no caben y el paquete está mal dimensionado |
 
@@ -1400,7 +1421,7 @@ En un sistema sin supervisión externa, la observabilidad no es un extra: es el 
 4. Umbral de dispersión que invalida un veredicto.
 5. Si `match.simulate` debe modelar el encuentro minuto a minuto o solo sus hitos.
 6. Punto a partir del cual conviene reescribir un capítulo en vez de repararlo.
-7. Con qué modelo de embedding se puebla el índice de prosa. El proveedor está fijado (§4.8) y el esquema guarda modelo y dimensión, así que cambiarlo es reindexar, no rediseñar.
+7. Con qué modelo multilingüe de `fastembed` se puebla el índice de prosa. El mecanismo está fijado (§4.8) y el esquema guarda modelo y dimensión, así que cambiarlo es reindexar, no rediseñar. Lo único abierto es el identificador.
 8. Qué modelo de Claude usa cada rol. §12 prevé modelos distintos por agente; cuál va a cuál se decide midiendo con `verification.md` §5.8, no por adelantado.
 9. Cómo evalúa el Jurado un capítulo en el techo de EST-07, que no cabe en los 9.000 tokens que §4.2 le da (§4.9). Las salidas: subir su presupuesto, evaluarlo por mitades, o acotar el capítulo por debajo de 4.000 palabras en la escaleta.
 10. Constante de la fusión recíproca de rangos (§4.4). Se usa 60 por venir del trabajo original; ajustarla exige medir con el conjunto dorado, que llega en el paso 9.
