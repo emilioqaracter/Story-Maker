@@ -478,7 +478,19 @@ Un modelo cuantizado de unos 30 a 130 MB, cargado en proceso. Lo que compra, en 
 
 **El modelo tiene que ser multilingüe, y esto no es negociable.** La novela se escribe en español. Un modelo entrenado en inglés —como `BAAI/bge-small-en-v1.5`, que lo lleva en el nombre— produce vectores que no separan bien el español, y la pierna semántica es justamente la que existe para encontrar lo que la léxica no encuentra: la escena espejo que no comparte ni una palabra con la consulta. Con un modelo inglés sobre texto español esa pierna devuelve ruido, y la recuperación se queda de hecho con una sola pierna, que es el escenario que §4.4 trata como degradado.
 
-**Propuesta: una variante multilingüe de las que sirve `fastembed`. El identificador concreto está sin fijar**, y es lo único que queda por confirmar de esta decisión; nada de lo demás depende de cuál sea. Se elige midiendo con el conjunto dorado cuando llegue, igual que el resto de parámetros de recuperación.
+**El modelo es `intfloat/multilingual-e5-large`**: 1024 dimensiones, 2,24 GB. De los multilingües que sirve `fastembed` había tres candidatos reales, y se elige **por para qué fue entrenado, no por tamaño**.
+
+| Modelo | Dim | Tamaño | Entrenado para |
+|---|---:|---:|---|
+| `paraphrase-multilingual-MiniLM-L6-v2` | 384 | 0,22 GB | Similitud entre frases |
+| `paraphrase-multilingual-mpnet-base-v2` | 768 | 1,00 GB | Similitud entre frases |
+| **`intfloat/multilingual-e5-large`** | 1024 | 2,24 GB | **Recuperación** |
+
+Los dos primeros son modelos de paráfrasis: miden si dos frases parecidas y de longitud parecida dicen lo mismo. Este sistema hace lo contrario: usa una especificación de escena —corta y estructurada— para buscar fragmentos de prosa —largos y narrativos—. Eso es **recuperación asimétrica**, y es justo donde un modelo de paráfrasis rinde peor.
+
+El tamaño no restringe: una obra son 600 a 1.200 fragmentos más un vector de consulta por escena, y a 1024 dimensiones los vectores de la obra entera ocupan unos 5 MB en el fichero. Los 2,24 GB se pagan una vez, en la imagen. Si esta llegara a ser demasiado grande, la alternativa es `paraphrase-multilingual-mpnet-base-v2` a 1 GB, perdiendo el entrenamiento para recuperación; el esquema guarda modelo y dimensión (§3.1), así que cambiarlo es reindexar.
+
+**Los modelos E5 exigen prefijos, y esto hay que escribirlo donde se vea**: `query: ` delante del texto de consulta y `passage: ` delante de cada fragmento que se indexa. Sin ellos el modelo carga sin quejarse, devuelve vectores de la dimensión correcta y recupera peor — sin error, sin aviso y sin que ninguna puerta lo note. Es el mismo modo de fallo silencioso que un modelo monolingüe inglés.
 
 **El modelo va dentro de la imagen, no se descarga en ejecución.** El contenedor no tiene red general (`verification.md` §5.3), así que bajarlo en el arranque sería añadir una dependencia de red justo donde se acaba de quitar una.
 
@@ -1468,7 +1480,7 @@ En un sistema sin supervisión externa, la observabilidad no es un extra: es el 
 4. Umbral de dispersión que invalida un veredicto.
 5. Si `match.simulate` debe modelar el encuentro minuto a minuto o solo sus hitos.
 6. Punto a partir del cual conviene reescribir un capítulo en vez de repararlo.
-7. Con qué modelo multilingüe de `fastembed` se puebla el índice de prosa. El mecanismo está fijado (§4.8) y el esquema guarda modelo y dimensión, así que cambiarlo es reindexar, no rediseñar. Lo único abierto es el identificador.
+7. ~~Con qué modelo de embedding se puebla el índice de prosa.~~ **Cerrada: `intfloat/multilingual-e5-large`** (§4.8). Cambiarlo más adelante es reindexar, no rediseñar, porque el esquema guarda modelo y dimensión.
 8. ~~Qué modelo de Claude usa cada rol.~~ **Cerrada: los once agentes de modelo corren sobre Claude Haiku 4.5** (§4.8). El puerto sigue permitiendo modelos distintos por agente si midiendo con `verification.md` §5.8 se viera que alguno lo necesita; hoy no se usa esa posibilidad. Consecuencias ya recogidas: ventana de 200.000 en vez de 1.000.000, mínimo cacheable de 4.096 y un factor de contador por modelo.
 9. Cómo evalúa el Jurado un capítulo en el techo de EST-07, que no cabe en los 9.000 tokens que §4.2 le da (§4.9). Las salidas: subir su presupuesto, evaluarlo por mitades, o acotar el capítulo por debajo de 4.000 palabras en la escaleta.
 10. Constante de la fusión recíproca de rangos (§4.4). Se usa 60 por venir del trabajo original; ajustarla exige medir con el conjunto dorado, que llega en el paso 9.

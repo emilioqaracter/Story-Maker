@@ -124,7 +124,7 @@ No hay actor «revisor». Cualquier requisito que lo necesite es un error de est
 | Persistencia | SQLite en local, un fichero por novela, sin extensiones nativas | `AGENTS.md` §3.2; `architecture.md` §3.1 |
 | Aislamiento | Contenedor sin más red que las APIs de Claude y Langfuse; ficheros acotados al directorio de la tirada | `verification.md` §5.3 |
 | Modelo de los once agentes | **Claude Haiku 4.5**, API de Anthropic. Ventana de 200.000, salida máxima de 64.000, mínimo cacheable de 4.096 | `architecture.md` §4.8 |
-| Embeddings | Modelo multilingüe local con `fastembed`, empaquetado en la imagen | `architecture.md` §4.8 |
+| Embeddings | `intfloat/multilingual-e5-large` con `fastembed`, empaquetado en la imagen. 1024 dimensiones | `architecture.md` §4.8 |
 | Contador de tokens | `tiktoken` local con factor de seguridad en `commons/`, contrastado contra el `usage` de cada respuesta | `architecture.md` §4.8 |
 | Observabilidad | Langfuse con su SDK de Python | `verification.md` §5.1 |
 
@@ -143,7 +143,7 @@ Las seis de `AGENTS.md` §5.3, que aquí se convierten en requisitos no funciona
 |---|---|
 | La API de Claude está accesible y su ventana es ≥ 100.000 tokens | El sistema no arranca: fallo cerrado en el arranque |
 | El modelo de embeddings carga al arrancar y su dimensión coincide con la del índice | La tirada no empieza. Es fallo cerrado en el arranque, no durante el ciclo (RF-101) |
-| Existe una variante multilingüe de `fastembed` adecuada para prosa en español | La pierna semántica devolvería ruido y la recuperación quedaría de hecho en una sola pierna. Es la única pieza sin fijar de la decisión D-22 |
+| `intfloat/multilingual-e5-large` recupera bien sobre prosa literaria en español | La pierna semántica rinde por debajo de lo previsto y nada lo señala. Se mide con el conjunto dorado cuando llegue (paso 8); hasta entonces, riesgo aceptado |
 | El factor de seguridad de §4.8 cubre el infracuento de `tiktoken` sobre prosa en español | Los paquetes salen mayores de lo previsto. No rompe ninguna llamada, porque el techo es propio y la ventana física es de 1.000.000; produce deriva de coste y calidad. Lo vigila una propiedad de CI (RNF-19) |
 | El brief llega ya estructurado, con sus entidades identificadas | Un brief en texto libre no se acepta en la versión 1 |
 
@@ -297,7 +297,7 @@ El corazón de la versión 1 y donde vive el RAG híbrido. Todo lo de esta secci
 | RF-77 | La fusión es determinista: el mismo canon y la misma petición producen el mismo orden | `architecture.md` §4.4; PRO-09 | VER-06 |
 | RF-78 | Si la pierna semántica devuelve vacío —fragmentos sin vector o indexados con otro modelo— la fusión sigue con una sola pierna, el paquete se marca como degradado y se traza. No aplica el fallo cerrado: la recuperación no es una comprobación | `architecture.md` §3.1, §4.4, §4.8 | VER-05, VER-09 |
 | RF-101 | Al arrancar, el modelo de embeddings se carga y su dimensión se contrasta con la del índice de la novela. Si no carga o no coincide, la tirada no empieza. No se reintenta: el fallo es determinista | `architecture.md` §4.8 | VER-05 |
-| RF-102 | El modelo de embeddings es multilingüe y viaja dentro de la imagen. Ni se descarga en ejecución ni se elige en caliente | `architecture.md` §4.8 | VER-11, VER-05 |
+| RF-102 | El modelo de embeddings es `intfloat/multilingual-e5-large` y viaja dentro de la imagen. Ni se descarga en ejecución ni se elige en caliente. Toda consulta se embebe con el prefijo `query: ` y todo fragmento indexado con `passage: `, que es lo que ese modelo exige | `architecture.md` §4.8 | VER-11, VER-05 |
 | RF-103 | Todo paquete abre con el prefijo cacheable (CTX-23) de 4.500 tokens: instrucción del agente, guía de estilo completa, invariantes duros y léxico del mundo. Es idéntico en todas las llamadas de ese agente y **nada voluble va delante** | `architecture.md` §4.3, §4.8 | VER-05, VER-06 |
 | RF-104 | Al arrancar se calibra el factor del contador: se mide una muestra de prosa en español del brief con `tiktoken` y contra el `usage` real, y el factor se fija en la razón observada más margen. Sin calibración no se admite ninguna llamada | `architecture.md` §4.8 | VER-05, VER-06 |
 
@@ -589,6 +589,7 @@ Ninguna introduce un término ni un número nuevo. Todas eligen entre formas de 
 | D-11 | Langfuse caído | Encolar en local y continuar | La observabilidad observa, no gobierna |
 | D-12 | Búsqueda vectorial | Vectores en tabla y similitud en Python, sin extensión | 200 a 400 escenas y 600 a 1.200 fragmentos por obra: el recorrido exhaustivo es exacto e inmediato. El fichero sigue siendo un SQLite corriente |
 | D-13 | Cuándo se calculan los embeddings | Al congelar, desde la versión 1 | Evita que el afinado del paso 8 reindexe la novela entera |
+| D-29 | Modelo de embeddings | `intfloat/multilingual-e5-large`, 1024 dimensiones | Se elige por su entrenamiento, no por tamaño: es de recuperación y los otros candidatos multilingües de `fastembed` son de paráfrasis. Aquí la consulta es una especificación de escena y el resultado son fragmentos de prosa, que es recuperación asimétrica |
 | D-23 | Modelo de los once agentes | Claude Haiku 4.5 para todos | Decisión de coste del autor. Cierra la decisión abierta nº 8. El puerto sigue permitiendo modelos distintos por rol si la medición lo pidiera |
 | D-24 | Tamaño del ancla | Crece de 2.000 a 4.500 y pasa a ser prefijo cacheable | Haiku no cachea por debajo de 4.096 y no avisa. Por debajo del mínimo, comprimir el ancla es una economía falsa: 4.500 cacheados salen varias veces más baratos que 2.000 sin cachear, y el ancla viaja en todas las llamadas |
 | D-25 | Presupuestos por agente | Suben 2.500 cada uno, los que llevan ancla | Es el crecimiento del prefijo, no un ensanche. Caben de sobra bajo el techo de 100.000 |
@@ -611,7 +612,7 @@ Ninguna introduce un término ni un número nuevo. Todas eligen entre formas de 
 
 | Decisión | Dónde está | Efecto en la versión 1 |
 |---|---|---|
-| Nº 7 de `architecture.md` §13: qué modelo multilingüe de `fastembed` puebla el índice | Abierta, y es la única de esta lista que hay que cerrar antes de indexar el primer capítulo | El mecanismo está fijado (D-22). Elegir otro después es reindexar, no rediseñar, pero arrancar con uno monolingüe inglés degrada la pierna semántica desde el capítulo 1 |
+| ~~Nº 7: qué modelo de embedding puebla el índice~~ | **Cerrada**: `intfloat/multilingual-e5-large` (D-29) | Ninguno. Cambiarlo después es reindexar, porque el esquema guarda modelo y dimensión |
 | ~~Nº 8: qué modelo de Claude usa cada rol~~ | **Cerrada**: Haiku 4.5 para los once (D-23) | Ventana de 200.000 en vez de 1.000.000, mínimo cacheable de 4.096 y menos colchón para el error del contador. Todo ello ya recogido |
 | Nº 9 de `architecture.md` §13: capítulo en el techo de EST-07 que no cabe en el presupuesto del Jurado | Abierta | Ninguno: el Jurado no está en la versión 1 |
 | Nº 10 de `architecture.md` §13: constante de la fusión por rangos | Abierta | Se usa 60; medirla es el paso 8 |
