@@ -28,7 +28,7 @@ backend/
 Cada funcionalidad lleva dentro sus modelos pydantic, su lógica, sus rutas, su esquema y sus tests. Tres reglas:
 
 1. **Una funcionalidad no importa de otra.** Solo de `commons/`.
-2. **`orchestration/` es la excepción**: conoce a todas y ninguna lo conoce a él. Es «todo entra y sale por el Orquestador» (§6.2) escrito en imports.
+2. **Dos excepciones, una en cada extremo**: `orchestration/` conoce a todas y ninguna lo conoce a él; de `canon/` importan todas en lectura (skills `canon.*` y proyecciones) y él no importa de ninguna. Tres pisos: `canon/` abajo, funcionalidades en medio, `orchestration/` arriba.
 3. **A `commons/` se baja por uso, no por previsión**: cuando lo usan dos funcionalidades, nunca cuando parece que podría hacer falta.
 
 Las reglas 1 y 2 las comprueba `import-linter` en la puerta de CI (VER-02). No son convención: sin esa comprobación, el paquete por funcionalidad se convierte en capas técnicas con otro nombre en veinte ficheros.
@@ -46,7 +46,7 @@ El esquema que FastAPI genera es la fuente de verdad de la frontera entre `backe
 La salida de un modelo entra como texto. **El punto donde ese texto se convierte en objeto tipado es la frontera de confianza del sistema entero** (VER-01).
 
 - Toda respuesta de agente se valida contra su modelo pydantic antes de tocar nada. Si no valida, se rechaza; no se parsea a mano ni se repara con expresiones regulares.
-- Los artefactos tienen forma declarada: `scene.spec`, `canon.delta`, `verdict`. Un campo nuevo es un cambio de contrato.
+- Los artefactos tienen forma declarada: `scene.spec`, el delta canónico (CAN-11, salida de `delta.extract`) y las puntuaciones de `*.audit`. Se nombran por la skill que los produce o por su ID (`architecture.md` §6.2). Un campo nuevo es un cambio de contrato.
 - **Ninguna cadena procedente de un modelo alcanza el sistema de ficheros, la red o la base de datos sin pasar antes por un validador de esquema** (VER-02). Es la regla que evita la familia entera de ataques de `verification.md` §5.9.
 
 ## 4. Guardrails antes de llamar, no después
@@ -59,8 +59,17 @@ La salida de un modelo entra como texto. **El punto donde ese texto se convierte
 | Skills permitidas por agente | Lista declarada; una llamada fuera de lista se rechaza y se traza |
 | Techo de tokens | Entrada ≤70.000, entrada más salida ≤85.000, **comprobado antes de la llamada** |
 | Canon de solo lectura | Solo el Archivero abre la conexión en escritura |
+| Puerto de proveedor | Ninguna llamada a un SDK de proveedor fuera de `commons/` |
 
 Ese techo es del sistema al redactar la novela. No limita el código, limita lo que el código puede mandar a un modelo.
+
+## 4.1 Proveedores y contador de tokens
+
+Los dos proveedores están fijados en `architecture.md` §4.8: **Claude** para los once agentes de modelo, **OpenRouter** para los embeddings del índice de prosa.
+
+- **Nadie importa el SDK de un proveedor fuera del puerto de `commons/`**, que expone `complete` y `embed`. Un agente que importe el SDK ata once ficheros a un proveedor y convierte un cambio de modelo, que `verification.md` §5.8 trata como un despliegue, en una refactorización.
+- **Hay un solo contador de tokens**, local y determinista, en `commons/`. Lo usan el empaquetado, la admisión y el guardarraíl. Dos contadores distintos dejan CTX-I1 sin forma de comprobarse.
+- **El recuento real que devuelve el proveedor se traza siempre** y se contrasta con el estimado. Que el estimado nunca se quede corto es una propiedad de `hypothesis`, no una confianza.
 
 ## 5. Agentes que son código
 
@@ -83,4 +92,5 @@ El Orquestador y el Documentalista no son llamadas a modelo: son módulos de Pyt
 
 - No se escribe canon fuera del Archivero.
 - No se añade una segunda capa de observabilidad: VER-09 está adjudicado a Langfuse.
+- No se crea una carpeta `api/`. Las rutas viven en su funcionalidad y la aplicación se compone en `orchestration/` (`architecture.md` §2.3).
 - No se inventan umbrales. Salen de los documentos, o se declaran como propuesta explicando su origen.

@@ -11,13 +11,13 @@ Un sistema **autónomo** de generación de novelas largas. Caso de referencia: �
 Dos restricciones fijan todo el diseño:
 
 - **Autonomía de extremo a extremo.** No hay aprobación manual, ni revisión de una persona, ni escalado. Cada decisión necesita una regla de precedencia, un umbral numérico o un agente responsable.
-- **Ventana de contexto de 100.000 tokens** por llamada, entrada más salida, para cualquier agente **del sistema mientras escribe la novela**. Es cuánto cabe en una llamada, no cuánto mide la novela. No aplica al trabajo de crear el sistema, las specs ni la documentación.
+- **Ventana de contexto de 100.000 tokens de entrada** por llamada, para cualquier agente **del sistema mientras escribe la novela**. Es un techo fijado por el proyecto, no un límite del proveedor: los modelos usados dan entre 200.000 y 1.000.000. La salida no cuenta contra él. Es cuánto cabe en una llamada, no cuánto mide la novela. No aplica al trabajo de crear el sistema, las specs ni la documentación.
 
 **De un vistazo**
 
 | | |
 |---|---|
-| **Ventana máxima de contexto** | **100.000 tokens** por llamada, entrada más salida (§5.3.2) |
+| **Ventana máxima de contexto** | **100.000 tokens de entrada** por llamada, techo propio del proyecto. La salida no cuenta (§5.3.2) |
 | **Backend** — `backend/` | **Python + FastAPI** |
 | **Frontend** — `frontend/` | **React** |
 | **Persistencia** | **SQLite en local**, un fichero por novela |
@@ -34,6 +34,7 @@ La idea central del dominio: **una novela larga no es un texto largo, es un esta
 | Ontología del dominio | ✅ Completa |
 | Modelos y diagramas | ✅ Completos |
 | Arquitectura, agentes y skills | ✅ Especificados |
+| SRS del backend (`specs/`) | 🟡 Versión 1 escrita: `specs/srs-backend-v1.md`, pasos 1 a 6 |
 | Estrategia de verificación | ✅ Completa |
 | Implementación de agentes | ⛔ **No iniciada** |
 | Implementación de skills | ⛔ No iniciada |
@@ -62,7 +63,7 @@ Es un **monorepo**: backend y frontend viven en la misma raíz, junto a la espec
 │   ├── fastapi/              ← tecnología: backend
 │   ├── react/                ← tecnología: frontend
 │   └── sqlite/               ← tecnología: persistencia
-├── specs/                    ← reservada y hoy vacía: ver §3.3
+├── specs/                    ← un SRS por versión del backend: ver §3.3
 ├── backend/                  ← API y motor del sistema autónomo
 └── frontend/                 ← visualización del estado narrativo
 ```
@@ -97,11 +98,21 @@ El reparto detallado, la frontera entre las dos mitades y su contrato están en 
 
 ### 3.3 `specs/`
 
-Carpeta **reservada**. Hoy está vacía, y **ninguna sección de este repositorio define qué va dentro ni cómo se organiza**.
+Los cuatro documentos de `docs/` dicen **qué sistema es** y por qué. Una spec dice **qué hace exactamente un paso de construcción**, con qué contrato y cómo se comprueba. No repite la arquitectura: la refina hasta el punto en que se puede escribir código.
 
-Lo que sí está fijado es otra cosa: los cuatro documentos de `docs/` son la especificación del sistema que escribe la novela, y el proceso B (§6.3) los gobierna. `specs/` no es eso, y su convención está sin escribir.
+| Regla | Valor |
+|---|---|
+| **Qué justifica una spec** | Una **versión del backend**: un tramo del orden de construcción de `architecture.md` §14 que se entrega junto. La versión 1 son los pasos 1 a 6, los que producen una novela coherente sin intervención (§8) |
+| **Nombre** | `specs/srs-backend-vN.md`, un solo fichero por versión, en formato SRS |
+| **Estructura** | Introducción con alcance; descripción general; requisitos de interfaces (`RI-NN`), funcionales por funcionalidad (`RF-NN`), de datos (`RD-NN`) y no funcionales (`RNF-NN`), cada uno con su fuente en `docs/` y su método `VER-NN`; matriz requisito × método; fuera de alcance; decisiones tomadas; decisiones abiertas; trazabilidad con los IDs de `definitions.md` |
+| **Proceso** | **B** (§6.3), el mismo que `architecture.md` y `verification.md`, con el mismo umbral y el mismo interrogatorio |
 
-Antes de poner el primer fichero ahí hay que decidir y documentar cuatro cosas: qué justifica una spec propia frente a una sección de `architecture.md`, cómo se nombra, qué estructura lleva y qué proceso de §6 la gobierna. Es una decisión con dueño, así que cruza el umbral de §6.1 y no se resuelve creando ficheros a ver qué sale.
+Dos límites que no se cruzan desde una spec:
+
+- **Una spec no introduce vocabulario ni números.** Todo término viene de `definitions.md` y todo número de `architecture.md`. Si hace falta uno nuevo, se para y se ejecuta el proceso A o B sobre el documento que corresponda, antes de seguir con la spec.
+- **Si al escribirla se descubre que la arquitectura está mal, se corrige `architecture.md` en la misma entrega.** La spec nunca contradice a la arquitectura en silencio: así es como los documentos dejan de describir un solo sistema.
+
+Cada requisito tiene exactamente un `VER-NN` principal que lo comprueba, o consta en el registro de riesgo aceptado de `verification.md` §9. Los IDs `RF`, `RD`, `RI` y `RNF` son estables dentro de su SRS y no se reciclan.
 
 ---
 
@@ -144,6 +155,7 @@ No hace falta leerlo todo cada vez. Carga lo que corresponda:
 | Tocar agentes, skills o contexto | `architecture.md` §4 a §7 |
 | Tocar estructura, stack o despliegue | `architecture.md` §2 y §3; §3.1 de este fichero |
 | Tocar verificación, tests o umbrales | `verification.md` completo |
+| Escribir o cambiar un SRS de `specs/` | `architecture.md` completo; `verification.md` §7 y §8; §3.3 de este fichero |
 | Responder una duda de dominio | `definitions.md`; el resto solo si hace falta |
 
 Si la tarea afecta a más de un documento, léelos todos antes de escribir nada. Editar uno y dejar los otros desalineados es el fallo más caro de este repositorio.
@@ -170,6 +182,7 @@ Un cambio conceptual toca los cuatro documentos o ninguno. La propagación no es
 | Un método en `verification.md` | El mapa de métodos, la matriz método × artefacto y el registro de riesgo aceptado |
 | Un presupuesto de tokens | La tabla por agente y el total de ocupación |
 | El stack, el despliegue o la estructura de carpetas | §3 y §3.1 de este fichero, más `architecture.md` §2.1, §2.2 y el orden de construcción |
+| Una sección de `architecture.md` que un SRS refina | Los requisitos de `specs/srs-backend-vN.md` que la citan como fuente |
 
 ### 5.3 Restricciones que no se negocian
 
@@ -179,7 +192,7 @@ Estas seis restricciones acotan **el sistema que se especifica**, no el trabajo 
 - **Los 100.000 tokens son el contexto que puede tener un agente del sistema en cada llamada mientras escribe la novela** (§5.3.2). No son la longitud de la novela, que es mucho mayor, ni un techo para el trabajo sobre este repositorio. Leer los cuatro documentos enteros para hacer un cambio bien no viola nada.
 
 1. **Nada de intervención humana en la revisión del texto.** Si al diseñar aparece una persona que aprueba, revisa o confirma una escena, un capítulo, un veredicto o un delta canónico, es un error de diseño. Sustitúyelo por regla, umbral o agente.
-2. **100.000 tokens es el techo de cada llamada del sistema al redactar.** Entrada ≤70.000, entrada más salida ≤85.000. Lo que no quepa se resuelve con jerarquía de resúmenes y recuperación selectiva, nunca con truncamiento.
+2. **100.000 tokens de entrada es el techo de cada llamada del sistema al redactar**, y lo fija este proyecto, no el proveedor. Un paquete se ensambla hasta 85.000, dejando 15.000 para lo que añada un reintento. La salida no cuenta contra el techo, pero tiene su propia red de seguridad en 50.000. Lo que no quepa se resuelve con jerarquía de resúmenes y recuperación selectiva, nunca con truncamiento.
 3. **El canon es la fuente de verdad.** Ninguna propuesta puede hacer que la verdad viva solo en la prosa.
 4. **Determinista antes que modelo.** Si algo se puede comprobar con código, no se le pregunta a un modelo.
 5. **Evidencia obligatoria.** Cualquier veredicto sin cita localizable se descarta.
@@ -232,7 +245,7 @@ Hay tres clases de cambio en este repositorio y cada una tiene su proceso. El ej
 | Proceso | Qué se toca | Radio de impacto | Detalle |
 |---|---|---|---|
 | **A** | `definitions.md`, `domain-knowledge.md` | Máximo: la ontología la consume todo lo demás | §6.2 |
-| **B** | `architecture.md`, `verification.md` | Alto: fija cómo se construye y cómo se comprueba | §6.3 |
+| **B** | `architecture.md`, `verification.md`, `specs/` | Alto: fija cómo se construye y cómo se comprueba | §6.3 |
 | **C** | `backend/`, `frontend/` | Local, pero puede revelar que la spec está mal | §6.4 |
 
 Los tres procesos se describen en §6.2 a §6.4, que son su **única** fuente: no hay una skill que los repita, y por eso no hace falta regla de desempate.
@@ -253,7 +266,7 @@ Las tres de tecnología dicen **cómo escribir**; este documento dice **qué pas
 
 **Los tres procesos empiezan igual: si el cambio cruza el umbral, el agente te interroga antes de editar nada.** Invoca la skill `grilling`, que abre una entrevista por rondas: cada pregunta numerada con la respuesta que el agente recomienda, y espera a que contestes antes de la siguiente ronda.
 
-Detalle de implementación que importa: se invoca **`grilling`**, no `grill-me`. `grill-me` y `grill-with-docs` llevan `disable-model-invocation: true`, así que solo tú puedes lanzarlas con `/grill-me`; el agente no puede. En el proceso A se invoca además `domain-modeling`, que es la que trabaja terminología de dominio.
+Detalle de implementación que importa: se invoca **`grilling`**, no `grill-me`. `grill-me` lleva `disable-model-invocation: true`, así que solo tú puedes lanzarla con `/grill-me`; el agente no puede. En el proceso A se invoca además `domain-modeling`, que es la que trabaja terminología de dominio.
 
 **Bloqueante cuando el cambio cruza el umbral.** El umbral es este, y es el mismo en los tres procesos:
 
@@ -289,7 +302,7 @@ Para `definitions.md` y `domain-knowledge.md`. Es el proceso más caro, porque e
 
 ### 6.3 Proceso B · Specs
 
-Para `architecture.md` y `verification.md`.
+Para `architecture.md`, `verification.md` y las specs de `specs/` (§3.3).
 
 1. **Leer antes de preguntar.** Las secciones que indica §4.1 para esa tarea. El agente no te interroga sobre algo que el documento ya responde.
 2. **Interrogar.** `grilling`. Preguntas obligadas: ¿qué decisión nueva introduce este cambio y quién es su dueño, regla de precedencia, umbral o agente? ¿de dónde sale cada número nuevo? ¿qué método de `verification.md` comprueba que funciona? ¿cabe en el presupuesto de tokens de su agente? Bloqueante si cruza el umbral de §6.1.
@@ -362,7 +375,7 @@ Un cambio está listo cuando:
 - [ ] Usa el vocabulario y los IDs de `definitions.md`
 - [ ] Respeta las seis restricciones de §5.3
 - [ ] Ha seguido el proceso de §6 que le corresponde y, si cruza el umbral, su interrogatorio previo está respondido
-- [ ] Si toca un agente o un paquete de contexto del sistema, cabe en 100.000 tokens con su presupuesto
+- [ ] Si toca un agente o un paquete de contexto del sistema, cabe en 100.000 tokens de entrada contando su cupo de herramientas
 - [ ] Tiene un método de `verification.md` que compruebe que funciona, o consta en su registro de riesgo aceptado
 - [ ] Los cuatro documentos de `docs/` siguen coherentes entre sí y con este fichero
 - [ ] Los diagramas Mermaid afectados renderizan

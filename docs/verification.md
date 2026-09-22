@@ -74,7 +74,7 @@ Comprobación automática de que los valores se usan de forma consistente con lo
 
 | Atributo | Valor |
 |---|---|
-| **Qué verifica aquí** | Firmas del backend, formas de los DTO de la API, props del frontend, y sobre todo el **esquema de salida de cada agente**: `scene.spec`, `canon.delta`, `verdict` |
+| **Qué verifica aquí** | Firmas del backend, formas de los DTO de la API, props del frontend, y sobre todo el **esquema de salida de cada agente**: `scene.spec`, el delta canónico (CAN-11, salida de `delta.extract`) y las puntuaciones de `*.audit` |
 | **Clase** | A |
 | **Herramienta** | `mypy --strict` o `pyright` en `backend/`; `tsc --strict` en `frontend/`; `pydantic` en la frontera HTTP y en el parseo de toda respuesta de modelo |
 | **Límite** | No dice nada sobre el contenido. Un `chapter_number: int` bien tipado puede valer 47 en un libro de 30 capítulos |
@@ -95,7 +95,7 @@ Escaneo del código fuente sin ejecutarlo, contra patrones conocidos como malos:
 Dos reglas propias que conviene escribir como patrón, porque ninguna herramienta las trae de serie:
 
 1. **Ninguna cadena procedente de un modelo puede alcanzar una operación de sistema de ficheros, red o base de datos sin pasar antes por un validador de esquema.** Patrón de `semgrep`.
-2. **Ninguna funcionalidad importa de otra funcionalidad**, solo de `commons/`, con `orchestration/` como única excepción (`architecture.md` §2.3). Se comprueba con `import-linter` en `backend/` y con la regla de fronteras de `eslint` en `frontend/`. Se deja en CI y no en convención porque es lo único que impide que el paquete por funcionalidad se convierta en capas técnicas con otro nombre al cabo de veinte ficheros.
+2. **Ninguna funcionalidad importa de otra funcionalidad**, solo de `commons/`, con dos excepciones: `orchestration/` importa de todas y de `canon/` importan todas en lectura (`architecture.md` §2.3). Se comprueba con `import-linter` en `backend/` y con la regla de fronteras de `eslint` en `frontend/`. Se deja en CI y no en convención porque es lo único que impide que el paquete por funcionalidad se convierta en capas técnicas con otro nombre al cabo de veinte ficheros.
 
 ### 4.3 VER-03 · Symbolic execution
 
@@ -103,7 +103,7 @@ Ejecución del código con entradas simbólicas para derivar, mediante un solver
 
 | Atributo | Valor |
 |---|---|
-| **Qué verifica aquí** | Aritmética del calendario y las elipsis; el recálculo de la clasificación; el empaquetador de contexto, que nunca debe superar su presupuesto; la resolución de precedencia del Árbitro |
+| **Qué verifica aquí** | Aritmética del calendario y las elipsis; el recálculo de la clasificación; el empaquetador de contexto, que nunca debe superar su presupuesto; el corte de fragmentos y la fusión por rangos de `architecture.md` §4.4; la resolución de precedencia del Árbitro |
 | **Clase** | A |
 | **Herramienta** | `CrossHair` sobre funciones puras con contrato; `z3` directamente para el calendario y el simulador de encuentros |
 | **Límite** | Explota en coste con bucles y estado. Se aplica a funciones puras y pequeñas, no al orquestador |
@@ -142,7 +142,7 @@ Enunciar una propiedad general que debe cumplirse para cualquier entrada, y gene
 
 | Atributo | Valor |
 |---|---|
-| **Qué verifica aquí** | «El recálculo de la clasificación es invariante a la permutación de los encuentros»; «el paquete de contexto nunca supera 70.000 tokens de entrada»; «la suma de las llamadas en vuelo nunca supera CTX-20, sea cual sea el orden de llegada» (CTX-I1); «fusionar dos deltas canónicos es asociativo»; «todo setup insertado aparece en la lista de deuda hasta cobrarse»; «congelar un capítulo no deja ninguna fila de memoria de trabajo» (PRO-I1); «reanudar desde un punto de reanudación produce el mismo capítulo que una tirada sin interrupción» (PRO-14) |
+| **Qué verifica aquí** | «El recálculo de la clasificación es invariante a la permutación de los encuentros»; «el paquete de contexto nunca supera 70.000 tokens de entrada»; «la suma de las llamadas en vuelo nunca supera CTX-20, sea cual sea el orden de llegada» (CTX-I1); «fusionar dos deltas canónicos es asociativo»; «todo setup insertado aparece en la lista de deuda hasta cobrarse»; «congelar un capítulo no deja ninguna fila de memoria de trabajo» (PRO-I1); «reanudar desde un punto de reanudación produce el mismo capítulo que una tirada sin interrupción» (PRO-14); «el contador de tokens de `architecture.md` §4.8 nunca estima por debajo del recuento real que devuelve el proveedor»; «un fragmento del índice de prosa nunca cruza la frontera de su escena»; «la fusión de §4.4 es determinista: el mismo canon produce el mismo paquete»; «ningún fragmento recuperado repite texto ya presente en el paquete» |
 | **Clase** | T |
 | **Herramienta** | `hypothesis` en `backend/`, con `fast-check` en `frontend/` si la lógica de proyección lo justifica |
 | **Límite** | Encuentra contraejemplos, no demuestra ausencia. Y solo prueba lo que la propiedad enuncia |
@@ -169,10 +169,10 @@ Verificar que la interfaz entre dos servicios se mantiene consistente, con indep
 
 | Atributo | Valor |
 |---|---|
-| **Qué verifica aquí** | Dos contratos distintos. El **HTTP**, entre `backend/` y `frontend/`, con el esquema OpenAPI que FastAPI genera como fuente de verdad. Y el **agente a agente**: el esquema JSON de `scene.spec`, `canon.delta` y `verdict`, que es lo que de verdad se rompe |
+| **Qué verifica aquí** | Dos contratos distintos. El **HTTP**, entre `backend/` y `frontend/`, con el esquema OpenAPI que FastAPI genera como fuente de verdad. Y el **agente a agente**: el esquema JSON de `scene.spec`, del delta canónico (CAN-11) y de las puntuaciones de `*.audit`, que es lo que de verdad se rompe |
 | **Clase** | T |
 | **Herramienta** | `schemathesis` contra el OpenAPI; cliente TypeScript generado desde ese mismo esquema, de modo que el frontend no compile si el contrato cambia; los esquemas de artefacto versionados y probados en ambos lados |
-| **Límite** | Verifica la forma, no el significado. Un `canon.delta` con la forma correcta y hechos falsos pasa |
+| **Límite** | Verifica la forma, no el significado. Un delta canónico con la forma correcta y hechos falsos pasa |
 
 El contrato entre agentes merece el mismo rigor que el HTTP. Un Planificador que añade un campo a `scene.spec` y un Escritor que lo ignora es un fallo silencioso: nada peta, la escena sale peor.
 
@@ -188,7 +188,7 @@ Instrumentar al agente para que su trayectoria real (llamadas a skills, tokens, 
 |---|---|
 | **Qué verifica aquí** | Toda ejecución: qué contexto entró, qué skill se llamó, cuántos tokens consumió, qué defectos se dispararon, cuántos reintentos hubo. Es la implementación de PRO-09, trazabilidad |
 | **Clase** | D |
-| **Herramienta** | Langfuse. Una traza por novela; el nombre del subagente lo da su `description`; la sesión se identifica con `CLAUDE_CODE_SESSION_ID` |
+| **Herramienta** | Langfuse, con su SDK de Python desde `backend/`. Una traza por novela; un span por llamada a agente, nombrado por agente, capítulo e intento; los datos de `architecture.md` §11 van como metadatos del span |
 | **Límite** | Observa, no juzga. Dice qué pasó, nunca si estuvo bien |
 
 Es prerrequisito de casi todo lo demás: sin traza no hay eval reproducible (VER-10), ni diagnóstico de deriva (VER-16), ni evidencia de un ataque (VER-17). Se instrumenta primero, no al final.
@@ -218,7 +218,7 @@ Ejecutar el código del agente en un entorno aislado, de modo que una acción ma
 
 | Atributo | Valor |
 |---|---|
-| **Qué verifica aquí** | Toda ejecución de agente corre en contenedor, sin red salvo la API del modelo, con el sistema de ficheros acotado al directorio de la tirada y con el canon montado en **solo lectura**. La escritura al canon pasa exclusivamente por el Archivero tras congelar |
+| **Qué verifica aquí** | El backend entero, que es el único proceso (`architecture.md` §7.4) y por tanto toda llamada a agente, corre en un contenedor sin más red que las dos APIs de proveedor de `architecture.md` §4.8, con el sistema de ficheros acotado al directorio de la tirada y con el canon montado en **solo lectura**. La escritura al canon pasa exclusivamente por el Archivero tras congelar |
 | **Clase** | D |
 | **Límite** | Contiene el daño, no lo previene. Un agente sandboxeado puede seguir escribiendo prosa incoherente con total libertad |
 
@@ -381,6 +381,10 @@ El eje de producto y el de proceso se cruzan en un solo punto: los evals agregad
 | Delta canónico | VER-08, 12, 14, 17 | A · I |
 | Trayectoria de ejecución | VER-09, 11, 12 | D |
 | Controlador de admisión CTX-20 | VER-06, 12, 18 | A |
+| Contador de tokens | VER-06, 09, 12 | T · A |
+| Índice de prosa y sus vectores | VER-05, 06 | T |
+| Pipeline de recuperación híbrida | VER-03, 05, 06, 09 | A · T |
+| Recetas de paquete por agente | VER-06, 12 | T · A |
 
 Toda fila tiene al menos un método. Cuando una fila nueva no lo tenga, va a §9 antes de escribir el código, no después.
 
@@ -406,6 +410,7 @@ Lo que este catálogo **no** verifica, dicho de forma explícita. Es la clase U 
 | Aplanamiento estilístico lento a lo largo de 40 capítulos | Cada capítulo aislado pasa todas las puertas; el defecto solo existe en el agregado | Deriva de la huella estilística vigilada por el Supervisor |
 | Que la novela interese a un lector real | Fuera del alcance de cualquier método automático | Ninguna. Riesgo aceptado, declarado aquí |
 | Que el modelo cambie de comportamiento tras una actualización del proveedor | No es observable por adelantado | Conjunto dorado ejecutado en cada cambio de versión de modelo, más VER-16 |
+| Que el proveedor de embeddings cambie el modelo y los vectores dejen de ser comparables entre sí | El cambio ocurre fuera del sistema y no se anuncia | Cada vector guarda su modelo y dimensión (`architecture.md` §3.1); una mezcla dispara reindexación completa |
 | Corrección de la implementación frente al modelo formal de VER-04 y VER-18 | La prueba cubre el modelo; cerrar la distancia exigiría código verificado, que no compensa | Cobertura de mutación de VER-07 sobre los módulos afectados |
 
 Un riesgo en esta tabla es una decisión, no una omisión. Sacar una fila de aquí exige un método; meter una nueva exige motivo y señal.

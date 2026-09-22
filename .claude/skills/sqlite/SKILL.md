@@ -9,7 +9,7 @@ Cómo se guarda el estado en este proyecto. El esquema lógico está en `docs/ar
 
 Antes de crear cualquier fichero, pasa por el proceso C de `AGENTS.md` §6.4.
 
-El esquema vive en `backend/canon/`, que es la funcionalidad dueña de los cinco almacenes (`architecture.md` §2.3). Ninguna otra funcionalidad abre la base directamente: consulta a través de `canon/`.
+El esquema vive en `backend/canon/`, que es la funcionalidad dueña de los cinco almacenes (`architecture.md` §2.3). Ninguna otra funcionalidad abre la base directamente: consulta a través de las skills `canon.*` de `canon/`, que es la excepción de lectura de `architecture.md` §2.3.
 
 ## 1. Un fichero por novela, en local
 
@@ -26,7 +26,7 @@ Separación lógica, no física: cinco conjuntos de tablas conviviendo. Unificar
 | Canon estructurado | Tablas relacionadas con columna de versión |
 | Registro de eventos | Tabla append-only, más vistas materializadas por proyección |
 | Grafo de entidades | Tabla de aristas con vigencia desde y hasta, recorrida con CTE recursivo |
-| Índice de prosa | FTS5 para el léxico, que ya trae BM25 |
+| Índice de prosa | Dos niveles, escena y fragmento; FTS5 para el léxico, que ya trae BM25, más tabla de vectores con modelo y dimensión |
 | Resúmenes jerárquicos | Tabla con nivel y referencia al padre |
 
 Esos cinco son la memoria de **largo plazo**: lo que es verdad y sobrevive a la congelación.
@@ -71,18 +71,27 @@ Son las que el sistema hace de verdad, así que son las que guían el diseño de
 | «Cómo describí el estadio la primera vez» | FTS5 con filtro previo por metadatos |
 | «Resume los actos I y II» | Recorrido por nivel en los resúmenes |
 
-**El troceado del índice de prosa es por escena, no por bloque de N tokens.** Cada trozo lleva capítulo, POV, lugar, instante de mundo y personajes presentes, de modo que la recuperación filtre antes de puntuar. Es lo que hace barata la consulta y precisa la respuesta.
+**El índice de prosa tiene dos niveles** (`architecture.md` §3.1). Una fila por escena, con sus metadatos y el vector de su resumen, que es lo que decide qué escenas miran; y filas de fragmento dentro de cada escena, de hasta 450 tokens por párrafos completos con un párrafo de solape, que son lo que se inyecta.
 
-## 5. La decisión abierta que no debes cerrar por tu cuenta
+**Un fragmento nunca cruza la frontera de su escena** y hereda sus metadatos por clave ajena: capítulo, POV, lugar, instante de mundo y personajes presentes. Así el filtro se aplica antes de puntuar, que es lo que hace barata la consulta y precisa la respuesta.
 
-SQLite no hace búsqueda vectorial de serie. FTS5 cubre el lado léxico con BM25, pero la recuperación híbrida (CTX-08) necesita además similitud semántica.
+**Solo entra prosa congelada.** Un borrador no se indexa ni marcado como provisional: la escena siguiente podría recuperar texto que aún puede desaparecer, que es el camino corto al envenenamiento de contexto (CTX-13).
 
-Hay tres salidas —extensión vectorial para SQLite, embeddings en tabla con el cálculo en Python, o quedarse en FTS5 más filtro por metadatos— y **ninguna está elegida**. Está registrada como decisión abierta nº 7 en `architecture.md` §13.
+## 5. Los vectores van en una tabla, no en una extensión
 
-Si tu trabajo la necesita, **para y ejecuta el proceso B de `AGENTS.md` §6.3**. Añadir una dependencia vectorial es cerrar la decisión de facto.
+SQLite no hace búsqueda vectorial de serie, y aquí **no se añade ninguna extensión que se la dé** (`architecture.md` §3.1). El embedding de cada trozo se guarda como blob en una tabla, junto con el identificador del modelo que lo produjo y su dimensión, y la similitud se calcula en Python sobre el conjunto que ya filtraron los metadatos.
+
+Funciona porque el conjunto es pequeño: una obra troceada por escena da del orden de 200 a 400 trozos, y el filtro previo deja menos. El recorrido exhaustivo es exacto y un índice aproximado solo añadiría error.
+
+Tres consecuencias al escribir el esquema:
+
+- **El fichero sigue siendo un SQLite corriente.** Nada de cargar extensiones nativas: es lo que mantiene cierta la promesa de que copiar el fichero es copiar el estado completo, vectores incluidos.
+- **Modelo y dimensión son columnas, no supuestos.** Vectores de modelos distintos no se comparan; encontrarlos mezclados dispara reindexación.
+- **La escritura del índice va dentro de la transacción de congelación**, con los vectores ya calculados antes de abrirla. Congelar la prosa y dejar el índice a medias rompe la recuperación en silencio.
 
 ## 6. Verificación
 
 - Las migraciones son código y pasan la puerta de CI como el resto (VER-15).
+- El orden de escritura al congelar lo fija `architecture.md` §3.3: fragmentar, resumir y embeber **fuera** de la transacción; eventos, proyecciones, índice, resúmenes y purga **dentro**. Una transacción abierta esperando a un proveedor externo bloquea el fichero y deja el estado a medias si el proceso cae.
 - Los invariantes del esquema se prueban con `hypothesis` (VER-06): «fusionar dos deltas es asociativo», «toda arista tiene vigencia coherente», «reconstruir la proyección desde cero da el mismo resultado que la incremental», «congelar no deja ninguna fila de memoria de trabajo» (PRO-I1).
 - Ninguna consulta se construye concatenando cadenas que vengan de un modelo. Parámetros siempre (VER-02).

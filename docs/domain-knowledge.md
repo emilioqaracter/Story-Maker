@@ -471,19 +471,20 @@ Qué entra en la llamada que escribe una escena, y en qué orden.
 
 ```mermaid
 graph TD
-  ENT["Entrada: escena a escribir"] --> SEL["Selector"]
+  ENT["Entrada: escena a escribir"] --> SEL["Filtros y términos desde el canon"]
 
   SEL --> Q1["Consulta estructurada al canon"]
-  SEL --> Q2["Búsqueda semántica en prosa previa"]
-  SEL --> Q3["Búsqueda léxica por nombres propios"]
   SEL --> Q4["Consulta al grafo de entidades"]
+  Q4 --> AMP["Conjunto de entidades ampliado"]
+  AMP --> Q3["Búsqueda léxica sobre fragmentos"]
+  AMP --> Q2["Búsqueda semántica sobre fragmentos"]
 
-  Q1 --> FUS["Fusión y deduplicación"]
-  Q2 --> FUS
+  Q2 --> FUS["Fusión recíproca de rangos"]
   Q3 --> FUS
-  Q4 --> FUS
+  FUS --> CUP["Selección por cupos y deduplicación"]
 
-  FUS --> PRI["Priorización por presupuesto · CTX-02"]
+  Q1 --> PRI["Priorización por presupuesto · CTX-02"]
+  CUP --> PRI
   PRI --> COMP["Compactación de excedente · CTX-10"]
   COMP --> ORD["Ordenación"]
 
@@ -504,7 +505,9 @@ graph TD
   B11 --> GEN["Llamada de generación"]
 ```
 
-Los once bloques y su orden son los de [`architecture.md`](architecture.md) §4.3, que es donde viven sus presupuestos en tokens. La especificación de la escena va **al final** por CTX-16. Las anclas van al principio porque deben sobrevivir a la compactación.
+Los once bloques y su orden son los de [`architecture.md`](architecture.md) §4.3, que es donde viven sus presupuestos en tokens; las recetas de los demás agentes están en §4.9 y el algoritmo de recuperación en §4.4. La especificación de la escena va **al final** por CTX-16. Las anclas van al principio porque deben sobrevivir a la compactación.
+
+Dos ramas distintas y no una sola: el canon y el grafo deciden **qué es verdad y quién cuenta**, y van directos a sus bloques; la búsqueda léxica y la semántica compiten entre sí por el bloque de recuperación, y solo esas dos se fusionan. Mezclar fichas de canon con fragmentos de prosa en la misma lista ordenada es comparar cosas que no se comparan.
 
 ---
 

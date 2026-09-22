@@ -103,18 +103,18 @@ backend/
 ├── context/         · agente 3 y el catálogo de skills de contexto
 ├── generation/      · agentes 4 y 5
 ├── verification/    · agentes 6, 7, 8 y 9
-├── canon/           · agentes 10 y 11, más los cinco almacenes de §3
+├── canon/           · agentes 10 y 11, los cinco almacenes de §3 y las skills canon.*
 └── supervision/     · agente 12
 ```
 
 | Carpeta | Agentes de §6 | Skills de §5 |
 |---|---|---|
 | `orchestration/` | 0 Orquestador | Presupuestos, admisión CTX-20, recuento de reintentos |
-| `planning/` | 1 Arquitecto, 2 Planificador | `outline.plan`, `scene.spec`, `replan.arc` |
-| `context/` | 3 Documentalista | `context.*`, `prose.retrieve`, `canon.query` |
+| `planning/` | 1 Arquitecto, 2 Planificador | `outline.plan`, `outline.check`, `scene.spec`, `replan.arc` |
+| `context/` | 3 Documentalista | `context.*` |
 | `generation/` | 4 Escritor, 5 Especialista deportivo | `scene.write`, `match.simulate`, `match.narrate` |
 | `verification/` | 6 Continuista, 7 Jurado, 8 Reparador, 9 Estilista | `check.*`, `*.audit`, `revise.targeted`, `style.*` |
-| `canon/` | 10 Archivero, 11 Árbitro | `delta.extract`, `summarize.hierarchical`, `retcon.propose` |
+| `canon/` | 10 Archivero, 11 Árbitro | `canon.*`, `prose.*`, `delta.extract`, `summarize.hierarchical`, `retcon.propose` |
 | `supervision/` | 12 Supervisor | `setup.ledger`, `metrics.report` |
 
 #### Frontend
@@ -136,10 +136,12 @@ El cliente generado vive en `commons/` y no en cada funcionalidad: es uno solo, 
 #### Las tres reglas que evitan que esto se degrade
 
 1. **Una funcionalidad no importa de otra funcionalidad.** Solo de `commons/`. Si dos se necesitan entre sí, o lo común baja a `commons/` o la frontera está mal puesta.
-2. **La excepción es `orchestration/`**, que es la raíz de composición: conoce a todas las funcionalidades y ninguna lo conoce a él. Es la forma en código de la regla de §6.2, «todo entra y sale por el Orquestador».
+2. **Dos excepciones, una en cada extremo.** `orchestration/` es la raíz de composición: conoce a todas las funcionalidades y ninguna lo conoce a él. `canon/` es la base: todas pueden importar de él **en lectura**, es decir, las skills `canon.*` y las proyecciones de §3, y él no importa de ninguna. La escritura sigue siendo exclusiva del Archivero, que vive dentro de `canon/`. Con eso el grafo de imports tiene tres pisos: `canon/` abajo, las funcionalidades en medio, `orchestration/` arriba. Son «el canon es la fuente de verdad» y «todo entra y sale por el Orquestador» (§6.2) escritos en imports. Sin la excepción de `canon/`, el Documentalista, el Planificador y el Continuista no podrían leer el canon sin romper la regla 1, y llevarse el API de lectura a `commons/` partiría al dueño de los almacenes en dos carpetas.
 3. **A `commons/` se entra por uso, no por previsión.** Algo baja cuando lo usan dos funcionalidades, nunca cuando parece que podría usarse. Sin esa regla, `commons/` acaba siendo el vertedero donde cae todo y la organización por funcionalidad deja de significar nada.
 
-La regla 1 y su excepción son estáticamente comprobables, así que no se dejan en convención: son un patrón de análisis estático en la puerta de CI (VER-02).
+La regla 1 y sus dos excepciones son estáticamente comprobables, así que no se dejan en convención: son un patrón de análisis estático en la puerta de CI (VER-02).
+
+**Dónde viven las rutas HTTP.** Dentro de cada funcionalidad, como todo lo suyo: `canon/` sirve el estado del mundo y los capítulos congelados, `planning/` la deuda narrativa, `orchestration/` el arranque y el estado de la tirada. No hay una carpeta `api/` transversal, porque sería una capa técnica con otro nombre y es justo lo que §2.3 evita. **La aplicación FastAPI se compone en `orchestration/`**, que ya es la raíz de composición: monta el router que aporta cada funcionalidad y es el único sitio donde existe el objeto de aplicación. Todas las rutas son de lectura salvo las dos que §2.2 autoriza, el brief y el arranque de la tirada.
 
 ---
 
@@ -165,12 +167,29 @@ Cinco almacenes con responsabilidades separadas. Unificarlos en un único índic
 | **Canon estructurado** | Entidades, atributos, fichas, guía de estilo, escaleta | Tablas relacionadas con columna de versión | "Dame la ficha del entrenador" |
 | **Registro de eventos** | Hechos canónicos fechados, append-only | Tabla de eventos con inserción única, más vistas materializadas por proyección | "Qué sabía el protagonista en la jornada 14" |
 | **Grafo de entidades** | Relaciones tipadas con vigencia | Tabla de aristas con vigencia desde y hasta, recorrida con CTE recursivo | "Quién tiene conflicto abierto con quién" |
-| **Índice de prosa** | Texto congelado, troceado por escena | FTS5 para el léxico, que ya trae BM25. La parte vectorial es **decisión abierta**: ver abajo | "Cómo describí el estadio la primera vez" |
+| **Índice de prosa** | Texto congelado, en dos niveles: escena y fragmento | FTS5 para el léxico, que ya trae BM25, más una tabla de vectores con el embedding de cada fila de los dos niveles | "Cómo describí el estadio la primera vez" |
 | **Resúmenes jerárquicos** | Escena → capítulo → arco → obra | Tabla con nivel y referencia al padre | "Resume los actos I y II en 400 palabras" |
 
-**Lo único que SQLite no resuelve de serie es la búsqueda vectorial del índice de prosa.** FTS5 cubre el lado léxico con BM25 incluido, pero la recuperación híbrida (CTX-08) necesita además similitud semántica. Ninguna de las salidas posibles está elegida: es la decisión abierta nº 7 de §13, no un detalle de implementación.
+**Lo único que SQLite no resuelve de serie es la búsqueda vectorial del índice de prosa.** FTS5 cubre el lado léxico con BM25 incluido, pero la recuperación híbrida (CTX-08) necesita además similitud semántica. Se resuelve **guardando los vectores en una tabla y calculando la similitud en Python**, sin extensión vectorial.
 
-**Troceado del índice de prosa**: la unidad es la escena, no un bloque de N tokens. Cada trozo lleva metadatos de capítulo, POV, lugar, instante de mundo y personajes presentes, de modo que la recuperación se filtre antes de puntuarse.
+El motivo es el tamaño real del problema. Una obra de 200.000 palabras troceada por escena (EST-08) da del orden de 200 a 400 trozos, y la recuperación filtra antes por metadatos, así que el conjunto que hay que puntuar es todavía menor. Sobre esas cifras el recorrido exhaustivo es exacto e inmediato, y un índice aproximado solo añadiría error. A cambio, el fichero de la novela sigue siendo un SQLite corriente: se abre con la librería estándar, se copia entero con sus vectores dentro, y «copiar el fichero es copiar el estado completo» (`AGENTS.md` §3.2) sigue siendo cierto sin cargar ninguna extensión nativa en el contenedor.
+
+Cada vector se guarda con el identificador del modelo que lo produjo y su dimensión, para que un cambio de modelo de embedding sea detectable y dispare la reindexación en vez de mezclar vectores incomparables. Cuándo se calculan y en qué orden está en §3.3.
+
+Si la recuperación semántica falla en el momento de consultar, `prose.retrieve` devuelve solo resultados léxicos y lo marca en el informe de `context.audit`. No es una comprobación, así que no aplica la regla de fallo cerrado; sí es una señal de §11, porque una tirada entera recuperando solo por léxico produce peor prosa sin que salte nada.
+
+**Troceado del índice de prosa: dos niveles.** El almacén guarda la prosa congelada en dos granularidades, porque las dos preguntas que se le hacen son distintas.
+
+| Nivel | Una fila por | Qué guarda | Para qué sirve |
+|---|---|---|---|
+| **Escena** | Escena congelada | Metadatos de capítulo, POV, lugar, instante de mundo, personajes presentes y función (EST-14), más su resumen de §4.5 y el vector de ese resumen | Decidir **qué escenas** son relevantes, y filtrar antes de puntuar |
+| **Fragmento** | Tramo de párrafos dentro de una escena | Texto literal, su orden dentro de la escena, su vector y su entrada en FTS5 | Es **lo que se inyecta** en el bloque 7 de un paquete |
+
+El fragmento es la unidad recuperable y **nunca cruza la frontera de una escena**: hereda todos los metadatos de la suya, de modo que el filtro por metadatos sigue aplicándose exactamente y la unidad de troceado sigue siendo la escena, no un bloque ciego de N tokens. Se corta por párrafos completos hasta **450 tokens**, con un párrafo de solape con el fragmento anterior. Ese tope sale de §4.3: el bloque 7 dispone de 3.000 tokens para 4 a 6 fragmentos, así que cada uno cabe en 500 contando su cabecera de procedencia.
+
+Los dos niveles son baratos: una obra de 200.000 palabras da del orden de 200 a 400 escenas y entre 600 y 1.200 fragmentos. Es justo el tamaño en que el recorrido exhaustivo gana al índice aproximado.
+
+**Qué se recupera y qué no.** La recuperación por búsqueda opera solo sobre el índice de prosa. Los resúmenes jerárquicos se piden por nivel y rango, no por similitud, porque quien los necesita ya sabe cuáles quiere: el resumen de la obra, el del arco en curso, el de los tres capítulos anteriores. Y el canon estructurado se consulta con `canon.query`, que es exacto. Buscar por similitud lo que se puede pedir por clave es la forma más común de gastar presupuesto en algo peor.
 
 **Consistencia entre almacenes**: el registro de eventos manda. Canon estructurado y grafo son proyecciones reconstruibles. El índice de prosa se reindexa al congelar un capítulo.
 
@@ -194,24 +213,55 @@ Todo lo que el sistema sostiene mientras produce un capítulo y que **no es verd
 
 **Por qué en SQLite y no en memoria del proceso.** `AGENTS.md` §3.2 promete que copiar el fichero es copiar el estado completo, y de ahí salen la reproducibilidad de una tirada, el conjunto dorado (CAL-10) y los evals (VER-10). Con el estado de trabajo en el proceso esa promesa deja de ser cierta, y una caída en el capítulo 28 se lleva el capítulo entero.
 
+
+### 3.3 Escritura del índice: qué se indexa al congelar
+
+La congelación (CAN-12) es el único momento en que el índice de prosa crece, y el orden importa porque una parte es red y otra es transacción.
+
+**Fuera de la transacción**, con el capítulo ya aprobado y antes de tocar la base:
+
+1. **Cortar los fragmentos** de cada escena del capítulo, por párrafos completos hasta 450 tokens con un párrafo de solape. Es determinista: el mismo capítulo produce siempre los mismos cortes.
+2. **Generar los resúmenes** de escena y de capítulo con `summarize.hierarchical`, según §4.5. El de escena es lo que se embebe en el nivel de escena.
+3. **Calcular los vectores** de cada resumen de escena y de cada fragmento con `prose.embed`. Es la única parte que sale a la red, y por eso va antes: si el proveedor falla, se reintenta contra el presupuesto de §7.3 y, agotado, el capítulo va a cuarentena sin haber escrito nada.
+
+**Dentro de la transacción**, todo junto o nada:
+
+4. Aplicar los eventos del delta canónico (CAN-11) al registro.
+5. Recalcular las proyecciones del canon estructurado y del grafo.
+6. Insertar las filas de escena y de fragmento con sus vectores y sus entradas de FTS5.
+7. Escribir los resúmenes en su almacén y regenerar los de nivel superior que toque, según §4.5.
+8. Purgar la memoria de trabajo del capítulo (PRO-I1).
+
+La razón de partirlo en dos mitades es que la red y la transacción no se llevan bien: una transacción abierta esperando a un proveedor externo bloquea el fichero durante segundos y deja el estado a medias si el proceso cae. Con este orden, un fallo de red no deja rastro y un fallo de escritura revierte entero.
+
+**Lo que no se indexa.** Nada que no esté congelado. Un borrador (PRO-06) no entra en el índice ni con marca de provisional: si entrara, la recuperación de la escena siguiente podría traer texto que aún puede desaparecer, que es exactamente el camino al envenenamiento de contexto (CTX-13).
+
 ---
 
 ## 4. Ingeniería de contexto con ventana de 100.000 tokens
 
-### 4.1 Del límite físico al presupuesto operativo
+### 4.1 Del límite propio al presupuesto operativo
 
-100.000 tokens es el techo del proveedor, no el objetivo de llenado. La distracción (CTX-14) y la dilución de atención aparecen mucho antes de agotar la ventana, y en generación de prosa el coste se paga en cada escena de cada capítulo.
+**100.000 tokens es un techo fijado por este proyecto, no un límite del proveedor.** Los modelos que el sistema usa ofrecen ventanas de 200.000 tokens (Haiku 4.5) y de 1.000.000 (Opus 5, Sonnet 5), por defecto y sin recargo. El techo es una decisión de calidad y de coste: la distracción (CTX-14) y la dilución de atención aparecen mucho antes de agotar la ventana, y en generación de prosa el coste se paga en cada escena de cada capítulo.
+
+Que sea propio y no impuesto importa, y por eso está escrito así: **una restricción etiquetada como física se salta en la primera implementación en cuanto alguien descubre que el proveedor da diez veces más.** Esta se sostiene por su motivo, no por su origen.
+
+**El techo mide entrada.** La salida no se cuenta contra él: sale de la ventana del agente que la produce y no ocupa sitio en la de ningún otro. Lo que sí se controla es que la salida de un agente no inunde el paquete del siguiente, y eso es el guardarraíl de 50.000 de la tabla.
 
 Reglas duras de ocupación (CTX-18) y de concurrencia (CTX-20):
 
 | Regla | Valor | Motivo |
 |---|---|---|
-| Entrada máxima por llamada | 70.000 tokens | Solo el Arquitecto se acerca; el resto opera muy por debajo |
-| Entrada + salida máximas | 85.000 tokens | Deja margen para reintentos que añaden el defecto y su evidencia |
-| Margen reservado | 15.000 tokens | Absorbe regeneración dirigida sin rehacer el paquete |
+| Entrada máxima por llamada | 100.000 tokens | Techo propio. Con herramientas, es la suma del paquete base más todo lo que la llamada acumule durante su turno |
+| Entrada máxima de un paquete al ensamblarse | 85.000 tokens | Deja 15.000 para lo que añada un reintento —el defecto y su evidencia— sin rehacer el paquete |
+| Salida máxima por llamada | 50.000 tokens | Red de seguridad: impide que la salida de un agente ocupe sola la ventana del siguiente. **No sustituye** a los topes de salida por agente de §4.2, que son límites de longitud narrativa, no de ventana |
 | Acción al desbordar | Compactación por prioridad inversa (CTX-19) | Nunca truncamiento por el final |
-| Techo concurrente del sistema | 100.000 tokens (CTX-20) | Suma de entrada y salida de todo lo que está en vuelo. **Sin margen reservado**: los 15.000 de arriba son por llamada, para que el defecto y su evidencia quepan al reintentar |
+| Techo concurrente del sistema | 100.000 tokens de entrada (CTX-20) | Suma de la **entrada** de todo lo que está en vuelo. Cinco agentes en serie tienen 100.000 cada uno, porque en cada instante solo hay uno en vuelo |
 | Política de admisión | FIFO estricta | El Orquestador no arranca una llamada si no cabe: la encola. Sin reordenar por hueco, que mataría de hambre al Arquitecto y al Continuista, que son las llamadas grandes |
+
+**Consecuencia que conviene ver.** Con la salida fuera del recuento y el único paralelismo real siendo los tres jueces, que suman 27.000 de entrada, el techo concurrente deja de morder en el flujo de hoy. Sigue escrito porque es un guardarraíl para cuando el paralelismo crezca, no una descripción de lo que ocurre ahora.
+
+**El contador de tokens se calibra por modelo.** Los modelos de Claude no comparten tokenizador: entre generaciones, el mismo texto puede dar hasta un 30 % más de fichas. Un presupuesto medido contra un modelo no vale para otro. El contador local de §4.8 mantiene por tanto un factor por modelo, contrastado contra el recuento real que devuelve el proveedor, y si un agente usa un modelo sin factor conocido su llamada no se admite, por la regla de fallo cerrado. Los tokens servidos desde caché ocupan ventana igual que los demás: el caché cambia lo que se paga, no lo que ocupa.
 
 **Orden de compactación** cuando el material excede el presupuesto: primero los fragmentos recuperados, después la prosa literal previa, después los resúmenes, después las fichas secundarias. Nunca se tocan las anclas, el conocimiento del POV ni la especificación de la escena.
 
@@ -221,7 +271,7 @@ Reglas duras de ocupación (CTX-18) y de concurrencia (CTX-20):
 |---|---:|---:|---:|---|
 | Arquitecto narrativo | 55.000 | 15.000 | 70 % | Una vez por obra y por replanificación de arco |
 | Planificador de capítulo | 28.000 | 6.000 | 34 % | Una vez por capítulo |
-| Escritor de escena | 17.000 | 3.000 | 20 % | Por escena |
+| Escritor de escena | 17.200 | 3.000 | 20 % | Por escena |
 | Especialista deportivo | 12.000 | 3.000 | 15 % | Por encuentro |
 | Continuista | 45.000 | 5.000 | 50 % | Por capítulo |
 | Estilista | 20.000 | 7.000 | 27 % | Por capítulo |
@@ -231,18 +281,18 @@ Reglas duras de ocupación (CTX-18) y de concurrencia (CTX-20):
 | Árbitro | 15.000 | 2.000 | 17 % | Por conflicto |
 | Supervisor | 30.000 | 3.000 | 33 % | Por capítulo cerrado |
 
-**Qué corre en paralelo.** Solo el Jurado: sus tres instancias son deliberadamente independientes entre sí (§9.2), así que se lanzan a la vez y suman 31.500 tokens. Todo lo demás va en serie. Las escenas de un capítulo **no** se paralelizan, y no por coste: el bloque 6 del paquete del Escritor es la prosa literal de la escena anterior (§4.3), no compactable, así que escribir la escena *n* exige tener escrita la *n−1*. Paralelizarlas compraría velocidad rompiendo justo el bloque que sostiene la voz.
+**Qué corre en paralelo.** Solo el Jurado: sus tres instancias son deliberadamente independientes entre sí (§9.2), así que se lanzan a la vez y suman 27.000 tokens de entrada. Todo lo demás va en serie. Las escenas de un capítulo **no** se paralelizan, y no por coste: el bloque 6 del paquete del Escritor es la prosa literal de la escena anterior (§4.3), no compactable, así que escribir la escena *n* exige tener escrita la *n−1*. Paralelizarlas compraría velocidad rompiendo justo el bloque que sostiene la voz.
 
-Con eso, las combinaciones que CTX-20 llega a acotar son estas:
+Con eso, las combinaciones que CTX-20 llega a acotar son estas. **Se suma entrada, y para los agentes con herramientas se suma también su cupo de tirón** (§6.3), que se reserva entero en la admisión:
 
-| Concurrencia | Suma | Cabe |
+| Concurrencia | Suma de entrada | Cabe |
 |---|---:|:-:|
-| Jurado ×3 | 31.500 | Sí |
-| Continuista más Jurado ×3 | 81.500 | Sí, deja 18.500 |
-| Arquitecto más Supervisor | 103.000 | No |
-| Escritores de escena en paralelo | 20.000 cada uno | Máximo 5, 4 con margen |
+| Jurado ×3 | 27.000 | Sí, de sobra |
+| Continuista con su cupo, más Jurado ×3 | 97.000 | Sí, justo |
+| Arquitecto con su cupo, más Supervisor con el suyo | 125.000 | No |
+| Escritores de escena en paralelo | 17.200 cada uno | Máximo 5 |
 
-Las dos últimas filas no ocurren en el flujo de §7: el Supervisor corre sobre capítulo cerrado y el Arquitecto solo al planificar, y las escenas van en serie. CTX-20 está para que sigan sin ocurrir cuando el paralelismo crezca, no para describir lo que pasa hoy.
+Las dos últimas filas no ocurren en el flujo de §7: el Supervisor corre sobre capítulo cerrado y el Arquitecto solo al planificar, y las escenas van en serie. CTX-20 está para que sigan sin ocurrir cuando el paralelismo crezca, no para describir lo que pasa hoy. Con la salida fuera del recuento, la única concurrencia real —los tres jueces— ocupa poco más de la cuarta parte del techo.
 
 El agente caro no es el que más escribe, es el **Continuista**: necesita el capítulo entero más el canon que podría contradecir. Es también el primero que tocará el techo cuando la novela crezca, y el que justifica la recuperación selectiva.
 
@@ -264,34 +314,115 @@ Es la llamada que más veces se ejecuta, así que es donde el presupuesto import
 | 10 | Muestra modélica de voz | 800 | Sí | Rotativa, nunca la escena anterior |
 | 11 | Especificación de la escena | 900 | No | Va al final por CTX-16 |
 | — | **Total entrada** | **17.200** | | 17 % de la ventana |
-| — | Reserva de salida | 3.000 | | Escena de hasta ~2.000 palabras |
+| — | Reserva de salida | 3.000 | | Escena de hasta 1.500 palabras (EST-08), con margen |
 
-El 80 % restante de la ventana no es espacio libre que llenar. Es margen deliberado: si esos 17.000 tokens están bien elegidos, añadir 50.000 más de canon tangencial empeora el resultado.
+El 80 % restante de la ventana no es espacio libre que llenar. Es margen deliberado: si esos 17.200 tokens están bien elegidos, añadir 50.000 más de canon tangencial empeora el resultado.
 
-### 4.4 Pipeline de ensamblaje
+### 4.4 Recuperación híbrida y ensamblaje del paquete
+
+Esta sección es el camino de lectura: de una petición de trabajo a un paquete de contexto listo para gastar una llamada. Lo ejecuta el Documentalista, que es código, y **no consume ni una llamada de modelo**: la consulta se construye con datos del canon, la fusión es aritmética y la selección va por cupos. Lo único que sale a la red es el vector de la consulta.
+
+#### Las cuatro piernas, y qué aporta cada una
+
+CTX-09 dice que ninguna de las tres búsquedas basta sola. En la práctica se reparten en dos trabajos distintos, y confundirlos es lo que hace lenta y mala una recuperación:
+
+| Pierna | Qué devuelve | Qué decide |
+|---|---|---|
+| **Consulta estructurada al canon** | Fichas, estado en t, conocimiento del POV | **Qué es verdad.** Va directa a sus bloques del paquete; no compite con nada |
+| **Consulta al grafo de entidades** | Entidades relacionadas con las de la escena y con vigencia abierta | **Quién más cuenta.** Amplía el conjunto de entidades y, con él, los nombres que busca la pierna léxica |
+| **Búsqueda léxica sobre fragmentos** | Fragmentos que contienen nombres propios, alias y léxico del mundo | **Dónde se dijo.** Es la única que acierta con nombres propios |
+| **Búsqueda semántica sobre fragmentos** | Fragmentos parecidos a la escena que se va a escribir | **Qué se pareció.** Es la única que encuentra una escena espejo que no comparte ni una palabra |
+
+Las dos primeras producen hechos y van a los bloques 2, 3, 4 y 8. Las dos últimas producen fragmentos y son las que se fusionan para llenar el bloque 7. **Fusionar fichas de canon con fragmentos de prosa sería comparar cosas que no se comparan**, y además pondría en riesgo la separación entre lo que es verdad y lo que solo se escribió.
+
+#### La consulta se construye sin modelo
+
+La expansión de consulta no es una llamada: es una lectura del canon.
+
+| Parte de la petición | De dónde sale |
+|---|---|
+| **Filtros** | De la especificación de escena: elenco activo, lugar, instante de mundo, arco, capítulos a excluir |
+| **Términos léxicos** | Del canon: nombre canónico y **alias vigentes** de cada entidad del conjunto ampliado por el grafo, más el léxico del mundo (MUN-08) asociado a ese lugar o institución |
+| **Texto semántico** | La propia especificación de escena: función, objetivo del POV, obstáculo y beats |
+| **Exclusiones** | Las escenas que ya viajan literales en el bloque 6 |
+
+Dos decisiones que esto encierra. La primera: **los sinónimos no los inventa un modelo, los da la tabla de alias**, que es canon. Un modelo expandiendo «el Chino» a «el asiático» introduce ruido; la tabla de alias dice exactamente cómo se ha llamado a esa persona en la obra, que es justo lo que la búsqueda léxica necesita. La segunda: **la especificación de escena ya es la consulta**. No hace falta redactar una: el artefacto que describe lo que se va a escribir es la mejor descripción de lo que conviene recuperar, y ya existe.
+
+#### Fusión: por rangos, no por puntuaciones
+
+Los resultados léxicos vienen con BM25 y los semánticos con similitud de coseno. Son escalas incomparables, y normalizarlas exige una calibración que cambia con el tamaño del corpus, es decir, que cambia en cada capítulo.
+
+Se fusiona con **fusión recíproca de rangos**: cada fragmento suma, por cada pierna en que aparece, uno partido por una constante más su posición en esa pierna. **Propuesta: la constante es 60**, que es el valor del trabajo que introdujo el método; no se ha ajustado aquí y ajustarla exigiría medir con el conjunto dorado.
+
+Tres motivos por los que encaja aquí y no solo por comodidad:
+
+- **No necesita calibración.** Solo usa posiciones, así que es estable capítulo a capítulo.
+- **Es determinista.** Dos ejecuciones con el mismo canon dan el mismo paquete, que es lo que hace reproducible una tirada y comprobable una propiedad.
+- **Se degrada sola.** Si el proveedor de embeddings falla, la pierna semántica devuelve vacío y la fusión sigue funcionando con una sola pierna, sin caso especial.
+
+#### Selección por cupos, no por peso
+
+Con la lista fusionada hay que elegir de 4 a 6 fragmentos. En vez de ponderar señales con pesos que nadie sabe justificar, el bloque 7 se reparte en **cupos por tipo de evidencia**, y cada cupo se llena con el mejor candidato de la lista que lo cumpla:
+
+| Cupo | Qué trae | Qué previene |
+|---|---|---|
+| Lugar | La descripción anterior más reciente del lugar de la escena | Describir el mismo estadio de dos maneras incompatibles |
+| Voz | Un fragmento con diálogo del POV, de una escena que no sea la anterior | Que el idiolecto (PER-08) se diluya |
+| Promesa | El fragmento que plantó el setup abierto que esta escena puede cobrar | Que un setup se cobre sin recordar cómo se plantó |
+| Espejo | Un fragmento de otra escena con la misma función (EST-14) sobre las mismas entidades | Repetir una solución ya usada sin saberlo, o perder un eco deliberado |
+| Libre | Los mejores de la fusión que no repitan escena | Lo que la consulta encuentre y los cupos no cubran |
+
+Cuatro consecuencias buenas de esto. **Cada fragmento lleva su motivo**, así que el paquete se puede auditar y trazar por qué entró cada cosa. **Un cupo vacío no rompe nada**: en los primeros capítulos casi todos lo están, y su presupuesto pasa al cupo libre. **La diversidad está garantizada por construcción**, que es lo que de verdad ayuda a escribir, en vez de seis fragmentos casi idénticos que es lo que da una lista ordenada por puntuación. Y **el cupo de voz penaliza lo ya usado**: un fragmento inyectado en las últimas llamadas cede el sitio al siguiente candidato, que es la contramedida directa contra la autosimilitud (POE-14).
+
+#### Deduplicación y ajuste a presupuesto
+
+- **No se repite escena** entre fragmentos, salvo que dos cupos distintos no tengan otro candidato. Como el solape solo existe dentro de una escena, esa sola regla elimina el texto duplicado.
+- **No entra nada que ya viaje literal** en el bloque 6.
+- **Un fragmento no se corta a la mitad.** Si no cabe en lo que queda, se prueba el siguiente candidato del mismo cupo; si ninguno cabe, entra el **resumen de su escena**, que ya existe y ocupa unos 130 tokens. Es la regla de compactación de §4.1 aplicada al caso concreto: se sustituye por resumen, nunca se trunca.
+- **El presupuesto que sobra en los bloques de canon pasa al cupo libre**, hasta el tope del paquete. Un bloque que no se llena no es espacio ganado para otro capítulo: es espacio para más evidencia en esta llamada.
+
+#### Pipeline completo
 
 ```mermaid
-graph LR
-  A["Especificación de escena"] --> B["Expansión de consulta"]
-  B --> C1["Consulta estructurada al canon"]
-  B --> C2["Recuperación semántica"]
-  B --> C3["Recuperación léxica por nombres"]
-  B --> C4["Consulta al grafo"]
-  C1 --> D["Fusión y deduplicación"]
-  C2 --> D
-  C3 --> D
-  C4 --> D
-  D --> E["Rerank por relevancia a la escena"]
-  E --> F["Ajuste a presupuesto · 17.200 tokens"]
-  F --> G["Compactación del excedente · CTX-19"]
-  G --> H["Ordenación por prioridad y recencia"]
-  H --> I["Paquete de contexto · CTX-03"]
-  I --> J["Auditoría automática del paquete"]
-  J --> K["Llamada de generación"]
-  J -.conflicto detectado.-> ARB["Árbitro"]
+graph TD
+  A["Petición: especificación de escena o capítulo"] --> B["Filtros y términos desde el canon"]
+  B --> C1["Consulta estructurada · canon.query"]
+  B --> C2["Consulta al grafo de entidades"]
+  C2 --> B2["Conjunto de entidades ampliado"]
+  B2 --> C3["Búsqueda léxica sobre fragmentos · FTS5"]
+  B2 --> C4["Búsqueda semántica sobre fragmentos · vectores"]
+  C3 --> F["Fusión recíproca de rangos"]
+  C4 --> F
+  F --> G["Selección por cupos"]
+  G --> H["Deduplicación"]
+  C1 --> I["Bloques de canon"]
+  H --> I
+  I --> J["Ajuste a presupuesto y compactación · CTX-19"]
+  J --> K["Ordenación por prioridad y recencia"]
+  K --> L["Paquete de contexto · CTX-03"]
+  L --> M["Auditoría · context.audit"]
+  M --> N["Llamada"]
+  M -.conflicto de hechos.-> O["Árbitro"]
+  O --> I
 ```
 
-**Auditoría del paquete (paso J)**: antes de gastar la llamada, se comprueba que no haya dos versiones del mismo hecho (CTX-15), que todo el elenco tenga ficha, que las anclas estén presentes y que el total no exceda el presupuesto. Si aparece un conflicto de hechos, no se genera: se resuelve primero en el Árbitro.
+#### Cada bloque declara de dónde viene
+
+Todo bloque del paquete llega con su procedencia escrita: **canon**, **prosa congelada** con su capítulo, o **plan**. No es decoración, es la contramedida contra el envenenamiento de contexto (CTX-13): sin la etiqueta, un fragmento de prosa que describía una intención de un personaje se lee igual que un hecho canónico, y a los tres capítulos esa intención se ha convertido en verdad sin que nadie la haya aprobado. Con la etiqueta, la regla que el paquete transporta es la de PRO-10: donde el canon y la prosa discrepen, manda el canon.
+
+#### Auditoría del paquete
+
+Antes de gastar la llamada, `context.audit` comprueba:
+
+| Comprobación | Si falla |
+|---|---|
+| No hay dos versiones del mismo hecho (CTX-15) | No se genera: va al Árbitro y se vuelve a ensamblar |
+| Todo el elenco activo tiene ficha | Se completa desde el canon; si no existe la entidad, es un defecto de planificación |
+| Las anclas están presentes y completas | Se reensambla; una llamada sin anclas es deriva garantizada |
+| El total no excede el presupuesto del agente destino | Se compacta por prioridad inversa |
+| Cada fragmento tiene su cupo y su procedencia | El fragmento sin motivo se descarta |
+| La recuperación semántica se ejecutó | Se marca el paquete como degradado y se traza (§11). No es una comprobación de verdad, así que no aplica el fallo cerrado |
+
 
 ### 4.5 Resúmenes jerárquicos
 
@@ -313,9 +444,294 @@ Esto es lo que mantiene la memoria completa dentro de 100.000 tokens cuando la n
 
 ### 4.7 Aislamiento (CTX-11)
 
-Cada agente corre en su propia ventana limpia y devuelve solo salida estructurada. El Escritor nunca ve los informes de defectos de otros capítulos, el Juez nunca ve el paquete del Escritor y el Archivero nunca ve las rúbricas. Es lo que permite que trece agentes trabajen sobre una novela de 200.000 palabras sin que ninguno necesite más de 70.000 tokens; once consumen ventana, porque el Orquestador y el Documentalista son código.
+Cada agente corre en su propia ventana limpia y devuelve solo salida estructurada. El Escritor nunca ve los informes de defectos de otros capítulos, el Juez nunca ve el paquete del Escritor y el Archivero nunca ve las rúbricas. Es lo que permite que trece agentes trabajen sobre una novela de 200.000 palabras sin que ninguno necesite acercarse al techo de 100.000; once consumen ventana, porque el Orquestador y el Documentalista son código.
 
 El aislamiento acota **lo que cada agente ve**, no **cuántos corren a la vez**. Eso segundo lo acota CTX-20, y lo hace cumplir la admisión del Orquestador (§4.1).
+
+---
+
+### 4.8 Proveedores externos y contador de tokens
+
+El sistema depende de dos proveedores, y de un solo contador de tokens que hace cumplir todos los presupuestos de esta sección.
+
+| Uso | Proveedor | Quién lo consume |
+|---|---|---|
+| Los once agentes de modelo | **Claude**, API de Anthropic | `planning/`, `generation/`, `verification/` y `canon/`, siempre a través del puerto de `commons/` |
+| Embeddings del índice de prosa | **OpenRouter** | `canon/` al congelar, `context/` al recuperar |
+
+Esto no cambia que el Orquestador y el Documentalista sean código (§6): Claude es el modelo que hay detrás de los once agentes que sí consumen ventana, no el que dirige el flujo.
+
+**Un puerto, dos operaciones.** Ningún agente importa el SDK de un proveedor. `commons/` expone un puerto con `complete`, que recibe instrucción, paquete de contexto y esquema de salida, y `embed`, que recibe texto y devuelve vector. El motivo es que §12 ya prevé modelos distintos por rol y `verification.md` §5.8 trata cambiar de modelo como un despliegue: con el puerto, cambiar de modelo es cambiar una configuración y no tocar once agentes.
+
+**Por qué dos proveedores y no uno.** La prosa es donde se juega la calidad de la obra, así que va a Claude sin intermediario. Los embeddings son una pieza intercambiable y de coste marginal, y OpenRouter da acceso a varios modelos de embedding con una sola cuenta, de modo que cerrar la mitad vectorial del índice (§3.1) no ata al sistema a un proveedor concreto.
+
+#### Contador de tokens
+
+Uno solo, **local y determinista**, en `commons/`. Lo usan las tres cosas que cuentan tokens: el empaquetado (§4.3), la admisión de CTX-20 (§7.4) y el guardarraíl de `verification.md` §5.4. Dos contadores distintos harían que CTX-I1 dejara de ser comprobable.
+
+| Regla | Valor | Motivo |
+|---|---|---|
+| Implementación | Tokenizador local con codificación fija, por el factor de seguridad de abajo, redondeado hacia arriba | La admisión corre antes de cada llamada. Una consulta de red ahí añade un modo de fallo a un ciclo que debe terminar sin que nadie intervenga (PRO-11), y con la regla de fallo cerrado una red intermitente pararía la tirada |
+| Factor de seguridad | **Propuesta: 1,15** | Sale del margen reservado de §4.1: 15.000 sobre 85.000, algo menos del 18 %. El error de estimación tiene que caber dentro de ese margen, para que una cuenta corta la absorba la reserva en lugar de romper el techo |
+| Contraste | El recuento real que devuelve el proveedor en cada respuesta va a la traza (§11) | Es lo que permite comprobar el estimador en vez de confiar en él |
+| Corrección | Si alguna llamada real supera al estimado, el factor sube | La propiedad que lo vigila está en `verification.md` §4.6, y su incumplimiento es un fallo de CI, no un aviso |
+
+El estimador no pretende acertar el número del proveedor. Pretende **no quedarse corto nunca**, que es lo único que los techos de §4.1 necesitan de él.
+
+---
+
+### 4.9 Recetas de paquete por agente
+
+§4.3 detalla el paquete del Escritor porque es la llamada que más veces se ejecuta. Esta sección hace lo mismo con los demás: **qué bloques recibe cada agente y cuántos tokens ocupa cada bloque**, dentro del presupuesto que §4.2 le asigna. Sin esto, «el Documentalista ensambla el paquete» es una frase sin contenido y cada implementación inventaría el suyo.
+
+#### Costes unitarios
+
+Todas las recetas son recuento por coste unitario. Los unitarios salen de secciones ya fijadas; los dos que no, van marcados como propuesta con su origen.
+
+| Pieza | Tokens | De dónde sale |
+|---|---|---|
+| Ancla de estilo e invariantes | 2.000 | §4.3, bloque 1. Idéntica en toda llamada |
+| Ficha compacta de entidad | 280 | §4.3, bloque 2 |
+| Ficha completa de entidad | **Propuesta: 800** | La compacta más su historial de versiones y el juego completo de atributos, estimado en el triple. Si resulta mayor, sale del margen de la receta que la use |
+| Resumen de escena | 130 | §4.5, 60 a 100 palabras |
+| Resumen de capítulo | 400 | §4.3, bloque 5 |
+| Resumen de arco | 500 | §4.3, bloque 5 |
+| Resumen de obra | 500 | §4.3, bloque 5 |
+| Especificación de escena | 900 | §4.3, bloque 11 |
+| Fragmento recuperado | 450 | §3.1 |
+| Conversión de palabras a tokens | **Propuesta: 2 por palabra** | §4.3 reserva 3.000 tokens de salida para una escena de hasta 1.500 palabras. Es conservador a propósito: pasarse en la cuenta encoge el paquete, quedarse corto rompe el techo |
+| Escena completa | hasta 3.000 | EST-08, 1.500 palabras |
+| Capítulo completo | hasta 8.000 | EST-07, 4.000 palabras |
+
+Esa conversión explica de paso el bloque 6 del Escritor: 4.500 tokens dan para la escena anterior completa en su tamaño típico más la cola de la anterior, que es lo que sostiene la voz al cruzar una frontera de escena.
+
+#### Arquitecto narrativo · 55.000
+
+| Bloque | Tokens | Nota |
+|---|---:|---|
+| Ancla | 2.000 | |
+| Brief completo | 4.000 | PRO-01, literal |
+| Fichas completas de las entidades del brief | 16.000 | 20 × 800 |
+| Reglamento y reglas del mundo | 3.000 | DEP-02, MUN-04 |
+| Resumen de obra y de arcos cerrados | 2.500 | 500 + 4 × 500 |
+| Escaleta vigente | 20.000 | Solo al replanificar; en la primera llamada el bloque va vacío |
+| Deuda narrativa completa | 2.000 | CAN-08 |
+| Curva de tensión planificada y realizada | 1.500 | |
+| Instrucción | 1.500 | Al final, por CTX-16 |
+| **Total** | **52.500** | 95 % del presupuesto |
+
+Es el único agente que ve el brief entero y el único que no recupera prosa: en la primera llamada no hay ninguna, y al replanificar le importa la forma del plan, no cómo quedó escrito.
+
+#### Planificador de capítulo · 28.000
+
+| Bloque | Tokens | Nota |
+|---|---:|---|
+| Ancla | 2.000 | |
+| Tramo de escaleta del capítulo | 3.000 | |
+| Fichas compactas del elenco previsto | 2.800 | 10 × 280 |
+| Estado del mundo en el instante inicial | 1.500 | MUN-10 |
+| Conocimiento de los POV previstos | 1.000 | PER-10 |
+| Resúmenes de obra, arco y tres capítulos anteriores | 2.200 | 500 + 500 + 3 × 400 |
+| Resúmenes de escena del capítulo anterior | 800 | 6 × 130 |
+| Deuda narrativa del arco en curso | 1.500 | Filtrada, no completa |
+| Reglamento y calendario, si el capítulo tiene encuentro | 1.500 | |
+| Curva de tensión del acto | 500 | |
+| Instrucción | 1.000 | |
+| **Total** | **17.800** | 64 % del presupuesto |
+
+La holgura es deliberada, igual que la del Escritor: si el tramo de escaleta y el estado están bien elegidos, añadir capítulos anteriores enteros empeora la especificación en vez de mejorarla.
+
+#### Especialista deportivo · 12.000
+
+| Bloque | Tokens | Nota |
+|---|---:|---|
+| Ancla | 2.000 | |
+| Especificación de la escena de encuentro | 900 | |
+| Cronología ya resuelta por `match.simulate` | 1.200 | El marcador entra como dato, no se inventa |
+| Reglamento de la disciplina | 2.000 | DEP-02 |
+| Plantillas de ambos equipos con estado físico | 2.000 | DEP-09, DEP-13 |
+| Clasificación y estadísticas vigentes | 800 | Recalculadas, nunca de memoria |
+| Resúmenes de encuentros previos de la rivalidad | 400 | 3 × 130 |
+| Fichas compactas del foco | 1.100 | 4 × 280 |
+| Muestra modélica de voz | 800 | |
+| Instrucción | 500 | |
+| **Total** | **11.700** | 98 % del presupuesto |
+
+Su llamada de modelo es solo `match.narrate`. `match.simulate` es código y no consume ventana, y por eso el resultado llega como cronología cerrada.
+
+#### Continuista · 45.000
+
+El agente caro, y el que justifica la recuperación selectiva. Su recuperación no se parece a la del Escritor: no busca material que inspire, busca **todo lo que podría contradecir**.
+
+| Bloque | Tokens | Nota |
+|---|---:|---|
+| Ancla | 2.000 | |
+| Capítulo completo | 8.000 | Sin compactar: es el objeto que se verifica |
+| Fichas completas de toda entidad mencionada | 12.000 | 15 × 800. Completas, no compactas: el detalle es justo donde está la contradicción |
+| Estado del mundo al inicio y al final del capítulo | 3.000 | Dos fotos, para detectar cambios no declarados |
+| Conocimiento de cada POV del capítulo | 2.000 | PER-I1 |
+| Eventos canónicos en la ventana temporal del capítulo | 4.000 | Con margen a ambos lados, para elipsis |
+| Clasificación, estadísticas y disponibilidad | 1.500 | DEP-I1, DEP-I2 |
+| Resúmenes de los capítulos anteriores del arco | 2.000 | 5 × 400 |
+| Fragmentos recuperados por afirmación | 7.200 | 16 × 450 |
+| Setups abiertos con su estado | 1.500 | |
+| Rúbrica de continuidad e instrucción | 1.500 | |
+| **Total** | **44.700** | 99 % del presupuesto |
+
+**Recuperación dirigida por afirmaciones.** En vez de construir la consulta desde una especificación de escena, se extraen del capítulo las afirmaciones comprobables —nombres propios, fechas, cifras, competencias ejercidas, estados físicos— y cada una genera su consulta. Dos diferencias con la del Escritor, y las dos importan:
+
+- **No hay cupos.** Aquí se busca recuerdo, no variedad: un fragmento que no se trae es una contradicción que no se detecta.
+- **La pierna semántica pesa poco y puede omitirse.** CTX-09 ya lo dice: los nombres propios fallan en semántica. Una contradicción de continuidad se busca por el nombre y por la cifra, que es exactamente lo que hace bien la búsqueda léxica.
+
+Es también el agente que primero tocará el techo cuando la obra crezca. Lo que lo mantiene dentro es que las fichas y los eventos se filtran por lo que el capítulo menciona, no por lo que existe.
+
+#### Reparador · 12.000
+
+| Bloque | Tokens | Nota |
+|---|---:|---|
+| Ancla | 2.000 | |
+| Escena completa que contiene el fragmento | 3.000 | Se repara con la escena delante, no el fragmento suelto |
+| Defectos agrupados con su evidencia citada | 2.000 | Sin cita no hay defecto |
+| Hechos canónicos que el defecto viola | 1.500 | Lo que debe ser cierto tras la corrección |
+| Fichas compactas del POV y de las entidades del fragmento | 1.100 | 4 × 280 |
+| Especificación de la escena | 900 | Para no reparar rompiendo la función |
+| Cola de la escena anterior | 700 | Para no romper la juntura |
+| Instrucción | 500 | |
+| **Total** | **11.700** | 98 % del presupuesto |
+
+No ve el paquete que generó el texto ni los veredictos de otros capítulos: repara con el defecto y su evidencia delante, que es la reflexión de `verification.md` §5.6.
+
+#### Estilista · 20.000
+
+| Bloque | Tokens | Nota |
+|---|---:|---|
+| Capítulo aprobado | 8.000 | |
+| Guía de estilo completa | 2.500 | No la condensada del ancla: es su objeto de trabajo |
+| Lista de proscripción completa | 1.500 | POE-12, no solo los 30 últimos |
+| Huella estilística de referencia y la del capítulo | 1.000 | POE-13 |
+| Muestras modélicas | 2.400 | 3 × 800, rotativas |
+| Fichas de voz de los POV del capítulo | 1.500 | PER-08 |
+| Repeticiones detectadas con su evidencia | 2.000 | Salida de `check.repetition` |
+| Instrucción | 800 | |
+| **Total** | **19.700** | 99 % del presupuesto |
+
+#### Archivero · 22.000
+
+| Bloque | Tokens | Nota |
+|---|---:|---|
+| Ancla | 2.000 | |
+| Capítulo final completo | 8.000 | |
+| Estado del mundo antes del capítulo | 3.000 | El delta es la diferencia contra esto |
+| Fichas compactas de las entidades presentes | 2.800 | 10 × 280 |
+| Escaleta del capítulo | 1.500 | Lo que debía pasar, para detectar lo que pasó de más |
+| Setups que el capítulo debía plantar o cobrar | 1.000 | |
+| Esquema del delta con sus tipos de evento | 1.500 | El contrato de salida, literal |
+| Resúmenes de escena del capítulo | 800 | 6 × 130, para regenerar los de nivel superior |
+| Instrucción | 1.000 | |
+| **Total** | **21.600** | 98 % del presupuesto |
+
+Nunca ve rúbricas ni veredictos: extrae hechos, no juzga calidad.
+
+#### Árbitro · 15.000
+
+| Bloque | Tokens | Nota |
+|---|---:|---|
+| Ancla | 2.000 | |
+| Las dos afirmaciones en conflicto con su procedencia | 1.000 | MET-09 decide la precedencia |
+| Fragmentos donde aparece cada una | 2.700 | 6 × 450, la evidencia textual de ambas |
+| Estado del mundo en el instante de cada una | 2.000 | |
+| Fichas completas de las entidades implicadas | 1.600 | 2 × 800 |
+| Cadena de eventos que produjo cada afirmación | 2.000 | |
+| Política de precedencia PRO-10, literal | 800 | La regla entra en la ventana, no se asume aprendida |
+| Si el hecho está cobrado en algún payoff | 700 | Condición dura del retcon, §8 |
+| Instrucción | 700 | |
+| **Total** | **13.500** | 90 % del presupuesto |
+
+#### Jurado · 9.000 por instancia
+
+| Bloque | Tokens | Nota |
+|---|---:|---|
+| Invariantes, sin guía de estilo | 500 | Ancla reducida: un juez que ve la guía puntúa la guía |
+| Rúbrica de sus dimensiones | 1.500 | CAL-02 |
+| Capítulo | 5.500 | Longitud típica de EST-07 |
+| Fichas de voz de los POV | 800 | |
+| Instrucción y formato de veredicto | 700 | |
+| **Total** | **9.000** | 100 % del presupuesto |
+
+**No recibe el paquete del Escritor, ni su razonamiento, ni los defectos ya detectados** (§9.2). Un capítulo en el techo de EST-07 no cabe en este presupuesto: cómo se resuelve es la decisión abierta nº 9 de §13, y no bloquea nada hasta el paso 9 del orden de construcción.
+
+#### Supervisor · 30.000
+
+| Bloque | Tokens | Nota |
+|---|---:|---|
+| Ancla | 2.000 | |
+| Métricas del capítulo cerrado | 1.500 | §11 |
+| Serie histórica de métricas | 3.000 | La tendencia, que es lo que detecta deriva |
+| Deuda narrativa completa con estados | 3.000 | |
+| Curva de tensión planificada frente a realizada | 2.000 | |
+| Resúmenes de todos los capítulos congelados | 12.000 | 30 × 400 |
+| Escaleta del tramo restante | 4.000 | |
+| Umbrales de §11 | 500 | |
+| Instrucción | 1.000 | |
+| **Total** | **29.000** | 97 % del presupuesto |
+
+Pasados los 30 capítulos, el bloque de resúmenes desborda. Se compacta como cualquier otro: los resúmenes de los capítulos de un arco ya cerrado se sustituyen por el resumen del arco, que es exactamente para lo que existe la jerarquía de §4.5.
+
+#### La muestra modélica de voz
+
+El bloque 10 del Escritor y las muestras del Estilista piden «un fragmento congelado de alta puntuación, distinto del inmediatamente anterior» (§4.6). Mientras el Jurado no exista, no hay puntuaciones, así que la elección es determinista: **el fragmento con diálogo del mismo POV, de la escena congelada más reciente que no sea la anterior y que no se haya usado como muestra en las tres últimas llamadas**. Cuando el Jurado entre, la puntuación sustituye a la recencia como criterio y la rotación se mantiene: es la regla la que cambia, no el bloque.
+
+### 4.10 Gestión del contexto en el ciclo completo
+
+§4.3 a §4.9 dicen **qué lleva** cada paquete. Esta sección dice **quién decide el contexto y en qué momento**, de principio a fin de una llamada, porque con herramientas ese control deja de estar en un solo sitio.
+
+#### Los dos modos de llenar una ventana
+
+| Modo | Quién decide | Cuándo se decide | Coste |
+|---|---|---|---|
+| **Empuje** | El Documentalista, que es código | Antes de la llamada, de una vez | Una sola ida y vuelta al modelo |
+| **Tirón** | El propio agente, llamando herramientas | Durante su turno, por pasos | Una ida y vuelta por cada consulta, más la definición de las herramientas |
+
+Los dos conviven, y el reparto por agente está en §6.3. La frontera no es de gusto: **empuje donde el trabajo es conocido de antemano, tirón donde el trabajo es una investigación cuya forma depende de lo que se vaya encontrando.**
+
+Escribir una escena es lo primero: la especificación ya dice qué hay que escribir, el paquete está afinado a once bloques y la llamada se ejecuta cientos de veces por novela. Comprobar la continuidad de un capítulo es lo segundo: qué haya que verificar depende de lo que el capítulo afirme, y el Continuista es además el agente que §12 señala como el primero que dejará de caber en su presupuesto cuando la obra crezca. El tirón resuelve ahí un problema declarado; en el Escritor crearía uno.
+
+#### Los cinco momentos de una llamada
+
+```mermaid
+graph TD
+  A["1 · Admisión"] --> B["2 · Paquete base"]
+  B --> C["3 · Turno del agente"]
+  C -->|sin herramientas| D["4 · Cierre"]
+  C -->|con herramientas| T["Consulta acotada"]
+  T --> C
+  D --> E["5 · Liberación"]
+```
+
+**1 · Admisión.** El Orquestador estima la entrada de la llamada y comprueba que quepa en lo que resta del techo concurrente. Para un agente sin herramientas, la estimación es el paquete. Para uno con herramientas, es **el paquete base más su cupo de tirón**, reservado entero desde el principio: admitir por lo que ocupa hoy y dejar que crezca después es la forma de romper el techo sin que salte nada. Si no se puede estimar, no se admite.
+
+**2 · Paquete base.** El Documentalista ensambla según la receta del agente destino, hasta 85.000, audita y entrega. Esto no cambia para nadie: **todo agente arranca con un paquete empujado**, tenga herramientas o no. Ninguno empieza en blanco preguntando qué novela es esta.
+
+**3 · Turno del agente.** Si tiene herramientas, cada consulta pasa por el control de presupuesto de §5.3: la herramienta mide el resultado antes de devolverlo y lo niega si no cabe. El contador de la llamada vive en el Orquestador, no en el agente; la herramienta lo lee y lo actualiza.
+
+**4 · Cierre.** `dispatch` valida la salida contra su esquema y aplica el tope de salida. Es la frontera de confianza: lo que pase de aquí sin validar contamina el canon.
+
+**5 · Liberación.** El Orquestador descuenta la entrada reservada del techo concurrente y admite al primero de la cola.
+
+#### Qué se gana y qué se pierde
+
+El tirón compra flexibilidad y paga con **reproducibilidad**. Una llamada con herramientas no es determinista: el mismo canon y la misma petición pueden dar dos recorridos distintos. Eso rompe la promesa de §4.4 de que «dos ejecuciones con el mismo canon dan el mismo paquete», y con ella la forma de verificar que hoy tiene el sistema.
+
+La salida no es rebajar la exigencia, es **cambiar de tipo de garantía en los agentes de tirón**:
+
+| Camino | Qué se garantiza | Cómo se comprueba |
+|---|---|---|
+| **Empuje** | El mismo canon produce el mismo paquete | Igualdad de salida; conjunto dorado |
+| **Tirón** | Invariantes que se cumplen en todo recorrido | Propiedades sobre la traza, no sobre el resultado |
+
+Los invariantes del camino de tirón son cuatro, y los cuatro se comprueban sobre lo que quedó registrado: **ninguna llamada superó su techo de entrada**; **todo resultado de herramienta llegó con su procedencia**, igual que un bloque de paquete; **ninguna consulta devolvió un resultado truncado**, porque la herramienta niega antes que cortar; y **toda consulta quedó trazada con su coste**, de modo que el recorrido se puede reconstruir aunque no se pueda repetir.
+
+**El camino caliente sigue siendo determinista**, que es lo que de verdad importaba: el Escritor, el Especialista deportivo y los verificadores no tienen herramientas, así que la generación de prosa se sigue pudiendo repetir y medir contra el conjunto dorado exactamente como antes.
 
 ---
 
@@ -330,7 +746,10 @@ Una **skill** es una capacidad reutilizable con contrato fijo de entrada y salid
 | `canon.query` | Consulta estructurada de entidades y fichas | Fichas en formato compacto |
 | `canon.state-at` | Proyecta el estado del mundo en un instante | Estado en t |
 | `canon.knowledge-of` | Proyecta qué sabe un personaje en t (PER-10) | Lista de hechos conocidos |
-| `prose.retrieve` | Recuperación híbrida con filtro por metadatos | Fragmentos rankeados |
+| `prose.embed` | Calcula el vector de un trozo de prosa o de una consulta con el proveedor de §4.8 | Vector con su modelo y dimensión |
+| `prose.retrieve` | Recuperación híbrida de §4.4: dos piernas sobre fragmentos, fusión por rangos y selección por cupos | Fragmentos con su cupo y su procedencia |
+| `prose.chunk` | Corta una escena congelada en fragmentos de hasta 450 tokens por párrafos completos, con un párrafo de solape | Fragmentos con su orden |
+| `canon.related` | Recorre el grafo de entidades y devuelve las relacionadas con vigencia abierta | Conjunto de entidades ampliado |
 | `context.pack` | Ensambla y ordena el paquete según presupuesto | Paquete de contexto |
 | `context.compact` | Reduce bloques por prioridad inversa | Paquete ajustado |
 | `context.audit` | Detecta conflictos, huecos y exceso de tokens | Informe de validez |
@@ -340,10 +759,16 @@ Una **skill** es una capacidad reutilizable con contrato fijo de entrada y salid
 | `check.format` | POV único, tiempo verbal, persona, longitud | Defectos con evidencia |
 | `check.repetition` | N-gramas repetidos y términos proscritos | Lista con recuento |
 | `check.lexicon` | Nombres, alias y léxico del mundo | Defectos con evidencia |
+| `check.knowledge` | Menciones de hechos canónicos por personajes cuyo PER-10 no los incluye en ese instante (PER-I1) | Defectos con evidencia |
+| `outline.check` | Verificador estructural de la escaleta: cobertura de arcos, doble arco resuelto en momentos distintos (DEP-20), curva de tensión monótona por acto, todo setup con payoff planificado, reparto de palabras por capítulo | Defectos con evidencia |
 | `match.simulate` | Motor de reglas que resuelve un encuentro completo | Cronología del encuentro y resultado |
 | `style.fingerprint` | Calcula la huella estilística del texto | Vector de métricas y desviación |
 | `setup.ledger` | Mantiene el registro de setups y su estado | Deuda narrativa vigente |
 | `metrics.report` | Agrega métricas de salud por capítulo | Cuadro de mando |
+
+`prose.embed` es la única skill de esta tabla que sale a la red, directamente o a través de `prose.retrieve`, que la usa para la consulta. Sigue aquí y no en §5.2 porque no consume ventana de contexto ni admite instrucción: recibe texto y devuelve números.
+
+Las tres skills de prosa viven en `canon/` con el almacén que manejan, y `context/` las consume por la excepción de lectura de §2.3.
 
 `match.simulate` es la skill que más devuelve en épica deportiva: **el encuentro se resuelve primero con reglas y después se narra**. El modelo no inventa el marcador, lo dramatiza. Elimina de raíz toda la familia de defectos de verosimilitud deportiva.
 
@@ -370,6 +795,55 @@ Una **skill** es una capacidad reutilizable con contrato fijo de entrada y salid
 
 **Contrato común de las skills de auditoría**: toda puntuación llega acompañada de la cita textual que la justifica. Sin evidencia, la puntuación se descarta automáticamente. Es lo que impide que un juez sin supervisión externa apruebe por inercia.
 
+### 5.3 Herramientas
+
+Una **herramienta** no es una skill. La diferencia es de quién la ejecuta y qué cuesta:
+
+| | Skill | Herramienta |
+|---|---|---|
+| Quién la ejecuta | El Orquestador o el Documentalista, que son código | El propio agente de modelo, durante su turno |
+| Qué ocupa de ventana | Nada | Su definición, más el resultado de cada consulta |
+| Cuándo actúa | Antes o después de la llamada | Dentro de la llamada |
+| Es determinista | Sí | El resultado sí; **cuándo y cuántas veces se llama, no** |
+
+Por eso las herramientas son pocas, están acotadas y no las tiene todo el mundo. **La lista de herramientas de un agente es cerrada**: una llamada a algo fuera de su lista se rechaza y se traza, igual que ocurre con las skills.
+
+Son dos, y ninguna escribe nada. **Ninguna herramienta puede modificar el canon**: la congelación sigue siendo la única operación que lo escribe, y solo la ejecuta `canon/`.
+
+#### `context.budget`
+
+Le dice al agente cuánto lleva ocupado de su ventana y cuánto le queda.
+
+| | |
+|---|---|
+| **Entrada** | Ninguna |
+| **Salida** | Consumido, disponible y techo, en tokens, más el número de consultas hechas |
+| **Coste** | Despreciable: la respuesta son tres números |
+
+Existe porque sin ella el agente no puede decidir si le cabe una consulta más, y acaba haciendo una de dos cosas malas: quedarse corto por prudencia, o pedir algo que no cabe y consumir un rechazo. El contador que lee no es suyo, es el que lleva el Orquestador.
+
+#### `canon.lookup`
+
+Consulta acotada al canon y a la prosa congelada, **con control de presupuesto incorporado**.
+
+| | |
+|---|---|
+| **Entrada** | Tipo de consulta —ficha de entidad, estado del mundo en un instante, conocimiento de un personaje, entidades relacionadas, búsqueda en prosa congelada—, sus parámetros y un tope opcional de tokens |
+| **Salida** | El resultado con su procedencia, **o** una negativa que dice cuánto habría ocupado |
+| **Coste** | El del resultado, que se suma al contador de la llamada |
+
+Tres reglas duras, y las tres son la aplicación literal de principios que ya rigen en el resto del sistema:
+
+1. **Mide antes de devolver.** Si lo consumido más el resultado supera el techo, **no devuelve el resultado**: devuelve su tamaño y en qué acotar la consulta. Es la regla de fallo cerrado aplicada a la recuperación.
+2. **Nunca trunca.** Igual que un fragmento del bloque 7 se sustituye por el resumen de su escena en vez de cortarse (§4.4), aquí un resultado que no cabe se niega entero o se sustituye por su resumen. Media ficha de personaje es peor que ninguna, porque el agente no sabe qué le falta.
+3. **Todo resultado llega etiquetado** con su procedencia —canon, prosa congelada con su capítulo, o plan— y transporta la misma regla que los bloques del paquete: donde canon y prosa discrepen, manda el canon (PRO-10). Sin la etiqueta, la contramedida contra el envenenamiento de contexto (CTX-13) se pierde justo en el camino nuevo.
+
+**Lo que `canon.lookup` no hace es sustituir a `prose.retrieve`.** La recuperación híbrida con sus cupos sigue siendo del Documentalista y sigue llenando el paquete base. `canon.lookup` es para lo que el agente descubre que necesita **después** de leer su paquete, que es exactamente el caso que el empuje no puede cubrir.
+
+#### El tope de salida no es una herramienta
+
+Las 50.000 fichas de salida de §4.1 las aplica `dispatch`, en el código, no el agente. Un tope que el modelo decide si invoca no es un tope. Es el mismo razonamiento por el que la validación de esquema vive ahí: es la frontera de confianza, y lo que la cruza sin comprobar contamina todo lo que viene detrás.
+
 ---
 
 ## 6. Catálogo de agentes
@@ -377,7 +851,7 @@ Una **skill** es una capacidad reutilizable con contrato fijo de entrada y salid
 | # | Agente | Misión | Skills principales | Criterio de salida |
 |---|---|---|---|---|
 | 0 | **Orquestador** | Dirige el flujo, aplica presupuestos, admite o encola llamadas contra CTX-20 y cuenta reintentos. Es código, no modelo. | Todas las deterministas | — |
-| 1 | **Arquitecto narrativo** | Arcos, doble arco (DEP-20), curva de tensión, escaleta de obra | `outline.plan`, `canon.query` | Escaleta que supera el verificador estructural |
+| 1 | **Arquitecto narrativo** | Arcos, doble arco (DEP-20), curva de tensión, escaleta de obra | `outline.plan`, `outline.check`, `canon.query` | Escaleta que supera `outline.check` |
 | 2 | **Planificador de capítulo** | Convierte el tramo de escaleta en especificaciones de escena | `scene.spec`, `canon.state-at`, `setup.ledger` | Todas las escenas con función y cambio de valor declarados |
 | 3 | **Documentalista** | Ensambla el paquete de contexto de cada llamada. Es código. | `context.pack`, `prose.retrieve`, `canon.*`, `context.audit` | Paquete válido dentro de presupuesto |
 | 4 | **Escritor de escena** | Produce la prosa | `scene.write` | Escena generada dentro de longitud |
@@ -429,14 +903,27 @@ graph LR
     S15["retcon.propose"]
     S16["setup.ledger"]
     S17["replan.arc"]
+    S18["canon.*"]
+    S19["outline.check"]
+    S20["style.fingerprint"]
+    S21["metrics.report"]
+    S22["dialogue.pass"]
+    S23["prose.embed"]
+    S24["prose.chunk"]
+    S25["canon.related"]
   end
 
   A1 --> S1
-  A1 --> S16
+  A1 --> S19
+  A1 --> S18
   A2 --> S2
+  A2 --> S18
   A2 --> S16
   A3 --> S3
   A3 --> S4
+  A3 --> S18
+  A3 --> S25
+  A3 --> S23
   A4 --> S5
   A5 --> S6
   A5 --> S7
@@ -445,11 +932,18 @@ graph LR
   A6 --> S9
   A7 --> S10
   A8 --> S11
+  A8 --> S22
   A9 --> S12
+  A9 --> S20
+  A9 --> S8
   A10 --> S13
   A10 --> S14
+  A10 --> S24
+  A10 --> S23
   A11 --> S15
+  A11 --> S18
   A12 --> S16
+  A12 --> S21
   A12 --> S17
 ```
 
@@ -483,7 +977,31 @@ Los artefactos se nombran por la skill que los produce (`scene.spec`, `delta.ext
 
 El Orquestador lleva además **el contador de CTX-20**. Es el único que sabe qué hay en vuelo, así que es el único que puede admitir o encolar una llamada. Dos reglas: la admisión es FIFO estricta, y si no puede estimar el presupuesto de una llamada no la admite, por la regla de fallo cerrado.
 
-**El Árbitro entra por dos puertas.** Lo llama el Orquestador cuando el delta del Archivero choca con el canon, y lo llama el Documentalista cuando `context.audit` detecta hechos en conflicto dentro del paquete, antes de generar (§7.2). Es el único agente al que invoca alguien distinto del Orquestador, y es deliberado: arbitrar antes de generar es mucho más barato que reparar después.
+**El Árbitro entra por dos puertas.** Lo llama el Orquestador cuando el delta del Archivero choca con el canon, y lo llama el Documentalista cuando `context.audit` detecta hechos en conflicto dentro del paquete, antes de generar (§7.2). Es el único agente al que invoca alguien distinto del Orquestador, y es deliberado: arbitrar antes de generar es mucho más barato que reparar después. En imports no es una excepción más: el Árbitro vive en `canon/`, del que toda funcionalidad puede importar (§2.3).
+
+### 6.3 Matriz agente x herramienta
+
+Qué agente puede llamar a qué, y por qué. Un agente sin herramientas no es un agente peor: es uno cuyo trabajo ya está descrito antes de empezar.
+
+| # | Agente | Herramientas | Cupo de tirón | Por qué |
+|---|---|---|---:|---|
+| 0 | Orquestador | — | — | Es código |
+| 1 | Arquitecto | `canon.lookup`, `context.budget` | 20.000 | Planifica sobre la obra entera. Qué necesite consultar depende de lo que vaya decidiendo, y se ejecuta una vez por obra |
+| 2 | Planificador | — | — | Recibe el tramo de escaleta y el estado del mundo. No investiga: reparte |
+| 3 | Documentalista | — | — | Es código, y es quien construye los paquetes de los demás |
+| 4 | **Escritor de escena** | **—** | — | El camino caliente. Cientos de llamadas por novela, paquete afinado a once bloques, y la especificación ya dice qué escribir. **Aquí el tirón multiplica el coste y destruye la reproducibilidad sin comprar nada** |
+| 5 | Especialista deportivo | — | — | El encuentro ya está resuelto por `match.simulate` antes de narrarlo. No hay nada que investigar |
+| 6 | **Continuista** | `canon.lookup`, `context.budget` | 25.000 | **El caso que justifica el tirón.** Qué comprobar depende de lo que el capítulo afirme, y es el agente que §12 señala como el primero que deja de caber en su presupuesto al crecer la obra |
+| 7 | Jurado | — | — | Juzga lo que tiene delante contra una rúbrica. Darle acceso al canon rompería su aislamiento (§9.2) |
+| 8 | Reparador | `canon.lookup` | 5.000 | Necesita ver el hecho canónico que violó, y solo ese. Sin `context.budget`: con un cupo tan corto, el presupuesto lo lleva el Orquestador |
+| 9 | Estilista | — | — | Trabaja sobre la prosa y la huella. El canon no le dice nada |
+| 10 | Archivero | `canon.lookup`, `context.budget` | 15.000 | Extrae el delta, y para saber si un hecho es nuevo tiene que poder preguntar si ya existe |
+| 11 | Árbitro | `canon.lookup`, `context.budget` | 15.000 | Resuelve contradicciones. Necesita ver los dos lados y su procedencia para aplicar la precedencia |
+| 12 | Supervisor | `canon.lookup`, `context.budget` | 20.000 | Vigila deriva y deuda sobre la obra entera; qué mire depende de qué métrica se salga |
+
+**El cupo de tirón se reserva entero en la admisión** (§4.10). Es el máximo que ese agente puede acumular consultando, y se suma a su entrada de §4.2 para calcular lo que ocupa en el techo concurrente. Un agente que agota su cupo no recibe más resultados: `canon.lookup` empieza a negar, y el agente tiene que concluir con lo que tiene. **No hay ampliación bajo demanda**, porque un cupo que se estira no es un cupo y el techo dejaría de significar nada.
+
+**Siete de los trece agentes no tienen ninguna herramienta, y cinco de ellos son los que más se ejecutan.** Es deliberado: el coste del tirón se paga una vez por capítulo en los agentes que investigan, no una vez por escena en los que producen.
 
 ---
 
@@ -494,7 +1012,7 @@ El Orquestador lleva además **el contador de CTX-20**. Es el único que sabe qu
 ```mermaid
 graph TD
   ST["Brief"] --> A1["1 · Arquitecto narrativo"]
-  A1 --> VE["Verificador estructural de escaleta"]
+  A1 --> VE["outline.check"]
   VE -->|falla| A1
   VE -->|pasa| FZ1["Congelar escaleta"]
 
@@ -591,7 +1109,7 @@ sequenceDiagram
     O->>C: reverificación
   end
 
-  O->>J: capítulo + rúbricas · 3 instancias en paralelo · 31.500 tokens
+  O->>J: capítulo + rúbricas · 3 instancias en paralelo · 27.000 tokens
   J-->>O: puntuaciones con evidencia y dispersión
   alt bajo umbral y reintentos disponibles
     O->>R: defectos S2 y S3
@@ -665,16 +1183,20 @@ Por escena y no por llamada porque la escena **ya es** la unidad de reintento de
 El techo de concurrencia de §4.1 se implementa como un **semáforo con contador de tokens**, no como un límite de llamadas simultáneas: lo que se cuenta son tokens, porque tres jueces y un Continuista ocupan cosas muy distintas.
 
 ```
+reserva(llamada) = entrada_del_paquete + cupo_de_tiron_del_agente
+
 admitir(llamada):
-    si en_vuelo + presupuesto(llamada) <= 100.000:
-        en_vuelo += presupuesto(llamada);  ejecutar
+    si en_vuelo + reserva(llamada) <= 100.000:
+        en_vuelo += reserva(llamada);  ejecutar
     si no:
         encolar en FIFO estricta, sin reordenar por hueco
 al terminar(llamada):
-    en_vuelo -= presupuesto(llamada);  admitir al primero de la cola
+    en_vuelo -= reserva(llamada);  admitir al primero de la cola
 ```
 
-Dos reglas que no se negocian: **FIFO estricta**, porque reordenar por hueco mata de hambre al Arquitecto y al Continuista, que son las llamadas grandes; y **fallo cerrado**, si el presupuesto de una llamada no se puede estimar, no se admite.
+Lo que se cuenta es **entrada**, y para un agente con herramientas se reserva su cupo de tirón entero desde el principio, aunque acabe sin usarlo. Admitir por lo que ocupa al empezar y dejar que crezca durante el turno es la forma de romper el techo sin que salte nada: cuando la llamada se pasa, ya está en vuelo y no hay dónde devolverla.
+
+Tres reglas que no se negocian: **FIFO estricta**, porque reordenar por hueco mata de hambre al Arquitecto y al Continuista, que son las llamadas grandes; **fallo cerrado**, si el presupuesto de una llamada no se puede estimar —incluido el caso de un modelo sin factor de contador conocido (§4.1)— no se admite; y **el cupo no se amplía en caliente**, porque un cupo que se estira no acota nada.
 
 #### Módulos de `backend/orchestration/`
 
@@ -684,7 +1206,7 @@ Dos reglas que no se negocian: **FIFO estricta**, porque reordenar por hueco mat
 | `checkpoint` | Escribe y lee el punto de reanudación en `run_state` |
 | `admission` | Contador de CTX-20, cola FIFO y fallo cerrado |
 | `retries` | Presupuesto de reintentos y paso a cuarentena de §7.3 |
-| `dispatch` | Llama al agente que toca y valida su salida contra el esquema antes de devolverla |
+| `dispatch` | Llama al agente que toca, sirve sus herramientas contra el contador de la llamada, aplica el tope de salida de §4.1 y valida la salida contra el esquema antes de devolverla |
 
 `dispatch` es el que concentra el riesgo: es la frontera de confianza donde el texto de un modelo se convierte en objeto tipado (VER-01). Todo lo que pase de ahí sin validar contamina el canon.
 
@@ -694,7 +1216,7 @@ Dos reglas que no se negocian: **FIFO estricta**, porque reordenar por hueco mat
 
 | Decisión | Sustituto autónomo |
 |---|---|
-| Aprobar la escaleta | Verificador estructural determinista: cobertura de arcos, resolución del doble arco en momentos distintos, curva de tensión monótona por acto, todos los setups con payoff planificado, reparto de palabras por capítulo. Más una pasada de jurado sobre la escaleta. |
+| Aprobar la escaleta | `outline.check`, verificador estructural determinista: cobertura de arcos, resolución del doble arco en momentos distintos, curva de tensión monótona por acto, todos los setups con payoff planificado, reparto de palabras por capítulo. Más una pasada de jurado sobre la escaleta. |
 | Resolver una contradicción de canon | Árbitro con la política de precedencia PRO-10: canon congelado > delta nuevo; brief > canon derivado; invariante duro > preferencia estética; hecho con payoff cobrado > hecho sin cobrar. |
 | Autorizar un retcon | `retcon.propose` más regla dura: solo procede si el hecho afectado no ha sido cobrado en ningún payoff y el número de pasajes que habría que tocar es igual o menor que 3. En caso contrario se regenera el capítulo nuevo. |
 | Cerrar un capítulo | Puertas automáticas con umbrales por dimensión (CAL-09). |
@@ -721,7 +1243,7 @@ Coste despreciable, cero falsos positivos si están bien escritos. Se ejecutan s
 - Nombres, alias y léxico del mundo.
 - Restricciones formales: tiempo verbal, persona, POV único por escena, longitud.
 - Repetición: n-gramas de 4 o más ya usados; frecuencia de términos proscritos.
-- Conocimiento: menciones de hechos canónicos por personajes cuyo PER-10 no los incluye.
+- Conocimiento (`check.knowledge`): menciones de hechos canónicos por personajes cuyo PER-10 no los incluye.
 
 ### 9.2 Jurado
 
@@ -795,6 +1317,10 @@ En un sistema sin supervisión externa, la observabilidad no es un extra: es el 
 | Ocupación real por bloque | Un bloque desplaza sistemáticamente a otro |
 | Ocupación concurrente máxima (CTX-20) | Roza los 100.000 de forma sostenida, o la cola crece: el paralelismo está mal dimensionado |
 | Aciertos sobre el conjunto dorado | Caída: los jueces han derivado |
+| Recuento real frente al estimado por el contador (§4.8) | El real supera al estimado en alguna llamada: el factor de seguridad se ha quedado corto |
+| Recuperaciones degradadas a solo léxico | Sostenidas: el proveedor de embeddings falla y la prosa pierde memoria semántica sin que salte ninguna puerta |
+| Cupos del bloque 7 que quedan vacíos (§4.4) | Muchos y sostenidos pasado el primer acto: el índice no está encontrando lo que debería, o la escaleta no planta setups |
+| Fragmentos sustituidos por el resumen de su escena | Creciente: los fragmentos no caben y el paquete está mal dimensionado |
 
 ---
 
@@ -820,24 +1346,29 @@ En un sistema sin supervisión externa, la observabilidad no es un extra: es el 
 4. Umbral de dispersión que invalida un veredicto.
 5. Si `match.simulate` debe modelar el encuentro minuto a minuto o solo sus hitos.
 6. Punto a partir del cual conviene reescribir un capítulo en vez de repararlo.
-7. Cómo se resuelve la mitad vectorial del índice de prosa sobre SQLite (§3): extensión vectorial, embeddings en tabla con cálculo en Python, o prescindir de lo semántico y quedarse en FTS5 más filtro por metadatos.
+7. Con qué modelo de embedding se puebla el índice de prosa. El proveedor está fijado (§4.8) y el esquema guarda modelo y dimensión, así que cambiarlo es reindexar, no rediseñar.
+8. Qué modelo de Claude usa cada rol. §12 prevé modelos distintos por agente; cuál va a cuál se decide midiendo con `verification.md` §5.8, no por adelantado.
+9. Cómo evalúa el Jurado un capítulo en el techo de EST-07, que no cabe en los 9.000 tokens que §4.2 le da (§4.9). Las salidas: subir su presupuesto, evaluarlo por mitades, o acotar el capítulo por debajo de 4.000 palabras en la escaleta.
+10. Constante de la fusión recíproca de rangos (§4.4). Se usa 60 por venir del trabajo original; ajustarla exige medir con el conjunto dorado, que llega en el paso 9.
 
 ---
 
 ## 14. Orden de construcción sugerido
 
-1. Canon estructurado + registro de eventos.
+1. Canon estructurado, registro de eventos y grafo de entidades. El grafo entra aquí porque su tabla de aristas con vigencia ya la crea este paso: lo único que añade es el recorrido recursivo, y un almacén sin paso es un almacén que no construye nadie.
 2. Especificación de escena y escaleta.
-3. Documentalista con presupuesto fijo, sin recuperación semántica.
-4. Escritor de escena + verificadores deterministas.
+3. Documentalista completo: recetas de paquete (§4.9) y recuperación híbrida (§4.4) con sus dos piernas. Va entero y no a mitades porque la fusión y los cupos hay que escribirlos igual con una pierna que con dos, y el vector de la consulta es una llamada más a una skill que ya existe.
+4. Escritor de escena, Especialista deportivo, verificadores deterministas, Continuista y Reparador. Los cinco van juntos porque el bucle de §7.1 no cierra sin ellos: sin Reparador no hay regeneración dirigida, sin Continuista no hay coherencia de capítulo y sin `match.simulate` los verificadores deportivos no tienen contra qué comprobar. `verification/` se llena en dos tramos, el determinista y de continuidad aquí, el subjetivo y de estilo en el paso 9.
 5. Archivero y ciclo de congelación.
 6. Árbitro y política de precedencia. **Desde aquí el sistema ya es autónomo**: antes de este punto, cualquier conflicto lo detiene.
 7. Resúmenes jerárquicos.
-8. Recuperación híbrida.
+8. Afinado de la recuperación: tamaño de fragmento, constante de fusión y reparto de cupos, medidos contra el conjunto dorado en vez de estimados.
 9. Jurado, conjunto dorado y Estilista.
 10. Supervisor, replanificación y métricas de salud.
 11. Frontend de lectura y visualización.
 
-El orden recorre **funcionalidades de §2.3**, no capas técnicas: los pasos 1 y 5 llenan `canon/`, el 2 `planning/`, el 3 `context/`, el 4 `generation/`, el 6 cierra `canon/`, el 9 `verification/`, el 10 `supervision/` y el 11 el frontend entero. Es la consecuencia práctica de organizar por funcionalidad: cada paso entrega una carpeta que funciona, no un estrato horizontal que todavía no hace nada.
+**Las rutas HTTP no son un paso.** Cada paso añade las suyas dentro de su funcionalidad y las monta en `orchestration/` (§2.3). Concentrarlas en un paso propio dejaría los diez anteriores sin forma de ejercitarse y convertiría la API en la capa técnica que §2.3 evita.
+
+El orden recorre **funcionalidades de §2.3**, no capas técnicas: los pasos 1, 5 y 7 llenan `canon/`, el 2 `planning/`, el 3 `context/` y el 8 lo afina, el 4 `generation/` y la mitad determinista de `verification/`, el 6 cierra `canon/`, el 9 completa `verification/`, el 10 `supervision/` y el 11 el frontend entero. Los pasos se agrupan en versiones del backend, cada una con su SRS en `specs/` (`AGENTS.md` §3.3); la versión 1 son los pasos 1 a 6 y está en `specs/srs-backend-v1.md`. Es la consecuencia práctica de organizar por funcionalidad: cada paso entrega una carpeta que funciona, no un estrato horizontal que todavía no hace nada.
 
 Los pasos 1 a 6 producen una novela coherente sin intervención. Del 7 al 10 se gana escala y calidad, no viabilidad. El paso 11 está fuera del camino crítico por definición (§2.1) y solo tiene sentido cuando el paso 10 ya produce métricas que mostrar.

@@ -25,7 +25,7 @@ Añadir o retirar un término siempre lo cruza. Cambiar la redacción de una def
 | Si tocas | Proceso | Lee antes |
 |---|---|---|
 | `definitions.md`, `domain-knowledge.md` | A | `AGENTS.md` §6.2 · invoca además `domain-modeling` |
-| `architecture.md`, `verification.md` | B | `AGENTS.md` §6.3 y §4.1 |
+| `architecture.md`, `verification.md`, `specs/` | B | `AGENTS.md` §6.3, §4.1 y §3.3 |
 | `backend/`, `frontend/` | C | `AGENTS.md` §6.4 y `verification.md` §8 |
 
 **Leer antes de preguntar.** No interrogues sobre algo que el documento ya responde: es la forma más rápida de gastar la paciencia de quien contesta.
