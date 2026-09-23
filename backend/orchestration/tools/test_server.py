@@ -13,12 +13,16 @@ from pathlib import Path
 import pytest
 
 from canon.brief import Brief, BriefEntity, create_novel
-from commons.provider.port import ToolCall
+from commons.provider.claude_cli import ClaudeCli
+from commons.provider.port import Completion, ToolCall, Usage
 from commons.tokens.counter import TokenCounter
 from commons.tokens.factors import ModelFactors
 from commons.types.primitives import BlockProvenance, WorldTime
 from orchestration.tools.server import (
+    LOOKUP_INPUT_SCHEMA,
     CallBudget,
+    LookupArgs,
+    ToolArgumentsError,
     ToolNotAllowedError,
     ToolServer,
 )
@@ -135,8 +139,132 @@ def test_el_conocimiento_se_consulta_en_un_instante(con: sqlite3.Connection) -> 
 
 def test_un_tipo_de_consulta_desconocido_se_rechaza(con: sqlite3.Connection) -> None:
     s = _server(con)
-    with pytest.raises(ToolNotAllowedError, match="Validos"):
+    with pytest.raises(ToolArgumentsError, match="kind"):
         s.serve(ToolCall(name="canon.lookup", arguments=json.dumps({"kind": "magia"})))
+
+
+# ------------------------------------------------ argumentos contra esquema
+
+#: Cada caso es un argumento mal pasado y la ruta del campo que lo delata. Un
+#: argumento mal tipado no se coerciona: se devuelve al modelo con el motivo.
+_MAL_TIPADOS = [
+    pytest.param('{"kind": "entity", "entity_ids": 5}', "entity_ids", id="lista-como-numero"),
+    pytest.param(
+        '{"kind": "entity", "entity_ids": "marcos"}', "entity_ids", id="lista-como-cadena"
+    ),
+    pytest.param('{"kind": "entity", "entity_ids": [1, 2]}', "entity_ids.0", id="ids-numericos"),
+    pytest.param('{"kind": "entity", "entity_ids": null}', "entity_ids", id="lista-nula"),
+    pytest.param(
+        '{"kind": "entity", "entity_ids": ["marcos"], "full": "no"}', "full", id="bool-como-cadena"
+    ),
+    pytest.param('{"kind": "entity", "full": 1}', "full", id="bool-como-numero"),
+    pytest.param('{"kind": "knowledge", "entity_id": 7}', "entity_id", id="id-como-numero"),
+    pytest.param('{"kind": 3}', "kind", id="kind-como-numero"),
+    pytest.param('{"entity_ids": ["marcos"]}', "kind", id="sin-kind"),
+    pytest.param('{"kind": "entity", "foo": 1}', "foo", id="clave-de-mas"),
+    pytest.param('["entity"]', "(raiz)", id="no-es-objeto"),
+    pytest.param("{no json", "(raiz)", id="json-malformado"),
+    pytest.param("", "(raiz)", id="vacio"),
+]
+
+
+@pytest.mark.parametrize(("arguments", "campo"), _MAL_TIPADOS)
+def test_un_argumento_mal_pasado_se_rechaza_con_su_campo(
+    con: sqlite3.Connection, arguments: str, campo: str
+) -> None:
+    """RF-91, VER-12. Antes `"full": "no"` valia True y `entity_ids: 5` pasaba
+    a `["5"]`: el modelo recibia algo que no habia pedido y no se enteraba."""
+    s = _server(con)
+    with pytest.raises(ToolArgumentsError) as exc:
+        s.serve(ToolCall(name="canon.lookup", arguments=arguments))
+    assert campo in str(exc.value)
+    assert "canon.lookup" in str(exc.value)
+
+
+def test_un_rechazo_por_argumentos_no_consume_cupo_ni_escribe(con: sqlite3.Connection) -> None:
+    s = _server(con)
+    antes = s._budget.available
+    eventos = con.execute("SELECT count(*) AS n FROM event").fetchone()["n"]
+    with pytest.raises(ToolArgumentsError):
+        s.serve(ToolCall(name="canon.lookup", arguments='{"kind": "entity", "full": "no"}'))
+    assert s._budget.available == antes
+    assert con.execute("SELECT count(*) AS n FROM event").fetchone()["n"] == eventos
+
+
+def test_el_contador_no_admite_argumentos(con: sqlite3.Connection) -> None:
+    """`context.budget` no lleva argumentos: uno de mas se rechaza igual."""
+    s = _server(con)
+    with pytest.raises(ToolArgumentsError, match=r"context[.]budget"):
+        s.serve(ToolCall(name="context.budget", arguments='{"full": true}'))
+    with pytest.raises(ToolArgumentsError, match=r"context[.]budget"):
+        s.serve(ToolCall(name="context.budget", arguments="{no json"))
+
+
+def test_los_argumentos_validos_siguen_pasando(con: sqlite3.Connection) -> None:
+    s = _server(con)
+    r = s.serve(
+        ToolCall(
+            name="canon.lookup",
+            arguments=json.dumps({"kind": "entity", "entity_ids": ["marcos"], "full": True}),
+        )
+    )
+    assert "Marcos" in r.content
+    r = s.serve(
+        ToolCall(name="canon.lookup", arguments=json.dumps({"kind": "related", "entity_ids": []}))
+    )
+    assert r.provenance is BlockProvenance.CANON
+
+
+def test_el_esquema_publicado_es_el_del_modelo_que_valida() -> None:
+    """El esquema que se le puede dar al modelo y el que valida son el mismo
+    objeto: dos copias se desincronizan."""
+    assert LookupArgs.model_json_schema() == LOOKUP_INPUT_SCHEMA
+    assert LOOKUP_INPUT_SCHEMA["additionalProperties"] is False
+    assert LOOKUP_INPUT_SCHEMA["properties"]["full"]["type"] == "boolean"
+    assert LOOKUP_INPUT_SCHEMA["properties"]["entity_ids"]["type"] == "array"
+    assert set(LOOKUP_INPUT_SCHEMA["properties"]["kind"]["enum"]) == {
+        "entity",
+        "knowledge",
+        "related",
+    }
+
+
+def test_un_rechazo_por_argumentos_vuelve_al_modelo_y_la_llamada_sigue(
+    con: sqlite3.Connection, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """El rechazo es un error de la llamada, no una excepcion que tumbe la
+    tirada: el bucle de herramientas se lo devuelve al modelo con el motivo y
+    el modelo concluye en el turno siguiente."""
+    salidas = iter(
+        [
+            '{"tool": "canon.lookup", "arguments": {"kind": "entity", "full": "no"}}',
+            '{"respuesta": "final"}',
+        ]
+    )
+    entradas: list[str] = []
+
+    def _run(self: ClaudeCli, *, system: str, stdin: str, **_: object) -> Completion:
+        entradas.append(stdin)
+        return Completion(
+            text=next(salidas),
+            usage=Usage(input_tokens=10, output_tokens=5),
+            stop_reason="end_turn",
+        )
+
+    monkeypatch.setattr(ClaudeCli, "_run", _run)
+    r = ClaudeCli().complete_with_tools(
+        cacheable_prefix="sistema",
+        packet="paquete",
+        instruction="instruccion",
+        output_schema="{}",
+        max_output_tokens=100,
+        tools=["canon.lookup"],
+        server=_server(con),
+    )
+    assert r.text == '{"respuesta": "final"}'
+    assert len(r.tool_calls) == 1
+    assert "rechazado" in entradas[1]
+    assert "full" in entradas[1]
 
 
 def test_ninguna_herramienta_escribe(con: sqlite3.Connection) -> None:

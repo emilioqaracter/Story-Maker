@@ -28,10 +28,12 @@ from commons.provider.port import (
 from commons.tokens.counter import TokenCounter
 from commons.tokens.factors import ModelFactors
 from commons.tracing.trace import Trace
+from commons.types.primitives import Defect
 from context.packing.recipes import BUDGETS
 from orchestration.admission import Admission
 from orchestration.engine import Composer, specs_provider
 from orchestration.loop import run
+from verification.checks.deterministic import check_lexicon
 
 PROSA = (
     "Marcos Vela entró el último y nadie levantó la vista. El vestuario olía a "
@@ -578,3 +580,92 @@ def test_una_cita_del_jurado_que_no_ancla_vuelve_al_juez_con_el_motivo(tmp_path:
     reintentos = [r for r in traza.records("retry") if "sin anclar" in str(r.fields.get("reason"))]
     assert reintentos, "la cita recortada volvio al juez"
     assert all(ch.jury is not None and ch.jury.passed for ch in informe.chapters)
+
+
+# ----------------------------------------------------- candidatos a nombre
+
+
+def _composer_nala(tmp_path: Path) -> Composer:
+    """Un canon con nombres cortos, que son los que mas erratas admiten."""
+    brief = Brief(
+        title="Nombres",
+        start={"stamp": "2026-08-01"},  # type: ignore[arg-type]
+        entities=(
+            BriefEntity(id="nala", kind="person", name="Nala"),
+            BriefEntity(id="carla", kind="person", name="Carla"),
+            BriefEntity(id="marcos", kind="person", name="Marcos Vela", aliases=("el Chino",)),
+            BriefEntity(id="tecnico", kind="person", name="Aurelio Peña"),
+        ),
+        style_guide="Tercera persona, pasado. " * 20,
+        target_words=3_600,
+    )
+    path = tmp_path / "nala.sqlite"
+    create_novel(path, brief)
+    traza = Trace(tmp_path / "nala.trace.jsonl")
+    factores = ModelFactors()
+    factores.set("haiku", 1.35)
+    return Composer(
+        port=ScriptedPort(),
+        path=path,
+        brief=brief,
+        embedder=_Embedder(),
+        counter=TokenCounter(factores),
+        model_id="haiku",
+        trace=traza,
+        admission=Admission(trace=traza),
+    )
+
+
+def _lexico(c: Composer, texto: str) -> list[Defect]:
+    """Lo mismo que `verify_scene` pasa a `check.lexicon`, sin montar una escena."""
+    return check_lexicon(texto, known_names=c._known_names(), candidates=c._name_candidates(texto))
+
+
+@pytest.mark.parametrize(
+    ("texto", "errata"),
+    [
+        pytest.param("Marcos llamo a Nalah y se fue.", "Nalah", id="una-sola-vez"),
+        pytest.param("Nalah ladro. Marcos rio.", "Nalah", id="principio-de-frase"),
+        pytest.param("Marcos llamo a Nála, y se fue.", "Nála", id="tilde-cambiada"),
+        pytest.param("—Nla, ven —dijo Marcos.", "Nla", id="tras-raya"),
+        pytest.param("Marcos miro a Anla sin decir nada.", "Anla", id="trasposicion"),
+        pytest.param("Hablo con Pena en el pasillo.", "Pena", id="tilde-quitada"),
+    ],
+)
+def test_una_errata_de_un_nombre_del_canon_salta(tmp_path: Path, texto: str, errata: str) -> None:
+    """ENT-37. Con Nala en el canon, un "Nalah" suelto, al principio de frase o
+    con la tilde cambiada es un S1 que cita la errata. Antes no llegaba ni a
+    candidato: tenia que repetirse y no podia ir tras un punto."""
+    c = _composer_nala(tmp_path)
+    assert errata in c._name_candidates(texto)
+    lexico = _lexico(c, texto)
+    assert [d.evidence.quote for d in lexico] == [errata]
+    assert "variante mal escrita" in lexico[0].rule
+
+
+@pytest.mark.parametrize(
+    "texto",
+    [
+        pytest.param("Nala ladro. Marcos Vela rio con Nala.", id="nombres-exactos"),
+        pytest.param("Aurelio Peña miro al Chino. El Chino no contesto.", id="alias-y-tilde"),
+        pytest.param("Nada. Nadie dijo nada. Luego se fue.", id="comunes-cerca-de-nala"),
+        pytest.param("Cara a cara, nadie aparto la cara.", id="comun-en-minuscula"),
+        pytest.param("Pena le daba verlo asi, y la pena no se iba.", id="pena-comun"),
+        pytest.param("Del banco salio Marcos.", id="articulo-del-alias"),
+    ],
+)
+def test_los_nombres_exactos_y_las_palabras_comunes_no_saltan(tmp_path: Path, texto: str) -> None:
+    """Sin falsos positivos: un nombre bien escrito no es candidato a errata, y
+    una palabra comun al principio de frase tampoco, aunque se quede a una
+    letra de un nombre del canon ("Nada" y "Nala", "Cara" y "Carla")."""
+    c = _composer_nala(tmp_path)
+    assert _lexico(c, texto) == []
+
+
+def test_un_nombre_nuevo_repetido_sigue_siendo_candidato(tmp_path: Path) -> None:
+    """La regla de antes no cambia: lo que se repite en mitad de frase y no esta
+    en el canon es un personaje que sobra."""
+    c = _composer_nala(tmp_path)
+    texto = "Marcos hablo con Ramirez. Luego, Ramirez se fue."
+    assert c._name_candidates(texto) == ["Ramirez"]
+    assert c._name_candidates("Marcos hablo con Ramirez y se fue.") == []
