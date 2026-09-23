@@ -125,7 +125,7 @@ def _finish(
     """Recalcula todo lo derivado y anade la siguiente pregunta."""
     faltan = missing(draft)
     choques = draft_contradictions(draft)
-    brief = to_brief(draft)
+    brief = to_brief(draft, origin_interview=interview_id)
     siguiente = next_field(draft)
     pregunta = Question(field=siguiente.name, text=siguiente.question(draft)) if siguiente else None
     if choques:

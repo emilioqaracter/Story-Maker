@@ -85,9 +85,13 @@ class WorldTime(BaseModel):
     ISO 8601 mas `seq` de desempate (D-07). Se ordena por la tupla
     `(stamp, seq)`, que ordena lexicograficamente igual que cronologicamente:
     por eso el formato es fijo y se valida.
+
+    Estricto con los campos de mas (RF-248): es parte del brief --su `start`--
+    y un `{"stamp": ..., "hora": ...}` que se aceptara en silencio perderia la
+    hora sin que nadie lo supiera.
     """
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     stamp: str = Field(description="ISO 8601: YYYY-MM-DD, opcionalmente con hora")
     seq: int = Field(default=0, ge=0, description="Desempate dentro del mismo instante")

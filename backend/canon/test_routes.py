@@ -51,6 +51,22 @@ def test_crear_una_novela_carga_el_brief(client: TestClient) -> None:
     assert r.json()["events_loaded"] > 0
 
 
+def test_un_campo_de_mas_en_el_brief_da_422_con_la_ruta_del_campo(client: TestClient) -> None:
+    """RI-64, RF-248, ENT-07. Ni en la raiz ni en una parte se ignora en silencio."""
+    payload = _brief_payload() | {"narrador": "omnisciente"}
+    r = client.post("/novels?novel_id=prueba-uno", json=payload)
+    assert r.status_code == 422
+    assert ["body", "narrador"] in [e["loc"] for e in r.json()["detail"]]
+
+    payload = _brief_payload()
+    payload["entities"][0]["color"] = "rojo"  # type: ignore[index]
+    r = client.post("/novels?novel_id=prueba-uno", json=payload)
+    assert r.status_code == 422
+    assert ["body", "entities", 0, "color"] in [e["loc"] for e in r.json()["detail"]]
+    # Y no se ha creado nada.
+    assert client.get("/novels/prueba-uno/chapters").status_code == 404
+
+
 def test_no_se_crea_dos_veces_la_misma(client: TestClient) -> None:
     client.post("/novels?novel_id=prueba-uno", json=_brief_payload())
     r = client.post("/novels?novel_id=prueba-uno", json=_brief_payload())

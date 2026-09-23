@@ -34,10 +34,15 @@ OUTPUT_TOKENS = 2_000
 Target = Literal["recipient.traits", "recipient.memories", "entity.person", "entity.place"]
 
 
+#: RF-248, D-93. La salida del modelo rechaza campos de mas: un hecho con uno
+#: cuenta como invalido y consta, igual que un tipo inventado (RF-217).
+_STRICT = ConfigDict(frozen=True, extra="forbid")
+
+
 class RawFact(BaseModel):
     """Lo que el modelo devuelve por cada hecho, antes de validarlo."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = _STRICT
 
     target: Target
     value: str = Field(min_length=1, max_length=300)
@@ -45,7 +50,7 @@ class RawFact(BaseModel):
 
 
 class RawFacts(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    model_config = _STRICT
 
     facts: tuple[RawFact, ...] = ()
 
@@ -155,8 +160,17 @@ class Extraction(BaseModel):
 
 
 def parse(raw: str) -> Extraction:
-    """La salida del modelo, hecho a hecho. Un hecho con un tipo que no existe no tumba los demas."""
+    """La salida del modelo, hecho a hecho. Un hecho con un tipo que no existe no tumba los demas.
+
+    Un hecho con un campo de mas es invalido y consta (RF-248). Una raiz con un
+    campo de mas no es la salida que se pidio: se rechaza entera, y la
+    entrevista sigue con cero propuestas y lo dice (RF-217).
+    """
     obj = first_json_object(raw)
+    if isinstance(obj, dict):
+        sobran = sorted(set(obj) - set(RawFacts.model_fields))
+        if sobran:
+            raise ValueError(f"la extraccion trae campos que no se pidieron: {sobran}")
     items = obj.get("facts", []) if isinstance(obj, dict) else []
     if not isinstance(items, list):
         raise ValueError("la extraccion no devolvio una lista de hechos")

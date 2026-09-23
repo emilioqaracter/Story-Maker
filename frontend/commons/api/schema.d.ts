@@ -508,6 +508,11 @@ export interface components {
              * @default
              */
             genre?: string;
+            /**
+             * Origin Interview
+             * @description RF-249: la entrevista de la que sale el brief, si sale de una
+             */
+            origin_interview?: string | null;
             recipient?: components["schemas"]["Recipient"] | null;
             /** Relations */
             relations?: components["schemas"]["BriefRelation"][];
@@ -747,7 +752,7 @@ export interface components {
              * Answered
              * @default []
              */
-            answered?: ("title" | "recipient.name" | "recipient.age" | "recipient.role" | "premise" | "genre" | "tone" | "target_words" | "start" | "dedication" | "recipient.traits" | "recipient.memories" | "forbidden_words" | "forbidden_themes")[];
+            answered?: ("title" | "recipient.name" | "recipient.age" | "recipient.birth_date" | "recipient.role" | "premise" | "genre" | "tone" | "target_words" | "start" | "dedication" | "recipient.traits" | "recipient.memories" | "forbidden_words" | "forbidden_themes")[];
             /**
              * Dedication
              * @default
@@ -780,6 +785,11 @@ export interface components {
             premise?: string;
             /** Recipient Age */
             recipient_age?: number | null;
+            /**
+             * Recipient Birth Date
+             * @default
+             */
+            recipient_birth_date?: string;
             /**
              * Recipient Memories
              * @default []
@@ -955,7 +965,7 @@ export interface components {
              * Field
              * @enum {string}
              */
-            field: "title" | "recipient.name" | "recipient.age" | "recipient.role" | "premise" | "genre" | "tone" | "target_words" | "start" | "dedication" | "recipient.traits" | "recipient.memories" | "forbidden_words" | "forbidden_themes";
+            field: "title" | "recipient.name" | "recipient.age" | "recipient.birth_date" | "recipient.role" | "premise" | "genre" | "tone" | "target_words" | "start" | "dedication" | "recipient.traits" | "recipient.memories" | "forbidden_words" | "forbidden_themes";
             /** Value */
             value: string;
         };
@@ -1117,7 +1127,7 @@ export interface components {
              * Field
              * @enum {string}
              */
-            field: "title" | "recipient.name" | "recipient.age" | "recipient.role" | "premise" | "genre" | "tone" | "target_words" | "start" | "dedication" | "recipient.traits" | "recipient.memories" | "forbidden_words" | "forbidden_themes";
+            field: "title" | "recipient.name" | "recipient.age" | "recipient.birth_date" | "recipient.role" | "premise" | "genre" | "tone" | "target_words" | "start" | "dedication" | "recipient.traits" | "recipient.memories" | "forbidden_words" | "forbidden_themes";
             /** Label */
             label: string;
         };
@@ -1175,21 +1185,36 @@ export interface components {
              * Field
              * @enum {string}
              */
-            field: "title" | "recipient.name" | "recipient.age" | "recipient.role" | "premise" | "genre" | "tone" | "target_words" | "start" | "dedication" | "recipient.traits" | "recipient.memories" | "forbidden_words" | "forbidden_themes";
+            field: "title" | "recipient.name" | "recipient.age" | "recipient.birth_date" | "recipient.role" | "premise" | "genre" | "tone" | "target_words" | "start" | "dedication" | "recipient.traits" | "recipient.memories" | "forbidden_words" | "forbidden_themes";
             /** Text */
             text: string;
         };
         /**
          * Recipient
-         * @description RF-200. Para quien es la novela: una entidad del brief, con lo que la entrevista recogio.
+         * @description RF-200, RD-42. Para quien es la novela: una entidad del brief, con lo que la entrevista recogio.
+         *
+         *     `birth_date` y `optional` son opcionales para que los briefs anteriores
+         *     sigan valiendo. `optional` es el subconjunto de rasgos y recuerdos que no
+         *     son obligatorios (RF-260): lo que no esta en `traits` ni en `memories` no
+         *     puede ser opcional, porque no hay nada que eximir.
          */
         Recipient: {
             /** Age */
             age: number;
+            /**
+             * Birth Date
+             * @description ISO 8601, AAAA-MM-DD. RF-249: la entrevista la pregunta tras la edad
+             */
+            birth_date?: string | null;
             /** Entity Id */
             entity_id: string;
             /** Memories */
             memories?: string[];
+            /**
+             * Optional
+             * @description Rasgos y recuerdos que no son obligatorios (RD-42)
+             */
+            optional?: string[];
             /**
              * Role
              * @description Papel en la historia
@@ -1472,6 +1497,10 @@ export interface components {
          *     ISO 8601 mas `seq` de desempate (D-07). Se ordena por la tupla
          *     `(stamp, seq)`, que ordena lexicograficamente igual que cronologicamente:
          *     por eso el formato es fijo y se valida.
+         *
+         *     Estricto con los campos de mas (RF-248): es parte del brief --su `start`--
+         *     y un `{"stamp": ..., "hora": ...}` que se aceptara en silencio perderia la
+         *     hora sin que nadie lo supiera.
          */
         WorldTime: {
             /**

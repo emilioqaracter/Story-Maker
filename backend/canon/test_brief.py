@@ -10,8 +10,9 @@ from pathlib import Path
 
 import pytest
 
-from canon.brief import Brief, BriefEntity, BriefRelation, create_novel, to_events
+from canon.brief import Brief, BriefEntity, BriefRelation, Recipient, create_novel, to_events
 from canon.db import connection
+from canon.events.types import AttributeSet
 from canon.skills import read
 from commons.types.primitives import Provenance, WorldTime
 
@@ -111,3 +112,38 @@ def test_el_rango_de_longitud_sale_del_brief() -> None:
     """La condicion de cierre de obra lo consulta: una novela fuera de rango no
     esta terminada por muchos arcos que haya resuelto."""
     assert _brief().word_range() == (180_000, 220_000)
+
+
+def test_la_edad_y_el_nacimiento_del_destinatario_entran_como_atributos_reservados(
+    tmp_path: Path,
+) -> None:
+    """RF-249, RD-41: `age` y `birth_date` de la entidad, con procedencia `brief`."""
+    recipient = Recipient(
+        entity_id="elena",
+        age=10,
+        birth_date="2015-06-01",  # type: ignore[arg-type]
+        role="protagonista",
+    )
+    brief = Brief.model_validate(_brief().model_dump() | {"recipient": recipient.model_dump()})
+    path = tmp_path / "n.sqlite"
+    create_novel(path, brief)
+    with connection.reader(path) as con:
+        [elena] = read.query(con, ["elena"], at=START, full=True)
+        assert dict(elena.attributes)["age"] == "10"
+        assert dict(elena.attributes)["birth_date"] == "2015-06-01"
+        procedencias = {
+            r["provenance"]
+            for r in con.execute(
+                "SELECT e.provenance FROM attribute a JOIN event e ON e.id = a.source_event "
+                "WHERE a.entity_id = 'elena' AND a.name IN ('age', 'birth_date')"
+            )
+        }
+        assert procedencias == {"brief"}
+
+
+def test_sin_fecha_de_nacimiento_no_se_inventa_ninguna() -> None:
+    """RD-41: sin fecha, solo la edad; la fecha no se inventa."""
+    recipient = Recipient(entity_id="elena", age=10, role="x")
+    brief = Brief.model_validate(_brief().model_dump() | {"recipient": recipient.model_dump()})
+    nombres = [e.payload.name for e in to_events(brief) if isinstance(e.payload, AttributeSet)]
+    assert "age" in nombres and "birth_date" not in nombres

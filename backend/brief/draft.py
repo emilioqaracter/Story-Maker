@@ -9,7 +9,6 @@ El modelo solo interviene al extraer hechos del texto libre (`extract.py`).
 from __future__ import annotations
 
 import re
-import unicodedata
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date
@@ -17,6 +16,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from canon import normalize
 from canon.brief import Brief, BriefEntity, Recipient
 from canon.brief_rules import Contradiction, contradictions
 from commons.types.primitives import WorldTime
@@ -25,6 +25,7 @@ FieldName = Literal[
     "title",
     "recipient.name",
     "recipient.age",
+    "recipient.birth_date",
     "recipient.role",
     "premise",
     "genre",
@@ -59,6 +60,8 @@ class Draft(BaseModel):
     title: str = ""
     recipient_name: str = ""
     recipient_age: int | None = None
+    #: RF-249. AAAA-MM-DD, o vacio si se contesto «ninguno».
+    recipient_birth_date: str = ""
     recipient_role: str = ""
     recipient_traits: tuple[str, ...] = ()
     recipient_memories: tuple[str, ...] = ()
@@ -88,7 +91,9 @@ def _who(d: Draft) -> str:
     return d.recipient_name or "la persona a quien va dedicada"
 
 
-#: RF-212. El orden es el de las preguntas: los obligatorios primero.
+#: RF-212. El orden es el de las preguntas: los obligatorios primero, salvo la
+#: fecha de nacimiento, que es opcional y se pregunta justo tras la edad
+#: (RF-249) porque es la misma pregunta vista desde el calendario.
 FIELDS: tuple[FieldSpec, ...] = (
     FieldSpec("title", "Título", "text", True, lambda d: "¿Qué título quieres para la novela?"),
     FieldSpec(
@@ -104,6 +109,15 @@ FIELDS: tuple[FieldSpec, ...] = (
         "int",
         True,
         lambda d: f"¿Cuántos años tiene {_who(d)}? Escríbelo con cifras.",
+    ),
+    FieldSpec(
+        "recipient.birth_date",
+        "Fecha de nacimiento del destinatario",
+        "date",
+        False,
+        lambda d: (
+            f"¿Cuál es la fecha de nacimiento de {_who(d)}? Escríbela como AAAA-MM-DD, o responde «ninguno»."
+        ),
     ),
     FieldSpec(
         "recipient.role",
@@ -197,6 +211,7 @@ _ATTR = {
     "title": "title",
     "recipient.name": "recipient_name",
     "recipient.age": "recipient_age",
+    "recipient.birth_date": "recipient_birth_date",
     "recipient.role": "recipient_role",
     "recipient.traits": "recipient_traits",
     "recipient.memories": "recipient_memories",
@@ -237,6 +252,8 @@ def parse(field: FieldSpec, raw: str) -> object:
             raise ParseError("La extensión tiene que ser mayor que cero.")
         return value
     if field.kind == "date":
+        if not field.required and _fold(text) in _NONE:
+            return ""
         if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", text):
             raise ParseError("Escribe la fecha como AAAA-MM-DD, por ejemplo 2026-08-01.")
         try:
@@ -248,8 +265,8 @@ def parse(field: FieldSpec, raw: str) -> object:
 
 
 def _fold(text: str) -> str:
-    decomposed = unicodedata.normalize("NFKD", text.lower())
-    return "".join(c for c in decomposed if not unicodedata.combining(c))
+    """La normalizacion unica del backend (RF-237)."""
+    return normalize.normalize(text)
 
 
 def value_of(draft: Draft, name: FieldName) -> object:
@@ -282,11 +299,15 @@ def missing(draft: Draft) -> list[Missing]:
 
 
 def next_field(draft: Draft) -> FieldSpec | None:
-    """RF-212. El primer obligatorio vacio; si no hay, el primer opcional sin contestar."""
+    """RF-212, RF-249. El primer campo por hacer en el orden de `FIELDS`.
+
+    Por hacer es un obligatorio vacio o un opcional sin contestar. Como los
+    opcionales van al final salvo la fecha de nacimiento, es lo mismo que «los
+    obligatorios primero» con esa sola excepcion, que va tras la edad.
+    """
     for f in FIELDS:
         if f.required and _empty(value_of(draft, f.name)):
             return f
-    for f in FIELDS:
         if not f.required and f.name not in draft.answered:
             return f
     return None
@@ -342,8 +363,13 @@ def style_guide(draft: Draft) -> str:
     return "\n".join(partes)
 
 
-def to_brief(draft: Draft) -> Brief | None:
-    """RF-219. El brief en la forma que RI-01 acepta, o `None` si falta algo o se contradice."""
+def to_brief(draft: Draft, *, origin_interview: str | None = None) -> Brief | None:
+    """RF-219. El brief en la forma que RI-01 acepta, o `None` si falta algo o se contradice.
+
+    La edad y el nacimiento van en `recipient`, y la carga los escribe como los
+    atributos reservados `age` y `birth_date` de su entidad (RF-249): la
+    entidad no los repite. `origin_interview` une el brief a su entrevista.
+    """
     if missing(draft) or draft_contradictions(draft):
         return None
     assert draft.recipient_age is not None and draft.target_words is not None
@@ -353,7 +379,7 @@ def to_brief(draft: Draft) -> Brief | None:
             id=recipient_id,
             kind="person",
             name=draft.recipient_name,
-            attributes=(("edad", str(draft.recipient_age)), ("papel", draft.recipient_role)),
+            attributes=(("papel", draft.recipient_role),),
         )
     ]
     usados = {recipient_id}
@@ -383,10 +409,12 @@ def to_brief(draft: Draft) -> Brief | None:
         recipient=Recipient(
             entity_id=recipient_id,
             age=draft.recipient_age,
+            birth_date=draft.recipient_birth_date or None,  # type: ignore[arg-type]
             traits=draft.recipient_traits,
             memories=draft.recipient_memories,
             role=draft.recipient_role,
         ),
         forbidden_words=draft.forbidden_words,
         forbidden_themes=draft.forbidden_themes,
+        origin_interview=origin_interview,
     )

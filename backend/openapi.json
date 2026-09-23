@@ -34,6 +34,7 @@
         "type": "object"
       },
       "Brief": {
+        "additionalProperties": false,
         "description": "El encargo de la obra.\n\n`start` es el instante en que arranca el mundo: todo lo que el brief\nestablece es cierto desde ahi, y nada anterior existe.\n\nLo que va despues de `word_tolerance` lo trae la entrevista (RF-200). Es\nopcional para que un brief escrito a mano, sin destinatario, siga valiendo.",
         "properties": {
           "dedication": {
@@ -66,6 +67,19 @@
             "default": "",
             "title": "Genre",
             "type": "string"
+          },
+          "origin_interview": {
+            "anyOf": [
+              {
+                "pattern": "^[a-f0-9]{12}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "RF-249: la entrevista de la que sale el brief, si sale de una",
+            "title": "Origin Interview"
           },
           "recipient": {
             "anyOf": [
@@ -133,6 +147,7 @@
         "type": "object"
       },
       "BriefEntity": {
+        "additionalProperties": false,
         "properties": {
           "aliases": {
             "items": {
@@ -201,6 +216,7 @@
         "type": "object"
       },
       "BriefRelation": {
+        "additionalProperties": false,
         "properties": {
           "kind": {
             "minLength": 1,
@@ -675,6 +691,7 @@
                 "title",
                 "recipient.name",
                 "recipient.age",
+                "recipient.birth_date",
                 "recipient.role",
                 "premise",
                 "genre",
@@ -741,6 +758,11 @@
               }
             ],
             "title": "Recipient Age"
+          },
+          "recipient_birth_date": {
+            "default": "",
+            "title": "Recipient Birth Date",
+            "type": "string"
           },
           "recipient_memories": {
             "default": [],
@@ -1103,6 +1125,7 @@
               "title",
               "recipient.name",
               "recipient.age",
+              "recipient.birth_date",
               "recipient.role",
               "premise",
               "genre",
@@ -1516,6 +1539,7 @@
               "title",
               "recipient.name",
               "recipient.age",
+              "recipient.birth_date",
               "recipient.role",
               "premise",
               "genre",
@@ -1658,6 +1682,7 @@
               "title",
               "recipient.name",
               "recipient.age",
+              "recipient.birth_date",
               "recipient.role",
               "premise",
               "genre",
@@ -1686,13 +1711,27 @@
         "type": "object"
       },
       "Recipient": {
-        "description": "RF-200. Para quien es la novela: una entidad del brief, con lo que la entrevista recogio.",
+        "additionalProperties": false,
+        "description": "RF-200, RD-42. Para quien es la novela: una entidad del brief, con lo que la entrevista recogio.\n\n`birth_date` y `optional` son opcionales para que los briefs anteriores\nsigan valiendo. `optional` es el subconjunto de rasgos y recuerdos que no\nson obligatorios (RF-260): lo que no esta en `traits` ni en `memories` no\npuede ser opcional, porque no hay nada que eximir.",
         "properties": {
           "age": {
             "maximum": 120.0,
             "minimum": 0.0,
             "title": "Age",
             "type": "integer"
+          },
+          "birth_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO 8601, AAAA-MM-DD. RF-249: la entrevista la pregunta tras la edad",
+            "title": "Birth Date"
           },
           "entity_id": {
             "minLength": 1,
@@ -1704,6 +1743,14 @@
               "type": "string"
             },
             "title": "Memories",
+            "type": "array"
+          },
+          "optional": {
+            "description": "Rasgos y recuerdos que no son obligatorios (RD-42)",
+            "items": {
+              "type": "string"
+            },
+            "title": "Optional",
             "type": "array"
           },
           "role": {
@@ -2338,7 +2385,8 @@
         "type": "object"
       },
       "WorldTime": {
-        "description": "MUN-05. Instante de mundo.\n\nISO 8601 mas `seq` de desempate (D-07). Se ordena por la tupla\n`(stamp, seq)`, que ordena lexicograficamente igual que cronologicamente:\npor eso el formato es fijo y se valida.",
+        "additionalProperties": false,
+        "description": "MUN-05. Instante de mundo.\n\nISO 8601 mas `seq` de desempate (D-07). Se ordena por la tupla\n`(stamp, seq)`, que ordena lexicograficamente igual que cronologicamente:\npor eso el formato es fijo y se valida.\n\nEstricto con los campos de mas (RF-248): es parte del brief --su `start`--\ny un `{\"stamp\": ..., \"hora\": ...}` que se aceptara en silencio perderia la\nhora sin que nadie lo supiera.",
         "properties": {
           "seq": {
             "default": 0,

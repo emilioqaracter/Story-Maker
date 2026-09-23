@@ -1,6 +1,6 @@
 """Contradicciones del brief que se comprueban sin juicio.
 
-RF-201, D-75. Tres reglas y ninguna mas: las que se deciden con codigo. Las usan
+RF-201, RF-247, D-75. Tres reglas y ninguna mas: las que se deciden con codigo. Las usan
 la carga del brief (RI-01 rechaza un brief contradictorio, `srs-frontend-v1.md`
 RI-41) y la entrevista, que las aplica al borrador mientras se escribe
 (RF-216). Viven en `canon/` porque las dos las necesitan y `canon/` es de donde
@@ -9,18 +9,21 @@ toda funcionalidad puede leer.
 
 from __future__ import annotations
 
-import re
-import unicodedata
 from collections.abc import Sequence
 
 from pydantic import BaseModel, ConfigDict
 
+from canon import normalize
+
 #: **Propuesta** (D-75). La franja PEGI 12 es la primera que la clasificacion
 #: europea separa de las edades infantiles.
 MIN_AGE_FOR_ADULT = 12
-#: Generos y tonos que la regla de edad considera adultos. Lista cerrada.
-ADULT_GENRES = ("terror", "erotico", "erotica", "gore")
-ADULT_TONES = ("violento", "macabro")
+#: RF-247, D-75. Generos y tonos que la regla de edad considera adultos. Lista
+#: cerrada y **una sola para los dos campos**: un tono erotico es tan inadecuado
+#: para un nino como un genero erotico. Se compara por palabra normalizada con
+#: sus variantes (RF-237): «eróticas», «EROTICO» y «Macabro» casan; «aterrorizado»
+#: no casa con «terror».
+ADULT_TERMS = ("terror", "erótico", "erótica", "gore", "violento", "macabro")
 
 
 class Contradiction(BaseModel):
@@ -34,13 +37,17 @@ class Contradiction(BaseModel):
 
 
 def fold(text: str) -> str:
-    """Minusculas y sin acentos: `Erótica` y `erotica` son la misma palabra."""
-    decomposed = unicodedata.normalize("NFKD", text.lower())
-    return "".join(c for c in decomposed if not unicodedata.combining(c))
+    """Minusculas y sin acentos: `Erótica` y `erotica` son la misma palabra.
+
+    Es la normalizacion de RF-237 (`canon/normalize.py`), la unica del backend;
+    se conserva el nombre porque la usa la interpretacion de solicitudes.
+    """
+    return normalize.normalize(text)
 
 
-def _words(text: str) -> set[str]:
-    return set(re.findall(r"\w+", fold(text)))
+def _adult_term(text: str) -> str | None:
+    """El primer termino de la lista adulta que aparece en `text`, o `None`."""
+    return next((t for t in ADULT_TERMS if normalize.contains(text, t)), None)
 
 
 def contradictions(
@@ -56,37 +63,31 @@ def contradictions(
 ) -> list[Contradiction]:
     """Las contradicciones de un brief o de un borrador. Pura."""
     out: list[Contradiction] = []
-    g, t = fold(genre), fold(tone)
 
     if age is not None and age < MIN_AGE_FOR_ADULT:
-        for word in ADULT_GENRES:
-            if word in _words(g):
-                out.append(
-                    Contradiction(
-                        fields=("recipient.age", "genre"),
-                        rule="edad-genero",
-                        message=f"El destinatario tiene {age} años y el género «{genre}» es para mayores de {MIN_AGE_FOR_ADULT}.",
-                    )
+        if _adult_term(genre) is not None:
+            out.append(
+                Contradiction(
+                    fields=("recipient.age", "genre"),
+                    rule="edad-genero",
+                    message=f"El destinatario tiene {age} años y el género «{genre}» es para mayores de {MIN_AGE_FOR_ADULT}.",
                 )
-                break
-        for word in ADULT_TONES:
-            if word in _words(t):
-                out.append(
-                    Contradiction(
-                        fields=("recipient.age", "tone"),
-                        rule="edad-tono",
-                        message=f"El destinatario tiene {age} años y el tono «{tone}» es para mayores de {MIN_AGE_FOR_ADULT}.",
-                    )
+            )
+        if _adult_term(tone) is not None:
+            out.append(
+                Contradiction(
+                    fields=("recipient.age", "tone"),
+                    rule="edad-tono",
+                    message=f"El destinatario tiene {age} años y el tono «{tone}» es para mayores de {MIN_AGE_FOR_ADULT}.",
                 )
-                break
+            )
 
     places = (("title", title), ("dedication", dedication), *(("entities", n) for n in names))
     for word in forbidden_words:
-        w = fold(word).strip()
-        if not w:
+        if not normalize.key(word):
             continue
         for field, text in places:
-            if w in _words(text) or (" " in w and w in fold(text)):
+            if normalize.contains(text, word):
                 out.append(
                     Contradiction(
                         fields=("forbidden_words", field),
@@ -95,11 +96,12 @@ def contradictions(
                     )
                 )
 
+    g, t = normalize.key(genre), normalize.key(tone)
     for theme in forbidden_themes:
-        th = fold(theme).strip()
+        th = normalize.key(theme)
         if not th:
             continue
-        if th == g.strip():
+        if th == g:
             out.append(
                 Contradiction(
                     fields=("forbidden_themes", "genre"),
@@ -107,7 +109,7 @@ def contradictions(
                     message=f"El tema «{theme}» está prohibido y es el propio género.",
                 )
             )
-        if th == t.strip():
+        if th == t:
             out.append(
                 Contradiction(
                     fields=("forbidden_themes", "tone"),

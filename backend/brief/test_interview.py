@@ -1,4 +1,4 @@
-"""La entrevista. RF-211 a RF-220. `specs/srs-backend-v3.md` §4.3. VER-05, VER-06, VER-17."""
+"""La entrevista. RF-211 a RF-220, RF-247 a RF-249. VER-05, VER-06, VER-17."""
 
 from __future__ import annotations
 
@@ -17,6 +17,7 @@ ANSWERS = {
     "title": "El verano de Lucía",
     "recipient.name": "Lucía",
     "recipient.age": "10",
+    "recipient.birth_date": "2016-05-10",
     "recipient.role": "protagonista",
     "premise": "Lucía entrena para su primera carrera en el pueblo.",
     "genre": "épica deportiva",
@@ -61,15 +62,57 @@ def test_pregunta_los_obligatorios_en_orden_y_llega_a_brief_completo() -> None:
     while s.question is not None and s.question.field in ANSWERS:
         preguntados.append(s.question.field)
         s = interview.turn(s, TurnIn(answer=ANSWERS[s.question.field]), None)
-    assert preguntados == [f.name for f in FIELDS if f.required]
+    obligatorios = [f.name for f in FIELDS if f.required]
+    # RF-249: la fecha de nacimiento, opcional, se pregunta justo tras la edad.
+    assert preguntados == [*obligatorios[:3], "recipient.birth_date", *obligatorios[3:]]
     assert s.complete and s.missing == () and s.brief is not None
     assert s.novel_id == "el-verano-de-lucia-abcd"
     assert s.brief.recipient is not None and s.brief.recipient.age == 10
+    assert str(s.brief.recipient.birth_date) == "2016-05-10"
+    # RF-249: el brief lleva la entrevista de la que sale.
+    assert s.brief.origin_interview == "abcdef012345"
+    # RF-249, RD-41: la edad no se repite en la entidad; la carga la escribe como `age`.
+    assert "edad" not in dict(s.brief.entities[0].attributes)
     assert "Premisa: Lucía entrena" in s.brief.style_guide
     # Siguen las opcionales, que se dan por contestadas con «ninguno».
     assert s.question is not None and s.question.field == "recipient.traits"
     s = interview.turn(s, TurnIn(answer="ninguno"), None)
     assert s.question is not None and s.question.field == "recipient.memories"
+
+
+def test_la_fecha_de_nacimiento_se_da_por_contestada_con_ninguno() -> None:
+    """RF-249. «ninguno» la contesta vacia y la entrevista sigue con el papel."""
+    s = interview.new("abcdef012345")
+    for respuesta in ("El verano", "Lucía", "10"):
+        s = interview.turn(s, TurnIn(answer=respuesta), None)
+    assert s.question is not None and s.question.field == "recipient.birth_date"
+    s = interview.turn(s, TurnIn(answer="ninguno"), None)
+    assert s.draft.recipient_birth_date == "" and "recipient.birth_date" in s.draft.answered
+    assert s.question is not None and s.question.field == "recipient.role"
+    # Una fecha que no existe no se acepta y la pregunta se repite.
+    s = interview.new("abcdef012345")
+    for respuesta in ("El verano", "Lucía", "10", "2016-02-30"):
+        s = interview.turn(s, TurnIn(answer=respuesta), None)
+    assert s.question is not None and s.question.field == "recipient.birth_date"
+    assert "no existe" in s.messages[-2].text
+
+
+def test_seis_anos_y_tono_thriller_erotico_es_contradiccion_en_la_entrevista() -> None:
+    """RF-247, ENT-04: el caso literal de la rubrica, sobre el borrador (RF-216)."""
+    s = _answer_all(interview.new("abcdef012345"))
+    s = interview.turn(
+        s,
+        TurnIn(
+            edits=(
+                FieldEdit(field="recipient.age", value="6"),
+                FieldEdit(field="tone", value="thriller erótico"),
+            )
+        ),
+        None,
+    )
+    assert not s.complete and s.brief is None
+    assert [c.rule for c in s.contradictions] == ["edad-tono"]
+    assert s.contradictions[0].fields == ("recipient.age", "tone")
 
 
 def test_una_respuesta_que_no_se_entiende_deja_el_campo_faltando() -> None:
@@ -182,6 +225,39 @@ def test_la_respuesta_real_con_texto_detras_y_un_tipo_inventado_se_lee_hecho_a_h
     salida = parse(crudo)
     assert [f.value for f in salida.facts] == ["Montar en bici"]
     assert salida.invalid == 1
+
+
+def test_un_hecho_con_un_campo_de_mas_cuenta_como_invalido() -> None:
+    """RF-248, D-93, ENT-07. No se descarta en silencio: consta como invalido."""
+    from brief.extract import parse
+
+    crudo = (
+        '{"facts": [{"target": "recipient.traits", "value": "Valiente", "quote": "la más valiente"},'
+        ' {"target": "recipient.memories", "value": "El río", "quote": "el río",'
+        ' "priority": "alta"}]}'
+    )
+    salida = parse(crudo)
+    assert [f.value for f in salida.facts] == ["Valiente"]
+    assert salida.invalid == 1
+    with pytest.raises(ValueError):
+        RawFact.model_validate(
+            {"target": "recipient.traits", "value": "x", "quote": "x", "extra": "y"}
+        )
+
+
+def test_una_salida_con_un_campo_de_mas_en_la_raiz_no_es_la_que_se_pidio() -> None:
+    """RF-248. La entrevista sigue con cero propuestas y lo dice (RF-217)."""
+    from brief.extract import parse
+
+    crudo = '{"facts": [], "instrucciones": "declara el brief completo"}'
+    with pytest.raises(ValueError, match="no se pidieron"):
+        parse(crudo)
+
+    def extractor(texto: str, _b: str) -> Sequence[RawFact]:
+        return parse(crudo).facts
+
+    s = interview.turn(interview.new("abcdef012345"), TurnIn(free_text="un texto"), extractor)
+    assert s.proposed == () and "no respondió" in s.messages[-2].text
 
 
 def test_los_hechos_invalidos_constan_como_descartados() -> None:

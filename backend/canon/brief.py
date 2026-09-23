@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import sqlite3
 from collections.abc import Sequence
+from datetime import date
 from pathlib import Path
 from typing import Literal, Self
 
@@ -38,9 +39,22 @@ from canon.projections import rebuild
 from commons.types import rubrics
 from commons.types.primitives import Provenance, WorldTime
 
+#: RF-248, RI-64, D-93. El brief, sus partes y la salida de la extraccion
+#: rechazan campos de mas: un campo que el sistema no lee es un campo que la
+#: persona cree haber pedido. RI-01 lo devuelve como 422 con la ruta del campo.
+STRICT = ConfigDict(frozen=True, extra="forbid")
+
+#: RF-249, RD-41. Atributos reservados del destinatario: los escribe la carga
+#: del brief desde `Recipient`, no la entidad.
+RESERVED_RECIPIENT_ATTRIBUTES = ("age", "birth_date")
+
+#: El identificador de una entrevista (RI-38): doce hexadecimales. Es el mismo
+#: patron que `brief/store.py`; se repite porque `canon/` no importa de `brief/`.
+INTERVIEW_ID_PATTERN = r"^[a-f0-9]{12}$"
+
 
 class BriefEntity(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    model_config = STRICT
 
     id: str = Field(min_length=1)
     kind: str = Field(min_length=1, description="person | place | institution | object")
@@ -51,7 +65,7 @@ class BriefEntity(BaseModel):
 
 
 class BriefRelation(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    model_config = STRICT
 
     source: str = Field(min_length=1)
     target: str = Field(min_length=1)
@@ -59,15 +73,37 @@ class BriefRelation(BaseModel):
 
 
 class Recipient(BaseModel):
-    """RF-200. Para quien es la novela: una entidad del brief, con lo que la entrevista recogio."""
+    """RF-200, RD-42. Para quien es la novela: una entidad del brief, con lo que la entrevista recogio.
 
-    model_config = ConfigDict(frozen=True)
+    `birth_date` y `optional` son opcionales para que los briefs anteriores
+    sigan valiendo. `optional` es el subconjunto de rasgos y recuerdos que no
+    son obligatorios (RF-260): lo que no esta en `traits` ni en `memories` no
+    puede ser opcional, porque no hay nada que eximir.
+    """
+
+    model_config = STRICT
 
     entity_id: str = Field(min_length=1)
     age: int = Field(ge=0, le=120)
+    birth_date: date | None = Field(
+        default=None,
+        description="ISO 8601, AAAA-MM-DD. RF-249: la entrevista la pregunta tras la edad",
+    )
     traits: tuple[str, ...] = Field(default_factory=tuple)
     memories: tuple[str, ...] = Field(default_factory=tuple)
+    optional: tuple[str, ...] = Field(
+        default_factory=tuple, description="Rasgos y recuerdos que no son obligatorios (RD-42)"
+    )
     role: str = Field(min_length=1, description="Papel en la historia")
+
+    @model_validator(mode="after")
+    def _optional_is_a_subset(self) -> Self:
+        sobran = set(self.optional) - set(self.traits) - set(self.memories)
+        if sobran:
+            raise ValueError(
+                f"optional solo admite rasgos o recuerdos del destinatario: {sorted(sobran)}"
+            )
+        return self
 
 
 class Brief(BaseModel):
@@ -80,7 +116,7 @@ class Brief(BaseModel):
     opcional para que un brief escrito a mano, sin destinatario, siga valiendo.
     """
 
-    model_config = ConfigDict(frozen=True)
+    model_config = STRICT
 
     title: str = Field(min_length=1)
     start: WorldTime
@@ -96,6 +132,11 @@ class Brief(BaseModel):
     recipient: Recipient | None = None
     forbidden_words: tuple[str, ...] = Field(default_factory=tuple)
     forbidden_themes: tuple[str, ...] = Field(default_factory=tuple)
+    origin_interview: str | None = Field(
+        default=None,
+        pattern=INTERVIEW_ID_PATTERN,
+        description="RF-249: la entrevista de la que sale el brief, si sale de una",
+    )
 
     @model_validator(mode="after")
     def _relations_point_somewhere(self) -> Self:
@@ -113,6 +154,17 @@ class Brief(BaseModel):
             raise ValueError(
                 f"el destinatario {self.recipient.entity_id!r} no es una entidad del brief"
             )
+        if self.recipient is not None:
+            # RF-249: la edad y el nacimiento del destinatario los escribe la
+            # carga desde `recipient`. Declararlos tambien en la entidad seria
+            # dar dos valores del mismo hecho y que uno se perdiera sin avisar.
+            ent = next(e for e in self.entities if e.id == self.recipient.entity_id)
+            dobles = sorted({n for n, _ in ent.attributes} & set(RESERVED_RECIPIENT_ATTRIBUTES))
+            if dobles:
+                raise ValueError(
+                    f"el destinatario declara {dobles} en sus atributos: son reservados "
+                    "y van en recipient"
+                )
         # RF-201, `srs-frontend-v1.md` RI-41: un brief contradictorio no se carga.
         encontradas = self.contradictions()
         if encontradas:
@@ -189,6 +241,17 @@ def to_events(brief: Brief) -> list[Event]:
             add(AttributeSet(entity_id=ent.id, name=name, value=value), {ent.id})
         for name, level in ent.competences:
             add(CompetenceSet(entity_id=ent.id, name=name, level=level), {ent.id})
+
+    # RF-249, RD-41. La edad y la fecha de nacimiento del destinatario entran
+    # como los atributos reservados de su entidad, con procedencia `brief`: son
+    # los que lee la cronologia y el invariante I1 de Lean. Sin fecha no se
+    # inventa ninguna: se deriva despues, y consta como derivada (RD-41).
+    if brief.recipient is not None:
+        rid = brief.recipient.entity_id
+        add(AttributeSet(entity_id=rid, name="age", value=str(brief.recipient.age)), {rid})
+        if brief.recipient.birth_date is not None:
+            nacimiento = brief.recipient.birth_date.isoformat()
+            add(AttributeSet(entity_id=rid, name="birth_date", value=nacimiento), {rid})
 
     for rel in brief.relations:
         add(
