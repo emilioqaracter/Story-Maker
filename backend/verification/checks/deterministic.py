@@ -381,11 +381,16 @@ def _inside_quotes(text: str, position: int) -> bool:
 def check_repetition(
     text: str, *, frozen_ngrams: Sequence[str], proscribed: Sequence[str], n: int = 4
 ) -> list[Defect]:
-    """N-gramas ya usados en prosa congelada, y terminos proscritos.
+    """N-gramas ya usados en prosa congelada, y terminos proscritos por estilo.
 
     Los dos son **S2**: repetir una imagen degrada la calidad sin contradecir
     nada. Marcarlos S1 pararia el capitulo por algo que el Estilista arregla en
     un pase.
+
+    `proscribed` es solo el nivel `estilo` (POE-12, D-91). Las prohibidas del
+    encargo --global, cliente, novela-- no pasan por aqui: son S1 de
+    `check.forbidden` (`forbidden.py`, RF-236), y darlas tambien aqui como S2
+    seria tener dos fuentes para el mismo termino.
     """
     out: list[Defect] = []
     palabras = [_normalize(w) for w in re.findall(r"\w+", text)]

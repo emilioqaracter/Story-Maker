@@ -12,6 +12,9 @@
   "extra_repos": {
     "myfactory": "C:/Users/student/Desktop/My-Factory"
   },
+  "probes": {
+    "ENT-71": [{"grep": "level IN .'global', 'cliente', 'novela'", "in": "**/*.{py,sql}"}]
+  },
   "commands": {
     "ENT-03": [{"cmd": "python -m pytest -q brief/test_interview.py brief/test_interpret.py", "cwd": "backend"}],
     "ENT-04": [{"cmd": "python -m pytest -q canon/test_brief_rules.py", "cwd": "backend"}],
@@ -24,7 +27,7 @@
     "ENT-34": [{"cmd": "python -m pytest -q orchestration/test_checkpoint.py", "cwd": "backend"}],
     "ENT-35": [{"cmd": "python -m pytest -q verification/checks/test_deterministic.py", "cwd": "backend"}],
     "ENT-43": [{"cmd": "python -m pytest -q verification/jury/test_jury.py", "cwd": "backend"}],
-    "ENT-75": [{"cmd": "python -m pytest -q canon/test_brief_rules.py canon/test_manuscript.py -k prohib", "cwd": "backend"}],
+    "ENT-75": [{"cmd": "python -m pytest -q verification/checks/test_forbidden.py", "cwd": "backend"}, {"cmd": "python -m pytest -q orchestration/test_loop.py orchestration/test_engine.py -k forbidden", "cwd": "backend"}],
     "ENT-77": [{"cmd": "python -m pytest -q commons/tokens/test_counter.py orchestration/test_admission.py", "cwd": "backend"}]
   },
   "glosario": {
@@ -32,7 +35,7 @@
     "hecho": ["evento MET-05", "delta canónico"],
     "cronología": ["cronología MUN-05", "registro de eventos con instante", "timeline"],
     "destinatario y datos personales": ["brief PRO-01", "backend/brief/", "backend/canon/brief.py"],
-    "palabras o temas prohibidos": ["prohibidas del brief", "proscritas", "backend/canon/brief_rules.py"],
+    "palabras o temas prohibidos": ["prohibidas del brief", "proscritas", "tabla proscribed con columna level: global, cliente, novela, estilo", "backend/verification/checks/forbidden.py", "backend/canon/normalize.py", "backend/canon/brief_rules.py"],
     "dedicatoria": ["dedicatoria del brief", "canon/brief_rules.py"],
     "cambio del lector": ["enmienda al brief", "retcon CAN-10", "amend", "orchestration/test_amend.py"],
     "versión de la novela": ["versión PRO-08", "canon/test_routes_v3.py", "srs-backend-v3.md"],

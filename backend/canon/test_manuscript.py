@@ -247,13 +247,13 @@ def con_path(path: Path) -> sqlite3.Connection:
 
 
 def test_las_prohibidas_del_brief_entran_como_proscritas(tmp_path: Path) -> None:
-    """RF-202."""
+    """RF-202, RD-37, D-91: las del brief son nivel `cliente` y tipo `term`."""
     path = tmp_path / "p.sqlite"
     brief = _brief().model_copy(update={"forbidden_words": ("Sangre", " ")})
     create_novel(path, brief)
     with connection.reader(path) as con:
-        filas = con.execute("SELECT term, kind FROM proscribed").fetchall()
-    assert [(r["term"], r["kind"]) for r in filas] == [("sangre", "brief")]
+        filas = con.execute("SELECT term, kind, level FROM proscribed").fetchall()
+    assert [(r["term"], r["kind"], r["level"]) for r in filas] == [("sangre", "term", "cliente")]
 
 
 def test_sin_solicitudes_la_version_vigente_es_la_1(novela: Path) -> None:

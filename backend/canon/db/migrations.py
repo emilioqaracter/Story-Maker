@@ -11,16 +11,39 @@ recuperar de otro sitio.
 
 La version 2 trae las tablas de `specs/srs-backend-v2.md` §5 en un solo paso,
 para que un fichero de la version 1 suba de una vez y no tramo a tramo.
+
+Un paso es una sentencia o, cuando SQLite no tiene forma idempotente de
+decirlo --`ALTER TABLE ... ADD COLUMN` no admite `IF NOT EXISTS`--, una funcion
+que mira el esquema antes de tocarlo. Asi reintentar una migracion a medias
+sigue siendo seguro.
 """
 
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Callable
 
 #: Version que este codigo escribe.
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
-MIGRATIONS: dict[int, tuple[str, ...]] = {
+Step = str | Callable[[sqlite3.Connection], None]
+
+
+def _columns(con: sqlite3.Connection, table: str) -> set[str]:
+    return {str(r[1]) for r in con.execute(f"PRAGMA table_info({table})")}  # nosec B608
+
+
+def _add_proscribed_level(con: sqlite3.Connection) -> None:
+    """RD-37. `proscribed` gana `level`, sin tocar lo que ya tiene."""
+    if "level" in _columns(con, "proscribed"):
+        return
+    con.execute(
+        "ALTER TABLE proscribed ADD COLUMN level TEXT NOT NULL DEFAULT 'estilo' "
+        "CHECK (level IN ('global', 'cliente', 'novela', 'estilo'))"
+    )
+
+
+MIGRATIONS: dict[int, tuple[Step, ...]] = {
     2: (
         # RD-23. Ninguna version de resumen se sobrescribe: `summary` guarda la
         # vigente y esta tabla, todas.
@@ -189,6 +212,50 @@ MIGRATIONS: dict[int, tuple[str, ...]] = {
         END
         """,
     ),
+    # `specs/srs-backend-v4.md` RD-37, D-91: los niveles de la proscripcion.
+    4: (
+        _add_proscribed_level,
+        # Un fichero anterior: lo que prohibio el brief es nivel `cliente`, y
+        # `kind` deja de mezclar el origen con el tipo. Los n-gramas ya quedan
+        # en `estilo` por el valor por defecto.
+        "UPDATE proscribed SET level = 'cliente', kind = 'term' WHERE kind = 'brief'",
+        "CREATE INDEX IF NOT EXISTS idx_proscribed_level ON proscribed (level)",
+        # D-91: un termino se queda en su nivel mas fuerte. Bajarlo no es un
+        # colapso, es perder una prohibicion, y se impide en el esquema.
+        """
+        CREATE TRIGGER IF NOT EXISTS proscribed_level_no_downgrade
+        BEFORE UPDATE OF level ON proscribed
+        WHEN (CASE NEW.level WHEN 'global' THEN 0 WHEN 'cliente' THEN 1
+                   WHEN 'novela' THEN 2 ELSE 3 END)
+           > (CASE OLD.level WHEN 'global' THEN 0 WHEN 'cliente' THEN 1
+                   WHEN 'novela' THEN 2 ELSE 3 END)
+        BEGIN
+            SELECT RAISE(ABORT, 'un termino proscrito se queda en su nivel mas fuerte');
+        END
+        """,
+        # RD-37: un termino del guardarrail es `term`; lo de `estilo`, `ngram` o
+        # `image`. Separar nivel y tipo no sirve si se pueden volver a mezclar.
+        """
+        CREATE TRIGGER IF NOT EXISTS proscribed_kind_insert
+        BEFORE INSERT ON proscribed
+        WHEN NEW.kind NOT IN ('ngram', 'image', 'term')
+           OR (NEW.level <> 'estilo' AND NEW.kind <> 'term')
+           OR (NEW.level = 'estilo' AND NEW.kind = 'term')
+        BEGIN
+            SELECT RAISE(ABORT, 'kind y level de proscribed no casan');
+        END
+        """,
+        """
+        CREATE TRIGGER IF NOT EXISTS proscribed_kind_update
+        BEFORE UPDATE OF kind, level ON proscribed
+        WHEN NEW.kind NOT IN ('ngram', 'image', 'term')
+           OR (NEW.level <> 'estilo' AND NEW.kind <> 'term')
+           OR (NEW.level = 'estilo' AND NEW.kind = 'term')
+        BEGIN
+            SELECT RAISE(ABORT, 'kind y level de proscribed no casan');
+        END
+        """,
+    ),
 }
 
 
@@ -200,15 +267,20 @@ def current_version(con: sqlite3.Connection) -> int:
 def migrate(con: sqlite3.Connection) -> int:
     """Aplica las versiones pendientes. Devuelve la version final.
 
-    Idempotente: una version ya aplicada no se repite, y todas las sentencias
-    son `IF NOT EXISTS`, asi que reintentar una migracion a medias es seguro.
+    Idempotente: una version ya aplicada no se repite, y cada paso es
+    `IF NOT EXISTS`, un `UPDATE` que da lo mismo aplicado dos veces o una
+    funcion que mira el esquema antes, asi que reintentar una migracion a medias
+    es seguro.
     """
     actual = current_version(con)
     for version in sorted(MIGRATIONS):
         if version <= actual:
             continue
-        for sentencia in MIGRATIONS[version]:
-            con.execute(sentencia)
+        for paso in MIGRATIONS[version]:
+            if callable(paso):
+                paso(con)
+            else:
+                con.execute(paso)
         con.execute(
             "INSERT OR IGNORE INTO schema_version (version, applied_at) VALUES (?, datetime('now'))",
             (version,),

@@ -61,9 +61,11 @@ from planning.ledger.setups import debt
 from planning.outline.arcs import arcs_closed_by, chapters_of_arc
 from planning.outline.check import OutlineDefect
 from planning.outline.check import check as check_outline
-from planning.outline.types import Outline
+from planning.outline.types import CHAPTER_WORDS, Outline
 from supervision import metrics as health_metrics
 from supervision.prompts import HealthVerdict, clamp
+from verification.checks import forbidden
+from verification.checks.deterministic import check_chapter_length
 from verification.continuity.review import Anchored, scene_of, scene_offsets
 from verification.gates import chapter_gate, scene_gate
 from verification.jury.verdict import JuryVerdict
@@ -235,6 +237,36 @@ def run(
     """
     trace = trace or Trace.disabled()
     report = RunReport(novel_id=novel_id)
+    _trace_forbidden_levels(path, brief, trace)
+    try:
+        congeladas, outline = _run_chapters(
+            path, brief, engine, report, chapters, specs_for, trace, after_freeze
+        )
+    except RunAbortedError as exc:
+        # RF-238: el motivo del aborto llega a quien encargo. RI-03 lee `reason`
+        # del ultimo `work.close`; sin este registro, una tirada parada por el
+        # guardarrail se veria como una que nunca termino.
+        trace.emit("work.close", closed=False, reason=str(exc), words=report.words, aborted=True)
+        raise
+
+    report.closed, report.reason = _work_closes(outline, brief, report, congeladas, path)
+    trace.emit("work.close", closed=report.closed, reason=report.reason, words=report.words)
+    if after_freeze is not None:
+        after_freeze()
+    return report
+
+
+def _run_chapters(
+    path: Path,
+    brief: Brief,
+    engine: Engine,
+    report: RunReport,
+    chapters: int,
+    specs_for: Callable[[Outline, int], Sequence[SceneSpec]],
+    trace: Trace,
+    after_freeze: Callable[[], object] | None,
+) -> tuple[set[str], Outline]:
+    """La escaleta y los capitulos, en orden. Devuelve lo congelado y la escaleta final."""
     outline = _plan_with_gate(brief, engine, chapters=chapters, trace=trace)
 
     punto = load(path) or ResumePoint(chapter=1)
@@ -269,12 +301,62 @@ def run(
         # entre congelaciones, y el capitulo siguiente ya las ve.
         if after_freeze is not None:
             after_freeze()
+    return congeladas, outline
 
-    report.closed, report.reason = _work_closes(outline, brief, report, congeladas, path)
-    trace.emit("work.close", closed=report.closed, reason=report.reason, words=report.words)
-    if after_freeze is not None:
-        after_freeze()
-    return report
+
+def _trace_forbidden_levels(path: Path, brief: Brief, trace: Trace) -> None:
+    """RF-239. Cuantas prohibidas hay por nivel, y que termino colapso en otro.
+
+    Un termino del cliente que ya estaba en la lista global se guardo como
+    global (D-91). Se dice aqui, al arrancar la tirada, porque la novela se crea
+    antes de que exista su traza.
+    """
+    with connection.reader(path) as con:
+        terminos = forbidden.read_terms(con)
+    niveles = {forbidden.normalize(t.term): t.level for t in terminos}
+    colapsos: list[JsonValue] = [
+        f"{w.strip().lower()}: cliente -> {niveles[forbidden.normalize(w.strip().lower())]}"
+        for w in brief.forbidden_words
+        if niveles.get(forbidden.normalize(w.strip().lower()), "cliente") != "cliente"
+    ]
+    trace.emit(
+        "guardrail.levels",
+        levels={n: sum(1 for t in terminos if t.level == n) for n in forbidden.FORBIDDEN_LEVELS},
+        collapsed=colapsos,
+    )
+
+
+def _emit_matches(
+    trace: Trace,
+    defects: Sequence[Defect],
+    *,
+    chapter: int,
+    scene: int | None,
+    attempt: int,
+    decision: str,
+    stage: str,
+) -> None:
+    """RF-240. Un `guardrail.match` por coincidencia de `check.forbidden`.
+
+    `decision` es lo que el bucle hace con ella: `reintentar` la escena,
+    `reparar` el capitulo o `abortar` la tirada. `stage` dice donde se vio.
+    """
+    for d in defects:
+        hit = forbidden.describe(d)
+        if hit is None:
+            continue
+        trace.emit(
+            "guardrail.match",
+            chapter=chapter,
+            scene=scene,
+            attempt=attempt,
+            term=hit.term,
+            level=hit.level,
+            quote=d.evidence.quote,
+            offset=d.evidence.offset,
+            decision=decision,
+            stage=stage,
+        )
 
 
 def _golden_check(engine: Engine, chapter: int, trace: Trace) -> None:
@@ -446,7 +528,10 @@ def _write_chapter(
         trace.emit(
             "retry", level=str(decision.level), action=str(decision.action), reason=decision.reason
         )
-        motivos = [f"{d.kind}: {d.rule}" for d in defectos][:8]
+        # RF-238. Las prohibidas van delante: si la tirada se para, su motivo
+        # nombra `check.forbidden`, el termino y el nivel aunque haya mas.
+        ordenados = sorted(defectos, key=lambda d: d.kind != forbidden.KIND)
+        motivos = list(dict.fromkeys(f"{d.kind}: {d.rule}" for d in ordenados))[:8]
         match decision.action:
             case Action.QUARANTINE_AND_RESPEC:
                 specs = list(engine.respec(specs, defectos))
@@ -456,6 +541,15 @@ def _write_chapter(
                 )
                 specs = list(specs_for(outline, numero))
             case _:
+                _emit_matches(
+                    trace,
+                    defectos,
+                    chapter=numero,
+                    scene=None,
+                    attempt=intento_capitulo,
+                    decision="abortar",
+                    stage="capitulo",
+                )
                 raise RunAbortedError(
                     f"el capitulo {numero} no pasa sus puertas tras rehacerlo y replanificar "
                     f"su tramo: {motivos}"
@@ -518,6 +612,18 @@ def _write_scene(
         trace.emit(
             "retry", level=str(decision.level), action=str(decision.action), reason=decision.reason
         )
+        # RF-238, RF-240. La escena con una prohibida vuelve a escribirse: con
+        # el defecto y su cita en el reintento, o con la especificacion nueva,
+        # o subiendo al capitulo. En los tres casos se reintenta.
+        _emit_matches(
+            trace,
+            defectos,
+            chapter=spec.identity.chapter,
+            scene=spec.identity.ordinal,
+            attempt=intento,
+            decision="reintentar",
+            stage="escena",
+        )
         if decision.action is Action.RETRY:
             anteriores = list(defectos)
             continue
@@ -577,7 +683,11 @@ def _approve_chapter(
         )
         trace.emit("quiz", chapter=capitulo.number, questions=len(preguntas), wrong=len(s2_examen))
 
-        defectos: list[Defect] = [*anclados.defects, *s2_examen]
+        # RF-232, D-97. Lo escrito, no lo planificado, frente a EST-07. Es S2 de
+        # `check.format` y cuenta en el maximo de 2 S2 de esta puerta, sin
+        # umbral propio.
+        longitud = check_chapter_length(texto_capitulo, word_range=CHAPTER_WORDS)
+        defectos: list[Defect] = [*anclados.defects, *s2_examen, *longitud]
         puerta = chapter_gate(defectos)
         trace.emit(
             "chapter.gate",
@@ -625,13 +735,45 @@ def _approve_chapter(
                 _polish(path, capitulo, engine, trace)
                 proposal, validacion = _extract_and_validate(path, capitulo, engine, trace, payoffs)
                 if validacion.clean:
-                    return (proposal, validacion), presupuesto, []
-                defectos = [r.defect for r in validacion.rejections]
-                capitulo.rejected_facts.extend(defectos)
+                    # RF-236, D-90. La segunda red, sobre el capitulo entero y
+                    # despues de reparaciones y pase de estilo: entre esto y
+                    # `_freeze` ya no cambia ni una letra. Una coincidencia aqui
+                    # es un S1 que vuelve a reparacion, nunca una congelacion.
+                    defectos = _forbidden_before_freeze(path, capitulo, trace)
+                    if not defectos:
+                        return (proposal, validacion), presupuesto, []
+                else:
+                    defectos = [r.defect for r in validacion.rejections]
+                    capitulo.rejected_facts.extend(defectos)
 
         presupuesto, agotado = _repair_pass(capitulo, defectos, engine, presupuesto, trace)
         if agotado:
             return None, presupuesto, defectos
+
+
+def _forbidden_before_freeze(path: Path, capitulo: ChapterResult, trace: Trace) -> list[Defect]:
+    """`check.forbidden` sobre el capitulo unido, con citas en el capitulo.
+
+    Coge lo que `verify_scene` no pudo ver: un borrador reanudado, que no se
+    reverifica, o un termino de varias palabras partido entre dos escenas.
+    """
+    with connection.reader(path) as con:
+        terminos = forbidden.read_terms(con)
+    texto = SEPARATOR.join(capitulo.texts)
+    defectos = forbidden.check_forbidden(texto, terms=terminos)
+    offsets = scene_offsets(capitulo.texts, SEPARATOR)
+    for d in defectos:
+        escena = capitulo.scenes[_scene_index_for(d, capitulo, offsets)]
+        _emit_matches(
+            trace,
+            [d],
+            chapter=capitulo.number,
+            scene=escena.spec.identity.ordinal,
+            attempt=capitulo.chapter_attempts,
+            decision="reparar",
+            stage="congelacion",
+        )
+    return defectos
 
 
 def _polish(path: Path, capitulo: ChapterResult, engine: Engine, trace: Trace) -> None:
@@ -660,6 +802,17 @@ def _polish(path: Path, capitulo: ChapterResult, engine: Engine, trace: Trace) -
             new_s1=[f"{d.kind}: {d.rule}"[:120] for d in nuevos_s1],
         )
         if nuevos_s1:
+            # RF-240. Un pase de estilo que mete una prohibida se revierte
+            # entero; el capitulo sigue por la reparacion con el texto previo.
+            _emit_matches(
+                trace,
+                nuevos_s1,
+                chapter=capitulo.number,
+                scene=None,
+                attempt=pase,
+                decision="reparar",
+                stage="estilo",
+            )
             capitulo.style_reverted = True
             break
         for escena, texto in zip(capitulo.scenes, pulidos, strict=True):
@@ -822,6 +975,17 @@ def _repair_pass(
         )
         resultado = evaluate(antes, despues, blocking_only=True)
         aceptada = resultado.accepted and not scene_gate(despues).s1
+        # RF-240. Una reparacion que deja una prohibida no se acepta, y el
+        # capitulo sigue en su bucle de reparacion.
+        _emit_matches(
+            trace,
+            despues,
+            chapter=capitulo.number,
+            scene=escena.spec.identity.ordinal,
+            attempt=escena.repairs + 1,
+            decision="reparar",
+            stage="reparacion",
+        )
         trace.emit(
             "repair",
             chapter=capitulo.number,

@@ -222,9 +222,15 @@ CREATE TABLE IF NOT EXISTS summary (
 -- opera sobre borradores, y un borrador puede acabar en cuarentena. Proscribir
 -- desde ahi condicionaria la obra por un texto que nunca existio.
 
+-- La columna `level` --global | cliente | novela | estilo-- la anade la
+-- migracion 4 (RD-37, D-91): los tres primeros son el guardarrail de prohibidas
+-- (`check.forbidden`, S1) y `estilo` los n-gramas de POE-12 (`check.repetition`).
+-- Un termino esta una sola vez, en su nivel mas fuerte. Las del guardarrail
+-- no las inserta la congelacion: entran al crear la novela (`canon/brief.py`)
+-- y con una solicitud de cambio de tipo `forbid` (RF-256).
 CREATE TABLE IF NOT EXISTS proscribed (
     term        TEXT    NOT NULL PRIMARY KEY,
-    kind        TEXT    NOT NULL,   -- ngram | image
+    kind        TEXT    NOT NULL,   -- ngram | image | term
     added_chapter INTEGER NOT NULL,
     added_at    TEXT    NOT NULL
 );
