@@ -18,7 +18,7 @@ Medido el 2026-09-23 sobre la rama `v2-oneshot`:
 | `pytest` | 383 recogidas y en verde, con el contrato generativo sobre todas las rutas |
 | `mypy --strict` | Limpio, 184 ficheros |
 | `import-linter` | 3 contratos, 0 rotos: las tres reglas de `architecture.md` §2.3 se cumplen, `supervision/` y `evals/` incluidas |
-| TLC | El modelo de `orchestration/model/` con los estados de la versión 2, sin contraejemplo: 352 estados distintos. Cuatro mutaciones sembradas —saltarse el Jurado, no marcarlo, no revertir el pase de estilo, admitir sin mirar el techo— dan contraejemplo o bloqueo |
+| TLC | El modelo de `orchestration/model/` con los estados de la versión 2, sin contraejemplo, con la salida guardada en `model/tlc/`: `chapter.cfg` 1.831 estados distintos y `run.cfg` 510.546, profundidad 242, con 5 capítulos. Las mutaciones versionadas `mutations/m1` a `m4` dan contraejemplo, y `code-today/` reproduce los fallos B1 a B4 del código actual |
 | `gate.py` | Existe como un solo comando; CI lo ejecuta en cada cambio y la puerta lenta —`pip-audit`, mutación— a diario |
 
 ### 1.2 Estado por tramo del SRS

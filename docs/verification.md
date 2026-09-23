@@ -337,13 +337,15 @@ Explorar de forma exhaustiva los estados y transiciones alcanzables del flujo pa
 | Atributo | Valor |
 |---|---|
 | **Qué verifica aquí** | La tirada entera de `architecture.md` §7: configuración, planificación, cada capítulo con su ciclo de vida, caída y reanudación, enmiendas entre congelaciones y publicación de cada versión. El capítulo es un modelo propio que el de la tirada usa como subacción |
-| **Invariantes** | «Nunca se congela sin superar todas las puertas»; «nunca se escribe canon antes de congelar»; «toda reparación revalida desde la primera puerta»; «nunca hay más de CTX-20 tokens en vuelo», que es CTX-I1; «tras reanudar no queda borrador posterior al punto cerrado», que es PRO-I2 y se comprueba sobre el estado que deja la reanudación, no por construcción; «una enmienda solo se aplica entre congelaciones». Cada uno lo rompe al menos una mutación versionada: un invariante que ninguna mutación rompe es sospechoso de vacuidad |
+| **Invariantes** | «Nunca se publica una versión con un capítulo que no pasó todas sus puertas», y dentro del capítulo «nunca se congela sin superar todas las puertas»; «ningún capítulo se congela dos veces» y «la reanudación no pierde capítulos»; «lo que mostraba una versión al dejar de ser la vigente es lo que sigue mostrando»; «los reintentos nunca superan la escalera de RF-18, tampoco sumando caídas»; «nunca se escribe canon antes de congelar»; «toda reparación revalida desde la primera puerta»; «nunca hay más de CTX-20 tokens en vuelo», que es CTX-I1; «tras reanudar no queda borrador posterior al punto cerrado», que es PRO-I2 y se comprueba sobre el estado que deja la reanudación, no por construcción; «una enmienda solo se aplica entre congelaciones». Cada uno lo rompe al menos una mutación versionada: un invariante que ninguna mutación rompe es sospechoso de vacuidad |
 | **Propiedad de vivacidad** | «Toda generación acaba publicada o abortada», con equidad débil sobre las acciones de progreso y nunca sobre la caída, que se acota. Incluye «no hay ciclo que evite la cuarentena para siempre» |
 | **Clase** | A |
-| **Herramienta** | `TLA+` con TLC sobre el modelo de estados, con `tla2tools.jar` en versión fija. La salida de cada ejecución se guarda con su commit, y un README relaciona cada acción con la función del código que la implementa |
+| **Herramienta** | `TLA+` con TLC sobre el modelo de estados, con `tla2tools.jar` en versión fija. La salida de cada ejecución se guarda con su commit, y un README relaciona cada acción con la función del código que la implementa. Los modelos están en `backend/orchestration/model/` y `run_tlc.sh` guarda cada salida en `tlc/` |
 | **Límite** | Prueba el flujo modelado, no el orquestador que lo implementa. Esa distancia la cubre VER-05 |
 
 El tercer invariante es el que más se rompe en la práctica: revalidar solo desde el punto que falló deja pasar la corrección de estilo que rompió la continuidad.
+
+El modelo de la tirada lleva como banderas las correcciones que el código aún no tiene: `run.cfg` las activa y cada configuración de `code-today/` da el contraejemplo del código actual (`backend/orchestration/model/README.md` §7.1).
 
 ### 5.11 VER-19 · Anclaje de evidencia
 
@@ -440,6 +442,7 @@ Dos detalles de orden que no son decorativos. **VER-20 corre antes que VER-14**,
 | Flujo del orquestador | VER-05, 18 | A |
 | Memoria de trabajo PRO-13 | VER-01, 05, 06 | T |
 | Reanudación de una tirada | VER-06, 18 | A |
+| Versiones del manuscrito y enmiendas | VER-05, 18 | A |
 | Cronología del canon MUN-05 | VER-04, 05 | A |
 | Guardarraíl de palabras prohibidas | VER-05, 06, 12 | A |
 | Espejo de observabilidad y audit log | VER-05, 06, 09 | D |
