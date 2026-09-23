@@ -154,19 +154,27 @@ def test_tres_llamadas_en_paralelo_respetan_el_techo_y_el_orden() -> None:
     """RF-160, CTX-I1. Tres hilos piden plaza a la vez; nunca hay mas en vuelo
     que el techo, y el que no cabe espera en vez de colarse."""
     import threading
-    import time
 
     from orchestration.admission import Admission, Reservation
 
     adm = Admission(ceiling=25_000)
     maximo = [0]
+    entradas = [0]
     candado = threading.Lock()
+    # Los dos primeros en entrar se esperan dentro: el solapamiento no depende
+    # del reloj, y el test no falla con la maquina cargada.
+    juntos = threading.Barrier(2)
 
     def llamada(agent: str) -> None:
         with adm.hold(Reservation(agent=agent, packet_tokens=11_500)):
             with candado:
                 maximo[0] = max(maximo[0], adm.in_flight)
-            time.sleep(0.05)
+                entradas[0] += 1
+                espera = entradas[0] <= 2
+            if espera:
+                juntos.wait(timeout=5)
+                with candado:
+                    maximo[0] = max(maximo[0], adm.in_flight)
 
     hilos = [threading.Thread(target=llamada, args=(f"juez-{i}",)) for i in range(3)]
     for h in hilos:
@@ -177,3 +185,31 @@ def test_tres_llamadas_en_paralelo_respetan_el_techo_y_el_orden() -> None:
     assert maximo[0] <= 25_000
     assert maximo[0] == 23_000, "dos caben a la vez; el tercero espera"
     assert adm.in_flight == 0
+
+
+def test_el_techo_por_defecto_es_100000_y_100001_no_entra() -> None:
+    """CTX-20, RF-14, RF-97. El limite exacto con el techo por defecto, sin inyectar otro.
+
+    100.000 entra con el sistema vacio; 100.001 no, ni por `admit` ni por `hold`,
+    y tampoco cuando el sobrante lo pone el cupo de tiron (se reserva entero).
+    """
+    from orchestration.admission import CONCURRENCY_CEILING
+
+    assert CONCURRENCY_CEILING == 100_000
+    a = Admission()
+    justo = Reservation(agent="x", packet_tokens=100_000)
+    with a.hold(justo):
+        assert a.in_flight == 100_000
+    assert a.in_flight == 0
+    assert a.admit(justo, call_id="c1") and a.in_flight == 100_000
+    a.release(justo)
+
+    for de_mas in (
+        Reservation(agent="x", packet_tokens=100_001),
+        Reservation(agent="x", packet_tokens=99_000, tool_quota=1_001),
+    ):
+        with pytest.raises(CeilingTooSmallError), a.hold(de_mas):
+            pass
+        with pytest.raises(CeilingTooSmallError):
+            a.admit(de_mas, call_id="c2")
+    assert a.in_flight == 0 and a.queued == 0

@@ -751,23 +751,36 @@ class Composer:
         return nombres + tokens
 
     def _name_candidates(self, text: str) -> list[str]:
-        """Palabras con mayuscula en mitad de frase que se repiten.
+        """Palabras con mayuscula que pueden ser un nombre fuera del canon.
 
-        Solo cuenta lo que va detras de una letra o una coma: tras punto, signo
-        de apertura, raya o comillas la mayuscula es ortografia, no nombre. Y
-        solo lo que se repite: un nombre propio nuevo aparece mas de una vez;
-        una mayuscula suelta suele ser un enfasis o un titulo.
+        Dos vias. La de un nombre **nuevo**: solo cuenta lo que va detras de una
+        letra o una coma --tras punto, signo de apertura, raya o comillas la
+        mayuscula es ortografia, no nombre-- y solo lo que se repite, porque una
+        mayuscula suelta suele ser un enfasis o un titulo.
+
+        La de una **errata** de un nombre del canon ("Nalah", "Nála" frente a
+        "Nala"): basta una aparicion, en cualquier posicion. Al principio de
+        frase la mayuscula no dice nada, asi que ahi una palabra que tambien
+        sale en minuscula en el texto, o una de las comunes, es vocabulario y no
+        errata: "Cara a cara" no es "Carla".
         """
+        conocidos = self._known_names()
+        minusculas = {m.group(0) for m in re.finditer(r"\b[a-záéíóúñü]+\b", text)}
         vistos: dict[str, int] = {}
+        erratas: set[str] = set()
         for m in _CAPITAL.finditer(text):
             w = m.group(1)
             if w.lower() in _COMMON_CAPITALS:
                 continue
             antes = text[: m.start()].rstrip()
-            if not antes or not (antes[-1].isalpha() or antes[-1] == ","):
+            en_medio = bool(antes) and (antes[-1].isalpha() or antes[-1] == ",")
+            if en_medio:
+                vistos[w] = vistos.get(w, 0) + 1
+            elif w.lower() in minusculas:
                 continue
-            vistos[w] = vistos.get(w, 0) + 1
-        return sorted(w for w, n in vistos.items() if n >= 2)
+            if checks.misspelling_of(w, conocidos) is not None:
+                erratas.add(w)
+        return sorted({w for w, n in vistos.items() if n >= 2} | erratas)
 
     def verify_scene(self, spec: SceneSpec, text: str) -> list[Defect]:
         with connection.reader(self.path) as con:
