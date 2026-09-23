@@ -26,6 +26,7 @@ from canon.arbiter.retcon import RetconPlan
 from canon.events import log
 from canon.events.types import Event
 from canon.projections import rebuild
+from canon.prose_index import usage
 from canon.prose_index.chunk import Chunk, chunk_scene
 from canon.summaries import levels
 from commons.provider.port import Embedding
@@ -75,6 +76,7 @@ def commit(
     """Todo junto o nada. Quien llama abre la transaccion con `canon_writer`."""
     ids = [s.scene_id for s in prepared.scenes]
     marks = ",".join("?" * len(ids))
+    antes = usage.vigente(con)
     con.execute(
         f"DELETE FROM prose_chunk_fts WHERE rowid IN (SELECT rowid FROM prose_chunk WHERE scene_id IN ({marks}))",  # nosec B608
         ids,
@@ -138,6 +140,9 @@ def commit(
             chapter_origin,
         ),
     )
+    # RF-241. Recongelar reescribe las filas de las escenas recongeladas; el
+    # valor que el evento deja de hacer vigente pierde las suyas.
+    usage.refresh(con, scenes=ids, before=antes)
 
 
 def read_retcons(con: sqlite3.Connection) -> list[dict[str, object]]:
