@@ -73,8 +73,12 @@ def _commit() -> str:
     head = subprocess.run(  # nosec B603
         [git, "rev-parse", "HEAD"], capture_output=True, text=True, cwd=LEAN
     ).stdout.strip()
+    # El propio registro no cuenta: es lo que se esta escribiendo.
     dirty = subprocess.run(  # nosec B603
-        [git, "status", "--porcelain", "--", "."], capture_output=True, text=True, cwd=LEAN
+        [git, "status", "--porcelain", "--", ".", f":!{RECORD.name}"],
+        capture_output=True,
+        text=True,
+        cwd=LEAN,
     ).stdout.strip()
     return head + (" con cambios sin commitear en lean/" if dirty else "")
 
