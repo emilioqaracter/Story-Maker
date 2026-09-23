@@ -45,7 +45,7 @@ FRONTEND = ROOT / "frontend"
 
 REQ_FAMILIES = ("RF", "RD", "RI", "RNF")
 REQ_RE = re.compile(r"\b(RF|RD|RI|RNF)-(\d{2,3})\b")
-DEC_RE = re.compile(r"\bD-(\d{2})\b")
+DEC_RE = re.compile(r"\bD-(\d{2,3})\b")
 VER_RE = re.compile(r"\bVER-(\d{2})\b")
 DOM_RE = re.compile(r"\b(MET|EST|PER|MUN|DEP|POE|CAN|CTX|CAL|PRO)-(\d{2}|I\d)\b")
 SEC_RE = re.compile(r"§(\d+(?:\.\d+)?)")
@@ -106,7 +106,7 @@ def defined_reqs(spec: str) -> dict[str, str]:
 
 def defined_decisions(spec: str) -> set[str]:
     return {
-        m.group(1) for line in spec.splitlines() if (m := re.match(r"^\|\s*(D-\d{2})\s*\|", line))
+        m.group(1) for line in spec.splitlines() if (m := re.match(r"^\|\s*(D-\d{2,3})\s*\|", line))
     }
 
 
