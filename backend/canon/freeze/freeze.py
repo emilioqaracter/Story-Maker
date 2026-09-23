@@ -29,6 +29,7 @@ from canon.events import log
 from canon.events.types import Event
 from canon.freeze import rows
 from canon.projections import rebuild
+from canon.prose_index import usage
 from canon.prose_index.chunk import Chunk, chunk_scene
 from canon.summaries import levels
 from commons.provider.port import Embedding
@@ -129,11 +130,15 @@ def commit_chapter(con: sqlite3.Connection, prepared: PreparedChapter) -> None:
     """
     from canon.prose_index.index import write_index
 
+    antes = usage.vigente(con)
     if prepared.delta:
         log.append(con, prepared.delta)
         rebuild.apply_all(con, [s for s in log.read_all(con) if s.event in prepared.delta])
 
     write_index(con, prepared)
+    # RF-241. Despues del delta y del indice, que es lo que lee: las escenas
+    # nuevas contra todo lo vigente, y lo que el delta hace vigente contra todas.
+    usage.refresh(con, scenes=[s.id for s in prepared.scenes], before=antes)
     _write_summaries(con, prepared)
     _write_proscribed(con, prepared)
     rows.write_verdicts(con, prepared.verdicts)

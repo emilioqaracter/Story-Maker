@@ -24,6 +24,7 @@ from canon.arbiter.retcon import RetconPlan
 from canon.events import log
 from canon.events.types import Event
 from canon.projections import rebuild
+from canon.prose_index import usage
 
 FIRST_VERSION = 1
 
@@ -384,8 +385,11 @@ def commit_amendment(
         )
     else:
         # Nada que reescribir: el hecho no se nombra en ninguna escena congelada.
+        antes = usage.vigente(con)
         log.append(con, [event])
         rebuild.rebuild(con)
+        # RF-241. El valor nuevo puede estar ya en la prosa.
+        usage.refresh(con, scenes=(), before=antes)
     cambiados = sorted(
         {capitulos_de[s.scene_id] for s in prepared.scenes if s.scene_id in capitulos_de}
     )

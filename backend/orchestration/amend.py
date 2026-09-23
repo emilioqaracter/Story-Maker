@@ -34,6 +34,7 @@ from canon.arbiter.retcon import RetconPlan
 from canon.db import connection
 from canon.events import log
 from canon.events.types import AttributeSet, EntityRenamed, Event
+from canon.prose_index import usage
 from canon.prose_index.reindex import scene_texts
 from commons.tracing.trace import Trace
 from commons.types.primitives import Provenance, Severity, WorldTime
@@ -216,17 +217,29 @@ def _names(forms: str | Sequence[str]) -> re.Pattern[str]:
     return re.compile(rf"(?<!\w)(?:{alternatives})(?!\w)", re.IGNORECASE)
 
 
-def affected_scenes(path: Path, interp: manuscript.Interpretation) -> list[str]:
+def affected_scenes(
+    path: Path, interp: manuscript.Interpretation, trace: Trace | None = None
+) -> list[str]:
     """RF-224. Escenas congeladas que nombran el hecho.
 
     Un cambio de nombre toca toda escena que nombra a la entidad por su nombre
     anterior: el nombre en el texto es la senal, este o no en el elenco. Un
     atributo, las escenas que contienen el valor anterior y en las que la
     entidad es POV, lugar o elenco.
+
+    RF-241, D-89. Para un atributo lee tambien el registro hecho x escena, que
+    se escribio al congelar con esta misma regla, y lo contrasta con la busqueda
+    en el texto: si discrepan, consta en la traza como `amend.usage_mismatch`.
+    Devuelve la busqueda en el texto, que es la que ve el texto de hoy.
     """
     patron = _names(old_forms(interp))
     with connection.reader(path) as con:
         textos = scene_texts(con)
+        registro = (
+            None
+            if interp.attribute == NAME
+            else usage.scenes_using(con, interp.entity_id, interp.attribute)
+        )
         filas = con.execute(
             "SELECT id, pov_entity, place_entity FROM prose_scene ORDER BY chapter, scene_number"
         ).fetchall()
@@ -244,6 +257,13 @@ def affected_scenes(path: Path, interp: manuscript.Interpretation) -> list[str]:
         presente = interp.entity_id in (r["pov_entity"], r["place_entity"]) or r["id"] in elenco
         if interp.attribute == NAME or presente:
             out.append(r["id"])
+    if registro is not None and registro != out and trace is not None:
+        trace.emit(
+            "amend.usage_mismatch",
+            fact=usage.fact_key(interp.entity_id, interp.attribute),
+            registry=list(registro),
+            text=list(out),
+        )
     return out
 
 
@@ -297,7 +317,7 @@ def _apply(path: Path, solicitud: manuscript.ChangeRequest, engine: Engine, trac
     interp = solicitud.interpretation
     if interp is None:
         raise RejectedError("La solicitud no tiene interpretación.")
-    escenas = affected_scenes(path, interp)
+    escenas = affected_scenes(path, interp, trace)
     evento, since = _event(path, interp)
     plan = RetconPlan(
         fact_key=f"{interp.entity_id}.{interp.attribute}",

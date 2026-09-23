@@ -16,6 +16,11 @@ Un paso es una sentencia o, cuando SQLite no tiene forma idempotente de
 decirlo --`ALTER TABLE ... ADD COLUMN` no admite `IF NOT EXISTS`--, una funcion
 que mira el esquema antes de tocarlo. Asi reintentar una migracion a medias
 sigue siendo seguro.
+
+Una version puede llevar ademas un **relleno** (`BACKFILL`): codigo que, tras sus
+sentencias y en la misma transaccion, llena lo nuevo a partir de lo que el
+fichero ya tenia. Tambien solo anade. La 5 lo usa para registrar hecho x escena
+sobre la prosa congelada antes de que existiera el registro (RD-39).
 """
 
 from __future__ import annotations
@@ -23,8 +28,10 @@ from __future__ import annotations
 import sqlite3
 from collections.abc import Callable
 
+from canon.prose_index import chronology
+
 #: Version que este codigo escribe.
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 Step = str | Callable[[sqlite3.Connection], None]
 
@@ -256,6 +263,47 @@ MIGRATIONS: dict[int, tuple[Step, ...]] = {
         END
         """,
     ),
+    # `specs/srs-backend-v4.md` T42: hecho x escena, cronologia y la historia que no
+    # se borra. Se escribe tras la 4 de T41 (orden de integracion, `backend/PLAN.md` §8).
+    5: (
+        # RD-39, D-89. Indice, no verdad: vive con el indice de prosa. Lo escribe la
+        # congelacion y la recongelacion (`canon/prose_index/usage.py`).
+        """
+        CREATE TABLE IF NOT EXISTS fact_usage (
+            fact_key        TEXT    NOT NULL,
+            source_event    INTEGER NOT NULL REFERENCES event(id),
+            scene_id        TEXT    NOT NULL REFERENCES prose_scene(id),
+            chapter         INTEGER NOT NULL,
+            PRIMARY KEY (fact_key, source_event, scene_id)
+        )
+        """,
+        "CREATE INDEX IF NOT EXISTS idx_fact_usage_scene ON fact_usage (scene_id)",
+        "CREATE INDEX IF NOT EXISTS idx_fact_usage_chapter ON fact_usage (fact_key, chapter)",
+        # RD-40, RF-242. Una vista no puede desincronizarse de lo que proyecta.
+        "CREATE VIEW IF NOT EXISTS chronology AS " + chronology.SELECT,
+        # RD-34. Una version publicada tampoco se borra.
+        """
+        CREATE TRIGGER IF NOT EXISTS manuscript_version_no_delete
+        BEFORE DELETE ON manuscript_version
+        BEGIN
+            SELECT RAISE(ABORT, 'una version publicada no se borra');
+        END
+        """,
+    ),
+}
+
+
+def _backfill_fact_usage(con: sqlite3.Connection) -> None:
+    # Import tardio: `usage` lee el indice de prosa y `connection` importa este
+    # modulo; arriba seria un ciclo.
+    from canon.prose_index import usage
+
+    usage.rebuild(con)
+
+
+#: Rellenos por version, tras sus sentencias y en la misma transaccion.
+BACKFILL: dict[int, Callable[[sqlite3.Connection], None]] = {
+    5: _backfill_fact_usage,
 }
 
 
@@ -281,6 +329,8 @@ def migrate(con: sqlite3.Connection) -> int:
                 paso(con)
             else:
                 con.execute(paso)
+        if version in BACKFILL:
+            BACKFILL[version](con)
         con.execute(
             "INSERT OR IGNORE INTO schema_version (version, applied_at) VALUES (?, datetime('now'))",
             (version,),
