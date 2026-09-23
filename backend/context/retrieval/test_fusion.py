@@ -16,6 +16,7 @@ from context.retrieval.quotas import Candidate, select
 
 # ------------------------------------------------------------------- la fusion
 
+
 def test_aparecer_en_las_dos_piernas_puntua_mas() -> None:
     """Es el efecto util de la fusion: lo que encuentran las dos formas de
     buscar es lo mas probable que sea relevante."""
@@ -57,10 +58,15 @@ def test_el_desempate_no_depende_del_orden_de_las_piernas() -> None:
 
 # ------------------------------------------------------------------ los cupos
 
+
 def _c(cid: str, **kw: object) -> Candidate:
     base: dict[str, object] = {
-        "chunk_id": cid, "scene_id": f"esc-{cid}", "chapter": 1, "text": f"texto {cid}",
-        "tokens": 100, "summary": f"resumen de {cid}" * 3,
+        "chunk_id": cid,
+        "scene_id": f"esc-{cid}",
+        "chapter": 1,
+        "text": f"texto {cid}",
+        "tokens": 100,
+        "summary": f"resumen de {cid}" * 3,
     }
     base.update(kw)
     return Candidate(**base)  # type: ignore[arg-type]
@@ -69,21 +75,27 @@ def _c(cid: str, **kw: object) -> Candidate:
 def _sel(ranked: list[Candidate], **kw: object):  # type: ignore[no-untyped-def]
     args: dict[str, object] = {
         # El escaner ve "token" en el nombre y lo toma por una contrasena.
-        "token_budget": 1_000, "place": "estadio", "pov": "marcos",  # nosec B105
-        "function": "revelar", "entities": frozenset({"marcos"}),
+        "token_budget": 1_000,
+        "place": "estadio",
+        "pov": "marcos",  # nosec B105
+        "function": "revelar",
+        "entities": frozenset({"marcos"}),
     }
     args.update(kw)
     return select(ranked, **args)  # type: ignore[arg-type]
 
 
 def test_cada_cupo_trae_su_tipo_de_evidencia() -> None:
-    seleccion = _sel([
-        _c("lugar", place="estadio"),
-        _c("voz", has_dialogue=True, pov="marcos"),
-        _c("promesa", plants_setup=("la-lesion",)),
-        _c("espejo", function="revelar", entities=frozenset({"marcos"})),
-        _c("libre"),
-    ], setups_to_pay=frozenset({"la-lesion"}))
+    seleccion = _sel(
+        [
+            _c("lugar", place="estadio"),
+            _c("voz", has_dialogue=True, pov="marcos"),
+            _c("promesa", plants_setup=("la-lesion",)),
+            _c("espejo", function="revelar", entities=frozenset({"marcos"})),
+            _c("libre"),
+        ],
+        setups_to_pay=frozenset({"la-lesion"}),
+    )
 
     por_cupo = {s.quota: s.candidate.chunk_id for s in seleccion.chosen}
     assert por_cupo[Quota.PLACE] == "lugar"

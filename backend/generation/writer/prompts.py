@@ -10,6 +10,9 @@ un byte voluble delante lo invalida sin dar error.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+
+from commons.types.primitives import Defect
 from commons.types.scene import SceneSpec
 
 #: Prefijo cacheable. Todo lo estable del Escritor.
@@ -37,7 +40,29 @@ La escena tiene que cambiar algo: empieza en un estado y termina en otro. Una
 escena donde no cambia nada es relleno, y el relleno se rechaza."""
 
 
-def instruction(spec: SceneSpec) -> str:
+#: Cuantos defectos del intento anterior entran en el reintento. Los S1
+#: primero: son los que bloquean. Cinco caben de sobra en los 15.000 tokens que
+#: `architecture.md` §4.1 reserva para lo que anade un reintento.
+MAX_PREVIOUS_DEFECTS = 5
+
+
+def previous_defects(defects: Sequence[Defect]) -> str:
+    """El defecto y su evidencia, que es lo que un reintento anade (§4.1).
+
+    Sin esto el reintento es la misma llamada otra vez y falla por lo mismo:
+    medido en la tirada real, tres intentos seguidos en presente cuando la guia
+    pedia pasado, sin que el Escritor supiera por que se le rechazaba.
+    """
+    if not defects:
+        return ""
+    orden = sorted(defects, key=lambda d: d.severity.value)[:MAX_PREVIOUS_DEFECTS]
+    lineas = "\n".join(f"- {d.severity}: {d.rule} (en: «{d.evidence.quote[:80]}»)" for d in orden)
+    return (
+        "\n\nEL INTENTO ANTERIOR SE RECHAZO POR ESTO. Escribela de nuevo sin repetirlo:\n" + lineas
+    )
+
+
+def instruction(spec: SceneSpec, previous: Sequence[Defect] = ()) -> str:
     """La parte que cambia en cada escena."""
     beats = "\n".join(f"  {i}. {b}" for i, b in enumerate(spec.content.beats, 1))
     prohibidos = (
@@ -65,6 +90,6 @@ COMO TERMINA: {spec.output.ends_with}
 PASOS:
 {beats}
 
-LONGITUD: en torno a {spec.output.target_words} palabras.{prohibidos}{ignora}
+LONGITUD: en torno a {spec.output.target_words} palabras.{prohibidos}{ignora}{previous_defects(previous)}
 
 Devuelve SOLO la prosa de la escena. Sin titulo, sin numero, sin notas."""

@@ -93,6 +93,6 @@ El Orquestador y el Documentalista no son llamadas a modelo: son módulos de Pyt
 ## 8. Lo que no se hace aquí
 
 - No se escribe canon fuera del Archivero.
-- No se añade una segunda capa de observabilidad: VER-09 está adjudicado a Langfuse.
+- No se añade una segunda capa de observabilidad: VER-09 está adjudicado a la traza local de `commons/tracing`.
 - No se crea una carpeta `api/`. Las rutas viven en su funcionalidad y la aplicación se compone en `orchestration/` (`architecture.md` §2.3).
 - No se inventan umbrales. Salen de los documentos, o se declaran como propuesta explicando su origen.

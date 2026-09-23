@@ -2,7 +2,7 @@
 
 Vive en `commons/` porque lo usan varias funcionalidades: `canon/` para saber
 donde esta el fichero de una novela, `orchestration/` para el directorio de la
-tirada, `commons/tracing` para la cola local.
+tirada y del fichero de traza, `commons/tracing` para escribirla.
 
 Un solo sitio donde se resuelve una ruta. Si cada funcionalidad compusiera la
 suya, el dia que cambie el directorio de tiradas habria que buscarlo en cinco
@@ -50,3 +50,11 @@ class Settings:
                 "Minusculas, digitos y guiones, entre 3 y 64 caracteres"
             )
         return self.runs_dir / f"{novel_id}.sqlite"
+
+    def trace_path(self, novel_id: str) -> Path:
+        """Ruta de la traza de una novela: junto a su SQLite, con el mismo nombre.
+
+        Juntos a proposito: copiar el directorio de la tirada es copiar el
+        estado y lo que paso, que es lo que hace reproducible una tirada.
+        """
+        return self.novel_path(novel_id).with_suffix(".trace.jsonl")

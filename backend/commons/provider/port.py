@@ -79,6 +79,10 @@ class Completion(BaseModel):
     usage: Usage
     stop_reason: str
     tool_calls: Sequence[ToolCall] = Field(default_factory=tuple)
+    #: D-35. Lo que el transporte anade por su cuenta y `usage` incluye. Se
+    #: descuenta al contrastar el estimado del paquete con el real (RNF-19):
+    #: sin esto la comparacion dispara siempre.
+    harness_tokens: int = Field(default=0, ge=0)
 
 
 class Embedding(BaseModel):
@@ -107,6 +111,15 @@ class ToolServer(Protocol):
     def serve(self, call: ToolCall) -> ToolResult: ...
 
 
+class ProviderError(RuntimeError):
+    """El proveedor no devolvio una respuesta utilizable.
+
+    Es el fallo intermitente de `architecture.md` §4.8: reintentar tiene
+    sentido. Cuenta como llamada fallida y consume un reintento del mismo
+    presupuesto que una salida que no valida (RI-18); agotado, sube.
+    """
+
+
 @runtime_checkable
 class ProviderPort(Protocol):
     """Contrato unico con los servicios externos."""
@@ -119,8 +132,14 @@ class ProviderPort(Protocol):
         instruction: str,
         output_schema: str,
         max_output_tokens: int,
+        json_schema: str | None = None,
     ) -> Completion:
-        """Una ida y vuelta, sin herramientas."""
+        """Una ida y vuelta, sin herramientas.
+
+        `json_schema` es el esquema JSON del artefacto esperado, cuando lo hay:
+        el proveedor que sepa hacerlo cumplir devuelve la salida ya conforme, y
+        `dispatch` la valida igual (RI-18). El que no, lo ignora.
+        """
         ...
 
     def complete_with_tools(
@@ -133,6 +152,7 @@ class ProviderPort(Protocol):
         max_output_tokens: int,
         tools: Sequence[str],
         server: ToolServer,
+        json_schema: str | None = None,
     ) -> Completion:
         """Bucle de herramientas hasta que el agente concluye.
 

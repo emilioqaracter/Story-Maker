@@ -30,15 +30,21 @@ AT = WorldTime(stamp="2026-06-01")
 @pytest.fixture
 def con(tmp_path: Path):  # type: ignore[no-untyped-def]
     path = tmp_path / "n.sqlite"
-    create_novel(path, Brief(
-        title="P", start=WorldTime(stamp="2026-01-01"),
-        entities=(
-            BriefEntity(id="marcos", kind="person", name="Marcos",
-                        attributes=(("estado", "sano"),)),
-            BriefEntity(id="elena", kind="person", name="Elena"),
+    create_novel(
+        path,
+        Brief(
+            title="P",
+            start=WorldTime(stamp="2026-01-01"),
+            entities=(
+                BriefEntity(
+                    id="marcos", kind="person", name="Marcos", attributes=(("estado", "sano"),)
+                ),
+                BriefEntity(id="elena", kind="person", name="Elena"),
+            ),
+            style_guide="g",
+            target_words=1000,
         ),
-        style_guide="g", target_words=1000,
-    ))
+    )
     c = sqlite3.connect(path)
     c.row_factory = sqlite3.Row
     yield c
@@ -78,10 +84,12 @@ def test_la_consulta_devuelve_canon_con_procedencia(con: sqlite3.Connection) -> 
     """RF-95. Sin la etiqueta, un fragmento de prosa se lee igual que un hecho
     canonico."""
     s = _server(con)
-    r = s.serve(ToolCall(
-        name="canon.lookup",
-        arguments=json.dumps({"kind": "entity", "entity_ids": ["marcos"]}),
-    ))
+    r = s.serve(
+        ToolCall(
+            name="canon.lookup",
+            arguments=json.dumps({"kind": "entity", "entity_ids": ["marcos"]}),
+        )
+    )
     assert "Marcos" in r.content
     assert r.provenance is BlockProvenance.CANON
     assert r.tokens > 0
@@ -91,10 +99,12 @@ def test_un_resultado_que_no_cabe_se_niega_no_se_trunca(con: sqlite3.Connection)
     """RF-93, RF-94. Media ficha es peor que ninguna: el agente no sabe que le
     falta y se fia de lo que llego."""
     s = _server(con, quota=1)
-    r = s.serve(ToolCall(
-        name="canon.lookup",
-        arguments=json.dumps({"kind": "entity", "entity_ids": ["marcos", "elena"]}),
-    ))
+    r = s.serve(
+        ToolCall(
+            name="canon.lookup",
+            arguments=json.dumps({"kind": "entity", "entity_ids": ["marcos", "elena"]}),
+        )
+    )
     assert r.refused
     assert "no cabe" in r.content
     assert "Acota" in r.content
@@ -105,15 +115,21 @@ def test_el_cupo_se_consume_y_no_se_amplia(con: sqlite3.Connection) -> None:
     """RF-97. Un cupo que se estira no acota nada."""
     s = _server(con, quota=200)
     antes = s._budget.available
-    s.serve(ToolCall(name="canon.lookup",
-                     arguments=json.dumps({"kind": "entity", "entity_ids": ["marcos"]})))
+    s.serve(
+        ToolCall(
+            name="canon.lookup", arguments=json.dumps({"kind": "entity", "entity_ids": ["marcos"]})
+        )
+    )
     assert s._budget.available < antes
 
 
 def test_el_conocimiento_se_consulta_en_un_instante(con: sqlite3.Connection) -> None:
     s = _server(con)
-    r = s.serve(ToolCall(name="canon.lookup",
-                         arguments=json.dumps({"kind": "knowledge", "entity_id": "marcos"})))
+    r = s.serve(
+        ToolCall(
+            name="canon.lookup", arguments=json.dumps({"kind": "knowledge", "entity_id": "marcos"})
+        )
+    )
     assert r.provenance is BlockProvenance.CANON
 
 
@@ -127,6 +143,9 @@ def test_ninguna_herramienta_escribe(con: sqlite3.Connection) -> None:
     """RF-96. La congelacion sigue siendo la unica operacion que toca el canon."""
     s = _server(con)
     antes = con.execute("SELECT count(*) AS n FROM event").fetchone()["n"]
-    s.serve(ToolCall(name="canon.lookup",
-                     arguments=json.dumps({"kind": "related", "entity_ids": ["marcos"]})))
+    s.serve(
+        ToolCall(
+            name="canon.lookup", arguments=json.dumps({"kind": "related", "entity_ids": ["marcos"]})
+        )
+    )
     assert con.execute("SELECT count(*) AS n FROM event").fetchone()["n"] == antes

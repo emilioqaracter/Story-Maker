@@ -41,10 +41,10 @@ class OutlineDefect:
         return f"{self.kind}[{self.where}]: {self.message}"
 
     def __eq__(self, other: object) -> bool:
-        return (
-            isinstance(other, OutlineDefect)
-            and (self.kind, self.where, self.message)
-            == (other.kind, other.where, other.message)
+        return isinstance(other, OutlineDefect) and (self.kind, self.where, self.message) == (
+            other.kind,
+            other.where,
+            other.message,
         )
 
     def __hash__(self) -> int:
@@ -66,6 +66,7 @@ def check(outline: Outline, *, word_range: tuple[int, int]) -> list[OutlineDefec
 
 # ------------------------------------------------------------------ integridad
 
+
 def _check_scene_ids(outline: Outline) -> list[OutlineDefect]:
     """Identificadores unicos y posiciones sin repetir dentro del capitulo.
 
@@ -76,9 +77,7 @@ def _check_scene_ids(outline: Outline) -> list[OutlineDefect]:
     seen: set[str] = set()
     for scene in outline.scenes:
         if scene.id in seen:
-            out.append(
-                OutlineDefect("escena-duplicada", scene.id, "identificador repetido")
-            )
+            out.append(OutlineDefect("escena-duplicada", scene.id, "identificador repetido"))
         seen.add(scene.id)
 
     positions: dict[tuple[int, int], str] = {}
@@ -98,6 +97,7 @@ def _check_scene_ids(outline: Outline) -> list[OutlineDefect]:
 
 
 # ----------------------------------------------------------------- los arcos
+
 
 def _check_arcs(outline: Outline) -> list[OutlineDefect]:
     """Todo arco tiene inicio, crisis y resolucion **que existen**.
@@ -187,13 +187,17 @@ def _check_double_arc(outline: Outline) -> list[OutlineDefect]:
 
 # ------------------------------------------------------------------ promesas
 
+
 def _check_setups(outline: Outline) -> list[OutlineDefect]:
     """Todo setup se planta y se cobra, y se cobra **despues** de plantarse."""
     out: list[OutlineDefect] = []
     known = outline.scene_ids()
 
     for setup in outline.setups:
-        for nombre, scene_id in (("plantado", setup.planted_scene), ("cobrado", setup.payoff_scene)):
+        for nombre, scene_id in (
+            ("plantado", setup.planted_scene),
+            ("cobrado", setup.payoff_scene),
+        ):
             if scene_id not in known:
                 out.append(
                     OutlineDefect(
@@ -205,17 +209,18 @@ def _check_setups(outline: Outline) -> list[OutlineDefect]:
         if {setup.planted_scene, setup.payoff_scene} <= known and _position(
             outline, setup.payoff_scene
         ) <= _position(outline, setup.planted_scene):
-                out.append(
-                    OutlineDefect(
-                        "setup-invertido",
-                        setup.id,
-                        "se cobra antes o a la vez que se planta",
-                    )
+            out.append(
+                OutlineDefect(
+                    "setup-invertido",
+                    setup.id,
+                    "se cobra antes o a la vez que se planta",
                 )
+            )
     return out
 
 
 # ----------------------------------------------------------- curva de tension
+
 
 def _check_tension(outline: Outline) -> list[OutlineDefect]:
     """La tension sube dentro de cada acto.
@@ -254,6 +259,7 @@ def _check_tension(outline: Outline) -> list[OutlineDefect]:
 
 
 # ------------------------------------------------------------------ longitud
+
 
 def _check_words(outline: Outline, word_range: tuple[int, int]) -> list[OutlineDefect]:
     """La suma de palabras cae en el rango del brief."""

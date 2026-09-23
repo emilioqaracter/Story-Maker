@@ -23,11 +23,15 @@ Tres reglas que no se negocian:
 
 from __future__ import annotations
 
+import itertools
+import threading
 from collections import deque
 from collections.abc import Iterator
 from contextlib import contextmanager
 
 from pydantic import BaseModel, ConfigDict, Field
+
+from commons.tracing.trace import Trace
 
 #: CTX-20. Techo de tokens de ENTRADA en vuelo en el mismo instante.
 CONCURRENCY_CEILING = 100_000
@@ -63,10 +67,27 @@ class Reservation(BaseModel):
 class Admission:
     """Semaforo de tokens con cola FIFO estricta."""
 
-    def __init__(self, ceiling: int = CONCURRENCY_CEILING) -> None:
+    def __init__(self, ceiling: int = CONCURRENCY_CEILING, *, trace: Trace | None = None) -> None:
         self._ceiling = ceiling
         self._in_flight = 0
         self._queue: deque[str] = deque()
+        self._trace = trace
+        # RF-160. Las tres instancias del Jurado piden plaza a la vez: el
+        # contador y la cola se tocan bajo el mismo candado, y quien no cabe
+        # espera su turno en `hold` en vez de colarse o de romper el techo.
+        self._cond = threading.Condition()
+        self._tickets = itertools.count()
+
+    def _emit(self, state: str, reservation: Reservation) -> None:
+        if self._trace is not None:
+            self._trace.emit(
+                "admission",
+                state=state,
+                agent=reservation.agent,
+                reserved=reservation.total,
+                in_flight=self._in_flight,
+                queued=len(self._queue),
+            )
 
     @property
     def in_flight(self) -> int:
@@ -95,14 +116,17 @@ class Admission:
         if self._queue or not self.would_fit(reservation):
             if call_id not in self._queue:
                 self._queue.append(call_id)
+            self._emit("queued", reservation)
             return False
 
         self._in_flight += reservation.total
+        self._emit("admitted", reservation)
         return True
 
     def release(self, reservation: Reservation) -> str | None:
         """Libera y devuelve el siguiente de la cola, si lo hay."""
         self._in_flight = max(0, self._in_flight - reservation.total)
+        self._emit("released", reservation)
         return self._queue.popleft() if self._queue else None
 
     @contextmanager
@@ -113,16 +137,34 @@ class Admission:
         libera va dejando el techo mas bajo cada vez, y el sistema acaba
         bloqueado sin que nada lo explique.
         """
-        self._in_flight += reservation.total
+        if reservation.total > self._ceiling:
+            raise CeilingTooSmallError(
+                f"{reservation.agent!r} pide {reservation.total} tokens y el techo es "
+                f"{self._ceiling}: no cabe ni con el sistema vacio"
+            )
+        ticket = f"hold-{next(self._tickets)}"
+        with self._cond:
+            self._queue.append(ticket)
+            if self._queue[0] != ticket or not self.would_fit(reservation):
+                self._emit("queued", reservation)
+            # FIFO estricta: entra el primero de la cola cuando cabe, nunca
+            # alguien de detras por mucho que quepa.
+            while self._queue[0] != ticket or not self.would_fit(reservation):
+                self._cond.wait()
+            self._queue.popleft()
+            self._in_flight += reservation.total
+            self._emit("admitted", reservation)
+            self._cond.notify_all()
         try:
             yield
         finally:
-            self._in_flight = max(0, self._in_flight - reservation.total)
+            with self._cond:
+                self._in_flight = max(0, self._in_flight - reservation.total)
+                self._emit("released", reservation)
+                self._cond.notify_all()
 
 
-def reserve(
-    *, agent: str, packet_tokens: int | None, tool_quota: int = 0
-) -> Reservation:
+def reserve(*, agent: str, packet_tokens: int | None, tool_quota: int = 0) -> Reservation:
     """Construye la reserva. Fallo cerrado si no hay estimacion.
 
     `packet_tokens` es `None` cuando el contador no supo estimar --por ejemplo,

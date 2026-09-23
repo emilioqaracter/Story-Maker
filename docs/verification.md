@@ -190,7 +190,7 @@ Instrumentar al agente para que su trayectoria real (llamadas a skills, tokens, 
 |---|---|
 | **Qué verifica aquí** | Toda ejecución: qué contexto entró, qué skill se llamó, cuántos tokens consumió, qué defectos se dispararon, cuántos reintentos hubo. Es la implementación de PRO-09, trazabilidad |
 | **Clase** | D |
-| **Herramienta** | Langfuse, con su SDK de Python desde `backend/`. Una traza por novela; un span por llamada a agente, nombrado por agente, capítulo e intento; los datos de `architecture.md` §11 van como metadatos del span |
+| **Herramienta** | Traza local en fichero: un JSONL append-only por novela, junto a su SQLite, escrito desde `backend/commons/tracing`. Un registro por llamada a agente, nombrado por agente, capítulo e intento; los datos de `architecture.md` §11 van como campos del registro. Sin servicio externo: la traza es parte del estado de la tirada y se copia con ella |
 | **Límite** | Observa, no juzga. Dice qué pasó, nunca si estuvo bien |
 
 Es prerrequisito de casi todo lo demás: sin traza no hay eval reproducible (VER-10), ni diagnóstico de deriva (VER-16), ni evidencia de un ataque (VER-17). Se instrumenta primero, no al final.
@@ -220,7 +220,7 @@ Ejecutar el código del agente en un entorno aislado, de modo que una acción ma
 
 | Atributo | Valor |
 |---|---|
-| **Qué verifica aquí** | El backend entero, que es el único proceso (`architecture.md` §7.4) y por tanto toda llamada a agente, corre en un contenedor sin más red que la API de Claude y la de Langfuse, porque los embeddings son locales (`architecture.md` §4.8), con el sistema de ficheros acotado al directorio de la tirada y con el canon montado en **solo lectura**. La escritura al canon pasa exclusivamente por el Archivero tras congelar |
+| **Qué verifica aquí** | El backend entero, que es el único proceso (`architecture.md` §7.4) y por tanto toda llamada a agente, corre en un contenedor sin más red que la de Claude, porque los embeddings son locales (`architecture.md` §4.8), con el sistema de ficheros acotado al directorio de la tirada y con el canon montado en **solo lectura**. La escritura al canon pasa exclusivamente por el Archivero tras congelar |
 | **Clase** | D |
 | **Límite** | Contiene el daño, no lo previene. Un agente sandboxeado puede seguir escribiendo prosa incoherente con total libertad |
 
@@ -252,7 +252,7 @@ Una persona aprueba, rechaza o edita las acciones de alto impacto, y su decisió
 
 La tabla de sustitutos vive en [`architecture.md`](architecture.md) §8 y no se repite aquí: mantener dos copias de la misma tabla es garantizar que una se quede atrás. En corto: lo que haría la persona lo hacen las puertas con umbral (CAL-09), el Árbitro con la precedencia PRO-10, el conjunto dorado (CAL-10) con la dispersión del jurado (CAL-11), y la cuarentena (CAL-13) con la replanificación (PRO-12).
 
-La única entrada humana del sistema es el brief inicial (PRO-01). Eso es un encargo, no una revisión: ocurre antes del ciclo y no lo interrumpe.
+La única entrada humana del sistema es el brief (PRO-01), inicial o enmendado después de una congelación (`architecture.md` §2.2). Eso es un encargo, no una revisión: cambia lo que se pide y no interrumpe el capítulo en curso.
 
 Es el único método del catálogo sin línea de límite, y es correcto que no la tenga: un método excluido no cubre nada, así que no hay cobertura que acotar.
 
@@ -283,7 +283,7 @@ Enrutar los cambios generados por agentes por el mismo pipeline, los mismos test
 |---|---|
 | **Qué verifica aquí** | Ningún cambio en `backend/` o `frontend/` llega a la rama principal sin pasar VER-01, VER-02, VER-05, VER-06 y VER-08 en verde |
 | **Clase** | T |
-| **Procedencia** | Cada commit generado por agente lleva su autoría y el identificador de traza de Langfuse en el pie del mensaje, de modo que todo cambio se puede devolver a la ejecución que lo produjo |
+| **Procedencia** | Cada commit generado por agente lleva su autoría y el identificador de la tirada y de la llamada en su traza local en el pie del mensaje, de modo que todo cambio se puede devolver a la ejecución que lo produjo |
 | **Límite** | Verifica el código del sistema. No dice nada sobre la novela que ese código produce |
 
 ### 5.8 VER-16 · Progressive rollout
@@ -305,7 +305,7 @@ Sondear fallos a propósito bajo un modelo de amenaza adversario, no solo error 
 
 | Amenaza | Vector concreto aquí |
 |---|---|
-| Prompt injection | Instrucciones incrustadas en el brief, o en un nombre de personaje que luego entra en todos los paquetes de contexto |
+| Prompt injection | Instrucciones incrustadas en el brief —incluido el texto libre que la entrevista extrae y una enmienda pedida desde la lectura—, o en un nombre de personaje que luego entra en todos los paquetes de contexto |
 | Tool misuse chains | Encadenar `retcon.propose` con la reparación dirigida para reescribir canon ya congelado |
 | Goal drift | El Escritor optimizando la puntuación del Jurado en lugar de la escena; deriva de género a lo largo de 40 capítulos |
 | Data exfiltration | Salida de modelo que construye una ruta o una URL para salir del sandbox |
@@ -342,8 +342,8 @@ Comprobar que la cita con la que un modelo justifica un veredicto **existe de ve
 |---|---|
 | **Qué verifica aquí** | Toda salida que este sistema exige acompañada de evidencia: los defectos del Continuista, las puntuaciones de las skills `*.audit`, los veredictos del Jurado y los defectos que devuelven los verificadores deterministas |
 | **Clase** | A. Es una coincidencia de cadenas sobre la acción propuesta, no una prueba ni un juicio |
-| **Herramienta** | `check.evidence` en `backend/`, contra la escena congelada que la cita nombra |
-| **Regla de coincidencia** | La cita se normaliza —espacios, comillas tipográficas, guiones de diálogo y mayúsculas— y debe aparecer **exactamente una vez** en la escena citada, con **8 palabras o más**. Nada de lematización ni de coincidencia difusa |
+| **Herramienta** | `check.evidence` en `backend/`, contra la escena que la cita nombra. El Continuista ancla contra el capítulo entero y deduce la escena; el Jurado prueba la escena nombrada y, si ahí no ancla, la única escena del capítulo que contiene la cita (D-66) |
+| **Regla de coincidencia** | La cita se normaliza —espacios, comillas tipográficas, guiones de diálogo, mayúsculas, y la barra de salto de párrafo y los puntos suspensivos tipográficos (D-65)— y debe aparecer **exactamente una vez** en la escena donde ancla, con **8 palabras o más**. Nada de lematización ni de coincidencia difusa |
 | **Si falla** | El veredicto se descarta sin evaluarlo y se anota como **defecto de proceso** de esa instancia, nunca como defecto del texto. No detiene la producción |
 | **Límite** | Comprueba que la cita existe, jamás que sostenga lo que se afirma con ella. Un pasaje real citado para justificar algo que no dice pasa entero |
 
@@ -424,7 +424,7 @@ Dos detalles de orden que no son decorativos. **VER-20 corre antes que VER-14**,
 |---|---|---|
 | Lógica de dominio del backend | VER-01, 02, 03, 05, 06, 07 | A |
 | API HTTP | VER-01, 02, 05, 08 | T |
-| Frontend | VER-01, 02, 05, 08 | T |
+| Frontend | VER-01, 02, 05, 06, 08 | T |
 | Verificadores deterministas CAL-03 | VER-05, 06, 07 | T |
 | Flujo del orquestador | VER-05, 18 | A |
 | Memoria de trabajo PRO-13 | VER-01, 05, 06 | T |
@@ -492,7 +492,7 @@ Lo que este catálogo **no** verifica, dicho de forma explícita. Es la clase U 
 | Riesgo | Por qué queda en U | Señal que se vigila en su lugar |
 |---|---|---|
 | Que una escena sea memorable | No hay criterio operativo de gusto, y el sistema no tiene a quién preguntárselo | Suelo del conjunto dorado CAL-10 y huella estilística |
-| Aplanamiento estilístico lento a lo largo de 40 capítulos | Cada capítulo aislado pasa todas las puertas; el defecto solo existe en el agregado | Deriva de la huella estilística vigilada por el Supervisor |
+| Aplanamiento estilístico lento a lo largo de 40 capítulos, **en lo que la huella no captura**: imagen, tono, riqueza que no se mide en cinco métricas | Cada capítulo aislado pasa todas las puertas; el defecto solo existe en el agregado. La parte observable ya no está aquí: la deriva sostenida de la huella la detecta `verification/style/` y la vigila el Supervisor (RF-138, RF-146) | La muestra modélica por puntuación del Jurado, que reintroduce juicio en la referencia de voz |
 | Que la novela interese a un lector real | Fuera del alcance de cualquier método automático | VER-20 vigila la condición **necesaria**: que el texto se entienda sin el canon delante. El interés en sí, ninguna |
 | Que una cita real sostenga de verdad la afirmación que la acompaña | Comprobarlo exige entender el texto, y eso devuelve el problema a un modelo con los mismos modos de fallo que el que citó. VER-19 llega hasta la existencia literal y ahí se para | La cita es literal y única, así que el pasaje siempre se puede contrastar; y la tasa de citas descartadas por VER-19, por instancia, queda en la traza de VER-09 |
 | Que el modelo cambie de comportamiento tras una actualización del proveedor | No es observable por adelantado | Conjunto dorado ejecutado en cada cambio de versión de modelo, más VER-16 |

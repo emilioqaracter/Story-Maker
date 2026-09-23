@@ -10,10 +10,19 @@ nombre, y es justo lo que la organizacion por funcionalidad evita.
 
 from __future__ import annotations
 
-from fastapi import FastAPI
+from pathlib import Path
 
+from fastapi import FastAPI
+from fastapi.responses import FileResponse
+
+from brief.extract import Extractor, model_extractor
+from brief.routes import get_extractor
+from brief.routes import router as brief_router
 from canon.routes import router as canon_router
+from orchestration.routes import router as orchestration_router
 from planning.routes import router as planning_router
+from supervision.routes import router as supervision_router
+from verification.routes import router as verification_router
 
 
 def create_app() -> FastAPI:
@@ -27,7 +36,54 @@ def create_app() -> FastAPI:
     )
     app.include_router(canon_router)
     app.include_router(planning_router)
+    app.include_router(orchestration_router)
+    app.include_router(verification_router)
+    app.include_router(supervision_router)
+    app.include_router(brief_router)
+    # RI-59: `brief/` no conoce el transporte del modelo; se lo da la raiz.
+    app.dependency_overrides[get_extractor] = _extractor
+    _mount_frontend(app, FRONTEND_DIST)
     return app
+
+
+def _extractor() -> Extractor:
+    """`brief.extract` sobre el CLI, con el mismo modelo que los agentes (`architecture.md` §4.8)."""
+    from commons.provider.claude_cli import ClaudeCli
+    from commons.tokens.counter import TokenCounter
+    from commons.tokens.factors import DEFAULT_FACTOR, ModelFactors
+
+    modelo = "haiku"
+    return model_extractor(
+        ClaudeCli(model=modelo),
+        TokenCounter(ModelFactors(factors={modelo: DEFAULT_FACTOR})),
+        modelo,
+    )
+
+
+#: El sitio estatico que `npm run build` deja en `frontend/dist/`.
+FRONTEND_DIST = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
+
+
+def _mount_frontend(app: FastAPI, dist: Path) -> None:
+    """Sirve el frontend bajo `/app/` (`specs/srs-frontend-v1.md` D-67).
+
+    Bajo una base propia y no en la raiz, porque `/novels/{id}` es a la vez
+    direccion de la aplicacion y ruta RI-03. Toda direccion que no sea un
+    fichero del sitio devuelve `index.html`: el router del navegador la resuelve.
+    Sin `dist/` no monta nada, y el backend sigue siendo el sistema completo
+    (`architecture.md` 2.1). Queda fuera del esquema: no es contrato.
+    """
+    index = dist / "index.html"
+    if not index.is_file():
+        return
+    root = dist.resolve()
+
+    @app.get("/app/{rest:path}", include_in_schema=False)
+    def frontend(rest: str) -> FileResponse:
+        candidate = (dist / rest).resolve()
+        if rest and candidate.is_file() and candidate.is_relative_to(root):
+            return FileResponse(candidate)
+        return FileResponse(index)
 
 
 app = create_app()

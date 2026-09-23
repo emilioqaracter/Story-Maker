@@ -39,9 +39,7 @@ _COLUMNS = "id, world_time, world_seq, type, payload, provenance, chapter_origin
 _ORDER = "ORDER BY world_time, world_seq"
 
 _SELECT_ALL = f"SELECT {_COLUMNS} FROM event {_ORDER}"  # nosec B608
-_SELECT_UNTIL = (
-    f"SELECT {_COLUMNS} FROM event WHERE (world_time, world_seq) <= (?, ?) {_ORDER}"  # nosec B608
-)
+_SELECT_UNTIL = f"SELECT {_COLUMNS} FROM event WHERE (world_time, world_seq) <= (?, ?) {_ORDER}"  # nosec B608
 
 
 class InstantCollisionError(RuntimeError):
@@ -123,9 +121,7 @@ def read_until(con: sqlite3.Connection, t: WorldTime) -> Sequence[StoredEvent]:
     return _read(con, _SELECT_UNTIL, (t.stamp, t.seq))
 
 
-def _read(
-    con: sqlite3.Connection, sql: str, params: tuple[object, ...]
-) -> Sequence[StoredEvent]:
+def _read(con: sqlite3.Connection, sql: str, params: tuple[object, ...]) -> Sequence[StoredEvent]:
     rows = con.execute(sql, params).fetchall()
     if not rows:
         return []

@@ -37,6 +37,7 @@ def _counter(factor: float = DEFAULT_FACTOR) -> TokenCounter:
 
 # ------------------------------------------------------------------ el factor
 
+
 @given(text=st.text(min_size=1, max_size=2000))
 def test_estimacion_nunca_por_debajo_del_crudo(text: str) -> None:
     """Con factor >= 1, la estimacion nunca queda por debajo del recuento crudo.
@@ -52,9 +53,7 @@ def test_estimacion_nunca_por_debajo_del_crudo(text: str) -> None:
     text=st.text(min_size=1, max_size=500),
     factor=st.floats(min_value=1.0, max_value=3.0, allow_nan=False),
 )
-def test_la_estimacion_aplica_el_factor_y_redondea_hacia_arriba(
-    text: str, factor: float
-) -> None:
+def test_la_estimacion_aplica_el_factor_y_redondea_hacia_arriba(text: str, factor: float) -> None:
     assert _counter(factor).estimate(text, MODEL) == math.ceil(_raw(text) * factor)
 
 
@@ -148,6 +147,4 @@ def test_proveedor_caido_es_fallo_cerrado() -> None:
         raise ConnectionError("sin red")
 
     with pytest.raises(CalibrationError, match="recuento real"):
-        calibrate(
-            sample=_SAMPLE, model_id=MODEL, real_counter=rompe, factors=ModelFactors()
-        )
+        calibrate(sample=_SAMPLE, model_id=MODEL, real_counter=rompe, factors=ModelFactors())

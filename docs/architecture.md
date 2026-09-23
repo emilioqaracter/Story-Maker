@@ -64,9 +64,9 @@ El repositorio es un monorepo con dos artefactos desplegables.
 | Carpeta | Stack | Contiene |
 |---|---|---|
 | `backend/` | Python y FastAPI | Orquestador, los 13 agentes, el catálogo de skills, los cinco almacenes de la capa de memoria y las puertas de calidad |
-| `frontend/` | React | Lectura del manuscrito y visualización del estado: grafo de entidades, curva de tensión, deuda narrativa y salud de la tirada |
+| `frontend/` | React | Entrevista del brief, lectura del manuscrito por versiones con portada, índice y ficha de personajes y lugares, enmiendas al brief desde la lectura, y visualización del estado: grafo de entidades, curva de tensión, deuda narrativa y salud de la tirada |
 
-**El frontend es un observador de solo lectura.** No aprueba, no corrige, no desbloquea y no escribe canon. El motivo no es de alcance sino de diseño: cualquier interacción de la interfaz que condicione el ciclo reintroduce la aprobación manual que PRO-11 prohíbe, y lo hace por la puerta de atrás, sin regla de precedencia ni agente responsable.
+**El frontend es un observador de solo lectura del ciclo.** No aprueba, no corrige, no desbloquea y no escribe canon. El motivo no es de alcance sino de diseño: cualquier interacción de la interfaz que condicione el ciclo reintroduce la aprobación manual que PRO-11 prohíbe, y lo hace por la puerta de atrás, sin regla de precedencia ni agente responsable. Lo único que entra por él son **encargos**: el brief antes del ciclo y sus enmiendas después de una congelación (§2.2). Un encargo cambia lo que se pide, nunca revisa lo que se escribió: la enmienda es un hecho con procedencia `brief` (MET-09) que el sistema aplica solo, por la precedencia de PRO-10, como un retcon (CAN-10) que conserva la versión anterior (PRO-08). Cómo lo hace está en §8.
 
 De ahí se sigue una prueba barata de que el diseño se respeta: **el sistema completa una novela con el frontend apagado**. El día que no pueda, hay un fallo de diseño.
 
@@ -74,8 +74,10 @@ De ahí se sigue una prueba barata de que el diseño se respeta: **el sistema co
 
 | Qué cruza | Dirección | Forma |
 |---|---|---|
-| Brief (PRO-01) | frontend → backend | Encargo inicial. Es entrada, no revisión: ocurre antes del ciclo y no lo interrumpe |
-| Manuscrito congelado | backend → frontend | Solo capítulos cerrados. Un borrador (PRO-06) no sale |
+| Brief (PRO-01) | frontend → backend | Encargo inicial, construido en una entrevista cuyas llamadas de modelo despacha el backend en código. Es entrada, no revisión: ocurre antes del ciclo y no lo interrumpe |
+| Enmienda al brief (PRO-01) | frontend → backend | Encargo posterior: un hecho nuevo con procedencia `brief` (MET-09) y el fragmento o el hecho del que sale. Se admite solo entre congelaciones o con la obra cerrada; el Orquestador la aplica como retcon (CAN-10) según §8 y la versión anterior (PRO-08) se conserva. Es entrada, no revisión |
+| Manuscrito congelado | backend → frontend | Solo capítulos cerrados, por versión (PRO-08), con qué capítulos cambiaron respecto a la anterior. Un borrador (PRO-06) no sale |
+| Ficha de entidades | backend → frontend | Personajes y lugares con sus alias, hechos con procedencia, relaciones vigentes y los capítulos donde aparecen. Derivada del canon, nunca el registro en crudo |
 | Proyecciones de estado | backend → frontend | Grafo de entidades, curva de tensión, deuda narrativa. Derivadas, nunca el registro de eventos en crudo |
 | Traza de ejecución | backend → frontend | Las métricas de §11, en lectura |
 
@@ -93,7 +95,7 @@ El motivo es el mismo a los dos lados: agrupar por capa técnica, con un `models
 
 #### Backend
 
-Las funcionalidades son las seis capas del diagrama de §2, más el Orquestador:
+Las funcionalidades son las seis capas del diagrama de §2, más el Orquestador y una carpeta que no es de la novela sino del sistema, `evals/`, que comparte piso con él:
 
 ```
 backend/
@@ -104,7 +106,9 @@ backend/
 ├── generation/      · agentes 4 y 5
 ├── verification/    · agentes 6, 7, 8 y 9
 ├── canon/           · agentes 10 y 11, los cinco almacenes de §3 y las skills canon.*
-└── supervision/     · agente 12
+├── supervision/     · agente 12
+├── brief/           · los encargos: la entrevista que construye el brief y la interpretación de una solicitud de cambio
+└── evals/           · los evals de verification.md §5.2: ejercitan las funcionalidades sobre ficheros congelados; piso de orchestration/
 ```
 
 | Carpeta | Agentes de §6 | Skills de §5 |
@@ -113,23 +117,29 @@ backend/
 | `planning/` | 1 Arquitecto, 2 Planificador | `outline.plan`, `outline.check`, `scene.spec`, `replan.arc`, `setup.ledger` |
 | `context/` | 3 Documentalista | `context.*` |
 | `generation/` | 4 Escritor, 5 Especialista deportivo | `scene.write`, `match.simulate`, `match.narrate` |
-| `verification/` | 6 Continuista, 7 Jurado, 8 Reparador, 9 Estilista | `check.*`, `*.audit`, `revise.targeted`, `style.*` |
+| `verification/` | 6 Continuista, 7 Jurado, 8 Reparador, 9 Estilista | `check.*`, `*.audit`, `revise.targeted`, `style.*`. El conjunto dorado de defectos sembrados (CAL-10) vive con el Jurado, que es a quien calibra |
 | `canon/` | 10 Archivero, 11 Árbitro | `canon.*`, `prose.*`, `delta.extract`, `summarize.hierarchical`, `retcon.propose` |
 | `supervision/` | 12 Supervisor | `metrics.report`. **Lee** `setup.ledger` de `planning/` |
+| `brief/` | Ninguno | `brief.extract` y `amend.interpret`: dos llamadas de modelo que se despachan en código, como el examen, y no agentes. Las preguntas de la entrevista van por plantilla. La enmienda la aplica `orchestration/` (§8) |
+| `evals/` | Ninguno | Conjunto dorado de recuperación, medida de acierto de la recuperación, comparación de tiradas, campaña adversaria. Está en el piso de `orchestration/`: importa lo que mide y nadie lo importa |
 
 #### Frontend
 
-Paquete por funcionalidad también, y **explícitamente no Feature-Sliced Design**: nada de `app/`, `pages/`, `widgets/`, `features/`, `entities/` y `shared/` como capas. Las funcionalidades son las vistas de §2.2:
+Paquete por funcionalidad también, y **explícitamente no Feature-Sliced Design**: nada de `app/`, `pages/`, `widgets/`, `features/`, `entities/` y `shared/` como capas. Las funcionalidades son las vistas y los encargos de §2.2:
 
 ```
 frontend/
 ├── commons/         · cliente generado desde el OpenAPI, tipos y componentes compartidos
-├── manuscript/      · lectura de capítulos congelados
+├── interview/       · entrevista que produce el brief y sus enmiendas
+├── manuscript/      · lectura de capítulos congelados por versión, y solicitud de cambio desde la lectura
+├── story-bible/     · ficha de personajes y lugares con enlace a sus capítulos
 ├── entity-graph/    · grafo de entidades con vigencia
 ├── tension-curve/   · curva de tensión de la obra
 ├── narrative-debt/  · setups abiertos sin payoff
 └── run-health/      · métricas de §11
 ```
+
+La raíz de composición del frontend son `main.tsx` y `routes.tsx`, en la raíz de `frontend/`: montan las direcciones que exporta cada funcionalidad y sirven la aplicación bajo `/app/`. Son el equivalente de `orchestration/`: conocen a todas las funcionalidades y ninguna las conoce. No pueden vivir en `commons/`, porque todas importan de él.
 
 El cliente generado vive en `commons/` y no en cada funcionalidad: es uno solo, sale del esquema OpenAPI (§2.2) y duplicarlo rompería la garantía de VER-08 de que un cambio incompatible rompe la compilación.
 
@@ -141,7 +151,7 @@ El cliente generado vive en `commons/` y no en cada funcionalidad: es uno solo, 
 
 La regla 1 y sus dos excepciones son estáticamente comprobables, así que no se dejan en convención: son un patrón de análisis estático en la puerta de CI (VER-02).
 
-**Dónde viven las rutas HTTP.** Dentro de cada funcionalidad, como todo lo suyo: `canon/` sirve el estado del mundo y los capítulos congelados, `planning/` la deuda narrativa, `orchestration/` el arranque y el estado de la tirada. No hay una carpeta `api/` transversal, porque sería una capa técnica con otro nombre y es justo lo que §2.3 evita. **La aplicación FastAPI se compone en `orchestration/`**, que ya es la raíz de composición: monta el router que aporta cada funcionalidad y es el único sitio donde existe el objeto de aplicación. Todas las rutas son de lectura salvo las dos que §2.2 autoriza, el brief y el arranque de la tirada.
+**Dónde viven las rutas HTTP.** Dentro de cada funcionalidad, como todo lo suyo: `canon/` sirve el estado del mundo, los capítulos congelados y los retcons, `planning/` la deuda narrativa, `verification/` el veredicto del Jurado y la huella de estilo, `supervision/` la salud de la tirada, `orchestration/` el arranque, el estado de la tirada y las solicitudes de cambio, `brief/` la entrevista. No hay una carpeta `api/` transversal, porque sería una capa técnica con otro nombre y es justo lo que §2.3 evita. **La aplicación FastAPI se compone en `orchestration/`**, que ya es la raíz de composición: monta el router que aporta cada funcionalidad y es el único sitio donde existe el objeto de aplicación. Todas las rutas son de lectura salvo las que §2.2 autoriza como encargo —el brief, sus enmiendas y el arranque de la tirada— y la creación y los turnos de la entrevista que construye el brief.
 
 ---
 
@@ -290,27 +300,29 @@ Reglas duras de ocupación (CTX-18) y de concurrencia (CTX-20):
 | Especialista deportivo | 14.500 | 3.000 | 15 % | Por encuentro |
 | Continuista | 47.500 | 5.000 | 48 % | Por capítulo |
 | Estilista | 20.000 | 7.000 | 27 % | Por capítulo |
-| Juez (por instancia) | 9.000 | 1.500 | 11 % | 3 instancias por capítulo |
+| Juez (por instancia) | 11.500 | 1.500 | 13 % | 3 instancias por capítulo |
 | Reparador | 14.500 | 3.000 | 15 % | Por defecto agrupado |
 | Archivero | 24.500 | 5.000 | 25 % | Por capítulo |
 | Árbitro | 17.500 | 2.000 | 18 % | Por conflicto |
 | Supervisor | 32.500 | 3.000 | 33 % | Por capítulo cerrado |
 | Lector del examen · `quiz.answer` | 9.000 | 1.000 | 10 % | Por capítulo |
+| Extracción del texto libre · `brief.extract` | 9.000 | 2.000 | 11 % | Por texto libre pegado en la entrevista |
+| Interpretación de una solicitud · `amend.interpret` | 7.100 | 500 | 8 % | Por solicitud de cambio |
 
-La última fila **no es un agente**: es una llamada de modelo que despacha el Orquestador en código, sin misión ni criterio de salida propios, igual que el tope de salida lo aplica `dispatch` y no el modelo (§5.3). Su entrada sale de números que ya están en este documento: 8.000 del capítulo completo —el mismo bloque que ya ocupan el Estilista y el Archivero en §4.9—, más 500 de preguntas y 500 de instrucción. La salida es menor que la de un juez porque son respuestas breves y no hay evidencia que citar.
+Las tres últimas filas **no son agentes**: son llamadas de modelo que se despachan en código, sin misión ni criterio de salida propios, igual que el tope de salida lo aplica `dispatch` y no el modelo (§5.3). Su entrada sale de números que ya están en este documento: 8.000 del capítulo completo —el mismo bloque que ya ocupan el Estilista y el Archivero en §4.9—, más 500 de preguntas y 500 de instrucción. La salida es menor que la de un juez porque son respuestas breves y no hay evidencia que citar. Las dos de los encargos también salen de números de este documento (`specs/srs-backend-v3.md` D-80): la extracción lleva el texto libre en el mismo bloque de 8.000 que un capítulo, más 500 de borrador y 500 de instrucción, y devuelve lo que el Árbitro; la interpretación lleva la cita en el techo de 4.500 de la prosa literal de §4.3, las fichas del bloque 2 de §4.3 y 1.000 de petición e instrucción, y devuelve un solo JSON.
 
-**Qué corre en paralelo.** Solo el Jurado: sus tres instancias son deliberadamente independientes entre sí (§9.2), así que se lanzan a la vez y suman 27.000 tokens de entrada. Todo lo demás va en serie. Las escenas de un capítulo **no** se paralelizan, y no por coste: el bloque 6 del paquete del Escritor es la prosa literal de la escena anterior (§4.3), no compactable, así que escribir la escena *n* exige tener escrita la *n−1*. Paralelizarlas compraría velocidad rompiendo justo el bloque que sostiene la voz.
+**Qué corre en paralelo.** Solo el Jurado: sus tres instancias son deliberadamente independientes entre sí (§9.2), así que se lanzan a la vez y suman 34.500 tokens de entrada. Todo lo demás va en serie. Las escenas de un capítulo **no** se paralelizan, y no por coste: el bloque 6 del paquete del Escritor es la prosa literal de la escena anterior (§4.3), no compactable, así que escribir la escena *n* exige tener escrita la *n−1*. Paralelizarlas compraría velocidad rompiendo justo el bloque que sostiene la voz.
 
 Con eso, las combinaciones que CTX-20 llega a acotar son estas. **Se suma entrada, y para los agentes con herramientas se suma también su cupo de tirón** (§6.3), que se reserva entero en la admisión:
 
 | Concurrencia | Suma de entrada | Cabe |
 |---|---:|:-:|
-| Jurado ×3 | 27.000 | Sí, de sobra |
-| Continuista con su cupo, más Jurado ×3 | 99.500 | Sí, al borde |
+| Jurado ×3 | 34.500 | Sí, de sobra |
+| Continuista con su cupo, más Jurado ×3 | 107.000 | No: el Jurado se encola hasta que el Continuista termina, que es además el orden de §7.2 |
 | Arquitecto con su cupo, más Supervisor con el suyo | 130.000 | No |
 | Escritores de escena en paralelo | 19.700 cada uno | Máximo 5 |
 
-Las dos últimas filas no ocurren en el flujo de §7: el Supervisor corre sobre capítulo cerrado y el Arquitecto solo al planificar, y las escenas van en serie. CTX-20 está para que sigan sin ocurrir cuando el paralelismo crezca, no para describir lo que pasa hoy. Con la salida fuera del recuento, la única concurrencia real —los tres jueces— ocupa poco más de la cuarta parte del techo.
+Las dos últimas filas no ocurren en el flujo de §7: el Supervisor corre sobre capítulo cerrado y el Arquitecto solo al planificar, y las escenas van en serie. CTX-20 está para que sigan sin ocurrir cuando el paralelismo crezca, no para describir lo que pasa hoy. Con la salida fuera del recuento, la única concurrencia real —los tres jueces— ocupa poco más de un tercio del techo.
 
 El agente caro no es el que más escribe, es el **Continuista**: necesita el capítulo entero más el canon que podría contradecir. Es también el primero que tocará el techo cuando la novela crezca, y el que justifica la recuperación selectiva.
 
@@ -476,7 +488,7 @@ El sistema depende de **un solo proveedor externo** y de un contador de tokens q
 
 | Uso | Proveedor | Quién lo consume |
 |---|---|---|
-| Los once agentes de modelo | **Claude Haiku 4.5**, API de Anthropic | `planning/`, `generation/`, `verification/` y `canon/`, siempre a través del puerto de `commons/` |
+| Los once agentes de modelo | **Claude Haiku 4.5**, a través del CLI de Claude Code con la suscripción del autor | `planning/`, `generation/`, `verification/` y `canon/`, siempre a través del puerto de `commons/` |
 | Embeddings del índice de prosa | **Modelo local con `fastembed`** | `canon/` al congelar, `context/` al recuperar |
 
 Esto no cambia que el Orquestador y el Documentalista sean código (§6): Claude es el modelo que hay detrás de los once agentes que sí consumen ventana, no el que dirige el flujo.
@@ -484,6 +496,14 @@ Esto no cambia que el Orquestador y el Documentalista sean código (§6): Claude
 **Un puerto, dos operaciones.** Ningún agente importa el SDK de un proveedor. `commons/` expone un puerto con `complete`, que recibe instrucción, paquete de contexto y esquema de salida, y `embed`, que recibe texto y devuelve vector. El motivo es que §12 ya prevé modelos distintos por rol y `verification.md` §5.8 trata cambiar de modelo como un despliegue: con el puerto, cambiar de modelo es cambiar una configuración y no tocar once agentes.
 
 **Solo hay un proveedor externo: Claude.** La prosa es donde se juega la calidad de la obra, así que va a Claude sin intermediario. Los embeddings, en cambio, **no salen de la máquina**: los calcula un modelo local servido por `fastembed`.
+
+#### El CLI de Claude Code como proveedor
+
+Los once agentes llegan a Claude a través del CLI de Claude Code, con la suscripción del autor y no con una clave de API. Es una decisión de coste, y tiene una consecuencia medida: **el CLI añade su propio andamiaje en cada llamada** —instrucciones de sistema y definiciones de herramientas— que suma **38.600 tokens** de entrada incluso con todos los recortes que el puerto aplica: sin herramientas del CLI, sin skills, sin servidores externos, sin persistencia de sesión. El modo mínimo que lo quitaría exige clave de API, así que por esta vía es un suelo.
+
+Ese andamiaje **no cuenta contra el techo de 100.000 de §4.1**. El techo acota lo que el sistema ensambla y controla —paquete, instrucción, cupo de tirón—; el andamiaje es un coste fijo del transporte que el sistema ni decide ni puede compactar. Sí cuenta contra la ventana real del modelo, y ahí cabe: la llamada más cara, el Continuista con su cupo, suma 72.500 + 38.600 = 111.100 sobre una ventana de 200.000. La admisión (§7.4) descuenta el andamiaje del colchón real y no del techo del proyecto, y el contador lo suma al contrastar el estimado con el `usage` (RNF-19), porque el `usage` sí lo incluye.
+
+El cache del prefijo sobrevive entre invocaciones del CLI —medido: la segunda llamada leyó 37.154 fichas de cache—, así que el andamiaje se paga caro una vez por agente y barato después. Volver a la API es cambiar la implementación del puerto (RI-21), no tocar un agente.
 
 #### Embeddings locales
 
@@ -494,7 +514,7 @@ Un modelo cuantizado de unos 30 a 130 MB, cargado en proceso. Lo que compra, en 
 | **Desaparece un modo de fallo entero** | La red ya no puede tumbar la indexación al congelar ni degradar la recuperación a solo léxico. Era la única pieza del ciclo que fallaba de forma intermitente |
 | **Determinismo real** | Pesos fijos y locales: el mismo texto da el mismo vector siempre. Refuerza la propiedad de §4.4 de que el mismo canon produce el mismo paquete |
 | **Coste cero por vector** | Una obra son 600 a 1.200 fragmentos más sus consultas, recalculados en cada reindexación |
-| **Un servicio externo menos** | El contenedor de `verification.md` §5.3 se cierra más: solo Claude y Langfuse |
+| **Un servicio externo menos** | El contenedor de `verification.md` §5.3 se cierra más: solo Claude |
 
 **El modelo tiene que ser multilingüe, y esto no es negociable.** La novela se escribe en español. Un modelo entrenado en inglés —como `BAAI/bge-small-en-v1.5`, que lo lleva en el nombre— produce vectores que no separan bien el español, y la pierna semántica es justamente la que existe para encontrar lo que la léxica no encuentra: la escena espejo que no comparte ni una palabra con la consulta. Con un modelo inglés sobre texto español esa pierna devuelve ruido, y la recuperación se queda de hecho con una sola pierna, que es el escenario que §4.4 trata como degradado.
 
@@ -775,18 +795,18 @@ Nunca ve rúbricas ni veredictos: extrae hechos, no juzga calidad.
 | Instrucción | 700 | |
 | **Total** | **16.000** | 91 % del presupuesto |
 
-#### Jurado · 9.000 por instancia
+#### Jurado · 11.500 por instancia
 
 | Bloque | Tokens | Nota |
 |---|---:|---|
 | Invariantes, sin guía de estilo | 500 | Ancla reducida: un juez que ve la guía puntúa la guía |
 | Rúbrica de sus dimensiones | 1.500 | CAL-02 |
-| Capítulo | 5.500 | Longitud típica de EST-07 |
+| Capítulo | 8.000 | El techo de EST-07, entero: la dimensión de ritmo es de capítulo completo |
 | Fichas de voz de los POV | 800 | |
 | Instrucción y formato de veredicto | 700 | |
-| **Total** | **9.000** | 100 % del presupuesto |
+| **Total** | **11.500** | 100 % del presupuesto |
 
-**No recibe el paquete del Escritor, ni su razonamiento, ni los defectos ya detectados** (§9.2). Un capítulo en el techo de EST-07 no cabe en este presupuesto: cómo se resuelve es la decisión abierta nº 9 de §13, y no bloquea nada hasta el paso 9 del orden de construcción.
+**No recibe el paquete del Escritor, ni su razonamiento, ni los defectos ya detectados** (§9.2). Un capítulo en el techo de EST-07 cabe entero: el bloque es el mismo que el del Estilista y el Archivero, y es lo que cerró la decisión nº 9 de §13.
 
 #### Supervisor · 32.500
 
@@ -1309,9 +1329,9 @@ La segunda fila es la que hay que tener clara, porque la lectura contraria parec
 
 §7.1 a §7.3 dicen **qué pasa**. Esta sección dice **cómo se ejecuta**, que es lo que hace falta para escribir `backend/orchestration/`.
 
-#### Un proceso, un bucle asíncrono
+#### Un proceso, un bucle
 
-El Orquestador es un bucle `asyncio` en un solo proceso. No hay cola de trabajos ni workers.
+El Orquestador es un bucle síncrono en un solo proceso. No hay cola de trabajos ni workers. Las tres llamadas del Jurado corren en hilos del mismo proceso, y la admisión de CTX-20 es un semáforo compartido entre ellos.
 
 El motivo es de dimensionamiento, no de gusto: una novela es una unidad aislada, no hay concurrencia entre tiradas, la persistencia es un fichero local, y el paralelismo real que hay que soportar son **tres llamadas simultáneas**, las del Jurado (§4.2). Un broker y un proceso más serían infraestructura para un problema que este sistema no tiene, y añadirían un modo de fallo nuevo a un ciclo que por PRO-11 debe terminar sin que nadie intervenga.
 
@@ -1368,6 +1388,7 @@ Tres reglas que no se negocian: **FIFO estricta**, porque reordenar por hueco ma
 | Aprobar la escaleta | `outline.check`, verificador estructural determinista: cobertura de arcos, resolución del doble arco en momentos distintos, curva de tensión monótona por acto, todos los setups con payoff planificado, reparto de palabras por capítulo. Más una pasada de jurado sobre la escaleta. |
 | Resolver una contradicción de canon | Árbitro con la política de precedencia PRO-10: canon congelado > delta nuevo; brief > canon derivado; invariante duro > preferencia estética; hecho con payoff cobrado > hecho sin cobrar. |
 | Autorizar un retcon | `retcon.propose` más regla dura: solo procede si el hecho afectado no ha sido cobrado en ningún payoff y el número de pasajes que habría que tocar es igual o menor que 3. En caso contrario se regenera el capítulo nuevo. |
+| Aplicar un cambio pedido por quien encargó la novela | Es una enmienda al brief (PRO-01) con procedencia `brief`, así que gana sobre el canon derivado por PRO-10 y **sin** la regla de los 3 pasajes, que acota lo que el sistema se propone a sí mismo. Se admite solo entre congelaciones o con la obra cerrada; el Orquestador identifica las escenas que nombran el hecho por el registro de eventos y el índice de prosa, las repara con el hecho nuevo como canónico, las reverifica y las recongela (§10), y la versión anterior (PRO-08) se conserva entera. Si el hecho nuevo contradice un invariante duro o el reglamento, se rechaza con el motivo: invariante duro gana. Si el sistema no lo interpreta como exactamente una entidad y un atributo, se rechaza para que se reformule; nunca elige por quien pide. |
 | Cerrar un capítulo | Puertas automáticas con umbrales por dimensión (CAL-09). |
 | Calibrar a los jueces | Conjunto dorado con defectos sembrados (CAL-10) ejecutado cada 5 capítulos, más dispersión del jurado (CAL-11) como señal de fiabilidad por veredicto. |
 | Rechazar y parar | No existe. Cuarentena (CAL-13) más replanificación (PRO-12). El artefacto cuarentenado se rehace de inmediato, sin esperar a nadie; a nivel de capítulo no se salta al siguiente (§7.3). |
@@ -1397,10 +1418,10 @@ Coste despreciable, cero falsos positivos si están bien escritos. Se ejecutan s
 
 ### 9.2 Jurado
 
-Tres instancias con rúbricas distintas y semillas distintas. Reglas:
+Tres instancias con las mismas rúbricas y semillas distintas: la semilla fija el orden de las dimensiones y el ángulo de lectura, que es lo que hace que las tres no sean la misma llamada tres veces (CAL-11). Reglas:
 
 - Toda puntuación cita el fragmento que la justifica, y la cita **se comprueba** con `check.evidence`. Sin cita, o con una cita que no aparece en el texto, se descarta y el descarte se anota contra esa instancia.
-- Contexto mínimo: escena, especificación y ficha de voz. Nunca el paquete del Escritor.
+- Contexto mínimo, el de §4.9: el capítulo entero, las rúbricas y las fichas de voz de los POV. Nunca la especificación ni el paquete del Escritor.
 - Dispersión alta entre instancias invalida el veredicto y fuerza una verificación adicional en lugar de promediar. Promediar jueces que no se ponen de acuerdo produce un número sin significado.
 
 ### 9.3 Puertas
@@ -1410,7 +1431,7 @@ Tres instancias con rúbricas distintas y semillas distintas. Reglas:
 | Escena generada | Cero defectos S1 deterministas |
 | Capítulo verificado | Cero S1, máximo 2 S2, continuidad y voz sobre umbral. Las respuestas erróneas del examen de comprensión (`verification.md` §5.12) entran aquí como S2, sin umbral propio |
 | Capítulo cerrado | Puertas anteriores más huella estilística dentro de tolerancia y delta canónico integrado |
-| Cierre de acto | Deuda narrativa dentro del margen planificado; curva de tensión conforme. Ver abajo qué parte se comprueba hoy |
+| Cierre de acto | Deuda narrativa dentro del margen planificado; curva de tensión conforme. Ver abajo |
 | Cierre de obra | Deuda narrativa cero; todos los arcos resueltos; longitud en rango |
 
 #### La puerta de cierre de acto
@@ -1420,7 +1441,7 @@ Es la única de las cinco que no se evalúa por capítulo, y por eso se le escap
 | | |
 |---|---|
 | **Qué comprueba** | Que todo setup (CAN-08) cuyo payoff estaba **planificado dentro de este acto** aparece cobrado. El umbral no es un número nuevo: lo fija la propia escaleta, que ya declara dónde se cobra cada promesa |
-| **Qué no comprueba todavía** | Que la curva de tensión realizada se parezca a la planificada. Medirla exige juicio, y el juicio llega con el Jurado. Queda en riesgo aceptado hasta entonces |
+| **Y su mitad de juicio** | Que la curva de tensión realizada —el nivel de ritmo del Jurado por capítulo— acompañe a la planificada. Se comparan en dirección, no en valor, porque son escalas distintas: falla cuando la realizada baja donde la planificada no baja, sostenido tres capítulos como la deriva de la huella. El remedio es el mismo que el de la deuda |
 | **Si falla** | El Arquitecto replanifica el tramo **siguiente** para dar payoff a lo que quedó sin cobrar |
 | **Qué no hace nunca** | Tocar el acto que se acaba de cerrar. El canon congelado gana (PRO-10), así que el remedio solo puede mirar hacia delante |
 
@@ -1504,14 +1525,14 @@ En un sistema sin supervisión externa, la observabilidad no es un extra: es el 
 ## 13. Decisiones abiertas
 
 1. Tamaño óptimo del bloque de prosa literal (4.500 tokens actuales) frente a su coste por escena.
-2. Si el Continuista debe operar por capítulo o por par de capítulos al crecer la obra.
-3. Número de instancias de jurado: tres es el mínimo para medir dispersión, pero triplica coste.
-4. Umbral de dispersión que invalida un veredicto.
+2. ~~Si el Continuista debe operar por capítulo o por par de capítulos al crecer la obra.~~ **Cerrada: por capítulo.** Los resúmenes de arco de §4.5 son lo que lo mantiene dentro; `specs/srs-backend-v2.md` RNF-29 lo mide y la reabre si no cabe.
+3. ~~Número de instancias de jurado: tres es el mínimo para medir dispersión, pero triplica coste.~~ **Cerrada: tres.** Es el mínimo que mide dispersión y el coste se paga una vez por capítulo, no por escena.
+4. ~~Umbral de dispersión que invalida un veredicto.~~ **Cerrada: rango ≥ 2 niveles sobre una rúbrica de cinco**, con la mediana como nivel resultante y umbral de aceptación en 3 (`specs/srs-backend-v2.md` D-39).
 5. Si `match.simulate` debe modelar el encuentro minuto a minuto o solo sus hitos.
 6. Punto a partir del cual conviene reescribir un capítulo en vez de repararlo.
 7. ~~Con qué modelo de embedding se puebla el índice de prosa.~~ **Cerrada: `intfloat/multilingual-e5-large`** (§4.8). Cambiarlo más adelante es reindexar, no rediseñar, porque el esquema guarda modelo y dimensión.
-8. ~~Qué modelo de Claude usa cada rol.~~ **Cerrada: los once agentes de modelo corren sobre Claude Haiku 4.5** (§4.8). El puerto sigue permitiendo modelos distintos por agente si midiendo con `verification.md` §5.8 se viera que alguno lo necesita; hoy no se usa esa posibilidad. Consecuencias ya recogidas: ventana de 200.000 en vez de 1.000.000, mínimo cacheable de 4.096 y un factor de contador por modelo.
-9. Cómo evalúa el Jurado un capítulo en el techo de EST-07, que no cabe en los 9.000 tokens que §4.2 le da (§4.9). Las salidas: subir su presupuesto, evaluarlo por mitades, o acotar el capítulo por debajo de 4.000 palabras en la escaleta.
+8. ~~Qué modelo de Claude usa cada rol.~~ **Cerrada: los once agentes de modelo corren sobre Claude Haiku 4.5, a través del CLI de Claude Code** (§4.8). El puerto sigue permitiendo modelos distintos por agente si midiendo con `verification.md` §5.8 se viera que alguno lo necesita; hoy no se usa esa posibilidad. Consecuencias ya recogidas: ventana de 200.000 en vez de 1.000.000, mínimo cacheable de 4.096 y un factor de contador por modelo.
+9. ~~Cómo evalúa el Jurado un capítulo en el techo de EST-07, que no cabía en los 9.000 tokens que §4.2 le daba.~~ **Cerrada: sube el presupuesto por instancia a 11.500** con el capítulo entero en 8.000 (§4.2, §4.9). Por mitades rompe la dimensión de ritmo; acotar la escaleta encoge EST-07 por una limitación del evaluador.
 10. Constante de la fusión recíproca de rangos (§4.4). Se usa 60 por venir del trabajo original; ajustarla exige medir con el conjunto dorado, que llega en el paso 9.
 
 ---
@@ -1528,10 +1549,10 @@ En un sistema sin supervisión externa, la observabilidad no es un extra: es el 
 8. Afinado de la recuperación: tamaño de fragmento, constante de fusión y reparto de cupos, medidos contra el conjunto dorado en vez de estimados.
 9. Jurado, conjunto dorado y Estilista.
 10. Supervisor, replanificación y métricas de salud.
-11. Frontend de lectura y visualización.
+11. Frontend: entrevista del brief, lectura por versiones con ficha de personajes y lugares, enmiendas al brief desde la lectura, y visualización. Su SRS es `specs/srs-frontend-v1.md`; las rutas que exige del backend son la versión 3 del backend.
 
 **Las rutas HTTP no son un paso.** Cada paso añade las suyas dentro de su funcionalidad y las monta en `orchestration/` (§2.3). Concentrarlas en un paso propio dejaría los diez anteriores sin forma de ejercitarse y convertiría la API en la capa técnica que §2.3 evita.
 
 El orden recorre **funcionalidades de §2.3**, no capas técnicas: los pasos 1, 5 y 7 llenan `canon/`, el 2 `planning/`, el 3 `context/` y el 8 lo afina, el 4 `generation/` y la mitad determinista de `verification/`, el 6 cierra `canon/`, el 9 completa `verification/`, el 10 `supervision/` y el 11 el frontend entero. Los pasos se agrupan en versiones del backend, cada una con su SRS en `specs/` (`AGENTS.md` §3.3); la versión 1 son los pasos 1 a 6 y está en `specs/srs-backend-v1.md`. Es la consecuencia práctica de organizar por funcionalidad: cada paso entrega una carpeta que funciona, no un estrato horizontal que todavía no hace nada.
 
-Los pasos 1 a 6 producen una novela coherente sin intervención. Del 7 al 10 se gana escala y calidad, no viabilidad. El paso 11 está fuera del camino crítico por definición (§2.1) y solo tiene sentido cuando el paso 10 ya produce métricas que mostrar.
+Los pasos 1 a 6 producen una novela coherente sin intervención. Del 7 al 10 se gana escala y calidad, no viabilidad. El paso 11 está fuera del camino crítico por definición (§2.1): la entrevista y la lectura funcionan desde el paso 6, y las vistas de métricas solo tienen sentido cuando el paso 10 ya las produce.

@@ -116,9 +116,7 @@ class ToolServer:
             f"techo: {self._budget.ceiling} tokens\n"
             f"consultas hechas: {self._budget.queries}"
         )
-        return ToolResult(
-            content=cuerpo, provenance=BlockProvenance.PLAN, tokens=0
-        )
+        return ToolResult(content=cuerpo, provenance=BlockProvenance.PLAN, tokens=0)
 
     # --------------------------------------------------------- canon.lookup
 
@@ -147,9 +145,7 @@ class ToolServer:
         self._budget.quota_used += coste
         return ToolResult(content=contenido, provenance=procedencia, tokens=coste)
 
-    def _resolve(
-        self, kind: str, args: Mapping[str, JsonValue]
-    ) -> tuple[str, BlockProvenance]:
+    def _resolve(self, kind: str, args: Mapping[str, JsonValue]) -> tuple[str, BlockProvenance]:
         """Delega en las skills de lectura de `canon/`.
 
         Toda respuesta sale con procedencia: sin ella, un fragmento de prosa que
@@ -180,6 +176,5 @@ class ToolServer:
                 )
             case _:
                 raise ToolNotAllowedError(
-                    f"tipo de consulta desconocido: {kind!r}. "
-                    "Validos: entity, knowledge, related"
+                    f"tipo de consulta desconocido: {kind!r}. Validos: entity, knowledge, related"
                 )

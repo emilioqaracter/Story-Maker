@@ -104,8 +104,7 @@ class LocalEmbedder:
                 f"el modelo devolvio {len(vectors)} vectores para {len(texts)} textos"
             )
         return [
-            Embedding(values=tuple(v), model_id=self._model_id, dimension=len(v))
-            for v in vectors
+            Embedding(values=tuple(v), model_id=self._model_id, dimension=len(v)) for v in vectors
         ]
 
 

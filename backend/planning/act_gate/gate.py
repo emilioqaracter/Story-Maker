@@ -10,12 +10,14 @@ una deuda que se desmadra en el acto II y se detecta en el cierre obliga a
 replanificar la obra entera. Esta puerta la detecta un acto antes, cuando queda
 sitio por delante para cobrarla.
 
-**Lo que no comprueba todavia**: que la curva de tension realizada se parezca a
-la planificada. Medirla exige juicio, y el juicio llega con el Jurado. Queda en
-riesgo aceptado, declarado y no omitido.
+**Su mitad de juicio** (RF-148): que la curva de tension realizada --el ritmo
+del Jurado por capitulo-- acompane a la planificada. La compara
+`tension_conforms`, y un fallo tiene el mismo remedio que la deuda.
 """
 
 from __future__ import annotations
+
+from collections.abc import Sequence
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -63,9 +65,7 @@ def closes_an_act(outline: Outline, chapter: int) -> int | None:
     return None
 
 
-def check_act(
-    outline: Outline, act: int, frozen_scenes: frozenset[str]
-) -> ActGateResult:
+def check_act(outline: Outline, act: int, frozen_scenes: frozenset[str]) -> ActGateResult:
     """Todo setup con payoff planificado dentro del acto aparece cobrado.
 
     **El umbral no es un numero nuevo**: lo fija la propia escaleta, que ya
@@ -96,3 +96,28 @@ def replan_target(outline: Outline, act: int) -> int | None:
     actos = sorted({s.act for s in outline.scenes})
     posteriores = [a for a in actos if a > act]
     return posteriores[0] if posteriores else None
+
+
+def tension_conforms(planned: Sequence[int], realized: Sequence[int | None]) -> bool:
+    """RF-148. La curva realizada acompana a la planificada.
+
+    La realizada es el nivel de la dimension de ritmo del Jurado por capitulo;
+    la planificada, la tension de la escaleta. No se comparan en valor --son
+    escalas distintas-- sino en direccion: se desvia cuando la realizada baja
+    donde la planificada no baja. Desviacion **sostenida**, por analogia con
+    RF-138, es que ocurra en dos transiciones seguidas, es decir, tres
+    capitulos. Un capitulo sin veredicto no cuenta ni a favor ni en contra.
+    """
+    desvios = 0
+    for i in range(1, min(len(planned), len(realized))):
+        a, b = realized[i - 1], realized[i]
+        if a is None or b is None:
+            desvios = 0
+            continue
+        if b < a and planned[i] >= planned[i - 1]:
+            desvios += 1
+            if desvios >= 2:
+                return False
+        else:
+            desvios = 0
+    return True

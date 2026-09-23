@@ -52,14 +52,20 @@ def indexada(tmp_path: Path) -> Path:
     con.execute(
         "INSERT INTO prose_chunk (id, scene_id, ordinal, text, vector, vector_model, vector_dim)"
         " VALUES (?,?,?,?,?,?,?)",
-        ("c1", "e1", 1, "Marcos Vela miro el cesped mojado.", pack_vector([1, 0, 0, 0]),
-         "m", DIM),
+        ("c1", "e1", 1, "Marcos Vela miro el cesped mojado.", pack_vector([1, 0, 0, 0]), "m", DIM),
     )
     con.execute(
         "INSERT INTO prose_chunk (id, scene_id, ordinal, text, vector, vector_model, vector_dim)"
         " VALUES (?,?,?,?,?,?,?)",
-        ("c2", "e2", 1, "El Chino se ato las botas dos veces.", pack_vector([0, 1, 0, 0]),
-         "m", DIM),
+        (
+            "c2",
+            "e2",
+            1,
+            "El Chino se ato las botas dos veces.",
+            pack_vector([0, 1, 0, 0]),
+            "m",
+            DIM,
+        ),
     )
     # Vector de otra dimension: simula un fragmento indexado con otro modelo.
     con.execute(
@@ -67,16 +73,14 @@ def indexada(tmp_path: Path) -> Path:
         " VALUES (?,?,?,?,?,?,?)",
         ("c3", "e2", 2, "Otro parrafo.", pack_vector([1, 1]), "viejo", 2),
     )
-    con.execute(
-        "INSERT INTO prose_chunk_fts (rowid, text) "
-        "SELECT rowid, text FROM prose_chunk"
-    )
+    con.execute("INSERT INTO prose_chunk_fts (rowid, text) SELECT rowid, text FROM prose_chunk")
     con.commit()
     con.close()
     return path
 
 
 # ------------------------------------------------------------------ serializar
+
 
 def test_el_vector_sobrevive_al_viaje() -> None:
     v = [0.5, -0.25, 1.0, 0.0]
@@ -92,6 +96,7 @@ def test_el_coseno_de_un_vector_nulo_no_revienta() -> None:
 
 
 # -------------------------------------------------------------------- lexica
+
 
 def test_la_lexica_encuentra_nombres_propios(indexada: Path) -> None:
     """Es la unica que acierta con ellos, y por eso sus terminos salen de la
@@ -119,6 +124,7 @@ def test_sin_terminos_no_hay_busqueda_lexica(indexada: Path) -> None:
 
 
 # ------------------------------------------------------------------ semantica
+
 
 def test_la_semantica_ordena_por_parecido(indexada: Path) -> None:
     with connection.reader(indexada) as con:

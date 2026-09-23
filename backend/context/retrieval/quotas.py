@@ -57,9 +57,7 @@ class Selected(BaseModel):
     candidate: Candidate
     quota: Quota
     provenance: BlockProvenance = BlockProvenance.FROZEN_PROSE
-    as_summary: bool = Field(
-        default=False, description="True si no cabia y entro su resumen"
-    )
+    as_summary: bool = Field(default=False, description="True si no cabia y entro su resumen")
 
     @property
     def tokens(self) -> int:

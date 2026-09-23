@@ -34,13 +34,16 @@ La idea central del dominio: **una novela larga no es un texto largo, es un esta
 | Ontología del dominio | ✅ Completa |
 | Modelos y diagramas | ✅ Completos |
 | Arquitectura, agentes y skills | ✅ Especificados |
-| SRS del backend (`specs/`) | 🟡 Versión 1 escrita: `specs/srs-backend-v1.md`, pasos 1 a 6 |
+| SRS del backend (`specs/`) | ✅ Versión 1 (`srs-backend-v1.md`, pasos 1 a 6) y versión 2 (`srs-backend-v2.md`, pasos 7 a 10 y retcon), y versión 3 (`srs-backend-v3.md`, T33 a T36): entrevista, versiones, fichas y solicitudes de cambio que el frontend exige |
+| SRS del frontend (`specs/`) | ✅ Versión 1 (`srs-frontend-v1.md`, paso 11): entrevista del brief, lectura por versiones, ficha de personajes y lugares, enmiendas al brief desde la lectura. Las rutas nuevas que exige las realiza `srs-backend-v3.md`. Su plan de implementación es `frontend/PLAN.md`, T26 a T32 |
 | Estrategia de verificación | ✅ Completa |
-| Implementación de agentes | ⛔ **No iniciada** |
-| Implementación de skills | ⛔ No iniciada |
-| Capa de memoria | ⛔ No iniciada |
+| Implementación del backend | 🟡 Versiones 1 y 2 construidas, cableadas y en verde (T0 a T24); faltan las dos tiradas reales: la de T16, que produce `golden/v1-seed/`, y la de T24, que se compara con ella (`backend/PLAN.md` §1.7) |
+| Implementación del frontend | ✅ T26 a T31 construidos y en verde (`node gate.mjs`): entrevista, lectura por versiones con marcas de cambio, ficha de personajes y lugares, solicitudes de cambio, estado, deuda y grafo. T32 con modelo real sobre una copia de la tirada real; la tirada entera de una novela encargada desde la entrevista depende de T16 (`frontend/PLAN.md`) |
+| Implementación del backend v3 | ✅ T34 a T36 construidos y en verde (`python gate.py`): `brief/`, versiones, fichas, lista de novelas y solicitudes aplicadas por el Orquestador |
+| Agentes de modelo | ✅ Los trece con prompt o código y cableados en el motor real |
+| Capa de memoria | ✅ Cinco almacenes en SQLite, memoria de trabajo, delta canónico validado al congelar y traza local por tirada |
 
-**El repositorio está en fase de especificación.** No hay código. No crees agentes, skills ni esqueletos de implementación salvo que se pida de forma explícita.
+**El repositorio está cerrando el backend: el código está completo y faltan las tiradas reales que lo demuestran.** El plan de lo que falta, con su orden y sus puertas, es `backend/PLAN.md`. No crees agentes, skills ni código fuera de ese plan salvo que se pida de forma explícita.
 
 ---
 
@@ -68,20 +71,20 @@ Es un **monorepo**: backend y frontend viven en la misma raíz, junto a la espec
 └── frontend/                 ← visualización del estado narrativo
 ```
 
-`backend/` y `frontend/` existen pero están **vacías**: solo contienen un `.gitkeep`, porque git no versiona directorios sin ficheros. Reservan el sitio y fijan el stack; el contenido llega cuando arranque la implementación (§2).
+`backend/` tiene el código de las versiones 1 y 2 (§2). `frontend/` tiene la versión 1 entera (§2), con su plan en `frontend/PLAN.md`. El paso 11 está fuera del camino crítico (§8).
 
 ### 3.1 Stack por carpeta
 
 | Carpeta | Stack | Responsabilidad |
 |---|---|---|
 | `backend/` | Python + FastAPI | Orquestador, agentes, skills, capa de memoria y canon. Todo lo especificado en `docs/architecture.md` |
-| `frontend/` | React | Interfaz de lectura y visualización del estado del mundo, del grafo canónico y de la curva de tensión |
+| `frontend/` | React | Entrevista del brief, lectura del manuscrito por versiones con ficha de personajes y lugares, enmiendas al brief desde la lectura, y visualización del estado del mundo, del grafo canónico y de la curva de tensión |
 
 **Las dos se organizan por funcionalidad, no por capa técnica.** Cada funcionalidad es una carpeta con todo lo suyo dentro y lo compartido vive en `commons/`; en el frontend, además, **no se usa Feature-Sliced Design**. El reparto concreto, con las tres reglas que impiden que degenere, está en `docs/architecture.md` §2.3.
 
 Dos consecuencias que conviene tener claras desde ya:
 
-- **El frontend no participa en el ciclo de generación.** Observa y muestra; no aprueba, no corrige, no desbloquea. Cualquier interacción que condicione al ciclo viola la restricción de autonomía (§5.3.1).
+- **El frontend no participa en el ciclo de generación.** Observa y muestra; no aprueba, no corrige, no desbloquea. Cualquier interacción que condicione al ciclo viola la restricción de autonomía (§5.3.1). Lo único que entra por él son encargos —el brief y sus enmiendas—, y un encargo cambia lo que se pide, no revisa lo que se escribió (`docs/architecture.md` §2.2).
 - **El backend es el único dueño del canon.** El frontend lee proyecciones del estado; no escribe en él (§5.3.3).
 
 ### 3.2 Persistencia
@@ -102,8 +105,8 @@ Los cuatro documentos de `docs/` dicen **qué sistema es** y por qué. Una spec 
 
 | Regla | Valor |
 |---|---|
-| **Qué justifica una spec** | Una **versión del backend**: un tramo del orden de construcción de `architecture.md` §14 que se entrega junto. La versión 1 son los pasos 1 a 6, los que producen una novela coherente sin intervención (§8) |
-| **Nombre** | `specs/srs-backend-vN.md`, un solo fichero por versión, en formato SRS |
+| **Qué justifica una spec** | Una **versión del backend o del frontend**: un tramo del orden de construcción de `architecture.md` §14 que se entrega junto. La versión 1 del backend son los pasos 1 a 6, los que producen una novela coherente sin intervención (§8); la versión 1 del frontend es el paso 11 |
+| **Nombre** | `specs/srs-<mitad>-vN.md`, con `<mitad>` igual a `backend` o `frontend`; un solo fichero por versión, en formato SRS. Los IDs de requisito, decisión y tramo son únicos en toda la carpeta: cada spec continúa la numeración donde la anterior terminó |
 | **Estructura** | Introducción con alcance; descripción general; requisitos de interfaces (`RI-NN`), funcionales por funcionalidad (`RF-NN`), de datos (`RD-NN`) y no funcionales (`RNF-NN`), cada uno con su fuente en `docs/` y su método `VER-NN`; matriz requisito × método; fuera de alcance; decisiones tomadas; decisiones abiertas; trazabilidad con los IDs de `definitions.md` |
 | **Proceso** | **B** (§6.3), el mismo que `architecture.md` y `verification.md`, con el mismo umbral y el mismo interrogatorio |
 
@@ -183,6 +186,7 @@ Un cambio conceptual toca los cuatro documentos o ninguno. La propagación no es
 | Un presupuesto de tokens | La tabla por agente y el total de ocupación |
 | El stack, el despliegue o la estructura de carpetas | §3 y §3.1 de este fichero, más `architecture.md` §2.1, §2.2 y el orden de construcción |
 | Una sección de `architecture.md` que un SRS refina | Los requisitos de `specs/srs-backend-vN.md` que la citan como fuente |
+| Un requisito de un SRS o un tramo del plan | La matriz de cobertura de `backend/PLAN.md` §7. `backend/coherence.py` lo comprueba en la puerta (§6.7) |
 
 ### 5.3 Restricciones que no se negocian
 
@@ -313,7 +317,7 @@ Si durante el interrogatorio aparece un término que no está en `definitions.md
 
 ### 6.4 Proceso C · Código
 
-Para `backend/` y `frontend/`. Hoy no aplica: el repositorio está en fase de especificación (§2) y las dos carpetas están vacías.
+Para `backend/` y `frontend/`. Aplica a `backend/` y a `frontend/` (§2).
 
 1. **Comprobar que hay spec.** Ninguna línea de código sin una sección de `architecture.md` que la autorice. Si no la hay, se para y se ejecuta el proceso B.
 2. **Interrogar.** `grilling`. Preguntas obligadas: ¿qué sección de la spec implementa esto? ¿qué método `VER-NN` lo verifica y de qué clase TAIDU es? ¿qué contrato cruza aquí, HTTP o agente a agente? ¿va en `backend/` o en `frontend/`, y respeta la frontera de `architecture.md` §2.2? Bloqueante si cruza el umbral de §6.1.
@@ -371,13 +375,35 @@ El umbral es el mismo a propósito, y no uno nuevo. §6.1 ya lo dice de la otra 
 
 **Al terminar se dice lo que se resolvió por cuenta propia.** Un problema del lado derecho de la tabla se arregla sin preguntar, pero no en silencio: si se eligió entre dos lecturas posibles, eso consta en el informe final aunque no mereciera una interrupción. Un cambio incompleto anunciado es recuperable; uno silencioso, no (§9).
 
+### 6.7 El ciclo docs → spec → plan, y quién lo comprueba
+
+Los tres niveles de documento describen un solo sistema desde tres alturas: `docs/` dice qué es, `specs/` qué hace exactamente cada paso, `backend/PLAN.md` en qué orden y con qué ficheros se construye. Se desalinean en silencio si nadie los contrasta, así que el contraste es **código en la puerta**, no una revisión.
+
+`backend/coherence.py` corre dentro de `gate.py` en cada cambio y falla la puerta si encuentra:
+
+| Qué comprueba | Entre qué |
+|---|---|
+| Todo `RF`, `RD`, `RI`, `RNF` y `D` citado existe, y ninguno se define dos veces | `specs/*.md` ↔ `backend/PLAN.md` |
+| Todo requisito cita un `VER-NN` que existe | `specs/*.md` ↔ `docs/verification.md` |
+| Toda sección `§N.N` citada de `architecture.md`, `verification.md` o este fichero existe | `specs/*.md`, `backend/PLAN.md` ↔ `docs/`, `AGENTS.md` |
+| Todo ID de dominio citado existe en el glosario | `specs/*.md` ↔ `docs/definitions.md` |
+| Todo requisito aparece en la matriz requisito × método de su SRS | `specs/*.md` §7.1 |
+| Todo requisito está asignado a un tramo, y en `frontend/PLAN.md` al mismo que le da su SRS | `specs/*.md` §11 o `backend/PLAN.md`; `frontend/PLAN.md` y su §7.2 |
+| Toda sección de `architecture.md` tiene fila en la matriz de cobertura de cada plan | `docs/architecture.md` ↔ `backend/PLAN.md` §7 y `frontend/PLAN.md` §7.1 |
+| Todo paquete de `backend/` y toda carpeta de `frontend/` están declarados en el reparto físico | `backend/`, `frontend/` ↔ `architecture.md` §2.3 |
+| Ningún número de tramo se define dos veces | `specs/*.md` §11 ↔ `backend/PLAN.md` |
+
+**Qué hacer cuando falla.** Lo que la puerta señala es una desalineación, y la dirección de la corrección la fija §3.3: la spec nunca contradice a la arquitectura en silencio, y el plan nunca contradice a la spec. Se corrige el documento de menor altura, salvo que al hacerlo se descubra que el de mayor altura está mal: entonces se ejecuta el proceso A o B que corresponda y se propagan los tres en la misma entrega.
+
+**Qué no comprueba.** Que lo escrito sea verdad. Comprueba que los tres documentos hablan de las mismas cosas con los mismos nombres, que es la condición para que alguien pueda comprobar lo demás.
+
 ---
 
 ## 7. Los 13 agentes especificados
 
 El catálogo completo —misión, skills principales, criterio de salida y contrato de entrada y salida— está en [`docs/architecture.md`](docs/architecture.md) §6 y §6.2. **No se repite aquí**: dos copias de la misma tabla garantizan que una se quede atrás.
 
-**Ninguno está implementado** (§2).
+El estado de implementación de cada uno está en §2 y, tramo a tramo, en `backend/PLAN.md`.
 
 ---
 

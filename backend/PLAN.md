@@ -1,367 +1,472 @@
-# Plan de implementación · backend v1
+# Plan de implementación · backend
 
-> Compañero de [`specs/srs-backend-v1.md`](../specs/srs-backend-v1.md), que dice **qué** hay que construir. Este documento dice **en qué orden y con qué ficheros**.
-> No es un SRS y no añade requisitos: todo lo que aparece aquí tiene su `RF`, `RD`, `RI` o `RNF` en la spec. Si algo no lo tiene, es un error de este documento.
+> Compañero de [`specs/srs-backend-v1.md`](../specs/srs-backend-v1.md), que dice **qué** hay que construir. Este documento dice **de dónde se parte, en qué orden se sigue y con qué ficheros**.
+> No es un SRS y no añade requisitos: todo lo que aparece aquí tiene su `RF`, `RD`, `RI` o `RNF` en la spec, o su sección en `architecture.md`. Si algo no lo tiene, es un error de este documento.
+
+El plan tiene dos bloques. El **bloque 1** cierra la versión 1 —pasos 1 a 6 de `architecture.md` §14— hasta que una tirada real va del brief al cierre de obra sin intervención. El **bloque 2** son los pasos 7 a 10, que compran escala y calidad, y no empieza hasta que el bloque 1 pasa su puerta. Sin esa frontera se pule calidad sobre un canon que todavía no evoluciona.
 
 ---
 
-## 1. Antes de escribir una línea
+## 1. De dónde se parte
 
-### 1.1 Lo que ya está decidido y no se vuelve a discutir
+### 1.1 Lo que está en verde
 
-Si al implementar te parece que alguna de estas está mal, eso dispara el proceso B de [`AGENTS.md`](../AGENTS.md) §6.3, no un parche en el código.
+Medido el 2026-09-23 sobre la rama `v2-oneshot`:
 
-| | Decisión | Dónde está |
+| Comprobación | Resultado |
+|---|---|
+| `pytest` | 383 recogidas y en verde, con el contrato generativo sobre todas las rutas |
+| `mypy --strict` | Limpio, 184 ficheros |
+| `import-linter` | 3 contratos, 0 rotos: las tres reglas de `architecture.md` §2.3 se cumplen, `supervision/` y `evals/` incluidas |
+| TLC | El modelo de `orchestration/model/` con los estados de la versión 2, sin contraejemplo: 352 estados distintos. Cuatro mutaciones sembradas —saltarse el Jurado, no marcarlo, no revertir el pase de estilo, admitir sin mirar el techo— dan contraejemplo o bloqueo |
+| `gate.py` | Existe como un solo comando; CI lo ejecuta en cada cambio y la puerta lenta —`pip-audit`, mutación— a diario |
+
+### 1.2 Estado por tramo del SRS
+
+Lo que el SRS §11 pedía a cada tramo y lo que le faltaba al arrancar este plan, con el tramo que lo cerró. Hoy no falta nada de esta tabla (§1.7).
+
+| Tramo | Entregado por el SRS | Lo que faltaba, y dónde se cerró |
 |---|---|---|
-| Modelo | Claude Haiku 4.5 para los once agentes | D-23 |
-| Embeddings | `intfloat/multilingual-e5-large` con `fastembed`, dentro de la imagen. 1024 dimensiones | D-22, D-29 |
-| Contador | `tiktoken` × factor, calibrado al arrancar. **Nunca crudo** | D-14, D-28 |
-| Vectores | En tabla, similitud en Python, sin extensión nativa | D-12 |
-| Persistencia | Un fichero SQLite por novela | RI-14 |
-| Rutas | Dentro de cada funcionalidad; la aplicación se compone en `orchestration/` | D-01 |
-| Contexto | Empuje para todos; tirón además para cinco agentes | D-19 |
-| Tiempo de mundo | ISO 8601 más `world_seq` de desempate | D-07 |
-| Retcon | No existe en v1: el canon congelado siempre gana | D-05 |
+| **T0** `commons/` | Puerto con `complete` en dos modos y `embed` local; contador `tiktoken` × factor con calibración al arrancar; memoria de trabajo acotada a `wm_*`; tipos que cruzan funcionalidades; ajustes con validación del identificador de novela | El emisor de la traza. **T9** |
+| **T1** `canon/` lectura | Esquema de los cinco almacenes con versión, registro de eventos, proyecciones reconstruibles, `canon.query`, `state-at`, `knowledge-of`, `related`, carga del brief, rutas RI-01, RI-04 a RI-06 | Nada |
+| **T2** `planning/` | `outline.check` determinista, prompt del Arquitecto, `scene_spec.from_entry`, registro de setups, puerta de acto, ruta RI-07 | Prompt del Planificador (`scene.spec` como agente de modelo); `replan.arc`. **T12** |
+| **T3** `context/` | Construcción de la consulta, dos piernas, fusión por rangos, cupos, ensamblaje y compactación sin truncar, auditoría | Recetas por agente destino de §4.9. **T15** |
+| **T4** `generation/` | Prompt del Escritor con prefijo cacheable; `match.simulate` determinista con semilla | `match.narrate`. **T13** |
+| **T5** `verification/` | Los siete `check.*` deterministas con cita | `continuity.review`; `revise.targeted`. **T14** |
+| **T6** `canon/` escritura | `prose.chunk`, índice en dos niveles con FTS5 y vectores, congelación transaccional que ya acepta `delta` y `new_proscribed`, purga de memoria de trabajo | `delta.extract`, `summarize.hierarchical` como skill y detección de términos a proscribir. **T10** |
+| **T7** `canon/` arbitraje | Política de precedencia, total y sin ciclos | Las dos puertas del Árbitro, Orquestador y Documentalista. **T11** |
+| **T8** `orchestration/` | `loop`, `checkpoint`, `admission`, `retries`, `dispatch`, servidor de herramientas con cupo, `app.py` | Rutas RI-02 y RI-03; raíz de composición que arme el motor real; paso por `admission` y `dispatch`; cuarentena de capítulo (D-26); modelo TLA+ de VER-18. **T14, T15** |
 
-### 1.2 La regla de importación, activa desde el primer commit
+### 1.3 Estado por agente
 
-Tres pisos, y se comprueba con `import-linter` en CI (RNF-15) **desde el tramo 0**, no al final:
+| # | Agente | Estado |
+|---|---|---|
+| 0 | Orquestador | Código. Bucle entero cableado: admisión, dispatch, cuarentena, Jurado en paralelo, pase de estilo, retcon, Supervisor |
+| 1 | Arquitecto | Prompt, verificador determinista y reintento con los defectos del intento anterior (RF-27) |
+| 2 | Planificador | Prompt de `scene.spec` y reespecificación más estricta |
+| 3 | Documentalista | Código. Recuperación completa y recetas por agente de §4.9 |
+| 4 | Escritor | Prompt con prefijo cacheable; el reintento lleva el defecto y su evidencia (§4.1) |
+| 5 | Especialista deportivo | `match.simulate` y `match.narrate` |
+| 6 | Continuista | `check.*` y `continuity.review` con cita anclada |
+| 7 | Jurado | Tres instancias en paralelo bajo admisión, anclaje, dispersión, mediana, segunda ronda y conjunto dorado |
+| 8 | Reparador | `revise.targeted` con aceptación sin regresiones |
+| 9 | Estilista | `style.polish`, reverificación con reversión y huella |
+| 10 | Archivero | `delta.extract` validado al congelar |
+| 11 | Árbitro | Precedencia, sus dos puertas y `retcon.propose` con la regla dura en código |
+| 12 | Supervisor | Trece señales, veredicto acotado y replanificación por métrica; si no responde cuenta como sano |
 
-```
-orchestration/          ← conoce a todas; nadie lo conoce a él
-    ↓
-planning/  context/  generation/  verification/
-    ↓
-canon/                  ← todas leen de él; él no importa de ninguna
-commons/                ← cualquiera puede importarlo
-```
+### 1.4 Lo que la tirada real enseña
 
-Dejarlo para el final significa descubrir en el tramo 8 que media docena de módulos cruzan la frontera, y reorganizarlos cuando ya tienen tests encima.
+La primera tirada completa con modelo real llegó a la puerta del Jurado en el capítulo 1 y destapó fallos que ninguna prueba con dobles podía ver, porque los cuatro dependen de cómo escribe y cómo cita un modelo de verdad:
 
-### 1.3 Diez trampas que van a morder
+| Fallo | Causa | Corrección |
+|---|---|---|
+| El examen dio por falladas 5 de 6 respuestas correctas | Exigía el nombre completo de la clave | D-64: basta la clave entera o una palabra distintiva suya |
+| El Jurado descartó 15 de sus puntuaciones y el ritmo se quedó sin nivel | Citas que unían párrafos con « / » y citas de ritmo atribuidas a «el capítulo» | D-65 y D-66; el prompt del juez exige copia literal de un párrafo, de 8 a 25 palabras |
+| Tres intentos de escena seguidos en presente | El reintento no llevaba el defecto: era la misma llamada otra vez | El reintento lleva el defecto y su evidencia, como ya pedía `architecture.md` §4.1 |
+| `check.timeline` marcaba «1 de esta» como fecha | La expresión aceptaba cualquier palabra tras «de» | Solo nombres de mes |
+| La tirada cayó entera cuando el CLI salió con error en una llamada del Jurado | El fallo del proveedor no se capturaba: subía hasta el bucle | Consume un intento del mismo presupuesto de la llamada, como `architecture.md` §4.8 pide para el fallo intermitente; agotado, sube, y la tirada se reanuda desde la última escena cerrada (RF-20) |
+| La segunda tirada abortó en el capítulo 1 con cuatro dimensiones del Jurado sin nivel | El juez recortaba citas con «...» y citaba frases cortas; lo descartado contaba como defecto del texto y el Reparador arreglaba lo que no estaba roto | D-71: la cita que no ancla vuelve al juez con su motivo dentro del presupuesto de llamada; la traza de la puerta de capítulo lleva ya los defectos con su cita |
+| El Continuista marcó como S1 cuatro adjetivos que la guía de estilo prohíbe | El prompt dice que no valora estilo y el modelo lo hace igual; CAL-06 pone el estilo en S3 y su dueño es el Estilista | RF-51 en código: el prompt enumera los ámbitos de continuidad y el anclaje descarta lo que caiga fuera como defecto de proceso (RF-111) |
+| El Supervisor declaró deriva tras el capítulo 1 por «recuperaciones degradadas» | La recuperación se marcaba degradada siempre que la pierna semántica volvía vacía, y al empezar la obra no hay prosa que recuperar | Degradado es que la pierna no pudo ejecutarse, como dicen `architecture.md` §4.4 y §11: sin vector de consulta, o con prosa indexada que no devuelve |
+| El capítulo 2 dio por agotada su primera escena al primer fallo | El presupuesto de reintentos era uno para la obra entera, y cada escena heredaba los intentos de la anterior | Presupuesto nuevo por capítulo, y contador de escena a cero al empezar cada escena y al entrar en la puerta de capítulo (RF-18, §7.3) |
 
-Están aquí porque las diez producen código que **funciona en la demo y falla en el capítulo 20**.
+La tirada se archivó en `runs-golden/intento-1/` y se relanzó con las correcciones.
 
-1. **`tiktoken` crudo.** Infracuenta en español. Todo lo que devuelve va multiplicado por el factor y redondeado hacia arriba. Un solo sitio que lo llame directo rompe el techo (RI-20).
-2. **Algo voluble delante del prefijo cacheable.** Una marca de tiempo, un identificador de tirada, un contador de intento. El caché casa por prefijo: un byte distinto y se pierde la llamada entera, sin error (RF-103).
-3. **Confundir las dos fábricas de escritura.** La de canon vive en `canon/db/` y no sale de ahí; la de memoria de trabajo vive en `commons/db/` y **solo** puede nombrar tablas `wm_*`. Usar la de canon para guardar un borrador desprotege lo único que esa regla existe para proteger (RD-09, RD-18).
-4. **Proyecciones que dependen del orden de inserción.** Ordena siempre por `(world_time, world_seq, id)`. La propiedad que lo detecta va en el tramo 1, no después (RD-03, RF-04).
-5. **Fragmentos que cruzan la frontera de su escena.** Rompe el filtrado por metadatos, que es lo que hace barata la recuperación (RD-16, RF-70).
-6. **Truncar.** Ni un fragmento, ni un paquete, ni un resultado de herramienta. Se sustituye por resumen o se niega (RF-84, RF-94).
-7. **Escenas en paralelo.** El bloque 6 del paquete del Escritor es la prosa literal de la anterior. Van en serie, siempre (RF-45).
-8. **Empezar el capítulo N+1 con el N sin congelar.** No existe para el sistema (RF-107).
-9. **Cálculo de embeddings dentro de la transacción.** Son cientos de vectores; bloquean el fichero sin motivo (RNF-21, RF-68).
-10. **La memoria de trabajo en un paquete.** Un borrador rechazado que llega al Escritor es el sistema aprendiendo de su propio error (RF-37).
-11. **Embeber sin los prefijos de E5.** `multilingual-e5-large` exige `query: ` delante del texto de consulta y `passage: ` delante de cada fragmento indexado. Sin ellos el modelo carga, devuelve vectores y recupera peor, **sin error y sin señal** (RF-102).
+### 1.5 Decisiones ya fijadas que este plan respeta
+
+Están en el SRS §9 y en `architecture.md`. Si al implementar parece que alguna está mal, eso dispara el proceso B de `AGENTS.md` §6.3, no un parche.
+
+| Decisión | Dónde |
+|---|---|
+| Traza local JSONL por tirada, sin servicio externo; un fallo al trazar se registra y se continúa | D-11, RI-16, RNF-13 |
+| Claude Haiku 4.5 a través del CLI de Claude Code, con la suscripción del autor | D-23, `architecture.md` §4.8 |
+| El andamiaje del CLI —38.600 tokens medidos— no cuenta contra el techo de 100.000; sí contra la ventana real, donde la admisión lo descuenta | D-35 |
+| Capítulo en cuarentena se rehace de inmediato; no se salta al siguiente | D-26, RF-107 |
+| Retcon no existe en la versión 1: el canon congelado siempre gana | D-05 |
+| Puerta de capítulo sin Jurado: cero S1 y máximo 2 S2 del Continuista | D-06 |
+| Puerta de acto solo en su mitad determinista, la deuda | D-27 |
+| Sin Supervisor replanifica el Planificador a nivel de escena y el Arquitecto a nivel de tramo | D-04 |
+| Dos fábricas de escritura: canon en `canon/db/`, memoria de trabajo en `commons/db/` | D-30 |
+| La proscripción la inserta la congelación | D-32, RF-108 |
+
+### 1.6 Trampas que siguen vivas
+
+Producen código que funciona en la demo y falla en el capítulo 20.
+
+1. **`tiktoken` crudo.** Todo lo que devuelve va multiplicado por el factor y redondeado hacia arriba (RI-20).
+2. **Algo voluble delante del prefijo cacheable.** Un byte distinto invalida la llamada entera, sin error (RF-103). Con el CLI la instrucción del sistema es lo único estable entre llamadas: ahí va el prefijo.
+3. **Confundir las dos fábricas de escritura** (RD-09, RD-18).
+4. **Proyecciones que dependen del orden de inserción.** `(world_time, world_seq)` es único; la colisión se rechaza (D-34).
+5. **Fragmentos que cruzan la frontera de su escena** (RD-16, RF-70).
+6. **Truncar.** Se sustituye por resumen o se niega (RF-84, RF-94).
+7. **Escenas en paralelo.** Van en serie, siempre (RF-45).
+8. **Empezar el capítulo N+1 con el N sin congelar** (RF-107).
+9. **Embeddings dentro de la transacción** (RNF-21).
+10. **La memoria de trabajo en un paquete** (RF-37).
+11. **Embeber sin los prefijos de E5**: `query: ` y `passage: ` (RF-102).
+12. **Un delta vacío tratado como éxito.** Una escena que cambia algo produce eventos; un `delta.extract` que devuelve vacío sobre una escena con cambio de valor declarado es un fallo del agente y consume un reintento, no una congelación limpia.
+13. **Contrastar el estimado contra un `usage` que lleva el andamiaje del CLI.** El `usage` incluye los 38.600 del CLI; el estimado del paquete no. Se comparan después de sumar el andamiaje al estimado, o RNF-19 dispara siempre (D-35).
+
+### 1.7 Estado de los tramos de este plan
+
+| Tramo | Estado |
+|---|---|
+| T9 a T15 | Puerta pasada |
+| T16 | Código listo; falta que la tirada real cierre la obra y su fichero se copie a `golden/v1-seed/` |
+| T17 | Hecho |
+| T18, T19 | Puerta pasada con dobles; la medida sobre la semilla espera a T16 |
+| T20 a T23 | Construidos, cableados en el bucle y en verde |
+| T24 | Bucle completo, rutas RI-29 y RI-30, TLC sin contraejemplo; falta la tirada real de la versión 2 y su comparación con la semilla |
 
 ---
 
-## 2. Los ocho tramos
+## 2. Bloque 1 · cerrar la versión 1
 
-Cada tramo abre cuando el anterior pasa su puerta. El detalle de qué entrega y con qué se comprueba está en el SRS §11; aquí va el contenido fichero a fichero.
+Ocho tramos, T9 a T16, que continúan la numeración del SRS §11 para que un identificador de tramo signifique una sola cosa. **Un tramo no empieza hasta que el anterior pasa su puerta.** Cada tramo termina con la sincronización inversa de `AGENTS.md` §6.5 —estructura, spec, matriz de verificación, glosario, §2 de `AGENTS.md`— y no se da por cerrado hasta que vuelve.
 
-### T0 · `commons/`
+El orden tiene una regla: **primero lo que hace que el canon evolucione, después lo que lo protege, al final lo que lo ejecuta de verdad.** Archivero antes que Árbitro porque sin delta no hay conflicto que arbitrar; Continuista antes que la raíz de composición porque una tirada real sin Continuista congela errores con la misma solemnidad que aciertos.
 
-Todo lo demás importa de aquí, así que va primero aunque no sea una funcionalidad.
+### T9 · Traza local y saneamiento
 
 ```
-commons/
-├── provider/
-│   ├── port.py           · protocolo: complete_once, complete_with_tools, embed
-│   ├── claude.py         · implementación Haiku 4.5; traduce el esquema de salida
-│   ├── embeddings.py     · fastembed; carga y verificación de dimensión al arrancar
-│   └── errors.py         · tipos de fallo del proveedor
-├── tokens/
-│   ├── counter.py        · tiktoken × factor, redondeo hacia arriba
-│   ├── factors.py        · un factor por modelo; sin factor, no se admite
-│   └── calibration.py    · llamada de calibración al arrancar
-├── db/
-│   └── working_memory.py · fábrica de escritura acotada a tablas wm_*
-├── tracing/
-│   ├── langfuse.py    · un span por llamada
-│   └── queue.py       · cola local para cuando Langfuse no responde
-└── types/                · artefactos que cruzan dos o más funcionalidades
-    ├── outline.py  scene_spec.py  context_package.py
-    ├── defect.py   canon_delta.py  arbitration.py
-    └── prose.py
+commons/tracing/
+└── trace.py              · emisor y lector: un registro JSONL por llamada, defecto, reintento, admisión y arbitraje
+orchestration/
+├── dispatch.py           · cada llamada emite su registro con agente, tokens reales, estimados y andamiaje (D-35)
+├── admission.py          · emite admisión, encolado y liberación con la ocupación en vuelo
+└── loop.py               · emite cada decisión de la escalera con su regla, y cada puerta con su veredicto
 ```
 
-| Requisitos | RI-11 a RI-13, RI-15, RI-20 a RI-22, RI-24, RD-09, RD-18, RNF-13, RNF-16, RNF-19 |
+| Requisitos | RI-16, RI-17, RI-23, RF-24, RF-39, RF-100, RNF-13, RNF-14, RNF-24 |
 |---|---|
-| **Puerta** | `mypy --strict` limpio; el contador contrastado contra un `usage` de doble |
+| **Puerta** | Una tirada con dobles deja un registro por llamada con agente, capítulo, intento, tokens reales y estimados; borrar el fichero de traza a mitad no detiene la tirada |
 
-**Lo que más importa de este tramo:** `port.py` tiene **dos** modos de `complete`, y quién usa cuál no lo decide el agente sino su ficha en `architecture.md` §6.3. Si el puerto expone uno solo, los cinco agentes con herramientas no tienen dónde vivir.
+**Lo que se hace aquí y no después:** la traza va antes que cualquier agente nuevo porque los tramos T10 a T14 se depuran leyéndola. Añadirla al final es la forma conocida de no añadirla. El registro lleva el andamiaje del CLI como campo propio, para que RNF-19 compare lo comparable (trampa 13).
 
-### T1 · `canon/` · esquema y lectura
+### T10 · Archivero
 
 ```
-canon/
-├── db/
-│   ├── connection.py     · lectura, y escritura DE CANON. Esta última no sale de aquí
-│   ├── schema.sql        · las tablas de los cinco almacenes
-│   ├── triggers.sql      · abortan UPDATE y DELETE sobre event
-│   └── migrations/       · versión de esquema; hacia delante en escritura
-├── events/               · inserción y lectura del registro
-├── projections/          · entity, alias, attribute, relation, knowledge, competence, document_version
-├── graph/                · recorrido recursivo sobre aristas vigentes
-├── skills/
-│   ├── query.py  state_at.py  knowledge_of.py  related.py
-├── brief.py               · carga el brief como eventos al crear el fichero
-└── routes.py              · POST /novels; GET de capítulos y estado del mundo
+canon/archivist/
+├── prompts.py            · delta.extract: prefijo cacheable con el catálogo de tipos de evento; instrucción con el capítulo y el estado en t
+├── extract.py            · valida la salida; renumera los desempates detrás de lo registrado (RD-19); el delta vacío es un fallo
+└── proscription.py       · n-gramas que el capítulo hace repetidos, sin palabras funcionales, para que la congelación los inserte
+canon/summaries/
+└── prompts.py            · summarize.hierarchical, niveles escena y capítulo, con los tamaños de §4.5
+orchestration/loop.py     · el Archivero extrae antes de congelar; `_freeze` escribe solo el delta validado
 ```
 
-| Requisitos | RD-01 a RD-18, RF-01 a RF-11, RF-67, RI-01, RI-04 a RI-06 |
+| Requisitos | RF-12, RF-55, RF-56, RF-57, RF-58, RF-90, RF-108 |
 |---|---|
-| **Puerta** | Independencia del orden de inserción; reconstruibilidad desde cero; vigencia correcta en cualquier instante |
+| **Puerta** | Tras congelar un capítulo con dobles, `event` contiene los eventos del delta y `state-at` en el instante del capítulo devuelve el cambio; un delta vacío sobre una escena con cambio de valor consume un reintento; un delta que no valida no escribe nada |
 
-**Escribe estas tres propiedades antes que las funciones**, porque las tres son de las que se comprueban generando casos, no ejemplos: proyectar los mismos eventos en distinto orden da el mismo estado; regenerar el canon desde cero es igual a mantenerlo incremental; una consulta en `t` no devuelve nada cuya vigencia haya terminado antes de `t`.
+**El Archivero tiene herramientas** (`canon.lookup`, `context.budget`, cupo 15.000, `architecture.md` §6.3): para saber si un hecho es nuevo tiene que poder preguntar si ya existe. Es la primera llamada con herramientas que corre de verdad, así que aquí se estrena `complete_with_tools` contra el servidor de `orchestration/tools/`.
 
-### T2 · `planning/`
-
-```
-planning/
-├── outline/
-│   ├── plan.py           · outline.plan, agente de modelo
-│   └── check.py          · outline.check, DETERMINISTA
-├── scene_spec/           · conversión de tramo a especificaciones
-├── ledger/               · registro de setups y su máquina de estados
-├── act_gate/             · puerta de cierre de acto
-├── replan/               · replan.arc: recalcula un tramo tras un bloqueo
-└── routes.py             · GET /novels/{id}/debt
-```
-
-| Requisitos | RF-25 a RF-31, RF-105, RF-106; RF-19 en su parte de replanificación |
-|---|---|
-| **Puerta** | `outline.check` rechaza una escaleta con un arco sin resolución y acepta una válida |
-
-**`check.py` no llama a ningún modelo.** Es un verificador estructural: cobertura de arcos, doble arco resuelto en escenas distintas, curva de tensión monótona por acto, todo setup con payoff planificado, reparto de palabras. Si te ves pidiéndole a un modelo que valide la escaleta, has cruzado la restricción de «determinista antes que modelo».
-
-### T3 · `context/`
-
-El tramo más grande, y donde vive el RAG híbrido.
+### T11 · Árbitro, las dos puertas
 
 ```
-context/
-├── query/                · filtros, términos léxicos desde alias, texto semántico, exclusiones
-├── retrieval/
-│   ├── lexical.py        · FTS5 con BM25
-│   ├── semantic.py       · coseno sobre vectores, en Python
-│   ├── fusion.py         · fusión recíproca de rangos, constante 60
-│   └── quotas.py         · lugar, voz, promesa, espejo, libre
-├── packing/
-│   ├── assemble.py       · ensamblaje por receta
-│   ├── compact.py        · prioridad inversa; nunca trunca
-│   └── recipes/          · una por agente destino
-└── audit/                · context.audit
+canon/arbiter/
+├── precedence.py         · ya existe
+└── entries.py            · puerta 1: `validate_delta`, cada rechazo es un S1 con cita para el Reparador (RF-60)
+                          · puerta 2: `resolve_claims`, la usa el Documentalista sobre los hechos del paquete
 ```
 
-| Requisitos | RF-32 a RF-39, RF-72 a RF-89, RF-103, RF-109, RNF-20, RNF-23 |
-|---|---|
-| **Puerta** | La fusión es determinista sobre el mismo canon; ningún paquete supera el presupuesto de su agente destino |
-
-**El ensamblador es una función pura** de su petición y del canon: construye cada paquete desde cero y no lo muta ni lo reutiliza. Eso es el aislamiento (CTX-11) en forma comprobable, y por eso no hay módulo de aislamiento (RF-109).
-
-**Cero llamadas de modelo en todo el tramo**, salvo el vector de la consulta, que además ahora es local. Si aparece una, algo está mal planteado: los sinónimos salen de la tabla de alias y la consulta semántica es la propia especificación de escena.
-
-### T4 · `generation/`
-
-```
-generation/
-├── writer/               · scene.write
-└── sports/
-    ├── simulate.py       · motor de reglas, DETERMINISTA dada una semilla
-    └── narrate.py        · dramatiza la cronología ya resuelta
-```
-
-| Requisitos | RF-40 a RF-45 |
-|---|---|
-| **Puerta** | `match.simulate` es determinista dada una semilla y no alinea a nadie indisponible |
-
-**`simulate.py` corre antes que `narrate.py`, siempre.** El marcador, la cronología de hitos y los cambios de estado físico los decide el motor de reglas; el modelo solo los dramatiza. Invertirlo reintroduce toda la familia de defectos de verosimilitud deportiva que este diseño elimina de raíz.
-
-### T5 · `verification/`
-
-```
-verification/
-├── checks/               · timeline, ledger, availability, format, repetition, lexicon, knowledge
-├── continuity/           · continuity.review, agente de modelo con herramientas
-└── repair/               · revise.targeted; revalida desde la primera puerta
-```
-
-| Requisitos | RF-46 a RF-54 |
-|---|---|
-| **Puerta** | Cobertura de mutación ≥ 90 % en los siete verificadores deterministas |
-
-**El 90 % de mutación se acota a `checks/` y no al resto**, porque son la red de seguridad del sistema entero: un verificador cuyos tests no detectan su ruptura es peor que no tener verificador, porque produce confianza falsa.
-
-### T6 · `canon/` · escritura
-
-```
-canon/
-├── prose_index/
-│   ├── chunk.py          · por párrafos, ≤450 tokens, un párrafo de solape
-│   ├── embed.py          · llama al modelo local de commons/
-│   └── index.py          · dos niveles: escena y fragmento; FTS5 y vectores
-├── summaries/            · escena y capítulo
-├── proscription/         · inserta en POE-12 lo que este capítulo hace repetido
-├── archivist/            · delta.extract
-└── freeze/               · la transacción
-```
-
-| Requisitos | RF-12, RF-55 a RF-58, RF-68 a RF-71, RF-90, RF-108, RNF-21 |
-|---|---|
-| **Puerta** | Congelar no deja ninguna fila de memoria de trabajo; un fallo de embeddings no escribe nada |
-
-**El orden de `freeze/` es la mitad del tramo.** Fuera de la transacción: cortar, resumir, vectorizar. Dentro y todo junto o nada: eventos, proyecciones, índice, resúmenes, purga. Escribirlo al revés deja el fichero bloqueado mientras se calculan cientos de vectores.
-
-### T7 · `canon/` · arbitraje
-
-```
-canon/
-└── arbiter/
-    ├── precedence.py     · la política, total y sin ciclos
-    └── entries.py        · las dos puertas: Orquestador y Documentalista
-```
+Sin `retcon.propose`: en la versión 1 el canon congelado gana siempre (D-05), así que la política decide sin llamada de modelo. El prompt del Árbitro llega con el retcon, en T23.
 
 | Requisitos | RF-59 a RF-63 |
 |---|---|
-| **Puerta** | La precedencia es total y sin ciclos; fusionar dos deltas es asociativo |
+| **Puerta** | Un delta que contradice un hecho congelado se resuelve por precedencia sin detener la tirada y queda registrado en la traza; un paquete con dos hechos incompatibles se arbitra antes de llegar al Escritor |
 
-**Desde aquí el sistema es autónomo.** Antes de este tramo, cualquier contradicción lo detiene porque no hay quién la resuelva.
+**Por qué `context/audit` puede llamar al Árbitro sin romper la regla de importación:** el Árbitro vive en `canon/`, del que toda funcionalidad puede importar (`architecture.md` §2.3 y §6.2). No es una excepción a los tres pisos.
 
-### T8 · `orchestration/`
+### T12 · Planificador y replanificación
+
+```
+planning/scene_spec/
+├── spec.py               · ya existe: la parte determinista, `from_entry`
+└── prompts.py            · scene.spec como agente de modelo; `parse` impone EST-I1; los defectos previos endurecen la especificación
+planning/replan/
+└── arc.py                · replan.arc: reemplaza solo el tramo pedido, recoloca cobros y resoluciones; nunca toca lo congelado
+orchestration/loop.py     · la puerta de acto replanifica el acto siguiente; la cuarentena de capítulo replanifica el suyo
+```
+
+| Requisitos | RF-28 a RF-31, RF-105, RF-106; RF-19 en su parte de replanificación |
+|---|---|
+| **Puerta** | Toda especificación producida por el doble del Planificador cumple EST-I1 y pasa `outline.check` de vuelta; una puerta de acto fallida replanifica el acto siguiente y la deuda vuelve a estar planificada |
+
+### T13 · Especialista deportivo
+
+```
+generation/sports/
+├── simulate.py           · ya existe
+└── narrate.py            · match.narrate: la cronología entra como dato con nombres y minutos
+verification/checks/deterministic.py · `check.milestones`: todo goleador de la cronología aparece en la prosa
+orchestration/loop.py     · escena con `is_match`: simulate antes que narrate, siempre; `verify_match` contrasta marcador, goleadores y disponibilidad
+```
+
+| Requisitos | RF-42 a RF-44 |
+|---|---|
+| **Puerta** | Una escena de encuentro narrada por el doble contiene exactamente los hitos de la cronología; un hito inventado dispara `check.ledger` con cita |
+
+### T14 · Continuista, Reparador y cuarentena
+
+```
+verification/checks/evidence.py · `check.evidence`: normaliza, exige ocho palabras y una sola aparición, devuelve la posición en el original
+verification/gates.py     · las dos puertas de la versión 1 como funciones puras: escena y capítulo (D-06)
+verification/continuity/
+├── prompts.py            · continuity.review: capítulo entero y canon que podría contradecirlo
+└── review.py             · ancla cada cita con `check.evidence`; la que no ancla se descarta y consta (RF-111)
+verification/repair/
+├── prompts.py            · revise.targeted: la escena entera con el defecto y su cita delante
+└── targeted.py           · agrupa por zona y decide si la reparación valió: la que abre un S1 nuevo se revierte (RF-54)
+verification/quiz/
+├── build.py              · quiz.build: preguntas con clave desde la especificación, sin modelo
+├── prompts.py            · quiz.answer: solo el capítulo, las preguntas y la instrucción; sin prefijo cacheable
+└── grade.py              · quiz.grade: cada respuesta errónea es un S2 que entra por la puerta de capítulo
+orchestration/loop.py     · puerta de capítulo, pases de reparación con la escalera de escena, cuarentena que rehace y replanifica (D-26)
+```
+
+| Requisitos | RF-46 a RF-54, RF-110 a RF-115, RI-19 |
+|---|---|
+| **Puerta** | Un S1 sembrado por un doble en un capítulo se detecta con cita, se repara, se revalida desde `check.*` y se congela; una respuesta errónea del examen entra como S2 por la misma puerta; un capítulo que agota su presupuesto se rehace entero y nunca se salta; cobertura de mutación ≥ 90 % leída de CI, no supuesta |
+
+**El Continuista es el agente caro** (47.500 de entrada más 25.000 de cupo) y el primero que tocará el techo al crecer la obra (`architecture.md` §12). Su recuperación es dirigida por afirmaciones, sin cupos y con la pierna léxica al frente (D-17): aquí se escribe su receta en `context/packing/`, y con ella las de los demás agentes destino de §4.9 que T3 dejó genéricas.
+
+### T15 · Raíz de composición y ejecución real
+
+```
+context/retrieval/
+├── candidates.py         · de identificadores de fragmento a candidatos con lugar, POV, diálogo y promesas
+└── retrieve.py           · `prose.retrieve`: piernas, fusión, cupos; degradación marcada sin fallo cerrado
+context/packing/recipes.py · las tablas de §4.2 y §4.9 como datos; los once bloques del Escritor; receta plana de los demás
+generation/writer/drafts.py · borradores en `wm_draft`: los lee la reanudación y el bloque 6 del Escritor
+commons/provider/claude_cli.py · bucle de herramientas por protocolo (D-46)
+orchestration/
+├── engine.py             · `Composer`: arma cada callable del `Engine` con receta, auditoría, admisión, dispatch y parseo
+├── compose.py            · arranque real: embeddings verificados (RF-101), factor calibrado por llamada (RF-104), `python -m orchestration.compose`
+├── routes.py             · RI-02 POST /novels/{id}/run · RI-03 GET /novels/{id} · RI-27 GET /novels/{id}/trace
+├── loop.py               · reanudación desde la última escena cerrada, con los borradores; probada con caída simulada
+└── model/
+    ├── chapter.tla       · máquina de estados del ciclo de vida del capítulo, `architecture.md` §7
+    └── chapter.cfg       · los seis invariantes de `verification.md` §5.10; TLC corre en la puerta lenta de CI
+```
+
+| Requisitos | RF-13 a RF-23, RF-66, RF-91 a RF-99, RF-107, RNF-01 a RNF-09, RNF-11, RI-02, RI-03, RI-08, RI-27 |
+|---|---|
+| **Puerta** | TLC no encuentra contraejemplo a los seis invariantes; una tirada con dobles lanzada por `POST /novels/{id}/run`, interrumpida a mitad de capítulo y relanzada, termina con el mismo manuscrito; `schemathesis` en verde sobre las tres rutas |
+
+**El modelo TLA+ es lo único de la puerta de T8 que no se pasó.** Va aquí y no en T8 porque el flujo que modela —admisión, cuarentena, reparación, reanudación— no está entero hasta T14. Modelar un flujo a medias es modelar otro flujo. Corre en la puerta lenta de CI, no en cada cambio.
+
+### T16 · Tirada real y semilla del conjunto dorado
+
+```
+golden/
+└── v1-seed/
+    ├── brief.json        · el brief de la tirada
+    ├── novel.sqlite      · el fichero congelado
+    └── trace.jsonl       · su traza completa
+```
+
+| Requisitos | RNF-03, RD-12; la Definición de terminado del SRS §11.2 |
+|---|---|
+| **Puerta** | Una tirada **con modelo real** va del brief al cierre de obra sin intervención; copiar el fichero y abrirlo devuelve las mismas proyecciones y la misma recuperación; la traza muestra que ningún estimado quedó por debajo del real sumado el andamiaje |
+
+Es la puerta del bloque entero. El fichero que produce es el primer elemento del conjunto dorado CAL-10, que el bloque 2 necesita para calibrar al Jurado y afinar la recuperación: se guarda en el repositorio porque es el único artefacto que demuestra que el sistema funciona y no solo que el camino existe.
+
+---
+
+## 3. Bloque 2 · versión 2: pasos 7 a 10 y retcon
+
+No empieza hasta que T16 pasa. Su spec ya existe: [`specs/srs-backend-v2.md`](../specs/srs-backend-v2.md), que es T17. Los tramos de abajo son los de su §11 con los ficheros que cada uno toca; los requisitos y las puertas son los de la spec y no se repiten distintos aquí.
+
+### T17 · `specs/srs-backend-v2.md`
+
+Hecho. Cierra las decisiones abiertas nº 2, 3, 4 y 9 de `architecture.md` §13 (D-36 a D-39), deja la nº 10 para la medida de T19, y mete el retcon (D-43) y los evals (D-44) en el alcance. Cualquier cambio en los tramos siguientes que exija un número o un término nuevo vuelve aquí primero.
+
+### T18 · Resúmenes de arco y de obra
+
+```
+canon/summaries/
+├── prompts.py            · gana los niveles arc y work
+└── levels.py             · cuándo se regenera cada nivel: arco al cerrarse, obra cada 5 capítulos
+canon/db/migrations.py    · esquema v2: summary_version con los capítulos que cubre cada nivel (RD-23), y las tablas de T20 a T23
+context/packing/recipes.py· los bloques de resumen de arco y obra entran donde §4.9 los pone
+```
+
+| Requisitos | RF-116 a RF-120, RD-23, RI-35, RNF-29 |
+|---|---|
+| **Puerta** | El paquete del Continuista en el capítulo 20 de la semilla ocupa menos que sin resúmenes de arco |
+
+### T19 · `evals/` · medir antes de tocar
+
+```
+evals/
+├── retrieval_golden.py   · conjunto dorado de recuperación construido desde la escaleta y el canon de la semilla
+├── retrieval_score.py    · acierto por cupo y agregado, determinista
+├── grid.py               · malla acotada sobre tamaño de fragmento, constante de fusión y reparto de cupos
+├── compare.py            · dos tiradas, mismas medidas, tabla de diferencias
+└── adversarial/          · los casos de verification.md §5.9 como pruebas que afirman la contramedida
+orchestration/engine.py   · cada llamada lleva el identificador de versión de su prompt (RI-34): hash de sus módulos de prompt
+```
+
+| Requisitos | RF-121 a RF-125, RF-156 a RF-158, RD-27, RI-34, RNF-35, RNF-36 |
+|---|---|
+| **Puerta** | La malla corre entera sobre la semilla y el valor elegido queda registrado en `architecture.md` §4.4 y §13. `evals/` vive en el piso de `orchestration/` (D-44) |
+
+### T20 · Jurado y conjunto dorado de defectos
+
+```
+commons/types/rubrics.py  · las rúbricas CAL-02 como datos versionados, sembradas con el brief (RNF-37)
+verification/jury/
+├── prompts.py            · voice, pacing, subtext y theme .audit; sin guía de estilo en el prefijo
+├── verdict.py            · check.evidence sobre cada puntuación, dispersión, mediana, veredicto inválido
+└── golden.py             · las cinco transformaciones deterministas que siembran defectos
+verification/routes.py    · RI-29 GET /novels/{id}/chapters/{n}/verdict
+canon/db/migrations.py    · scene_verdict (RD-20)
+canon/freeze/rows.py      · filas de veredicto, huella y métricas que la congelación escribe junto al capítulo
+orchestration/loop.py     · tres llamadas admitidas por separado y lanzadas en paralelo; puerta de capítulo completa
+```
+
+| Requisitos | RF-126 a RF-136, RD-20, RI-29, RNF-28, RNF-31, RNF-32, RNF-37 |
+|---|---|
+| **Puerta** | El Jurado detecta ≥ 90 % del conjunto dorado; tres instancias sobre un capítulo en el techo de EST-07 caben y corren en paralelo bajo admisión |
+
+### T21 · Estilista y huella
+
+```
+verification/style/
+├── fingerprint.py        · las cinco métricas de RF-137 con spaCy en proceso (D-40)
+├── drift.py              · referencia de los tres primeros capítulos, desviación, deriva sostenida
+└── prompts.py            · style.polish
+context/packing/recipes.py · muestra modélica por puntuación de voz, rotativa (RF-140); sustituye a la elección por recencia
+verification/routes.py    · RI-30 GET /novels/{id}/style
+canon/db/migrations.py    · chapter_fingerprint (RD-21)
+orchestration/loop.py     · Estilista tras el Jurado; reverificación por el Continuista; puerta de capítulo cerrado con huella
+```
+
+| Requisitos | RF-137 a RF-143, RD-21, RI-30, RNF-33 |
+|---|---|
+| **Puerta** | La huella de la semilla es estable dentro de tolerancia; un pase de estilo que abre un S1 se revierte |
+
+### T22 · Supervisor y métricas de salud
+
+```
+supervision/
+├── metrics.py            · metrics.report: las trece señales de §11 desde la traza y el canon, con umbral y estado
+├── prompts.py            · el Supervisor, con canon.lookup y context.budget, cupo 20.000; su veredicto —sano, o deriva con la señal y el tramo— acotado por código
+└── routes.py             · RI-28 GET /novels/{id}/health
+canon/db/migrations.py    · chapter_metrics (RD-22)
+planning/act_gate/gate.py · la mitad de juicio: curva realizada frente a planificada (RF-148)
+orchestration/loop.py     · Supervisor tras cada congelación; replan.arc por métrica
+pyproject.toml            · supervision/ entra en los tres contratos de import-linter
+```
+
+| Requisitos | RF-144 a RF-150, RD-22, RI-28, RNF-26, RNF-27 |
+|---|---|
+| **Puerta** | Las trece señales se calculan desde la traza de la semilla; una deriva sembrada dispara `replan.arc` sin detener la tirada |
+
+### T23 · Retcon
+
+```
+canon/arbiter/
+├── retcon.py             · retcon.propose —el modelo solo propone— y la regla dura como código: no cobrado y ≤ 3 pasajes (RF-152)
+└── refreeze.py           · recongelación atómica de una escena: índice, resumen, vigencia del hecho anterior
+canon/db/migrations.py    · retcon (RD-24)
+canon/routes.py           · RI-31 GET /novels/{id}/retcons
+```
+
+| Requisitos | RF-151 a RF-155, RD-24 a RD-26, RI-31, RNF-30 |
+|---|---|
+| **Puerta** | Un retcon admisible recongela sus escenas y deja canon e índice coherentes; uno inadmisible no toca nada |
+
+### T24 · Bucle completo y tirada real de la versión 2
 
 ```
 orchestration/
-├── loop.py               · bucles de capítulo y de escena
-├── checkpoint.py         · punto de reanudación, al cerrar cada escena
-├── admission.py          · semáforo de entrada, FIFO estricta, cupos de tirón
-├── retries.py            · presupuesto de reintentos y cuarentena por nivel
-├── dispatch.py           · frontera de confianza: valida salida, aplica tope de 50.000
-├── tools/
-│   ├── budget.py         · context.budget
-│   └── lookup.py         · canon.lookup, con control de presupuesto
-├── app.py                · composición FastAPI: monta el router de cada funcionalidad
-└── routes.py             · POST /novels/{id}/run, GET /novels/{id}
+├── loop.py               · el flujo de §7.1 entero, trece agentes
+└── model/chapter.tla     · estados nuevos: juzgando, puliendo, supervisando, retcon
+golden/v2-run/            · la tirada real de la versión 2, comparada con v1-seed por evals/compare.py
 ```
 
-| Requisitos | RF-13 a RF-24, RF-91 a RF-100, RF-107, RNF-01 a RNF-09, RNF-24 |
+| Requisitos | RF-159 a RF-161, RI-32, RI-33, RI-36, RNF-34 |
 |---|---|
-| **Puerta** | Los invariantes de `verification.md` §7 comprobados por model checking |
-
-**`dispatch.py` concentra el riesgo del sistema entero.** Es donde el texto de un modelo se convierte en objeto tipado. Todo lo que pase de ahí sin validar contamina el canon, y no hay revisión humana detrás que lo detecte.
+| **Puerta** | TLC sin contraejemplo; una tirada real con los trece agentes cierra la obra sin intervención y ninguna dimensión de CAL-01 queda peor que en `golden/v1-seed/` |
 
 ---
 
-## 3. Lo que se construye en cada tramo aunque no lo parezca
-
-Tres cosas son transversales y **no tienen tramo propio a propósito**. Dejarlas para el final es la forma conocida de que no se hagan.
+## 4. Lo que se construye en cada tramo aunque no lo parezca
 
 | Qué | Cuándo | Por qué no al final |
 |---|---|---|
-| **Rutas HTTP** | Cada tramo añade las suyas dentro de su carpeta | Concentrarlas al final deja los ocho tramos anteriores sin forma de ejercitarse |
-| **Trazas a Langfuse** | Cada llamada, desde la primera | Es el único mecanismo para detectar que algo lleva diez capítulos degradándose (RNF-13) |
-| **La regla de importación** | Desde el primer commit, en CI | Ver §1.2 |
+| **Traza** | Desde T9, en cada llamada | Los tramos siguientes se depuran leyéndola |
+| **Rutas HTTP** | Cada tramo añade las suyas dentro de su carpeta | Concentrarlas deja los tramos anteriores sin forma de ejercitarse |
+| **Regla de importación** | Ya está en CI; cada tramo la mantiene en verde | Ver `pyproject.toml` |
+| **Sincronización inversa** | Al cerrar cada tramo, `AGENTS.md` §6.5 | Sin ella la spec describe en dos meses un sistema que ya no existe |
+| **Dobles deterministas de cada agente de modelo** | En el mismo tramo que el agente | Sin doble no hay prueba en CI, y una prueba que gasta modelo real no corre en cada cambio |
 
 ---
 
-## 4. Definición de terminado
+## 5. Definición de terminado
 
-Los ocho tramos compilando no es terminado. Esto sí:
+**Bloque 1:**
 
-- [ ] Los ocho tramos pasaron su puerta
-- [ ] La puerta de CI del SRS §7.2 en verde
-- [ ] Todo requisito con su método principal ejecutándose, o en el riesgo aceptado del SRS §7.4
-- [ ] **Una tirada completa va del brief al cierre de obra sin intervención** (RNF-03)
+- [ ] T9 a T16 pasaron su puerta
+- [ ] La puerta de CI del SRS §7.2 en verde, y la puerta lenta —mutación ≥ 90 %, TLC sin contraejemplo— leída
+- [ ] Todo requisito del SRS v1 con su método principal ejecutándose, o en el riesgo aceptado de §7.4
+- [ ] **Una tirada real va del brief al cierre de obra sin intervención** (RNF-03)
 - [ ] Copiar el fichero de la novela y abrirlo da las mismas proyecciones y la misma recuperación (RD-12)
+- [ ] `golden/v1-seed/` existe y es la tirada que lo demuestra
 
-El cuarto es el que cuenta. Los demás comprueban que el camino existe; ese comprueba que funciona.
+**Bloque 2:**
+
+- [ ] T18 a T24 pasaron su puerta
+- [ ] Todo requisito del SRS v2 con su método principal ejecutándose, o en su §7.4
+- [ ] Una tirada real con los trece agentes cierra la obra sin intervención y ninguna dimensión de CAL-01 queda peor que en `golden/v1-seed/`
+- [ ] La decisión abierta nº 10 cerrada con la medida de T19; las nº 1, 5 y 6 declaradas abiertas con su motivo en los dos sitios
 
 ---
 
-## 5. Cobertura de `architecture.md`
+## 6. Riesgos de este plan
 
-Una fila por sección de la arquitectura. Lo único que queda sin sitio es lo que está **fuera de la versión 1**; los cinco huecos que esta revisión destapó están resueltos en §6.
-
-| Sección de `architecture.md` | Dónde cae en el plan | Estado |
+| Riesgo | Señal | Qué se hace |
 |---|---|---|
-| §1 Principios de diseño | §1.3, las trampas los encarnan uno a uno | Cubierto |
-| §2.1 Monorepo | Estructura de los tramos | Cubierto |
-| §2.2 Frontera con el frontend | — | **Fuera de v1** |
-| §2.3 Paquete por funcionalidad | §1.2 y el árbol de cada tramo | Cubierto salvo `supervision/`, que es del paso 10 |
-| §3.1 Los cinco almacenes | T1 y T6 | Cubierto |
-| §3.2 Memoria de trabajo | T0 `commons/db/`, trampa 10 | Cubierto (D-30) |
-| §3.3 Escritura del índice | T6, `freeze/` | Cubierto |
-| §4.1 Techos de ocupación | T0 `tokens/`, T8 `admission.py` | Cubierto |
-| §4.2 Presupuesto por agente | T3 `recipes/` | Cubierto |
-| §4.3 Paquete del Escritor | T3 `recipes/` | Cubierto |
-| §4.4 Recuperación híbrida | T3 entero | Cubierto |
-| §4.5 Resúmenes jerárquicos | T6 `summaries/` | Cubierto en sus dos niveles bajos; arco y obra son del paso 7 |
-| §4.6 Control de deriva | T6 `proscription/` | Cubierto (D-32) |
-| §4.7 Aislamiento | T3, como propiedad del ensamblador | Cubierto (D-33) |
-| §4.8 Proveedores, caché y medición | T0 entero | Cubierto |
-| §4.9 Recetas por agente | T3 `recipes/` | Cubierto |
-| §4.10 Gestión del contexto en el ciclo | T8 | Cubierto |
-| §5.1 Skills deterministas | Repartidas por tramo | Cubierto salvo `style.fingerprint` y `metrics.report`, de pasos posteriores |
-| §5.2 Skills de modelo | Repartidas por tramo; `replan.arc` en T2 | Cubierto |
-| §5.3 Herramientas | T8 `tools/` | Cubierto |
-| §6.1 Matriz agente × skill | Implícita en el reparto por tramo | Cubierto |
-| §6.2 Contratos de entrada y salida | T0 `types/` | Cubierto |
-| §6.3 Matriz agente × herramienta | T8 `tools/` | Cubierto |
-| §7.1 y §7.2 Flujos | T8 `loop.py` | Cubierto |
-| §7.3 Reparación y cuarentena | T8 `retries.py` | Cubierto |
-| §7.4 El Orquestador como código | T8, módulo a módulo | Cubierto |
-| §8 Sustitutos de decisiones humanas | Repartido | Cubierto salvo el retcon, fuera de v1 |
-| §9.1 Verificadores deterministas | T5 `checks/` | Cubierto |
-| §9.2 Jurado | — | **Fuera de v1** |
-| §9.3 Puertas | T2 `act_gate/`, T8 | Cubierto |
-| §10 Escritura de canon | T6 y T7 | Cubierto |
-| §11 Observabilidad | T0 `commons/tracing/`, más §3 | Cubierto |
-| §12 Riesgos | — | No es implementable; vive en el SRS §7.4 |
-| §13 Decisiones abiertas | §7 | Cubierto |
-| §14 Orden de construcción | §2 | Cubierto |
+| El CLI de Claude Code cambia su andamiaje y los 38.600 dejan de ser el suelo | El campo de andamiaje de la traza se mueve entre tiradas | El valor es una constante medida en `claude_cli.py`; se recalibra al arrancar igual que el factor del contador, y RNF-19 lo delata |
+| La tirada real de T16 no cierra por coste o por tiempo | La traza muestra reintentos en escalera antes del cierre | Se acorta el brief, no la puerta: la condición es cerrar sin intervención, no cerrar largo |
+| El Continuista no cabe con el andamiaje en la ventana real | Ocupación real de su paquete en la traza | Es el riesgo que T18 existe para retirar; hasta entonces, riesgo aceptado del SRS §7.4 |
+| Un agente nuevo devuelve algo que valida pero no significa nada —delta vacío, defecto sin cita— | Tasa de descartes por `check.evidence` y de deltas vacíos en la traza | Trampa 12: se rechaza y consume reintento, nunca se congela |
+| Empezar el bloque 2 sin la semilla de T16 | Un módulo en `supervision/`, `jury/` o `evals/` sin `golden/v1-seed/` en el repositorio | El SRS v2 lo declara supuesto (§2.6): sin semilla no hay contra qué medir, y medir es lo que el bloque 2 hace |
 
 ---
 
-## 6. Los huecos, resueltos
+## 7. Cobertura de `architecture.md`
 
-Las seis recomendaciones de la revisión de cobertura están aplicadas. Quedan aquí con su resolución porque el **porqué** importa más que el qué: son las decisiones que un implementador estaría tentado de tomar al revés.
+Una fila por sección. Lo que queda sin tramo en el bloque 1 está en el bloque 2 o fuera del backend.
 
-| Hueco | Resuelto así | Dec. |
+| Sección | Tramo | Estado |
 |---|---|---|
-| La memoria de trabajo no tenía carpeta dueña, y quien la escribe no podía importar la fábrica de escritura | **Dos fábricas**: canon en `canon/db/`, memoria de trabajo en `commons/db/` acotada a `wm_*` por análisis estático. Cada tabla la escribe quien produce ese estado | D-30, RD-09, RD-18 |
-| `setup.ledger` tenía dos dueños, y el que fijaba la arquitectura no existe en la v1 | Vive en **`planning/`**. `supervision/` lo leerá cuando llegue | D-31 |
-| La lista de proscripción tenía quien la detectara y nadie que la insertara | La inserta **la congelación**, en su transacción | D-32, RF-108 |
-| El aislamiento no tenía comprobación | Una **propiedad**: el ensamblador es puro, construye desde cero y no muta. Sin módulo | D-33, RF-109 |
-| `replan.arc` no estaba en ningún tramo | `planning/replan/`, en T2 | — |
-| Faltaban las rutas de `canon/` y la carga del brief | En T1 | — |
-
-**Las tres decisiones que más fácil es tomar al revés**, y por qué la otra lectura falla:
-
-**No se relaja la regla de escritura de `canon/` para que quepa el estado efímero.** Es la salida obvia y desprotege justo lo único que esa regla existe para proteger. Dos fábricas cuesta más escribir y mantiene el invariante comprobable.
-
-**La proscripción no la inserta `check.repetition` aunque sea quien detecta.** El verificador opera sobre borradores, y un borrador puede acabar en cuarentena: proscribir desde ahí condicionaría toda la obra por un texto que nunca existió. La lista es una proyección de la prosa **congelada**, igual que el índice.
-
-**El aislamiento no necesita un módulo que lo vigile.** Si el paquete se construye desde cero y no se muta, se cumple por construcción. Un vigilante sería una pieza que comprueba algo que no debería poder ocurrir.
-
----
-
-## 7. El modelo de embeddings, fijado
-
-**`intfloat/multilingual-e5-large`**, 1024 dimensiones, 2,24 GB, dentro de la imagen.
-
-De los modelos multilingües que sirve `fastembed`, había tres candidatos reales:
-
-| Modelo | Dim | Tamaño | Entrenado para |
-|---|---:|---:|---|
-| `paraphrase-multilingual-MiniLM-L6-v2` | 384 | 0,22 GB | Similitud entre frases |
-| `paraphrase-multilingual-mpnet-base-v2` | 768 | 1,00 GB | Similitud entre frases |
-| **`intfloat/multilingual-e5-large`** | 1024 | 2,24 GB | **Recuperación** |
-
-**Se elige por para qué fue entrenado, no por tamaño.** Los dos primeros son modelos de paráfrasis: miden si dos frases parecidas y de longitud parecida dicen lo mismo. Este sistema hace lo contrario: usa una especificación de escena —corta y estructurada— para buscar fragmentos de prosa —largos y narrativos—. Eso es recuperación asimétrica, y es justo donde un modelo de paráfrasis rinde peor y uno de recuperación rinde mejor.
-
-**El tamaño no restringe aquí.** Una obra son 600 a 1.200 fragmentos más un vector de consulta por escena, en local y de una novela cada vez. A 1024 dimensiones, los vectores de una obra entera ocupan unos 5 MB en el fichero. Los 2,24 GB se pagan una vez, en la imagen.
-
-**Si el tamaño de la imagen llegara a ser un problema**, la alternativa es `paraphrase-multilingual-mpnet-base-v2`: 1 GB, y se pierde el entrenamiento para recuperación. El esquema guarda modelo y dimensión (RD-13), así que cambiarlo es reindexar.
-
-**La trampa que trae, y por la que está en §1.3:** los modelos E5 exigen prefijos. `query: ` delante del texto de consulta y `passage: ` delante de cada fragmento que se indexa. Sin ellos el modelo carga sin quejarse, devuelve vectores de la dimensión correcta y recupera peor — sin error, sin aviso y sin que ninguna puerta lo note.
+| §1 Principios | §1.6, las trampas | Cubierto |
+| §2.1 a §2.3 Monorepo y paquete por funcionalidad | En verde; `supervision/` en T22, `evals/` en T19 | Cubierto |
+| §3.1 Cinco almacenes | T1, T6 entregados; delta en T10 | Cubierto en T10 |
+| §3.2 Memoria de trabajo | T0 entregado | Cubierto |
+| §3.3 Escritura del índice | T6 entregado | Cubierto |
+| §4.1 a §4.3 Techos y presupuestos | T0, T8 entregados; andamiaje en T9 | Cubierto en T9 |
+| §4.4 Recuperación híbrida | T3 entregado; afinado en T19 | Cubierto |
+| §4.5 Resúmenes jerárquicos | Niveles bajos en T10; arco y obra en T18 | Cubierto |
+| §4.6 Control de deriva | Proscripción en T10; huella en T21 | Cubierto |
+| §4.7 Aislamiento | T3 entregado como propiedad | Cubierto |
+| §4.8 Proveedores, CLI y contador | T0 entregado; D-35 en T9 | Cubierto |
+| §4.9 Recetas por agente | T14 | Cubierto en T14 |
+| §4.10 Contexto en el ciclo | T15 | Cubierto en T15 |
+| §5 Skills y herramientas | Repartidas por tramo; `*.audit` en T20, `style.*` en T21, `metrics.report` en T22, `retcon.propose` en T23 | Cubierto |
+| §6 Agentes | §1.3 y T10 a T14; Jurado T20, Estilista T21, Supervisor T22 | Cubierto |
+| §7.1 a §7.3 Flujos, reparación y cuarentena | T14, T15; el flujo completo en T24 | Cubierto |
+| §7.4 Orquestador como código | T8 entregado; cableado en T15 | Cubierto en T15 |
+| §8 Sustitutos de decisiones humanas | Repartido; el retcon en T23 | Cubierto |
+| §9.1 Verificadores deterministas | T5 entregado | Cubierto |
+| §9.2 Jurado | T20 | Bloque 2 |
+| §9.3 Puertas | T12, T14, T15; la mitad de juicio en T20 y T22 | Cubierto |
+| §10 Escritura de canon | T10, T11; el retcon en T23 | Cubierto |
+| §11 Observabilidad | T9; las trece señales en T22 | Cubierto |
+| §12 Riesgos | §6 de este plan y SRS §7.4 | Cubierto |
+| §13 Decisiones abiertas | T17 cierra nº 2, 3, 4 y 9; T19 cierra nº 10 | Cubierto |
+| §14 Orden de construcción | §2 y §3 de este plan | Cubierto |

@@ -89,3 +89,14 @@ def test_el_estado_de_un_setup_lleva_sus_capitulos() -> None:
     assert s.state is SetupState.PLANTED
     assert s.planted_chapter == 1
     assert s.payoff_chapter == 3
+
+
+def test_la_curva_realizada_que_baja_dos_veces_donde_la_planificada_sube_no_conforma() -> None:
+    """RF-148."""
+    from planning.act_gate.gate import tension_conforms
+
+    assert tension_conforms([3, 5, 7], [4, 4, 4])
+    assert tension_conforms([3, 5, 7], [4, 3, 4]), "una sola bajada no es sostenida"
+    assert not tension_conforms([3, 5, 7], [5, 4, 3])
+    assert tension_conforms([3, 5, 7], [5, None, 3]), "sin veredicto no cuenta"
+    assert tension_conforms([7, 5, 3], [5, 4, 3]), "si la planificada tambien baja, conforma"

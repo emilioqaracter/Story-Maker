@@ -26,6 +26,7 @@ from orchestration.retries import (
 
 # ------------------------------------------------------------------ admision
 
+
 def test_lo_que_cabe_entra() -> None:
     a = Admission(ceiling=100_000)
     assert a.admit(Reservation(agent="escritor", packet_tokens=19_700), call_id="c1")
@@ -36,8 +37,7 @@ def test_el_cupo_de_tiron_se_reserva_entero() -> None:
     """RF-97. Admitir por lo que ocupa al empezar y dejar que crezca rompe el
     techo sin que salte nada: cuando la llamada se pasa, ya esta en vuelo."""
     a = Admission(ceiling=100_000)
-    a.admit(Reservation(agent="continuista", packet_tokens=47_500, tool_quota=25_000),
-            call_id="c1")
+    a.admit(Reservation(agent="continuista", packet_tokens=47_500, tool_quota=25_000), call_id="c1")
     assert a.in_flight == 72_500
 
 
@@ -83,11 +83,7 @@ def test_lo_que_no_cabe_ni_vacio_no_se_encola() -> None:
 
 
 @settings(max_examples=60, deadline=None)
-@given(
-    reservas=st.lists(
-        st.integers(min_value=1_000, max_value=40_000), min_size=1, max_size=8
-    )
-)
+@given(reservas=st.lists(st.integers(min_value=1_000, max_value=40_000), min_size=1, max_size=8))
 def test_lo_en_vuelo_nunca_supera_el_techo(reservas: list[int]) -> None:
     """CTX-I1. La propiedad que sostiene todo el presupuesto de contexto."""
     a = Admission(ceiling=100_000)
@@ -107,6 +103,7 @@ def test_el_bloque_libera_aunque_lance() -> None:
 
 
 # ---------------------------------------------------------------- reintentos
+
 
 def test_la_escena_se_reintenta_tres_veces() -> None:
     b = Budget()
@@ -151,3 +148,32 @@ def test_no_se_empieza_un_capitulo_con_el_anterior_sin_congelar() -> None:
     siguiente', que fabrica una contradiccion invisible."""
     assert may_start_chapter(previous_frozen=True)
     assert not may_start_chapter(previous_frozen=False)
+
+
+def test_tres_llamadas_en_paralelo_respetan_el_techo_y_el_orden() -> None:
+    """RF-160, CTX-I1. Tres hilos piden plaza a la vez; nunca hay mas en vuelo
+    que el techo, y el que no cabe espera en vez de colarse."""
+    import threading
+    import time
+
+    from orchestration.admission import Admission, Reservation
+
+    adm = Admission(ceiling=25_000)
+    maximo = [0]
+    candado = threading.Lock()
+
+    def llamada(agent: str) -> None:
+        with adm.hold(Reservation(agent=agent, packet_tokens=11_500)):
+            with candado:
+                maximo[0] = max(maximo[0], adm.in_flight)
+            time.sleep(0.05)
+
+    hilos = [threading.Thread(target=llamada, args=(f"juez-{i}",)) for i in range(3)]
+    for h in hilos:
+        h.start()
+    for h in hilos:
+        h.join(timeout=5)
+    assert all(not h.is_alive() for h in hilos)
+    assert maximo[0] <= 25_000
+    assert maximo[0] == 23_000, "dos caben a la vez; el tercero espera"
+    assert adm.in_flight == 0

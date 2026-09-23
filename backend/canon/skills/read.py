@@ -42,13 +42,31 @@ class EntityCard(BaseModel):
     competences: tuple[tuple[str, str], ...] = Field(default_factory=tuple)
 
 
+class Relation(BaseModel):
+    """Una arista del grafo de entidades (MET-03), con su vigencia (MET-07)."""
+
+    model_config = ConfigDict(frozen=True)
+
+    source_id: str
+    target_id: str
+    kind: str
+    valid_from: str
+    valid_to: str | None = None
+
+
 class WorldState(BaseModel):
-    """MUN-10. Estado del mundo en un instante."""
+    """MUN-10. Estado del mundo en un instante: fichas y relaciones vigentes.
+
+    Las relaciones no entran en ningun paquete de contexto: los agentes leen
+    `cards`. Estan aqui porque MUN-10 las incluye y porque es de donde el grafo
+    del frontend las lee mientras no exista su ruta propia.
+    """
 
     model_config = ConfigDict(frozen=True)
 
     at: WorldTime
     cards: tuple[EntityCard, ...]
+    relations: tuple[Relation, ...] = Field(default_factory=tuple)
 
 
 def query(
@@ -119,7 +137,21 @@ def query(
 def state_at(con: sqlite3.Connection, at: WorldTime) -> WorldState:
     """`canon.state-at`. El mundo entero en un instante (RF-03)."""
     ids = [r["id"] for r in con.execute("SELECT id FROM entity ORDER BY id")]
-    return WorldState(at=at, cards=tuple(query(con, ids, at=at, full=True)))
+    relations = tuple(
+        Relation(
+            source_id=r["source_id"],
+            target_id=r["target_id"],
+            kind=r["kind"],
+            valid_from=r["valid_from"],
+            valid_to=r["valid_to"],
+        )
+        for r in con.execute(
+            f"SELECT source_id, target_id, kind, valid_from, valid_to FROM relation "  # nosec B608
+            f"WHERE {_ALIVE} ORDER BY source_id, target_id, kind",
+            {"t": at.stamp},
+        )
+    )
+    return WorldState(at=at, cards=tuple(query(con, ids, at=at, full=True)), relations=relations)
 
 
 def knowledge_of(con: sqlite3.Connection, entity_id: str, at: WorldTime) -> frozenset[str]:

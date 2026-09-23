@@ -15,6 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 # --------------------------------------------------------------------- MET-09
 
+
 class Provenance(StrEnum):
     """MET-09. De donde viene un hecho canonico.
 
@@ -30,6 +31,7 @@ class Provenance(StrEnum):
 
 # --------------------------------------------------------------------- CAL-06
 
+
 class Severity(StrEnum):
     """CAL-06. Gravedad de un defecto.
 
@@ -43,6 +45,7 @@ class Severity(StrEnum):
 
 
 # --------------------------------------------------------------------- CTX
+
 
 class BlockProvenance(StrEnum):
     """De donde sale un bloque de paquete de contexto.
@@ -103,6 +106,7 @@ class WorldTime(BaseModel):
 
 
 # --------------------------------------------------------------------- CAL-05
+
 
 class Evidence(BaseModel):
     """Cita localizable. Sin esto un veredicto se descarta (RI-19)."""

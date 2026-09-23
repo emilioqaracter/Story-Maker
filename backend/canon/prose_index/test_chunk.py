@@ -13,8 +13,9 @@ from hypothesis import strategies as st
 
 from canon.prose_index.chunk import MAX_CHUNK_TOKENS, chunk_scene, contained_in
 
-_parrafo = st.text(alphabet=st.characters(min_codepoint=97, max_codepoint=122),
-                   min_size=20, max_size=400)
+_parrafo = st.text(
+    alphabet=st.characters(min_codepoint=97, max_codepoint=122), min_size=20, max_size=400
+)
 
 
 def _texto(parrafos: list[str]) -> str:

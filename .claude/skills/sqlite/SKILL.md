@@ -47,7 +47,7 @@ Tres cosas que importan al escribir el esquema:
 
 - **Márcalas como efímeras en el propio esquema**, con prefijo o con un `schema` aparte. Que se distingan de un vistazo es lo que impide que una consulta de canon lea un borrador por error.
 - **La purga al congelar es una transacción**, junto con la escritura del delta. A medias deja huérfanos, y el invariante PRO-I1 dice que tras congelar no queda ninguna fila del capítulo.
-- **No las archives en tablas históricas.** Esa traza es de Langfuse (VER-09). Aquí se guarda lo que es verdad, no lo que pasó.
+- **No las archives en tablas históricas.** Esa traza va al fichero JSONL de la tirada (VER-09). Aquí se guarda lo que es verdad, no lo que pasó.
 
 ## 3. El registro de eventos manda
 

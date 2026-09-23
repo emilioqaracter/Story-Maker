@@ -35,8 +35,12 @@ class _Puerto:
     def _completion(self) -> Completion:
         return Completion(
             text=self.respuesta,
-            usage=Usage(input_tokens=100, cache_read_tokens=4_000,
-                        cache_creation_tokens=50, output_tokens=200),
+            usage=Usage(
+                input_tokens=100,
+                cache_read_tokens=4_000,
+                cache_creation_tokens=50,
+                output_tokens=200,
+            ),
             stop_reason="end_turn",
         )
 
@@ -64,8 +68,12 @@ class _Servidor:
 
 def _dispatch(puerto: _Puerto, **kw: object):  # type: ignore[no-untyped-def]
     args: dict[str, object] = {
-        "agent": "escritor", "cacheable_prefix": "ancla", "packet": "p",
-        "instruction": "escribe", "output_schema": "{}", "max_output_tokens": 3_000,
+        "agent": "escritor",
+        "cacheable_prefix": "ancla",
+        "packet": "p",
+        "instruction": "escribe",
+        "output_schema": "{}",
+        "max_output_tokens": 3_000,
     }
     args.update(kw)
     return dispatch(puerto, **args)  # type: ignore[arg-type]

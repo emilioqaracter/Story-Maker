@@ -1,0 +1,4085 @@
+{
+  "components": {
+    "schemas": {
+      "Appearance": {
+        "properties": {
+          "chapter": {
+            "title": "Chapter",
+            "type": "integer"
+          },
+          "roles": {
+            "description": "pov, place, cast",
+            "items": {
+              "type": "string"
+            },
+            "title": "Roles",
+            "type": "array"
+          },
+          "scene_id": {
+            "title": "Scene Id",
+            "type": "string"
+          },
+          "scene_number": {
+            "title": "Scene Number",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "chapter",
+          "scene_id",
+          "scene_number",
+          "roles"
+        ],
+        "title": "Appearance",
+        "type": "object"
+      },
+      "Brief": {
+        "description": "El encargo de la obra.\n\n`start` es el instante en que arranca el mundo: todo lo que el brief\nestablece es cierto desde ahi, y nada anterior existe.\n\nLo que va despues de `word_tolerance` lo trae la entrevista (RF-200). Es\nopcional para que un brief escrito a mano, sin destinatario, siga valiendo.",
+        "properties": {
+          "dedication": {
+            "default": "",
+            "title": "Dedication",
+            "type": "string"
+          },
+          "entities": {
+            "items": {
+              "$ref": "#/components/schemas/BriefEntity"
+            },
+            "title": "Entities",
+            "type": "array"
+          },
+          "forbidden_themes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Forbidden Themes",
+            "type": "array"
+          },
+          "forbidden_words": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Forbidden Words",
+            "type": "array"
+          },
+          "genre": {
+            "default": "",
+            "title": "Genre",
+            "type": "string"
+          },
+          "recipient": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Recipient"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "relations": {
+            "items": {
+              "$ref": "#/components/schemas/BriefRelation"
+            },
+            "title": "Relations",
+            "type": "array"
+          },
+          "rulebook": {
+            "default": "",
+            "description": "DEP-02, vacio si no es deportiva",
+            "title": "Rulebook",
+            "type": "string"
+          },
+          "start": {
+            "$ref": "#/components/schemas/WorldTime"
+          },
+          "style_guide": {
+            "description": "POE-06",
+            "minLength": 1,
+            "title": "Style Guide",
+            "type": "string"
+          },
+          "target_words": {
+            "exclusiveMinimum": 0.0,
+            "title": "Target Words",
+            "type": "integer"
+          },
+          "title": {
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          },
+          "tone": {
+            "default": "",
+            "title": "Tone",
+            "type": "string"
+          },
+          "word_tolerance": {
+            "default": 0.1,
+            "exclusiveMaximum": 1.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Word Tolerance",
+            "type": "number"
+          }
+        },
+        "required": [
+          "title",
+          "start",
+          "entities",
+          "style_guide",
+          "target_words"
+        ],
+        "title": "Brief",
+        "type": "object"
+      },
+      "BriefEntity": {
+        "properties": {
+          "aliases": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Aliases",
+            "type": "array"
+          },
+          "attributes": {
+            "items": {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "string"
+                }
+              ],
+              "type": "array"
+            },
+            "title": "Attributes",
+            "type": "array"
+          },
+          "competences": {
+            "items": {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "string"
+                }
+              ],
+              "type": "array"
+            },
+            "title": "Competences",
+            "type": "array"
+          },
+          "id": {
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "description": "person | place | institution | object",
+            "minLength": 1,
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "name"
+        ],
+        "title": "BriefEntity",
+        "type": "object"
+      },
+      "BriefRelation": {
+        "properties": {
+          "kind": {
+            "minLength": 1,
+            "title": "Kind",
+            "type": "string"
+          },
+          "source": {
+            "minLength": 1,
+            "title": "Source",
+            "type": "string"
+          },
+          "target": {
+            "minLength": 1,
+            "title": "Target",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "target",
+          "kind"
+        ],
+        "title": "BriefRelation",
+        "type": "object"
+      },
+      "ChangeRequest": {
+        "description": "RI-49. Una solicitud y lo que el sistema hizo con ella.",
+        "properties": {
+          "anchor": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Anchor",
+            "type": "object"
+          },
+          "changed_chapters": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Changed Chapters",
+            "type": "array"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "interpretation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Interpretation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "request_id": {
+            "title": "Request Id",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          }
+        },
+        "required": [
+          "request_id",
+          "text",
+          "anchor",
+          "status",
+          "interpretation",
+          "reason",
+          "version",
+          "changed_chapters",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ChangeRequest",
+        "type": "object"
+      },
+      "ChangeRequestIn": {
+        "description": "RI-47. La peticion y su ancla: un fragmento de la lectura o un hecho de la ficha.",
+        "properties": {
+          "anchor": {
+            "discriminator": {
+              "mapping": {
+                "fact": "#/components/schemas/FactAnchor",
+                "fragment": "#/components/schemas/FragmentAnchor"
+              },
+              "propertyName": "kind"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/FragmentAnchor"
+              },
+              {
+                "$ref": "#/components/schemas/FactAnchor"
+              }
+            ],
+            "title": "Anchor"
+          },
+          "text": {
+            "description": "Texto no confiable",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "anchor"
+        ],
+        "title": "ChangeRequestIn",
+        "type": "object"
+      },
+      "ChangeRequestList": {
+        "properties": {
+          "requests": {
+            "items": {
+              "$ref": "#/components/schemas/ChangeRequest"
+            },
+            "title": "Requests",
+            "type": "array"
+          }
+        },
+        "required": [
+          "requests"
+        ],
+        "title": "ChangeRequestList",
+        "type": "object"
+      },
+      "ChapterAtVersion": {
+        "properties": {
+          "chapter": {
+            "title": "Chapter",
+            "type": "integer"
+          },
+          "scenes": {
+            "items": {
+              "$ref": "#/components/schemas/SceneAt"
+            },
+            "title": "Scenes",
+            "type": "array"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "chapter",
+          "version",
+          "scenes"
+        ],
+        "title": "ChapterAtVersion",
+        "type": "object"
+      },
+      "ChapterEntry": {
+        "properties": {
+          "changed": {
+            "title": "Changed",
+            "type": "boolean"
+          },
+          "number": {
+            "title": "Number",
+            "type": "integer"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Nulo mientras la escaleta no tenga almacen (D-79)",
+            "title": "Title"
+          },
+          "words": {
+            "title": "Words",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "number",
+          "title",
+          "words",
+          "changed"
+        ],
+        "title": "ChapterEntry",
+        "type": "object"
+      },
+      "ChapterHealth": {
+        "properties": {
+          "alarms": {
+            "title": "Alarms",
+            "type": "integer"
+          },
+          "chapter": {
+            "title": "Chapter",
+            "type": "integer"
+          },
+          "signals": {
+            "items": {
+              "$ref": "#/components/schemas/MetricRow"
+            },
+            "title": "Signals",
+            "type": "array"
+          }
+        },
+        "required": [
+          "chapter",
+          "signals",
+          "alarms"
+        ],
+        "title": "ChapterHealth",
+        "type": "object"
+      },
+      "ChapterList": {
+        "properties": {
+          "chapters": {
+            "items": {
+              "$ref": "#/components/schemas/ChapterSummary"
+            },
+            "title": "Chapters",
+            "type": "array"
+          }
+        },
+        "required": [
+          "chapters"
+        ],
+        "title": "ChapterList",
+        "type": "object"
+      },
+      "ChapterProse": {
+        "properties": {
+          "chapter": {
+            "title": "Chapter",
+            "type": "integer"
+          },
+          "scenes": {
+            "items": {
+              "$ref": "#/components/schemas/SceneProse"
+            },
+            "title": "Scenes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "chapter",
+          "scenes"
+        ],
+        "title": "ChapterProse",
+        "type": "object"
+      },
+      "ChapterSummary": {
+        "properties": {
+          "chapter": {
+            "title": "Chapter",
+            "type": "integer"
+          },
+          "ends_at": {
+            "description": "Instante de mundo de su ultima escena, ISO 8601",
+            "title": "Ends At",
+            "type": "string"
+          },
+          "ends_seq": {
+            "description": "Desempate de ese instante",
+            "minimum": 0.0,
+            "title": "Ends Seq",
+            "type": "integer"
+          },
+          "scenes": {
+            "title": "Scenes",
+            "type": "integer"
+          },
+          "words": {
+            "title": "Words",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "chapter",
+          "scenes",
+          "words",
+          "ends_at",
+          "ends_seq"
+        ],
+        "title": "ChapterSummary",
+        "type": "object"
+      },
+      "ChapterVerdict": {
+        "properties": {
+          "chapter": {
+            "title": "Chapter",
+            "type": "integer"
+          },
+          "dimensions": {
+            "items": {
+              "$ref": "#/components/schemas/DimensionOut"
+            },
+            "title": "Dimensions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "chapter",
+          "dimensions"
+        ],
+        "title": "ChapterVerdict",
+        "type": "object"
+      },
+      "Contradiction": {
+        "description": "Dos campos que no pueden ser ciertos a la vez, y la regla que lo dice.",
+        "properties": {
+          "fields": {
+            "maxItems": 2,
+            "minItems": 2,
+            "prefixItems": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Fields",
+            "type": "array"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "rule": {
+            "title": "Rule",
+            "type": "string"
+          }
+        },
+        "required": [
+          "fields",
+          "rule",
+          "message"
+        ],
+        "title": "Contradiction",
+        "type": "object"
+      },
+      "Debt": {
+        "description": "CAN-08. La deuda narrativa vigente.",
+        "properties": {
+          "open_setups": {
+            "description": "Plantados y sin cobrar. Esto es lo que se debe",
+            "items": {
+              "$ref": "#/components/schemas/SetupStatus"
+            },
+            "title": "Open Setups",
+            "type": "array"
+          },
+          "paid": {
+            "items": {
+              "$ref": "#/components/schemas/SetupStatus"
+            },
+            "title": "Paid",
+            "type": "array"
+          },
+          "planned": {
+            "description": "Ni plantados aun. No son deuda todavia, pero son compromiso",
+            "items": {
+              "$ref": "#/components/schemas/SetupStatus"
+            },
+            "title": "Planned",
+            "type": "array"
+          }
+        },
+        "required": [
+          "open_setups",
+          "planned"
+        ],
+        "title": "Debt",
+        "type": "object"
+      },
+      "DimensionOut": {
+        "properties": {
+          "dimension": {
+            "title": "Dimension",
+            "type": "string"
+          },
+          "discarded_instances": {
+            "default": [],
+            "description": "Instancias del Jurado sin puntuacion anclada en esta dimension (RF-129)",
+            "items": {
+              "type": "string"
+            },
+            "title": "Discarded Instances",
+            "type": "array"
+          },
+          "dispersion": {
+            "title": "Dispersion",
+            "type": "integer"
+          },
+          "level": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Level"
+          },
+          "scores": {
+            "items": {
+              "$ref": "#/components/schemas/ScoreOut"
+            },
+            "title": "Scores",
+            "type": "array"
+          },
+          "valid": {
+            "title": "Valid",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "dimension",
+          "level",
+          "dispersion",
+          "valid",
+          "scores"
+        ],
+        "title": "DimensionOut",
+        "type": "object"
+      },
+      "Draft": {
+        "description": "RF-169 del frontend: lo que el panel muestra. Vacio al empezar.",
+        "properties": {
+          "answered": {
+            "default": [],
+            "items": {
+              "enum": [
+                "title",
+                "recipient.name",
+                "recipient.age",
+                "recipient.role",
+                "premise",
+                "genre",
+                "tone",
+                "target_words",
+                "start",
+                "dedication",
+                "recipient.traits",
+                "recipient.memories",
+                "forbidden_words",
+                "forbidden_themes"
+              ],
+              "type": "string"
+            },
+            "title": "Answered",
+            "type": "array"
+          },
+          "dedication": {
+            "default": "",
+            "title": "Dedication",
+            "type": "string"
+          },
+          "entities": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ExtraEntity"
+            },
+            "title": "Entities",
+            "type": "array"
+          },
+          "forbidden_themes": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Forbidden Themes",
+            "type": "array"
+          },
+          "forbidden_words": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Forbidden Words",
+            "type": "array"
+          },
+          "genre": {
+            "default": "",
+            "title": "Genre",
+            "type": "string"
+          },
+          "premise": {
+            "default": "",
+            "title": "Premise",
+            "type": "string"
+          },
+          "recipient_age": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipient Age"
+          },
+          "recipient_memories": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Recipient Memories",
+            "type": "array"
+          },
+          "recipient_name": {
+            "default": "",
+            "title": "Recipient Name",
+            "type": "string"
+          },
+          "recipient_role": {
+            "default": "",
+            "title": "Recipient Role",
+            "type": "string"
+          },
+          "recipient_traits": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Recipient Traits",
+            "type": "array"
+          },
+          "start": {
+            "default": "",
+            "title": "Start",
+            "type": "string"
+          },
+          "target_words": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Words"
+          },
+          "title": {
+            "default": "",
+            "title": "Title",
+            "type": "string"
+          },
+          "tone": {
+            "default": "",
+            "title": "Tone",
+            "type": "string"
+          }
+        },
+        "title": "Draft",
+        "type": "object"
+      },
+      "EntityCard": {
+        "description": "Ficha de entidad. CTX-05 en su forma compacta.\n\nCompacta y completa se diferencian en cuanto traen, no en su forma: seis\ncompactas caben en 1.600 tokens y una completa en 800 (RF-09).",
+        "properties": {
+          "aliases": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Aliases",
+            "type": "array"
+          },
+          "attributes": {
+            "items": {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "string"
+                }
+              ],
+              "type": "array"
+            },
+            "title": "Attributes",
+            "type": "array"
+          },
+          "competences": {
+            "items": {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "string"
+                }
+              ],
+              "type": "array"
+            },
+            "title": "Competences",
+            "type": "array"
+          },
+          "entity_id": {
+            "title": "Entity Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entity_id",
+          "kind",
+          "name"
+        ],
+        "title": "EntityCard",
+        "type": "object"
+      },
+      "EntityFile": {
+        "description": "RI-46. La ficha de una entidad.",
+        "properties": {
+          "appearances": {
+            "items": {
+              "$ref": "#/components/schemas/Appearance"
+            },
+            "title": "Appearances",
+            "type": "array"
+          },
+          "card": {
+            "$ref": "#/components/schemas/EntityCard",
+            "description": "Ficha compacta, CTX-05"
+          },
+          "entity": {
+            "$ref": "#/components/schemas/EntitySummary"
+          },
+          "facts": {
+            "items": {
+              "$ref": "#/components/schemas/Fact"
+            },
+            "title": "Facts",
+            "type": "array"
+          },
+          "relations": {
+            "items": {
+              "$ref": "#/components/schemas/EntityRelation"
+            },
+            "title": "Relations",
+            "type": "array"
+          }
+        },
+        "required": [
+          "entity",
+          "card",
+          "facts",
+          "relations",
+          "appearances"
+        ],
+        "title": "EntityFile",
+        "type": "object"
+      },
+      "EntityList": {
+        "properties": {
+          "entities": {
+            "items": {
+              "$ref": "#/components/schemas/EntitySummary"
+            },
+            "title": "Entities",
+            "type": "array"
+          }
+        },
+        "required": [
+          "entities"
+        ],
+        "title": "EntityList",
+        "type": "object"
+      },
+      "EntityRelation": {
+        "properties": {
+          "direction": {
+            "description": "out si la entidad es el origen, in si es el destino",
+            "title": "Direction",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "other_id": {
+            "title": "Other Id",
+            "type": "string"
+          },
+          "other_name": {
+            "title": "Other Name",
+            "type": "string"
+          },
+          "valid_from": {
+            "title": "Valid From",
+            "type": "string"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid To"
+          }
+        },
+        "required": [
+          "kind",
+          "other_id",
+          "other_name",
+          "direction",
+          "valid_from"
+        ],
+        "title": "EntityRelation",
+        "type": "object"
+      },
+      "EntitySummary": {
+        "properties": {
+          "aliases": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Aliases",
+            "type": "array"
+          },
+          "chapters": {
+            "description": "Capitulos congelados donde aparece",
+            "items": {
+              "type": "integer"
+            },
+            "title": "Chapters",
+            "type": "array"
+          },
+          "entity_id": {
+            "title": "Entity Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entity_id",
+          "kind",
+          "name",
+          "aliases",
+          "chapters"
+        ],
+        "title": "EntitySummary",
+        "type": "object"
+      },
+      "ExtraEntity": {
+        "description": "Un personaje o un lugar que entro al aceptar un hecho propuesto (RF-218).",
+        "properties": {
+          "kind": {
+            "enum": [
+              "person",
+              "place"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "note": {
+            "default": "",
+            "maxLength": 300,
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "name"
+        ],
+        "title": "ExtraEntity",
+        "type": "object"
+      },
+      "Fact": {
+        "properties": {
+          "attribute": {
+            "title": "Attribute",
+            "type": "string"
+          },
+          "provenance": {
+            "description": "MET-09: brief, prose, derived o arbitration",
+            "title": "Provenance",
+            "type": "string"
+          },
+          "valid_from": {
+            "title": "Valid From",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "attribute",
+          "value",
+          "provenance",
+          "valid_from"
+        ],
+        "title": "Fact",
+        "type": "object"
+      },
+      "FactAnchor": {
+        "description": "Un hecho de la ficha: entidad y atributo.",
+        "properties": {
+          "attribute": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Attribute",
+            "type": "string"
+          },
+          "entity_id": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Entity Id",
+            "type": "string"
+          },
+          "kind": {
+            "const": "fact",
+            "default": "fact",
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entity_id",
+          "attribute"
+        ],
+        "title": "FactAnchor",
+        "type": "object"
+      },
+      "FieldEdit": {
+        "description": "RF-214. Un campo por nombre; los de lista, separados por comas.",
+        "properties": {
+          "field": {
+            "enum": [
+              "title",
+              "recipient.name",
+              "recipient.age",
+              "recipient.role",
+              "premise",
+              "genre",
+              "tone",
+              "target_words",
+              "start",
+              "dedication",
+              "recipient.traits",
+              "recipient.memories",
+              "forbidden_words",
+              "forbidden_themes"
+            ],
+            "title": "Field",
+            "type": "string"
+          },
+          "value": {
+            "maxLength": 4000,
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "field",
+          "value"
+        ],
+        "title": "FieldEdit",
+        "type": "object"
+      },
+      "FingerprintRow": {
+        "description": "RD-21. La huella de un capitulo congelado.",
+        "properties": {
+          "adj_noun_ratio": {
+            "title": "Adj Noun Ratio",
+            "type": "number"
+          },
+          "chapter": {
+            "title": "Chapter",
+            "type": "integer"
+          },
+          "deviation": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deviation"
+          },
+          "is_reference": {
+            "default": false,
+            "title": "Is Reference",
+            "type": "boolean"
+          },
+          "lexical_richness": {
+            "title": "Lexical Richness",
+            "type": "number"
+          },
+          "mean_sentence_len": {
+            "title": "Mean Sentence Len",
+            "type": "number"
+          },
+          "top_ngrams": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Top Ngrams",
+            "type": "array"
+          },
+          "var_sentence_len": {
+            "title": "Var Sentence Len",
+            "type": "number"
+          }
+        },
+        "required": [
+          "chapter",
+          "mean_sentence_len",
+          "var_sentence_len",
+          "adj_noun_ratio",
+          "top_ngrams",
+          "lexical_richness"
+        ],
+        "title": "FingerprintRow",
+        "type": "object"
+      },
+      "FragmentAnchor": {
+        "description": "Una seleccion del lector: la cita literal, sin recortar ni normalizar (RD-30 del frontend).",
+        "properties": {
+          "chapter": {
+            "minimum": 1.0,
+            "title": "Chapter",
+            "type": "integer"
+          },
+          "kind": {
+            "const": "fragment",
+            "default": "fragment",
+            "title": "Kind",
+            "type": "string"
+          },
+          "quote": {
+            "maxLength": 20000,
+            "minLength": 1,
+            "title": "Quote",
+            "type": "string"
+          },
+          "scene_id": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Scene Id",
+            "type": "string"
+          },
+          "version": {
+            "minimum": 1.0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "version",
+          "chapter",
+          "scene_id",
+          "quote"
+        ],
+        "title": "FragmentAnchor",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "Health": {
+        "properties": {
+          "chapters": {
+            "items": {
+              "$ref": "#/components/schemas/ChapterHealth"
+            },
+            "title": "Chapters",
+            "type": "array"
+          },
+          "novel_id": {
+            "title": "Novel Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "novel_id",
+          "chapters"
+        ],
+        "title": "Health",
+        "type": "object"
+      },
+      "Interpretation": {
+        "description": "Lo que el sistema entendio: exactamente una entidad y un atributo (RI-52).",
+        "properties": {
+          "attribute": {
+            "title": "Attribute",
+            "type": "string"
+          },
+          "entity_id": {
+            "title": "Entity Id",
+            "type": "string"
+          },
+          "new_value": {
+            "title": "New Value",
+            "type": "string"
+          },
+          "previous_value": {
+            "title": "Previous Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entity_id",
+          "attribute",
+          "previous_value",
+          "new_value"
+        ],
+        "title": "Interpretation",
+        "type": "object"
+      },
+      "InterviewState": {
+        "description": "RI-39, RI-40 del frontend.",
+        "properties": {
+          "brief": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Brief"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "En la forma de RI-01, solo si el brief esta completo"
+          },
+          "complete": {
+            "title": "Complete",
+            "type": "boolean"
+          },
+          "contradictions": {
+            "items": {
+              "$ref": "#/components/schemas/Contradiction"
+            },
+            "title": "Contradictions",
+            "type": "array"
+          },
+          "discarded_quotes": {
+            "description": "Citas descartadas por no aparecer literales",
+            "minimum": 0.0,
+            "title": "Discarded Quotes",
+            "type": "integer"
+          },
+          "draft": {
+            "$ref": "#/components/schemas/Draft"
+          },
+          "interview_id": {
+            "title": "Interview Id",
+            "type": "string"
+          },
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/Message"
+            },
+            "title": "Messages",
+            "type": "array"
+          },
+          "missing": {
+            "items": {
+              "$ref": "#/components/schemas/Missing"
+            },
+            "title": "Missing",
+            "type": "array"
+          },
+          "novel_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Identificador sugerido para RI-01 (D-81)",
+            "title": "Novel Id"
+          },
+          "proposed": {
+            "items": {
+              "$ref": "#/components/schemas/ProposedFact"
+            },
+            "title": "Proposed",
+            "type": "array"
+          },
+          "question": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Question"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "interview_id",
+          "messages",
+          "question",
+          "draft",
+          "missing",
+          "contradictions",
+          "proposed",
+          "discarded_quotes",
+          "complete",
+          "brief",
+          "novel_id"
+        ],
+        "title": "InterviewState",
+        "type": "object"
+      },
+      "JsonValue": {},
+      "Manifest": {
+        "description": "RI-43. Portada e indice de una version.",
+        "properties": {
+          "chapters": {
+            "items": {
+              "$ref": "#/components/schemas/ChapterEntry"
+            },
+            "title": "Chapters",
+            "type": "array"
+          },
+          "current": {
+            "title": "Current",
+            "type": "boolean"
+          },
+          "dedication": {
+            "title": "Dedication",
+            "type": "string"
+          },
+          "recipient_name": {
+            "title": "Recipient Name",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "version",
+          "current",
+          "title",
+          "dedication",
+          "recipient_name",
+          "chapters"
+        ],
+        "title": "Manifest",
+        "type": "object"
+      },
+      "Message": {
+        "properties": {
+          "kind": {
+            "enum": [
+              "question",
+              "answer",
+              "free_text",
+              "note"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "interviewer",
+              "person"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role",
+          "kind",
+          "text"
+        ],
+        "title": "Message",
+        "type": "object"
+      },
+      "MetricRow": {
+        "description": "RD-22. Una senal de `architecture.md` §11 para un capitulo.",
+        "properties": {
+          "chapter": {
+            "title": "Chapter",
+            "type": "integer"
+          },
+          "signal": {
+            "title": "Signal",
+            "type": "string"
+          },
+          "state": {
+            "pattern": "^(ok|alarm|unknown)$",
+            "title": "State",
+            "type": "string"
+          },
+          "threshold": {
+            "title": "Threshold",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "chapter",
+          "signal",
+          "value",
+          "threshold",
+          "state"
+        ],
+        "title": "MetricRow",
+        "type": "object"
+      },
+      "Missing": {
+        "properties": {
+          "field": {
+            "enum": [
+              "title",
+              "recipient.name",
+              "recipient.age",
+              "recipient.role",
+              "premise",
+              "genre",
+              "tone",
+              "target_words",
+              "start",
+              "dedication",
+              "recipient.traits",
+              "recipient.memories",
+              "forbidden_words",
+              "forbidden_themes"
+            ],
+            "title": "Field",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "field",
+          "label"
+        ],
+        "title": "Missing",
+        "type": "object"
+      },
+      "NovelCreated": {
+        "properties": {
+          "events_loaded": {
+            "description": "Hechos que el brief aporto al canon",
+            "title": "Events Loaded",
+            "type": "integer"
+          },
+          "novel_id": {
+            "title": "Novel Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "novel_id",
+          "events_loaded"
+        ],
+        "title": "NovelCreated",
+        "type": "object"
+      },
+      "NovelEntry": {
+        "properties": {
+          "novel_id": {
+            "title": "Novel Id",
+            "type": "string"
+          },
+          "state": {
+            "$ref": "#/components/schemas/RunState"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "versions": {
+            "minimum": 1.0,
+            "title": "Versions",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "novel_id",
+          "title",
+          "state",
+          "versions"
+        ],
+        "title": "NovelEntry",
+        "type": "object"
+      },
+      "NovelList": {
+        "properties": {
+          "novels": {
+            "items": {
+              "$ref": "#/components/schemas/NovelEntry"
+            },
+            "title": "Novels",
+            "type": "array"
+          }
+        },
+        "required": [
+          "novels"
+        ],
+        "title": "NovelList",
+        "type": "object"
+      },
+      "ProposedFact": {
+        "description": "RF-174 del frontend: un hecho sacado del texto libre, con su cita.",
+        "properties": {
+          "fact_id": {
+            "title": "Fact Id",
+            "type": "string"
+          },
+          "quote": {
+            "title": "Quote",
+            "type": "string"
+          },
+          "status": {
+            "default": "proposed",
+            "enum": [
+              "proposed",
+              "accepted",
+              "discarded"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "target": {
+            "enum": [
+              "recipient.traits",
+              "recipient.memories",
+              "entity.person",
+              "entity.place"
+            ],
+            "title": "Target",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "fact_id",
+          "target",
+          "value",
+          "quote"
+        ],
+        "title": "ProposedFact",
+        "type": "object"
+      },
+      "Question": {
+        "properties": {
+          "field": {
+            "enum": [
+              "title",
+              "recipient.name",
+              "recipient.age",
+              "recipient.role",
+              "premise",
+              "genre",
+              "tone",
+              "target_words",
+              "start",
+              "dedication",
+              "recipient.traits",
+              "recipient.memories",
+              "forbidden_words",
+              "forbidden_themes"
+            ],
+            "title": "Field",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "field",
+          "text"
+        ],
+        "title": "Question",
+        "type": "object"
+      },
+      "Recipient": {
+        "description": "RF-200. Para quien es la novela: una entidad del brief, con lo que la entrevista recogio.",
+        "properties": {
+          "age": {
+            "maximum": 120.0,
+            "minimum": 0.0,
+            "title": "Age",
+            "type": "integer"
+          },
+          "entity_id": {
+            "minLength": 1,
+            "title": "Entity Id",
+            "type": "string"
+          },
+          "memories": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Memories",
+            "type": "array"
+          },
+          "role": {
+            "description": "Papel en la historia",
+            "minLength": 1,
+            "title": "Role",
+            "type": "string"
+          },
+          "traits": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Traits",
+            "type": "array"
+          }
+        },
+        "required": [
+          "entity_id",
+          "age",
+          "role"
+        ],
+        "title": "Recipient",
+        "type": "object"
+      },
+      "Relation": {
+        "description": "Una arista del grafo de entidades (MET-03), con su vigencia (MET-07).",
+        "properties": {
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "source_id": {
+            "title": "Source Id",
+            "type": "string"
+          },
+          "target_id": {
+            "title": "Target Id",
+            "type": "string"
+          },
+          "valid_from": {
+            "title": "Valid From",
+            "type": "string"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid To"
+          }
+        },
+        "required": [
+          "source_id",
+          "target_id",
+          "kind",
+          "valid_from"
+        ],
+        "title": "Relation",
+        "type": "object"
+      },
+      "RetconEntry": {
+        "properties": {
+          "chapter_origin": {
+            "title": "Chapter Origin",
+            "type": "integer"
+          },
+          "fact_key": {
+            "title": "Fact Key",
+            "type": "string"
+          },
+          "new_value": {
+            "title": "New Value",
+            "type": "string"
+          },
+          "previous_value": {
+            "title": "Previous Value",
+            "type": "string"
+          },
+          "refrozen_scenes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Refrozen Scenes",
+            "type": "array"
+          },
+          "rule": {
+            "title": "Rule",
+            "type": "string"
+          }
+        },
+        "required": [
+          "fact_key",
+          "previous_value",
+          "new_value",
+          "refrozen_scenes",
+          "rule",
+          "chapter_origin"
+        ],
+        "title": "RetconEntry",
+        "type": "object"
+      },
+      "RetconList": {
+        "properties": {
+          "retcons": {
+            "items": {
+              "$ref": "#/components/schemas/RetconEntry"
+            },
+            "title": "Retcons",
+            "type": "array"
+          }
+        },
+        "required": [
+          "retcons"
+        ],
+        "title": "RetconList",
+        "type": "object"
+      },
+      "RunState": {
+        "description": "RI-03. El estado de la tirada, solo lo que un lector puede ver.",
+        "properties": {
+          "chapter_in_progress": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chapter In Progress"
+          },
+          "closed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "`None` mientras la tirada no ha terminado",
+            "title": "Closed"
+          },
+          "error": {
+            "default": "",
+            "title": "Error",
+            "type": "string"
+          },
+          "frozen_chapters": {
+            "minimum": 0.0,
+            "title": "Frozen Chapters",
+            "type": "integer"
+          },
+          "last_closed_scene": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Closed Scene"
+          },
+          "novel_id": {
+            "title": "Novel Id",
+            "type": "string"
+          },
+          "quarantines": {
+            "description": "Veces que un capitulo se rehizo entero",
+            "minimum": 0.0,
+            "title": "Quarantines",
+            "type": "integer"
+          },
+          "reason": {
+            "default": "",
+            "title": "Reason",
+            "type": "string"
+          },
+          "running": {
+            "title": "Running",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "novel_id",
+          "running",
+          "frozen_chapters",
+          "quarantines"
+        ],
+        "title": "RunState",
+        "type": "object"
+      },
+      "SceneAt": {
+        "description": "RI-44. Una escena tal como estaba en una version.",
+        "properties": {
+          "changed": {
+            "description": "Reescrita en esta version respecto a la anterior",
+            "title": "Changed",
+            "type": "boolean"
+          },
+          "pov": {
+            "title": "Pov",
+            "type": "string"
+          },
+          "scene_id": {
+            "title": "Scene Id",
+            "type": "string"
+          },
+          "scene_number": {
+            "title": "Scene Number",
+            "type": "integer"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scene_id",
+          "scene_number",
+          "pov",
+          "text",
+          "changed"
+        ],
+        "title": "SceneAt",
+        "type": "object"
+      },
+      "SceneProse": {
+        "properties": {
+          "pov": {
+            "title": "Pov",
+            "type": "string"
+          },
+          "scene_number": {
+            "title": "Scene Number",
+            "type": "integer"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scene_number",
+          "pov",
+          "text"
+        ],
+        "title": "SceneProse",
+        "type": "object"
+      },
+      "ScoreOut": {
+        "properties": {
+          "instance": {
+            "title": "Instance",
+            "type": "string"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "quote": {
+            "title": "Quote",
+            "type": "string"
+          },
+          "scene_id": {
+            "title": "Scene Id",
+            "type": "string"
+          },
+          "score": {
+            "title": "Score",
+            "type": "integer"
+          },
+          "seed": {
+            "title": "Seed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "scene_id",
+          "instance",
+          "seed",
+          "score",
+          "quote",
+          "offset"
+        ],
+        "title": "ScoreOut",
+        "type": "object"
+      },
+      "SetupState": {
+        "description": "Estado de una promesa.\n\n`PLANTED` cuando la escena que la planta esta congelada; `PAID` cuando lo\nesta la que la cobra. **Planificar no es plantar**: mientras las dos escenas\nsigan sin escribirse, la promesa esta prevista y no abierta, porque una\npromesa que el lector no ha leido todavia no debe nada.",
+        "enum": [
+          "planificado",
+          "plantado",
+          "cobrado"
+        ],
+        "title": "SetupState",
+        "type": "string"
+      },
+      "SetupStatus": {
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "payoff_chapter": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payoff Chapter"
+          },
+          "payoff_scene": {
+            "title": "Payoff Scene",
+            "type": "string"
+          },
+          "planted_chapter": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Planted Chapter"
+          },
+          "planted_scene": {
+            "title": "Planted Scene",
+            "type": "string"
+          },
+          "state": {
+            "$ref": "#/components/schemas/SetupState"
+          }
+        },
+        "required": [
+          "id",
+          "state",
+          "planted_scene",
+          "payoff_scene",
+          "description"
+        ],
+        "title": "SetupStatus",
+        "type": "object"
+      },
+      "StyleReport": {
+        "properties": {
+          "chapters": {
+            "items": {
+              "$ref": "#/components/schemas/FingerprintRow"
+            },
+            "title": "Chapters",
+            "type": "array"
+          },
+          "novel_id": {
+            "title": "Novel Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "novel_id",
+          "chapters"
+        ],
+        "title": "StyleReport",
+        "type": "object"
+      },
+      "TracePage": {
+        "properties": {
+          "novel_id": {
+            "title": "Novel Id",
+            "type": "string"
+          },
+          "records": {
+            "items": {
+              "$ref": "#/components/schemas/TraceRecord"
+            },
+            "title": "Records",
+            "type": "array"
+          }
+        },
+        "required": [
+          "novel_id",
+          "records"
+        ],
+        "title": "TracePage",
+        "type": "object"
+      },
+      "TraceRecord": {
+        "description": "Una linea de la traza.",
+        "properties": {
+          "at": {
+            "description": "Instante real, ISO 8601 UTC",
+            "title": "At",
+            "type": "string"
+          },
+          "fields": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "title": "Fields",
+            "type": "object"
+          },
+          "kind": {
+            "description": "call, admission, retry, defect, arbitration, ...",
+            "minLength": 1,
+            "title": "Kind",
+            "type": "string"
+          },
+          "seq": {
+            "description": "Orden de escritura dentro de la tirada",
+            "minimum": 0.0,
+            "title": "Seq",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "seq",
+          "at",
+          "kind"
+        ],
+        "title": "TraceRecord",
+        "type": "object"
+      },
+      "TurnIn": {
+        "description": "RI-39. Todo opcional: un turno puede traer cualquier combinacion.",
+        "properties": {
+          "accept": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "title": "Accept",
+            "type": "array"
+          },
+          "answer": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer"
+          },
+          "discard": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "title": "Discard",
+            "type": "array"
+          },
+          "edits": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/FieldEdit"
+            },
+            "maxItems": 20,
+            "title": "Edits",
+            "type": "array"
+          },
+          "free_text": {
+            "anyOf": [
+              {
+                "maxLength": 200000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Texto no confiable: una anecdota, una carta. Nunca instruye al sistema",
+            "title": "Free Text"
+          }
+        },
+        "title": "TurnIn",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      },
+      "VersionInfo": {
+        "description": "RI-42. Una version del manuscrito (PRO-08).",
+        "properties": {
+          "cause": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Solicitud que la produjo; nula en la 1",
+            "title": "Cause"
+          },
+          "changed_chapters": {
+            "description": "Capitulos cambiados respecto a la anterior",
+            "items": {
+              "type": "integer"
+            },
+            "title": "Changed Chapters",
+            "type": "array"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Nulo en la 1: nace con la tirada",
+            "title": "Created At"
+          },
+          "current": {
+            "title": "Current",
+            "type": "boolean"
+          },
+          "number": {
+            "minimum": 1.0,
+            "title": "Number",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "number",
+          "created_at",
+          "cause",
+          "changed_chapters",
+          "current"
+        ],
+        "title": "VersionInfo",
+        "type": "object"
+      },
+      "VersionList": {
+        "properties": {
+          "versions": {
+            "items": {
+              "$ref": "#/components/schemas/VersionInfo"
+            },
+            "title": "Versions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "versions"
+        ],
+        "title": "VersionList",
+        "type": "object"
+      },
+      "WorldState": {
+        "description": "MUN-10. Estado del mundo en un instante: fichas y relaciones vigentes.\n\nLas relaciones no entran en ningun paquete de contexto: los agentes leen\n`cards`. Estan aqui porque MUN-10 las incluye y porque es de donde el grafo\ndel frontend las lee mientras no exista su ruta propia.",
+        "properties": {
+          "at": {
+            "$ref": "#/components/schemas/WorldTime"
+          },
+          "cards": {
+            "items": {
+              "$ref": "#/components/schemas/EntityCard"
+            },
+            "title": "Cards",
+            "type": "array"
+          },
+          "relations": {
+            "items": {
+              "$ref": "#/components/schemas/Relation"
+            },
+            "title": "Relations",
+            "type": "array"
+          }
+        },
+        "required": [
+          "at",
+          "cards"
+        ],
+        "title": "WorldState",
+        "type": "object"
+      },
+      "WorldTime": {
+        "description": "MUN-05. Instante de mundo.\n\nISO 8601 mas `seq` de desempate (D-07). Se ordena por la tupla\n`(stamp, seq)`, que ordena lexicograficamente igual que cronologicamente:\npor eso el formato es fijo y se valida.",
+        "properties": {
+          "seq": {
+            "default": 0,
+            "description": "Desempate dentro del mismo instante",
+            "minimum": 0.0,
+            "title": "Seq",
+            "type": "integer"
+          },
+          "stamp": {
+            "description": "ISO 8601: YYYY-MM-DD, opcionalmente con hora",
+            "title": "Stamp",
+            "type": "string"
+          }
+        },
+        "required": [
+          "stamp"
+        ],
+        "title": "WorldTime",
+        "type": "object"
+      },
+      "brief__routes__ErrorDetail": {
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          }
+        },
+        "required": [
+          "detail"
+        ],
+        "title": "ErrorDetail",
+        "type": "object"
+      },
+      "canon__routes__ErrorDetail": {
+        "description": "Cuerpo de todo error de esta API.\n\nSe declara porque un contrato que dice \"puede devolver 404\" sin decir con\nque forma deja al cliente generado adivinando, que es la mitad del problema\nque el contrato existe para quitar.",
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          }
+        },
+        "required": [
+          "detail"
+        ],
+        "title": "ErrorDetail",
+        "type": "object"
+      },
+      "orchestration__routes__ErrorDetail": {
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          }
+        },
+        "required": [
+          "detail"
+        ],
+        "title": "ErrorDetail",
+        "type": "object"
+      },
+      "planning__routes__ErrorDetail": {
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          }
+        },
+        "required": [
+          "detail"
+        ],
+        "title": "ErrorDetail",
+        "type": "object"
+      },
+      "supervision__routes__ErrorDetail": {
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          }
+        },
+        "required": [
+          "detail"
+        ],
+        "title": "ErrorDetail",
+        "type": "object"
+      },
+      "verification__routes__ErrorDetail": {
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          }
+        },
+        "required": [
+          "detail"
+        ],
+        "title": "ErrorDetail",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "Sistema autonomo de generacion de novelas largas. La API observa y arranca; no aprueba, no corrige y no desbloquea.",
+    "title": "Story Maker",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/interviews": {
+      "post": {
+        "description": "RI-38. Una entrevista nueva con su primera pregunta.",
+        "operationId": "create_interview_interviews_post",
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterviewState"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Create Interview",
+        "tags": [
+          "brief"
+        ]
+      }
+    },
+    "/interviews/{interview_id}": {
+      "get": {
+        "description": "RI-40. El mismo estado que RI-39, para reanudar.",
+        "operationId": "get_interview_interviews__interview_id__get",
+        "parameters": [
+          {
+            "description": "Identificador de la entrevista",
+            "in": "path",
+            "name": "interview_id",
+            "required": true,
+            "schema": {
+              "description": "Identificador de la entrevista",
+              "pattern": "^[a-f0-9]{12}$",
+              "title": "Interview Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterviewState"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/brief__routes__ErrorDetail"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Interview",
+        "tags": [
+          "brief"
+        ]
+      }
+    },
+    "/interviews/{interview_id}/turns": {
+      "post": {
+        "description": "RI-39. Respuesta, texto libre, ediciones y decisiones sobre hechos propuestos.",
+        "operationId": "send_turn_interviews__interview_id__turns_post",
+        "parameters": [
+          {
+            "description": "Identificador de la entrevista",
+            "in": "path",
+            "name": "interview_id",
+            "required": true,
+            "schema": {
+              "description": "Identificador de la entrevista",
+              "pattern": "^[a-f0-9]{12}$",
+              "title": "Interview Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TurnIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterviewState"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/brief__routes__ErrorDetail"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Send Turn",
+        "tags": [
+          "brief"
+        ]
+      }
+    },
+    "/novels": {
+      "get": {
+        "description": "RI-37. Las novelas del directorio de tiradas, con su estado y sus versiones.\n\nVive aqui y no en `canon/` porque el estado de la tirada es del Orquestador.",
+        "operationId": "list_novels_novels_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NovelList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Novels",
+        "tags": [
+          "orchestration"
+        ]
+      },
+      "post": {
+        "description": "RI-01. Carga el brief. Es la unica escritura que la API provoca.",
+        "operationId": "create_novels_post",
+        "parameters": [
+          {
+            "description": "Identificador de la novela",
+            "in": "query",
+            "name": "novel_id",
+            "required": true,
+            "schema": {
+              "description": "Identificador de la novela",
+              "pattern": "^[a-z0-9][a-z0-9-]{2,63}$",
+              "title": "Novel Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Brief"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NovelCreated"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/canon__routes__ErrorDetail"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/canon__routes__ErrorDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create",
+        "tags": [
+          "canon"
+        ]
+      }
+    },
+    "/novels/{novel_id}": {
+      "get": {
+        "description": "RI-03. Capitulo y escena en curso, congelados, cuarentenas, cierre.",
+        "operationId": "get_state_novels__novel_id__get",
+        "parameters": [
+          {
+            "description": "Identificador de la novela",
+            "in": "path",
+            "name": "novel_id",
+            "required": true,
+            "schema": {
+              "description": "Identificador de la novela",
+              "pattern": "^[a-z0-9][a-z0-9-]{2,63}$",
+              "title": "Novel Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunState"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/orchestration__routes__ErrorDetail"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/orchestration__routes__ErrorDetail"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get State",
+        "tags": [
+          "orchestration"
+        ]
+      }
+    },
+    "/novels/{novel_id}/change-requests": {
+      "get": {
+        "description": "RI-48. Todas las solicitudes con su estado.",
+        "operationId": "list_change_requests_novels__novel_id__change_requests_get",
+        "parameters": [
+          {
+            "description": "Identificador de la novela",
+            "in": "path",
+            "name": "novel_id",
+            "required": true,
+            "schema": {
+              "description": "Identificador de la novela",
+              "pattern": "^[a-z0-9][a-z0-9-]{2,63}$",
+              "title": "Novel Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeRequestList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/orchestration__routes__ErrorDetail"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/orchestration__routes__ErrorDetail"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Change Requests",
+        "tags": [
+          "orchestration"
+        ]
+      },
+      "post": {
+        "description": "RI-47. Interpreta en la misma llamada (D-82) y deja la solicitud en cola o rechazada.\n\nCon la tirada en marcha, el bucle la aplica tras el siguiente capitulo\ncongelado. Sin tirada, el Orquestador la aplica enseguida en su hilo (D-77).",
+        "operationId": "create_change_request_novels__novel_id__change_requests_post",
+        "parameters": [
+          {
+            "description": "Identificador de la novela",
+            "in": "path",
+            "name": "novel_id",
+            "required": true,
+            "schema": {
+              "description": "Identificador de la novela",
+              "pattern": "^[a-z0-9][a-z0-9-]{2,63}$",
+              "title": "Novel Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeRequestIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeRequest"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/orchestration__routes__ErrorDetail"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/orchestration__routes__ErrorDetail"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Change Request",
+        "tags": [
+          "orchestration"
+        ]
+      }
+    },
+    "/novels/{novel_id}/change-requests/{request_id}": {
+      "get": {
+        "description": "RI-49. Estado, interpretacion y, si se aplico, la version que produjo.",
+        "operationId": "get_change_request_novels__novel_id__change_requests__request_id__get",
+        "parameters": [
+          {
+            "description": "Identificador de la novela",
+            "in": "path",
+            "name": "novel_id",
+            "required": true,
+            "schema": {
+              "description": "Identificador de la novela",
+              "pattern": "^[a-z0-9][a-z0-9-]{2,63}$",
+              "title": "Novel Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Request Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeRequest"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/orchestration__routes__ErrorDetail"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/orchestration__routes__ErrorDetail"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Change Request",
+        "tags": [
+          "orchestration"
+        ]
+      }
+    },
+    "/novels/{novel_id}/chapters": {
+      "get": {
+        "description": "RI-04. Solo capitulos congelados: son los unicos que estan en el indice.",
+        "operationId": "list_chapters_novels__novel_id__chapters_get",
+        "parameters": [
+          {
+            "description": "Identificador de la novela",
+            "in": "path",
+            "name": "novel_id",
+            "required": true,
+            "schema": {
+              "description": "Identificador de la novela",
+              "pattern": "^[a-z0-9][a-z0-9-]{2,63}$",
+              "title": "Novel Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChapterList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/canon__routes__ErrorDetail"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/canon__routes__ErrorDetail"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Chapters",
+        "tags": [
+          "canon"
+        ]
+      }
+    },
+    "/novels/{novel_id}/chapters/{number}": {
+      "get": {
+        "description": "RI-05. La prosa de un capitulo congelado.",
+        "operationId": "get_chapter_novels__novel_id__chapters__number__get",
+        "parameters": [
+          {
+            "description": "Identificador de la novela",
+            "in": "path",
+            "name": "novel_id",
+            "required": true,
+            "schema": {
+              "description": "Identificador de la novela",
+              "pattern": "^[a-z0-9][a-z0-9-]{2,63}$",
+              "title": "Novel Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "number",
+            "required": true,
+            "schema": {
+              "title": "Number",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChapterProse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/canon__routes__ErrorDetail"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/canon__routes__ErrorDetail"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Chapter",
+        "tags": [
+          "canon"
+        ]
+      }
+    },
+    "/novels/{novel_id}/chapters/{number}/verdict": {
+      "get": {
+        "description": "RI-29. El veredicto del Jurado sobre un capitulo congelado.",
+        "operationId": "get_verdict_novels__novel_id__chapters__number__verdict_get",
+        "parameters": [
+          {
+            "description": "Identificador de la novela",
+            "in": "path",
+            "name": "novel_id",
+            "required": true,
+            "schema": {
+              "description": "Identificador de la novela",
+              "pattern": "^[a-z0-9][a-z0-9-]{2,63}$",
+              "title": "Novel Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "number",
+            "required": true,
+            "schema": {
+              "title": "Number",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChapterVerdict"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/verification__routes__ErrorDetail"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/verification__routes__ErrorDetail"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Verdict",
+        "tags": [
+          "verification"
+        ]
+      }
+    },
+    "/novels/{novel_id}/debt": {
+      "get": {
+        "description": "RI-07. Setups abiertos y compromisos sin plantar.",
+        "operationId": "read_debt_novels__novel_id__debt_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "novel_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z0-9][a-z0-9-]{2,63}$",
+              "title": "Novel Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Debt"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/planning__routes__ErrorDetail"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Read Debt",
+        "tags": [
+          "planning"
+        ]
+      }
+    },
+    "/novels/{novel_id}/entities": {
+      "get": {
+        "description": "RI-45. Personajes, lugares, instituciones y objetos, con los capitulos donde aparecen.",
+        "operationId": "list_entities_novels__novel_id__entities_get",
+        "parameters": [
+          {
+            "description": "Identificador de la novela",
+            "in": "path",
+            "name": "novel_id",
+            "required": true,
+            "schema": {
+              "description": "Identificador de la novela",
+              "pattern": "^[a-z0-9][a-z0-9-]{2,63}$",
+              "title": "Novel Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "PER-01, MUN-01, MUN-03 o MUN-02",
+            "in": "query",
+            "name": "type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "person",
+                    "place",
+                    "institution",
+                    "object"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "PER-01, MUN-01, MUN-03 o MUN-02",
+              "title": "Type"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntityList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/canon__routes__ErrorDetail"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/canon__routes__ErrorDetail"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Entities",
+        "tags": [
+          "canon"
+        ]
+      }
+    },
+    "/novels/{novel_id}/entities/{entity_id}": {
+      "get": {
+        "description": "RI-46. La ficha: compacta, hechos con procedencia, relaciones vigentes y apariciones.",
+        "operationId": "get_entity_novels__novel_id__entities__entity_id__get",
+        "parameters": [
+          {
+            "description": "Identificador de la novela",
+            "in": "path",
+            "name": "novel_id",
+            "required": true,
+            "schema": {
+              "description": "Identificador de la novela",
+              "pattern": "^[a-z0-9][a-z0-9-]{2,63}$",
+              "title": "Novel Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 1,
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntityFile"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/canon__routes__ErrorDetail"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/canon__routes__ErrorDetail"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Entity",
+        "tags": [
+          "canon"
+        ]
+      }
+    },
+    "/novels/{novel_id}/health": {
+      "get": {
+        "operationId": "get_health_novels__novel_id__health_get",
+        "parameters": [
+          {
+            "description": "Identificador de la novela",
+            "in": "path",
+            "name": "novel_id",
+            "required": true,
+            "schema": {
+              "description": "Identificador de la novela",
+              "pattern": "^[a-z0-9][a-z0-9-]{2,63}$",
+              "title": "Novel Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/supervision__routes__ErrorDetail"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/supervision__routes__ErrorDetail"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Health",
+        "tags": [
+          "supervision"
+        ]
+      }
+    },
+    "/novels/{novel_id}/retcons": {
+      "get": {
+        "description": "RI-31. Los retcons aplicados, con la regla que los admitio.",
+        "operationId": "list_retcons_novels__novel_id__retcons_get",
+        "parameters": [
+          {
+            "description": "Identificador de la novela",
+            "in": "path",
+            "name": "novel_id",
+            "required": true,
+            "schema": {
+              "description": "Identificador de la novela",
+              "pattern": "^[a-z0-9][a-z0-9-]{2,63}$",
+              "title": "Novel Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetconList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/canon__routes__ErrorDetail"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/canon__routes__ErrorDetail"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Retcons",
+        "tags": [
+          "canon"
+        ]
+      }
+    },
+    "/novels/{novel_id}/run": {
+      "post": {
+        "description": "RI-02. Arranca la tirada. Idempotente: si ya corre, devuelve el estado.",
+        "operationId": "start_run_novels__novel_id__run_post",
+        "parameters": [
+          {
+            "description": "Identificador de la novela",
+            "in": "path",
+            "name": "novel_id",
+            "required": true,
+            "schema": {
+              "description": "Identificador de la novela",
+              "pattern": "^[a-z0-9][a-z0-9-]{2,63}$",
+              "title": "Novel Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunState"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/orchestration__routes__ErrorDetail"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/orchestration__routes__ErrorDetail"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Start Run",
+        "tags": [
+          "orchestration"
+        ]
+      }
+    },
+    "/novels/{novel_id}/state": {
+      "get": {
+        "description": "RI-06. El estado del mundo en un instante.\n\nEl instante es obligatorio: un estado sin instante no significa nada en un\nsistema donde todo tiene vigencia.\n\nEl formato se declara **en el contrato** y no solo en el validador. Mientras\nvivio solo en el codigo, el esquema prometia aceptar cualquier texto y la\nruta rechazaba casi todos: un cliente generado desde ese contrato habria\nenviado basura convencido de que era valida. Lo encontro la comprobacion\ngenerativa, que es para lo que esta.",
+        "operationId": "get_state_novels__novel_id__state_get",
+        "parameters": [
+          {
+            "description": "Identificador de la novela",
+            "in": "path",
+            "name": "novel_id",
+            "required": true,
+            "schema": {
+              "description": "Identificador de la novela",
+              "pattern": "^[a-z0-9][a-z0-9-]{2,63}$",
+              "title": "Novel Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Instante de mundo, ISO 8601",
+            "in": "query",
+            "name": "at",
+            "required": true,
+            "schema": {
+              "description": "Instante de mundo, ISO 8601",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}(:\\d{2})?)?$",
+              "title": "At",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "seq",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Seq",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorldState"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/canon__routes__ErrorDetail"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/canon__routes__ErrorDetail"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get State",
+        "tags": [
+          "canon"
+        ]
+      }
+    },
+    "/novels/{novel_id}/style": {
+      "get": {
+        "description": "RI-30. Huella de referencia y la de cada capitulo, con su desviacion.",
+        "operationId": "get_style_novels__novel_id__style_get",
+        "parameters": [
+          {
+            "description": "Identificador de la novela",
+            "in": "path",
+            "name": "novel_id",
+            "required": true,
+            "schema": {
+              "description": "Identificador de la novela",
+              "pattern": "^[a-z0-9][a-z0-9-]{2,63}$",
+              "title": "Novel Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StyleReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/verification__routes__ErrorDetail"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/verification__routes__ErrorDetail"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Style",
+        "tags": [
+          "verification"
+        ]
+      }
+    },
+    "/novels/{novel_id}/trace": {
+      "get": {
+        "description": "RI-27. Los registros de la traza, en orden de escritura.",
+        "operationId": "get_trace_novels__novel_id__trace_get",
+        "parameters": [
+          {
+            "description": "Identificador de la novela",
+            "in": "path",
+            "name": "novel_id",
+            "required": true,
+            "schema": {
+              "description": "Identificador de la novela",
+              "pattern": "^[a-z0-9][a-z0-9-]{2,63}$",
+              "title": "Novel Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 500,
+              "maximum": 5000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 40,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TracePage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/orchestration__routes__ErrorDetail"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/orchestration__routes__ErrorDetail"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Trace",
+        "tags": [
+          "orchestration"
+        ]
+      }
+    },
+    "/novels/{novel_id}/versions": {
+      "get": {
+        "description": "RI-42. Versiones del manuscrito (PRO-08): la 1 es la tirada, cada enmienda una mas.",
+        "operationId": "list_versions_novels__novel_id__versions_get",
+        "parameters": [
+          {
+            "description": "Identificador de la novela",
+            "in": "path",
+            "name": "novel_id",
+            "required": true,
+            "schema": {
+              "description": "Identificador de la novela",
+              "pattern": "^[a-z0-9][a-z0-9-]{2,63}$",
+              "title": "Novel Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/canon__routes__ErrorDetail"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/canon__routes__ErrorDetail"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Versions",
+        "tags": [
+          "canon"
+        ]
+      }
+    },
+    "/novels/{novel_id}/versions/{version}": {
+      "get": {
+        "description": "RI-43. Portada e indice de una version, con los capitulos cambiados marcados.",
+        "operationId": "get_manifest_novels__novel_id__versions__version__get",
+        "parameters": [
+          {
+            "description": "Identificador de la novela",
+            "in": "path",
+            "name": "novel_id",
+            "required": true,
+            "schema": {
+              "description": "Identificador de la novela",
+              "pattern": "^[a-z0-9][a-z0-9-]{2,63}$",
+              "title": "Novel Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Manifest"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/canon__routes__ErrorDetail"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/canon__routes__ErrorDetail"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Manifest",
+        "tags": [
+          "canon"
+        ]
+      }
+    },
+    "/novels/{novel_id}/versions/{version}/chapters/{number}": {
+      "get": {
+        "description": "RI-44. Un capitulo tal como estaba en una version, con sus escenas cambiadas marcadas.",
+        "operationId": "get_chapter_at_novels__novel_id__versions__version__chapters__number__get",
+        "parameters": [
+          {
+            "description": "Identificador de la novela",
+            "in": "path",
+            "name": "novel_id",
+            "required": true,
+            "schema": {
+              "description": "Identificador de la novela",
+              "pattern": "^[a-z0-9][a-z0-9-]{2,63}$",
+              "title": "Novel Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Version",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "number",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Number",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChapterAtVersion"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/canon__routes__ErrorDetail"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/canon__routes__ErrorDetail"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Chapter At",
+        "tags": [
+          "canon"
+        ]
+      }
+    }
+  }
+}

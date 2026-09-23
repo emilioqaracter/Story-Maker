@@ -84,6 +84,7 @@ def _snapshot(con: sqlite3.Connection) -> list[tuple[object, ...]]:
 
 # ----------------------------------------------------------- RF-04 y RF-05
 
+
 @settings(max_examples=25, deadline=None)
 @given(events=st.lists(_attribute_event(), min_size=1, max_size=12), base=st.integers(0, 99))
 def test_la_proyeccion_no_depende_del_orden_de_insercion(
@@ -152,9 +153,10 @@ def test_una_colision_de_instante_se_rechaza(
 
     path = tmp_path_factory.mktemp("col") / "n.sqlite"
     connection.create(path)
-    with pytest.raises(log.InstantCollisionError, match="next_seq"), connection.canon_writer(
-        path
-    ) as con:
+    with (
+        pytest.raises(log.InstantCollisionError, match="next_seq"),
+        connection.canon_writer(path) as con,
+    ):
         log.append(con, _seed_entities())
         log.append(con, colision)
 
@@ -187,6 +189,7 @@ def test_next_seq_da_el_siguiente_hueco_libre(
 
 # ---------------------------------------------------------------- RF-06
 
+
 def test_un_atributo_nuevo_cierra_al_anterior(novela: Path) -> None:
     """RF-06. Nunca hay dos valores vigentes del mismo atributo.
 
@@ -217,10 +220,13 @@ def test_un_atributo_nuevo_cierra_al_anterior(novela: Path) -> None:
         ).fetchone()["n"]
         assert abiertos == 1
 
-        filas = [tuple(r) for r in con.execute(
-            "SELECT value, valid_from, valid_to FROM attribute "
-            "WHERE entity_id='e1' AND name='estado' ORDER BY valid_from"
-        )]
+        filas = [
+            tuple(r)
+            for r in con.execute(
+                "SELECT value, valid_from, valid_to FROM attribute "
+                "WHERE entity_id='e1' AND name='estado' ORDER BY valid_from"
+            )
+        ]
         assert filas == [
             ("sano", "2026-04-01", "2026-04-10"),
             ("lesionado", "2026-04-10", "2026-04-20"),
@@ -260,6 +266,7 @@ def test_proyectar_hasta_un_instante_ignora_lo_posterior(novela: Path) -> None:
 
 # --------------------------------------------------- el registro es append-only
 
+
 def test_el_registro_no_admite_update_ni_delete(novela: Path) -> None:
     """RF-01. Lo impiden triggers del esquema, no el codigo de acceso.
 
@@ -297,3 +304,48 @@ def test_un_evento_sin_entidad_se_rechaza() -> None:
             provenance=Provenance.BRIEF,
             entities=frozenset(),
         )
+
+
+def test_reconstruir_con_prosa_congelada_no_rompe_las_claves(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """RF-05 sobre una novela real: el indice de prosa referencia a `entity`."""
+    from collections.abc import Sequence
+
+    from canon.brief import Brief, BriefEntity, create_novel
+    from canon.db import connection
+    from canon.freeze.freeze import SceneToFreeze, commit_chapter, prepare
+    from canon.projections import rebuild
+    from commons.provider.port import Embedding
+    from commons.types.primitives import WorldTime
+
+    class _E:
+        def embed(self, texts: Sequence[str], *, is_query: bool) -> list[Embedding]:
+            return [Embedding(values=(0.1,), model_id="d", dimension=1) for _ in texts]
+
+    path = tmp_path / "n.sqlite"
+    create_novel(
+        path,
+        Brief(
+            title="p",
+            start=WorldTime(stamp="2026-01-01"),
+            entities=(BriefEntity(id="m", kind="person", name="M"),),
+            style_guide="x",
+            target_words=1000,
+        ),
+    )
+    esc = SceneToFreeze(
+        id="c1e1",
+        chapter=1,
+        scene_number=1,
+        pov_entity="m",
+        world_time=WorldTime(stamp="2026-01-02"),
+        function="establecer",
+        text="M entro.",
+        summary="s",
+        present=("m",),
+    )
+    with connection.canon_writer(path) as con:
+        commit_chapter(con, prepare([esc], chapter=1, chapter_summary="c", embed=_E()))
+    with connection.canon_writer(path) as con:
+        rebuild.rebuild(con)
+    with connection.reader(path) as con:
+        assert con.execute("SELECT count(*) AS n FROM entity").fetchone()["n"] == 1

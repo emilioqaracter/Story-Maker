@@ -38,6 +38,7 @@ class _Roto:
 
 # --------------------------------------------------------------- los prefijos
 
+
 def test_consulta_y_pasaje_llevan_prefijos_distintos() -> None:
     assert prefixed("hola", is_query=True) == QUERY_PREFIX + "hola"
     assert prefixed("hola", is_query=False) == PASSAGE_PREFIX + "hola"
@@ -66,6 +67,7 @@ def test_el_vector_lleva_modelo_y_dimension() -> None:
 
 
 # ------------------------------------------------------- arranque, no ejecucion
+
 
 def test_verifica_contra_un_indice_vacio() -> None:
     assert LocalEmbedder(_Backend()).verify(index_dimension=None) == DIMENSION

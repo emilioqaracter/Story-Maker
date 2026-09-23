@@ -1,0 +1,60 @@
+{
+  "report_dir": ".claude/auditoria-entrega",
+  "exclude": [
+    "backend/runs",
+    "backend/runs-demo",
+    "backend/runs-golden",
+    "backend/runs-real",
+    "backend/openapi.json",
+    ".hypothesis",
+    ".import_linter_cache"
+  ],
+  "extra_repos": {
+    "myfactory": "C:/Users/student/Desktop/My-Factory"
+  },
+  "commands": {
+    "ENT-03": [{"cmd": "python -m pytest -q brief/test_interview.py brief/test_interpret.py", "cwd": "backend"}],
+    "ENT-04": [{"cmd": "python -m pytest -q canon/test_brief_rules.py", "cwd": "backend"}],
+    "ENT-06": [{"cmd": "python -m pytest -q evals/adversarial/test_campaign.py", "cwd": "backend"}],
+    "ENT-15": [{"cmd": "python -m pytest -q orchestration/test_amend.py canon/arbiter/test_retcon.py", "cwd": "backend"}],
+    "ENT-16": [{"cmd": "python -m pytest -q verification/continuity/test_review.py", "cwd": "backend"}],
+    "ENT-18": [{"cmd": "python -m pytest -q canon/test_routes_v3.py", "cwd": "backend"}],
+    "ENT-26": [{"cmd": "python -m pytest -q orchestration/tools/test_server.py", "cwd": "backend"}],
+    "ENT-27": [{"cmd": "python -m pytest -q orchestration/test_dispatch.py", "cwd": "backend"}],
+    "ENT-34": [{"cmd": "python -m pytest -q orchestration/test_checkpoint.py", "cwd": "backend"}],
+    "ENT-35": [{"cmd": "python -m pytest -q verification/checks/test_deterministic.py", "cwd": "backend"}],
+    "ENT-43": [{"cmd": "python -m pytest -q verification/jury/test_jury.py", "cwd": "backend"}],
+    "ENT-75": [{"cmd": "python -m pytest -q canon/test_brief_rules.py canon/test_manuscript.py -k prohib", "cwd": "backend"}],
+    "ENT-77": [{"cmd": "python -m pytest -q commons/tokens/test_counter.py orchestration/test_admission.py", "cwd": "backend"}]
+  },
+  "glosario": {
+    "story bible": ["Biblia de la obra CAN-03", "canon CAN-01", "canon estructurado", "registro de eventos", "grafo de entidades", "backend/canon/"],
+    "hecho": ["evento MET-05", "delta canónico"],
+    "cronología": ["cronología MUN-05", "registro de eventos con instante", "timeline"],
+    "destinatario y datos personales": ["brief PRO-01", "backend/brief/", "backend/canon/brief.py"],
+    "palabras o temas prohibidos": ["prohibidas del brief", "proscritas", "backend/canon/brief_rules.py"],
+    "dedicatoria": ["dedicatoria del brief", "canon/brief_rules.py"],
+    "cambio del lector": ["enmienda al brief", "retcon CAN-10", "amend", "orchestration/test_amend.py"],
+    "versión de la novela": ["versión PRO-08", "canon/test_routes_v3.py", "srs-backend-v3.md"],
+    "checkpoint": ["congelación CAN-12", "reanudación", "orchestration/test_checkpoint.py"],
+    "resúmenes por capítulo": ["resumen jerárquico CTX-06", "resúmenes jerárquicos"],
+    "planner": ["backend/planning/", "escaleta", "scene_spec"],
+    "writer": ["backend/generation/writer/"],
+    "editor/critic": ["backend/verification/", "continuity review", "jurado CAL-11", "repair"],
+    "LLM-as-judge": ["jurado CAL-11", "backend/verification/jury/"],
+    "policy engine": ["política de arbitraje PRO-10", "backend/canon/arbiter/"],
+    "audit log": ["registro de arbitraje", "traza local por tirada", "backend/commons/tracing/"],
+    "100.000 tokens concurrentes": ["techo de 100.000 tokens de entrada por llamada, AGENTS.md §5.3.2", "commons/tokens/", "orchestration/admission.py"],
+    "hooks": ["no hay .claude/settings.json en el repo: buscar también puntos de enganche del motor en orchestration/"]
+  },
+  "notas": [
+    "Las reglas de trabajo del repo están en AGENTS.md; CLAUDE.md solo apunta a él. Los prompts de solución siguen sus procesos A, B y C (§6), con interrogatorio previo cuando el cambio cruza el umbral de §6.1.",
+    "Ningún código sin sección de docs/architecture.md que lo autorice (AGENTS.md §6.4.1): si falta, el prompt empieza por el proceso B.",
+    "Los métodos de verificación del proyecto son VER-NN de docs/verification.md: las capas adicionales los citan antes de proponer uno nuevo.",
+    "La revisión humana de ENT-44 es evaluación fuera del ciclo de generación; no viola la restricción de cero intervención humana de AGENTS.md §5.3.1, pero hay que defenderlo así.",
+    "El dominio de referencia del repo es una épica deportiva; la rúbrica habla de una novela personalizada. Relacionar los términos con el glosario antes de marcar algo como ausente.",
+    "El frontend T29 a T32 (entrevista, versiones, ficha, solicitudes de cambio) espera a las rutas de srs-backend-v3.md; comprobar el estado real en frontend/PLAN.md.",
+    "La puerta del repo es backend/gate.py, que incluye backend/coherence.py: todo paquete o carpeta nuevos se declaran en docs/architecture.md §2.3.",
+    "Faltan las tiradas reales T16 y T24 (backend/PLAN.md §1.7); son ejecuciones largas, no se lanzan desde el auditor."
+  ]
+}

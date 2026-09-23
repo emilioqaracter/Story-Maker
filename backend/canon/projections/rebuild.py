@@ -28,6 +28,7 @@ from canon.events.types import (
     CompetenceSet,
     DocumentVersion,
     EntityCreated,
+    EntityRenamed,
     KnowledgeGained,
     RelationSet,
     StoredEvent,
@@ -53,6 +54,10 @@ def rebuild(con: sqlite3.Connection, *, until: WorldTime | None = None) -> None:
     `until` acota a los eventos anteriores o iguales a ese instante, que es como
     se responde "que era cierto entonces" sin filtrar despues de proyectar.
     """
+    # El indice de prosa referencia a `entity` por clave ajena. Vaciar y
+    # reconstruir en la misma transaccion deja las claves bien al terminar, pero
+    # no a mitad: la comprobacion se aplaza al commit, que es donde vale.
+    con.execute("PRAGMA defer_foreign_keys = ON")
     for table in PROJECTED_TABLES:
         con.execute(f"DELETE FROM {table}")  # nosec B608
 
@@ -91,6 +96,11 @@ def _apply(con: sqlite3.Connection, stored: StoredEvent) -> None:
             con.execute(
                 "INSERT OR IGNORE INTO entity (id, kind, name, created_at) VALUES (?, ?, ?, ?)",
                 (payload.entity_id, payload.kind, payload.name, at.stamp),
+            )
+
+        case EntityRenamed():
+            con.execute(
+                "UPDATE entity SET name = ? WHERE id = ?", (payload.name, payload.entity_id)
             )
 
         case AliasAdded():

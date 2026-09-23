@@ -18,11 +18,13 @@ Tres cosas ocurren aqui y en ningun otro sitio:
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+import json
+from collections.abc import Mapping, Sequence
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, ValidationError
 
 from commons.provider.port import Completion, ProviderPort, ToolServer
+from commons.tracing.trace import Trace
 
 #: RF-16. Red de seguridad: impide que la salida de un agente ocupe sola la
 #: ventana del siguiente. No sustituye a los topes de longitud narrativa por
@@ -69,6 +71,9 @@ def dispatch(
     tools: Sequence[str] = (),
     server: ToolServer | None = None,
     parse: object | None = None,
+    trace: Trace | None = None,
+    estimated_input: int | None = None,
+    context: Mapping[str, JsonValue] | None = None,
 ) -> DispatchResult:
     """Llama al agente que toca y valida lo que devuelve.
 
@@ -76,14 +81,24 @@ def dispatch(
     como argumento porque cada agente tiene el suyo y `dispatch` no debe conocer
     a ninguno: si tuviera un mapa de agente a esquema, anadir un agente exigiria
     tocar la frontera de confianza, que es lo ultimo que conviene tocar a menudo.
+
+    `trace`, `estimated_input` y `context` son la traza de la llamada (RI-16):
+    agente, lo que se estimo, lo que costo de verdad y el andamiaje que el
+    transporte anadio (D-35). Se compara estimado mas andamiaje contra real,
+    porque el `usage` incluye el andamiaje y el estimado del paquete no.
     """
     tope = min(max_output_tokens, MAX_OUTPUT_TOKENS)
+    # El esquema JSON real del artefacto, para el proveedor que sepa hacerlo
+    # cumplir. La validacion de abajo no se relaja por ello (RI-18).
+    esquema_json = (
+        json.dumps(parse.model_json_schema(), ensure_ascii=False)  # type: ignore[attr-defined]
+        if parse is not None
+        else None
+    )
 
     if tools:
         if server is None:
-            raise ValueError(
-                f"{agent!r} declara herramientas y no se le paso quien las sirve"
-            )
+            raise ValueError(f"{agent!r} declara herramientas y no se le paso quien las sirve")
         completion = port.complete_with_tools(
             cacheable_prefix=cacheable_prefix,
             packet=packet,
@@ -92,6 +107,7 @@ def dispatch(
             max_output_tokens=tope,
             tools=tools,
             server=server,
+            json_schema=esquema_json,
         )
     else:
         completion = port.complete_once(
@@ -100,16 +116,49 @@ def dispatch(
             instruction=instruction,
             output_schema=output_schema,
             max_output_tokens=tope,
+            json_schema=esquema_json,
         )
 
+    real = completion.usage.total_input
+    harness = completion.harness_tokens
+    ok = True
+    error: str | None = None
     if parse is not None:
         try:
             parse.model_validate_json(completion.text)  # type: ignore[attr-defined]
         except ValidationError as exc:
-            raise OutputValidationError(
+            ok = False
+            # Los tres primeros errores con su ruta: es lo que el reintento le
+            # devuelve al modelo, y "no encaja" sin decir donde no corrige nada.
+            detalles = "; ".join(
+                f"{'.'.join(str(x) for x in e['loc']) or '(raiz)'}: {e['msg']}"
+                for e in exc.errors()[:3]
+            )
+            error = (
                 f"la salida de {agent!r} no encaja con su esquema: {exc.error_count()} "
-                f"error(es). Cuenta como llamada fallida"
-            ) from exc
+                f"error(es) [{detalles}]. Cuenta como llamada fallida"
+            )
+
+    if trace is not None:
+        trace.emit(
+            "call",
+            agent=agent,
+            estimated_input=estimated_input,
+            real_input=real,
+            harness_tokens=harness,
+            output_tokens=completion.usage.output_tokens,
+            tool_calls=len(completion.tool_calls),
+            # RNF-19: el estimado mas el andamiaje nunca queda por debajo del
+            # real. Si queda, el factor del contador se ha quedado corto.
+            estimate_short=(estimated_input is not None and estimated_input + harness < real),
+            ok=ok,
+            error=error,
+            raw_head=None if ok else completion.text[:400],
+            **dict(context or {}),
+        )
+
+    if not ok:
+        raise OutputValidationError(error or "salida invalida")
 
     return DispatchResult(
         agent=agent,

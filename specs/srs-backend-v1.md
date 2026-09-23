@@ -28,7 +28,7 @@ La versión 1 es el **sistema mínimo autónomo**: los pasos 1 a 6 del orden de 
 | Árbitro y política de precedencia (paso 6) | |
 | Orquestador, admisión CTX-20, reanudación y bucle de herramientas | |
 | Rutas HTTP mínimas dentro de cada funcionalidad | |
-| Observabilidad con Langfuse desde el primer día | |
+| Traza local por tirada desde el primer día | |
 
 Diez agentes de los trece de `architecture.md` §6 participan: 0 Orquestador, 1 Arquitecto, 2 Planificador, 3 Documentalista, 4 Escritor, 5 Especialista deportivo, 6 Continuista, 8 Reparador, 10 Archivero y 11 Árbitro. Quedan fuera 7 Jurado, 9 Estilista y 12 Supervisor.
 
@@ -81,11 +81,11 @@ graph LR
   ORQ <--> CLA["Claude · agentes de modelo"]
   ORQ <--> OR["fastembed · embeddings locales"]
   ORQ --> DB["Fichero SQLite de la novela"]
-  ORQ --> LF["Langfuse"]
+  ORQ --> TR["Fichero de traza JSONL"]
   API -->|manuscrito congelado| OP
 ```
 
-Cinco fronteras externas: la API HTTP, los dos proveedores de `architecture.md` §4.8, el fichero SQLite y Langfuse. Todas se detallan en §3.
+Cinco fronteras: la API HTTP, los dos proveedores de `architecture.md` §4.8, el fichero SQLite y el fichero de traza. Todas se detallan en §3.
 
 ### 2.2 Funciones del producto
 
@@ -110,7 +110,6 @@ Una fila por funcionalidad de `architecture.md` §2.3. Las funcionalidades son c
 | Quien encarga la novela | Entrega el brief (PRO-01) y lee el manuscrito congelado | Antes del ciclo y después de cada congelación. **Nunca dentro** (PRO-11) |
 | Claude | Responde a las llamadas de los agentes de modelo | En cada llamada admitida |
 | Modelo local de `fastembed` | Calcula los embeddings del índice y de las consultas. **No es un actor externo**: corre en el mismo proceso | Al congelar y al recuperar |
-| Langfuse | Recibe la traza de cada ejecución | Siempre |
 | Frontend | Lee proyecciones y manuscrito | Fuera de la versión 1; la API ya le sirve |
 
 No hay actor «revisor». Cualquier requisito que lo necesite es un error de este documento.
@@ -120,13 +119,13 @@ No hay actor «revisor». Cualquier requisito que lo necesite es un error de est
 | Aspecto | Valor | Fuente |
 |---|---|---|
 | Lenguaje y framework | Python y FastAPI | `AGENTS.md` §3.1 |
-| Ejecución | Un solo proceso, un bucle `asyncio`, sin cola de trabajos ni workers | `architecture.md` §7.4 |
+| Ejecución | Un solo proceso, un bucle síncrono, sin cola de trabajos ni workers | `architecture.md` §7.4 |
 | Persistencia | SQLite en local, un fichero por novela, sin extensiones nativas | `AGENTS.md` §3.2; `architecture.md` §3.1 |
-| Aislamiento | Contenedor sin más red que las APIs de Claude y Langfuse; ficheros acotados al directorio de la tirada | `verification.md` §5.3 |
-| Modelo de los once agentes | **Claude Haiku 4.5**, API de Anthropic. Ventana de 200.000, salida máxima de 64.000, mínimo cacheable de 4.096 | `architecture.md` §4.8 |
+| Aislamiento | Contenedor sin más red que la de Claude; ficheros acotados al directorio de la tirada | `verification.md` §5.3 |
+| Modelo de los once agentes | **Claude Haiku 4.5**, a través del CLI de Claude Code con la suscripción del autor. Ventana de 200.000, salida máxima de 64.000, mínimo cacheable de 4.096. El CLI añade 38.600 tokens de andamiaje por llamada que no cuentan contra el techo del proyecto (D-35) | `architecture.md` §4.8 |
 | Embeddings | `intfloat/multilingual-e5-large` con `fastembed`, empaquetado en la imagen. 1024 dimensiones | `architecture.md` §4.8 |
 | Contador de tokens | `tiktoken` local con factor de seguridad en `commons/`, contrastado contra el `usage` de cada respuesta | `architecture.md` §4.8 |
-| Observabilidad | Langfuse con su SDK de Python | `verification.md` §5.1 |
+| Observabilidad | Traza local JSONL por tirada, escrita por `commons/tracing` | `verification.md` §5.1 |
 
 ### 2.5 Restricciones de diseño
 
@@ -141,7 +140,7 @@ Las seis de `AGENTS.md` §5.3, que aquí se convierten en requisitos no funciona
 
 | Supuesto | Consecuencia si falla |
 |---|---|
-| La API de Claude está accesible y su ventana es ≥ 100.000 tokens | El sistema no arranca: fallo cerrado en el arranque |
+| El CLI de Claude Code está instalado y autenticado, y la ventana del modelo cubre 100.000 tokens más el andamiaje del CLI | El sistema no arranca: fallo cerrado en el arranque |
 | El modelo de embeddings carga al arrancar y su dimensión coincide con la del índice | La tirada no empieza. Es fallo cerrado en el arranque, no durante el ciclo (RF-101) |
 | `intfloat/multilingual-e5-large` recupera bien sobre prosa literaria en español | La pierna semántica rinde por debajo de lo previsto y nada lo señala. Se mide con el conjunto dorado cuando llegue (paso 8); hasta entonces, riesgo aceptado |
 | El factor de seguridad de §4.8 cubre el infracuento de `tiktoken` sobre prosa en español | Los paquetes salen mayores de lo previsto. No rompe ninguna llamada, porque el techo es propio y la ventana física es de 1.000.000; produce deriva de coste y calidad. Lo vigila una propiedad de CI (RNF-19) |
@@ -164,6 +163,7 @@ Mínima, y coherente con la frontera de `architecture.md` §2.2: entra el brief,
 | RI-05 | `GET /novels/{id}/chapters/{n}` | `canon/` | — | Prosa del capítulo `n` congelado |
 | RI-06 | `GET /novels/{id}/state?at=` | `canon/` | Instante de mundo | Estado del mundo en t (MUN-10) |
 | RI-07 | `GET /novels/{id}/debt` | `planning/` | — | Deuda narrativa vigente (CAN-08) |
+| RI-27 | `GET /novels/{id}/trace` | `orchestration/` | — | Registros de la traza de la tirada (RI-16), en orden de escritura |
 
 Requisitos transversales de la API:
 
@@ -187,7 +187,7 @@ Requisitos transversales de la API:
 
 ### 3.4 Observabilidad
 
-- **RI-16** Una traza de Langfuse por novela. Un span por llamada a agente, nombrado por agente, capítulo e intento. Los datos de `architecture.md` §11 van como metadatos del span.
+- **RI-16** Una traza por novela, en un fichero JSONL append-only junto a su SQLite. Un registro por llamada a agente, nombrado por agente, capítulo e intento. Los datos de `architecture.md` §11 van como campos del registro.
 - **RI-17** Ningún dato de la traza se duplica en tablas históricas del fichero de la novela. SQLite guarda lo que es verdad; la traza guarda lo que pasó.
 - **RI-23** La traza de cada paquete incluye, por bloque, su ocupación real y, para el bloque de recuperación, el cupo y la procedencia de cada fragmento. Es lo que permite responder por qué entró un fragmento concreto sin reconstruir la ejecución.
 
@@ -383,7 +383,7 @@ El corazón de la versión 1 y donde vive el RAG híbrido. Todo lo de esta secci
 |---|---|---|---|
 | RF-64 | Las rutas de §3.1 existen con los modelos declarados y el OpenAPI las describe sin `dict` ni `Any`. Cada ruta vive en la funcionalidad dueña de lo que sirve; `orchestration/` compone la aplicación montando sus routers. No hay carpeta `api/` | `architecture.md` §2.3 | VER-01, VER-02, VER-08 |
 | RF-65 | Las rutas de lectura solo devuelven capítulos congelados y proyecciones derivadas. Ninguna expone borradores, defectos, veredictos, la cola de admisión ni el registro de eventos en crudo | `architecture.md` §2.2 | VER-05 |
-| RF-66 | RI-02 es idempotente y arranca la tirada en el bucle `asyncio` del proceso, sin proceso ni cola adicionales | `architecture.md` §7.4 | VER-05 |
+| RF-66 | RI-02 es idempotente y arranca la tirada en un hilo del mismo proceso, uno por novela, sin proceso ni cola adicionales | `architecture.md` §7.4 | VER-05 |
 
 ### 4.10 Herramientas de agente (transversal)
 
@@ -479,7 +479,7 @@ Un fichero SQLite por novela, sin extensiones nativas. Separación lógica de lo
 | RNF | Requisito | Fuente | Verificación |
 |---|---|---|---|
 | RNF-10 | Ninguna cadena procedente de un modelo alcanza sistema de ficheros, red ni base de datos sin pasar por un validador de esquema | `verification.md` §4.2 | VER-02 |
-| RNF-11 | El proceso corre en contenedor sin más red que las APIs de Claude y Langfuse, con el sistema de ficheros acotado al directorio de la tirada. El modelo de embeddings viaja en la imagen y no se descarga en ejecución | `verification.md` §5.3; `architecture.md` §4.8 | VER-11 |
+| RNF-11 | El proceso corre en contenedor sin más red que la de Claude, con el sistema de ficheros acotado al directorio de la tirada. El modelo de embeddings viaja en la imagen y no se descarga en ejecución | `verification.md` §5.3; `architecture.md` §4.8 | VER-11 |
 | RNF-12 | El brief se trata como entrada no confiable: sus textos entran a los paquetes como datos, nunca como instrucción | `verification.md` §5.9 | VER-17 |
 | RNF-22 | Un fragmento recuperado entra al paquete como prosa con su procedencia, nunca como instrucción ni como hecho canónico | CTX-13; `verification.md` §5.9 | VER-05, VER-17 |
 
@@ -487,7 +487,7 @@ Un fichero SQLite por novela, sin extensiones nativas. Separación lógica de lo
 
 | RNF | Requisito | Fuente | Verificación |
 |---|---|---|---|
-| RNF-13 | Toda llamada, defecto, reintento, admisión y arbitraje se traza en Langfuse. Si Langfuse no responde, la traza se encola en local y la tirada continúa | `verification.md` §5.1; PRO-09 | VER-09 |
+| RNF-13 | Toda llamada, defecto, reintento, admisión y arbitraje se escribe en la traza local de la tirada. Un fallo al escribir la traza se registra y la tirada continúa: la observabilidad observa, no gobierna | `verification.md` §5.1; PRO-09 | VER-09 |
 | RNF-14 | Todo fragmento congelado es trazable a la versión del paquete y a la llamada que lo produjo | PRO-09 | VER-09 |
 | RNF-19 | Hay un solo contador de tokens y lo estimado con `tiktoken` por su factor nunca queda por debajo del recuento real de `usage`, sumados sus tres campos de entrada. Si alguna llamada lo supera, CI falla y el factor sube | `architecture.md` §4.8 | VER-06, VER-09 |
 
@@ -509,13 +509,13 @@ Un fichero SQLite por novela, sin extensiones nativas. Separación lógica de lo
 | Método | Requisitos que cubre como método principal |
 |---|---|
 | VER-01 Type checking | RF-02, RF-21, RF-29, RF-64, RNF-16 |
-| VER-02 Static analysis | RF-58, RF-64, RF-96, RD-08, RD-09, RD-11, RD-17, RD-18, RNF-10, RNF-15, RNF-21 |
+| VER-02 Static analysis | RF-58, RF-64, RF-96, RD-08, RD-09, RD-11, RD-17, RD-18, RI-17, RI-20, RI-26, RNF-10, RNF-15, RNF-21 |
 | VER-03 Symbolic execution | RF-109; RNF-18: proyecciones, calendario, clasificación, corte de fragmentos, fusión y empaquetador |
 | VER-04 Formal verification | RF-59, RF-61 |
-| VER-05 Unit e integration | RF-01, RF-10, RF-11, RF-12, RF-15, RF-27, RF-30, RF-34, RF-35, RF-36, RF-37, RF-41, RF-48, RF-49, RF-52, RF-56, RF-60, RF-65, RF-66, RF-67, RF-68, RF-71, RF-72, RF-73, RF-74, RF-75, RF-78, RF-79, RF-80, RF-81, RF-82, RF-87, RF-88, RF-89, RF-90, RF-91, RF-92, RF-93, RF-95, RF-98, RF-99, RF-101, RF-102, RF-103, RF-104, RF-105, RF-106, RF-108, RD-01, RD-02, RD-06, RD-07, RD-10, RD-12, RD-13, RD-14, RD-15, RNF-05, RNF-07, RNF-09, RNF-17, RNF-22 |
-| VER-06 Property-based | RF-03 a RF-09, RF-14, RF-16, RF-20, RF-31, RF-32, RF-33, RF-42, RF-43, RF-47, RF-57, RF-62, RF-69, RF-70, RF-76, RF-77, RF-83, RF-84, RF-85, RF-86, RF-93, RF-94, RF-97, RF-103, RF-104, RF-108, RF-109, RD-03, RD-04, RD-05, RD-16, RNF-04, RNF-06, RNF-08, RNF-19, RNF-23, RNF-25 |
+| VER-05 Unit e integration | RF-01, RF-10, RF-11, RF-12, RF-15, RF-23, RF-26, RF-27, RF-30, RF-34, RF-35, RF-36, RF-37, RF-41, RF-48, RF-49, RF-52, RF-56, RF-60, RF-65, RF-66, RF-67, RF-68, RF-71, RF-72, RF-73, RF-74, RF-75, RF-78, RF-79, RF-80, RF-81, RF-82, RF-87, RF-88, RF-89, RF-90, RF-91, RF-92, RF-93, RF-95, RF-98, RF-99, RF-101, RF-102, RF-103, RF-104, RF-105, RF-106, RF-108, RF-113, RD-01, RD-02, RD-06, RD-07, RD-10, RD-12, RD-13, RD-14, RD-15, RD-19, RI-13, RI-14, RI-15, RI-22, RNF-05, RNF-07, RNF-09, RNF-17, RNF-22 |
+| VER-06 Property-based | RF-03 a RF-09, RF-14, RF-16, RF-20, RF-31, RF-32, RF-33, RF-42, RF-43, RF-47, RF-57, RF-62, RF-69, RF-70, RF-76, RF-77, RF-83, RF-84, RF-85, RF-86, RF-93, RF-94, RF-97, RF-103, RF-104, RF-108, RF-109, RF-114, RD-03, RD-04, RD-05, RD-16, RNF-04, RNF-06, RNF-08, RNF-19, RNF-23, RNF-25 |
 | VER-07 Mutation | RF-46, RF-50 |
-| VER-08 Contract | RI-08, RI-11, RI-21, RI-24, RF-28, RF-55, RF-64 |
+| VER-08 Contract | RI-01 a RI-11, RI-18, RI-21, RI-24, RI-27, RF-28, RF-55, RF-64 |
 | VER-09 Observability | RI-12, RI-16, RI-23, RF-24, RF-39, RF-100, RNF-13, RNF-14, RNF-19, RNF-20, RNF-24 |
 | VER-10 Evals | RF-25, RF-40, RF-44, RF-51, RF-53: calidad de la salida de cada agente de modelo, con dobles en CI y modelo real por lotes |
 | VER-11 Sandbox | RNF-11 |
@@ -600,16 +600,19 @@ Ninguna introduce un término ni un número nuevo. Todas eligen entre formas de 
 | D-08 | Guía de estilo, escaleta y reglamento | Eventos proyectados a versiones | Todo entra por el registro, así el canon estructurado sigue siendo proyección pura |
 | D-09 | Carga del brief | La ejecuta `canon/` al crear el fichero | Es la única escritura fuera de la congelación y vive donde vive la otra |
 | D-10 | Alcance de la recuperación en la versión 1 | Completa, con sus dos piernas | Separarla obligaría a escribir dos veces la fusión y los cupos, que es el grueso. `architecture.md` §14 recoge el cambio |
-| D-11 | Langfuse caído | Encolar en local y continuar | La observabilidad observa, no gobierna |
+| D-11 | Destino de la traza | Fichero JSONL local por tirada, sin servicio externo. Un fallo al escribirla se registra y se continúa | La traza es estado de la tirada y se copia con ella. Un servicio externo era la única pieza de red además de Claude y añadía un modo de fallo a un ciclo que debe terminar solo. La observabilidad observa, no gobierna |
 | D-12 | Búsqueda vectorial | Vectores en tabla y similitud en Python, sin extensión | 200 a 400 escenas y 600 a 1.200 fragmentos por obra: el recorrido exhaustivo es exacto e inmediato. El fichero sigue siendo un SQLite corriente |
 | D-13 | Cuándo se calculan los embeddings | Al congelar, desde la versión 1 | Evita que el afinado del paso 8 reindexe la novela entera |
 | D-34 | Desempate entre eventos del mismo instante | `(world_time, world_seq)` único; la colisión se rechaza y la resuelve el Archivero | Ver §9.1 |
+| D-62 | Salida estructurada de los agentes sobre el CLI | El esquema JSON del artefacto viaja con `--json-schema` y el CLI lo hace cumplir; `dispatch` revalida igual (RI-18). El texto del esquema va ademas al final de la entrada, no en el sistema | Medido en la primera tirada real: con el esquema en el sistema, Haiku devolvia markdown o claves inventadas, porque el CLI antepone su andamiaje y lo ultimo que se lee es lo que mas pesa (CTX-16). Cuesta un turno mas, y el andamiaje dos veces, que `harness_tokens` declara |
+| D-46 | Bucle de herramientas sobre el CLI | Por protocolo desde fuera: en cada turno el modelo devuelve una peticion de herramienta en JSON o su respuesta final; el servidor de `orchestration/` la sirve contra el cupo y el resultado entra en el turno siguiente. Doce turnos como red de seguridad, no como cupo | El CLI solo expone sus propias herramientas y el modo con las nuestras exige clave de API. El protocolo conserva lo que importa: lista cerrada, cupo en tokens aplicado por el servidor, cada consulta trazada con su coste. Cuesta reenviar el paquete por turno, y el prefijo cacheado lo abarata |
+| D-35 | Andamiaje del CLI frente al techo de 100.000 | No cuenta contra el techo del proyecto; sí contra la ventana real del modelo, donde la admisión lo descuenta | El techo acota lo que el sistema ensambla y controla; el andamiaje es coste fijo del transporte, medido en 38.600 tokens, que el sistema ni decide ni compacta. La llamada más cara suma 111.100 sobre 200.000 de ventana. `architecture.md` §4.8 |
 | D-30 | Dueño de la memoria de trabajo | Dos fábricas de escritura: canon en `canon/db/`, memoria de trabajo en `commons/db/` acotada a `wm_*` | Son dos escrituras distintas que comparten fichero por comodidad. Relajar la regla de `canon/` para que quepa el estado efímero habría desprotegido lo único que esa regla existe para proteger |
 | D-31 | Dueño de `setup.ledger` | `planning/`, no `supervision/` | `planning/` planta los setups al escribir la escaleta y los cobra al especificar escenas. Y el Supervisor no existe en la v1, así que dejarlo ahí era dejar la deuda narrativa sin nadie justo donde hace falta. Corrige `architecture.md` §2.3 |
 | D-32 | Quién inserta en la lista de proscripción | La congelación, en su transacción | La lista es una proyección de la prosa congelada. Insertarla desde el verificador la alimentaría con borradores que pueden acabar en cuarentena |
 | D-33 | Forma del aislamiento | Una propiedad sobre el ensamblador, no un módulo | Si el paquete se construye desde cero y no se muta, el aislamiento se cumple por construcción y se comprueba. Un módulo de aislamiento sería una pieza que vigila algo que no debería poder ocurrir |
 | D-29 | Modelo de embeddings | `intfloat/multilingual-e5-large`, 1024 dimensiones | Se elige por su entrenamiento, no por tamaño: es de recuperación y los otros candidatos multilingües de `fastembed` son de paráfrasis. Aquí la consulta es una especificación de escena y el resultado son fragmentos de prosa, que es recuperación asimétrica |
-| D-23 | Modelo de los once agentes | Claude Haiku 4.5 para todos | Decisión de coste del autor. Cierra la decisión abierta nº 8. El puerto sigue permitiendo modelos distintos por rol si la medición lo pidiera |
+| D-23 | Modelo de los once agentes | Claude Haiku 4.5 para todos, a través del CLI de Claude Code con la suscripción del autor, no con clave de API | Decisión de coste del autor. Cierra la decisión abierta nº 8. El puerto sigue permitiendo modelos distintos por rol si la medición lo pidiera |
 | D-24 | Tamaño del ancla | Crece de 2.000 a 4.500 y pasa a ser prefijo cacheable | Haiku no cachea por debajo de 4.096 y no avisa. Por debajo del mínimo, comprimir el ancla es una economía falsa: 4.500 cacheados salen varias veces más baratos que 2.000 sin cachear, y el ancla viaja en todas las llamadas |
 | D-25 | Presupuestos por agente | Suben 2.500 cada uno, los que llevan ancla | Es el crecimiento del prefijo, no un ensanche. Caben de sobra bajo el techo de 100.000 |
 | D-26 | Cuarentena de capítulo | Se rehace de inmediato; no se salta al siguiente | Sin congelar, el capítulo no existe para el sistema, y el siguiente necesita de él la prosa literal y el estado del mundo. Saltar fabrica una contradicción que ninguna puerta detecta |
@@ -682,15 +685,15 @@ El orden de `architecture.md` §14 dice **qué se construye antes que qué**. Es
 
 | # | Tramo | Qué entrega | Requisitos | Puerta para seguir |
 |---|---|---|---|---|
-| **T0** | `commons/` | Puerto con `complete` en sus dos modos y `embed` sobre modelo local; contador de tokens con su factor por modelo; tipos de los artefactos que cruzan dos funcionalidades | RI-11 a RI-13, RI-20 a RI-22, RI-24, RNF-16, RNF-19 | `mypy --strict` limpio y el contador contrastado contra un `usage` de doble |
-| **T1** | `canon/` · esquema y lectura | Las tablas de los cinco almacenes con sus triggers append-only y su versión de esquema; proyecciones; grafo con recorrido recursivo; `canon.query`, `state-at`, `knowledge-of`, `related` | RD-01 a RD-17, RF-01 a RF-11, RF-67 | Las propiedades de proyección: independencia del orden de inserción, reconstruibilidad desde cero, vigencia correcta en cualquier instante |
-| **T2** | `planning/` | Escaleta, `outline.check` determinista, especificación de escena, registro de setups | RF-25 a RF-31 | `outline.check` rechaza una escaleta con un arco sin resolución planificada, y acepta una válida |
-| **T3** | `context/` | Construcción de la consulta desde el canon; las dos piernas; fusión por rangos; selección por cupos; ensamblaje por receta; compactación; auditoría | RF-32 a RF-39, RF-72 a RF-89, RNF-20, RNF-23 | La fusión es determinista sobre el mismo canon, y ningún paquete supera el presupuesto de su agente destino |
+| **T0** | `commons/` | Puerto con `complete` en sus dos modos y `embed` sobre modelo local; contador de tokens con su factor por modelo; tipos de los artefactos que cruzan dos funcionalidades | RI-11 a RI-13, RI-17, RI-20 a RI-22, RI-24, RD-18, RF-64, RF-101 a RF-104, RNF-10, RNF-15 a RNF-19 | `mypy --strict` limpio y el contador contrastado contra un `usage` de doble |
+| **T1** | `canon/` · esquema y lectura | Las tablas de los cinco almacenes con sus triggers append-only y su versión de esquema; proyecciones; grafo con recorrido recursivo; `canon.query`, `state-at`, `knowledge-of`, `related` | RD-01 a RD-19, RF-01 a RF-11, RF-65, RF-67, RI-01, RI-04 a RI-06, RI-09, RI-10, RI-14, RI-15 | Las propiedades de proyección: independencia del orden de inserción, reconstruibilidad desde cero, vigencia correcta en cualquier instante |
+| **T2** | `planning/` | Escaleta, `outline.check` determinista, especificación de escena, registro de setups | RF-25 a RF-31, RI-07 | `outline.check` rechaza una escaleta con un arco sin resolución planificada, y acepta una válida |
+| **T3** | `context/` | Construcción de la consulta desde el canon; las dos piernas; fusión por rangos; selección por cupos; ensamblaje por receta; compactación; auditoría | RF-32 a RF-39, RF-72 a RF-89, RF-109, RNF-12, RNF-20, RNF-22, RNF-23 | La fusión es determinista sobre el mismo canon, y ningún paquete supera el presupuesto de su agente destino |
 | **T4** | `generation/` | `scene.write`; `match.simulate` como motor de reglas; `match.narrate` | RF-40 a RF-45 | `match.simulate` es determinista dada una semilla y no alinea a nadie indisponible |
-| **T5** | `verification/` · determinista | Los siete `check.*`; `continuity.review`; `revise.targeted` con revalidación desde la primera puerta | RF-46 a RF-54 | Cobertura de mutación ≥ 90 % en los verificadores deterministas |
+| **T5** | `verification/` · determinista | Los siete `check.*`; `continuity.review`; `revise.targeted` con revalidación desde la primera puerta | RF-46 a RF-54, RF-110 a RF-115 | Cobertura de mutación ≥ 90 % en los verificadores deterministas |
 | **T6** | `canon/` · escritura | `prose.chunk`, `prose.embed`, índice en dos niveles, `delta.extract`, resúmenes, congelación transaccional | RF-12, RF-55 a RF-58, RF-68 a RF-71, RF-90, RNF-21 | Congelar no deja ninguna fila de memoria de trabajo, y un fallo de embeddings no escribe nada |
 | **T7** | `canon/` · arbitraje | Política de precedencia con sus dos puertas de entrada | RF-59 a RF-63 | La precedencia es total y sin ciclos, y fusionar dos deltas es asociativo |
-| **T8** | `orchestration/` | `loop`, `checkpoint`, `admission`, `retries`, `dispatch`, y el servidor de herramientas con su contador por llamada | RF-13 a RF-24, RF-91 a RF-100, RNF-01 a RNF-09, RNF-24 | Los invariantes de `verification.md` §7 comprobados por model checking |
+| **T8** | `orchestration/` | `loop`, `checkpoint`, `admission`, `retries`, `dispatch`, y el servidor de herramientas con su contador por llamada | RF-13 a RF-24, RF-66, RF-91 a RF-100, RI-02, RI-03, RI-08, RI-18, RI-25, RI-26, RNF-01 a RNF-09, RNF-11, RNF-24, RNF-25 | Los invariantes de `verification.md` §7 comprobados por model checking |
 
 **Las rutas HTTP no son un tramo.** Cada uno añade las suyas dentro de su funcionalidad, y `orchestration/` las monta al componer la aplicación. Concentrarlas al final dejaría los ocho tramos anteriores sin forma de ejercitarse.
 

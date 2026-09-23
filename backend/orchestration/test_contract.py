@@ -37,8 +37,20 @@ ESQUEMAS_DEL_FRAMEWORK = frozenset({"ValidationError", "HTTPValidationError"})
 
 
 def _app_de_pruebas(tmp: Path) -> FastAPI:
+    from brief.routes import get_extractor
+    from brief.routes import get_settings as brief_settings
+    from orchestration.routes import get_amender, get_interpreter
+    from orchestration.routes import get_settings as orch_settings
+    from supervision.routes import get_settings as sup_settings
+    from verification.routes import get_settings as ver_settings
+
     app = create_app()
-    app.dependency_overrides[get_settings] = lambda: Settings(runs_dir=tmp)
+    for dep in (get_settings, orch_settings, sup_settings, ver_settings, brief_settings):
+        app.dependency_overrides[dep] = lambda: Settings(runs_dir=tmp)
+    # La comprobacion generativa mide el contrato, no el modelo: sin proveedor.
+    app.dependency_overrides[get_extractor] = lambda: None
+    app.dependency_overrides[get_interpreter] = lambda: None
+    app.dependency_overrides[get_amender] = lambda: lambda _p, _n, _t: None
     return app
 
 
@@ -100,6 +112,11 @@ def test_la_api_cumple_lo_que_declara(case: Any) -> None:
     llenaria el directorio de tiradas de novelas basura sin comprobar nada que
     las de lectura no comprueben ya.
     """
+    if case.operation.method.upper() != "GET":
+        pytest.skip(f"solo lectura: {case.operation.method.upper()} {case.path}")
+    # schemathesis tambien prueba metodos que la ruta no declara (TRACE, ...).
+    # Omitir entonces el caso entero dejaba sin probar la ruta de lectura: se
+    # descarta solo ese ejemplo y se sigue con los demas.
     if case.method.upper() != "GET":
-        pytest.skip("solo lectura")
+        return
     case.validate_response(case.call())

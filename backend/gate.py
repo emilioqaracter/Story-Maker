@@ -39,6 +39,18 @@ class Check:
 
 CHECKS: tuple[Check, ...] = (
     Check(
+        name="coherencia docs-spec-plan",
+        what="Contrasta specs/, backend/PLAN.md y docs/ entre si: IDs, secciones, "
+        "matrices y tramos. Es el ciclo de AGENTS.md 6.7 hecho codigo",
+        command=["python", "coherence.py"],
+    ),
+    Check(
+        name="contrato versionado",
+        what="El esquema OpenAPI del repositorio es el que genera la aplicacion: "
+        "de el sale el cliente del frontend (RI-08, RI-54)",
+        command=["python", "-m", "orchestration.openapi", "--check"],
+    ),
+    Check(
         name="formato y estilo",
         what="Lee el codigo sin ejecutarlo buscando formas propensas a error",
         command=["python", "-m", "ruff", "check", "."],
@@ -56,8 +68,7 @@ CHECKS: tuple[Check, ...] = (
     ),
     Check(
         name="seguridad del codigo",
-        what="Busca patrones inseguros: consultas concatenadas, secretos, "
-        "aleatoriedad debil",
+        what="Busca patrones inseguros: consultas concatenadas, secretos, aleatoriedad debil",
         # Se juzga por HALLAZGOS y no por codigo de salida. Bandit sale con 1
         # tambien cuando encuentra una supresion que funciono: con sentencias
         # multilinea reporta el problema en una linea y la supresion va en otra,
@@ -65,15 +76,23 @@ CHECKS: tuple[Check, ...] = (
         # forma de evitarlo colocando mejor el comentario. Lo que importa es si
         # queda algun hallazgo real, y eso se lee de su JSON.
         command=[
-            "python", "-m", "bandit", "-q", "-r", ".",
+            "python",
+            "-m",
+            "bandit",
+            "-q",
+            "-r",
+            ".",
             # B101 es `assert`, que en pruebas es la forma de escribirlas.
             # B608 lo sustituye `commons/test_sql_safety.py`, que comprueba QUE
             # se interpola en cada consulta en vez de si se usa f-string. Mas
             # estricta, no menos: la generica se silencia por linea y se olvida;
             # la nuestra obliga a declarar cada caso en un sitio visible.
-            "--skip", "B101,B608",
-            "--exclude", "./.venv,./build",
-            "-f", "json",
+            "--skip",
+            "B101,B608",
+            "--exclude",
+            "./.venv,./build",
+            "-f",
+            "json",
         ],
         judge="bandit",
     ),
@@ -132,9 +151,7 @@ def _judge_bandit(raw: str) -> tuple[bool, str]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--full", action="store_true", help="incluye las comprobaciones lentas"
-    )
+    parser.add_argument("--full", action="store_true", help="incluye las comprobaciones lentas")
     args = parser.parse_args()
 
     selected = [c for c in CHECKS if args.full or not c.slow]

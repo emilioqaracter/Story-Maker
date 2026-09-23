@@ -25,9 +25,7 @@ class AuditFinding(BaseModel):
 
     kind: str
     detail: str
-    blocking: bool = Field(
-        description="Si impide generar. Lo no bloqueante se marca y se traza"
-    )
+    blocking: bool = Field(description="Si impide generar. Lo no bloqueante se marca y se traza")
 
 
 class AuditReport(BaseModel):
@@ -106,13 +104,17 @@ def _check_cast(packet: Packet, active_cast: Sequence[str]) -> list[AuditFinding
     """
     presentes = " ".join(b.content for b in packet.blocks)
     faltan = [e for e in active_cast if e not in presentes]
-    return [
-        AuditFinding(
-            kind="elenco-sin-ficha",
-            detail=f"sin ficha en el paquete: {faltan}",
-            blocking=True,
-        )
-    ] if faltan else []
+    return (
+        [
+            AuditFinding(
+                kind="elenco-sin-ficha",
+                detail=f"sin ficha en el paquete: {faltan}",
+                blocking=True,
+            )
+        ]
+        if faltan
+        else []
+    )
 
 
 def _check_anchors(packet: Packet) -> list[AuditFinding]:

@@ -27,8 +27,10 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from canon.events import log
 from canon.events.types import Event
+from canon.freeze import rows
 from canon.projections import rebuild
 from canon.prose_index.chunk import Chunk, chunk_scene
+from canon.summaries import levels
 from commons.provider.port import Embedding
 from commons.types.primitives import WorldTime
 
@@ -65,6 +67,13 @@ class PreparedChapter(BaseModel):
         default_factory=tuple, description="Pares (termino, tipo) que este capitulo hace repetidos"
     )
     delta: tuple[Event, ...] = Field(default_factory=tuple)
+    #: RF-116, RF-117. Resumenes de arco y de obra que este capitulo dispara,
+    #: ya generados fuera de la transaccion.
+    higher_summaries: tuple[levels.SummaryToWrite, ...] = Field(default_factory=tuple)
+    #: RD-20, RD-21, RD-22. Preparadas por quien produce el estado; escritas aqui.
+    verdicts: tuple[rows.SceneVerdictRow, ...] = Field(default_factory=tuple)
+    fingerprint: rows.FingerprintRow | None = None
+    metrics: tuple[rows.MetricRow, ...] = Field(default_factory=tuple)
 
 
 def prepare(
@@ -75,6 +84,10 @@ def prepare(
     embed: object,
     delta: Sequence[Event] = (),
     new_proscribed: Sequence[tuple[str, str]] = (),
+    higher_summaries: Sequence[levels.SummaryToWrite] = (),
+    verdicts: Sequence[rows.SceneVerdictRow] = (),
+    fingerprint: rows.FingerprintRow | None = None,
+    metrics: Sequence[rows.MetricRow] = (),
 ) -> PreparedChapter:
     """Primera mitad: todo lo caro, **fuera** de la transaccion.
 
@@ -100,6 +113,10 @@ def prepare(
         chapter_summary=chapter_summary,
         new_proscribed=tuple(new_proscribed),
         delta=tuple(delta),
+        higher_summaries=tuple(higher_summaries),
+        verdicts=tuple(verdicts),
+        fingerprint=fingerprint,
+        metrics=tuple(metrics),
     )
 
 
@@ -114,27 +131,36 @@ def commit_chapter(con: sqlite3.Connection, prepared: PreparedChapter) -> None:
 
     if prepared.delta:
         log.append(con, prepared.delta)
-        rebuild.apply_all(
-            con, [s for s in log.read_all(con) if s.event in prepared.delta]
-        )
+        rebuild.apply_all(con, [s for s in log.read_all(con) if s.event in prepared.delta])
 
     write_index(con, prepared)
     _write_summaries(con, prepared)
     _write_proscribed(con, prepared)
+    rows.write_verdicts(con, prepared.verdicts)
+    rows.write_fingerprint(con, prepared.fingerprint)
+    rows.write_metrics(con, prepared.metrics)
     purge_working_memory(con, prepared.chapter)
 
 
 def _write_summaries(con: sqlite3.Connection, prepared: PreparedChapter) -> None:
+    """Los cuatro niveles de CTX-06, cada uno con su version (RD-23)."""
     for scene in prepared.scenes:
         con.execute(
             "INSERT OR REPLACE INTO summary (level, ref_id, parent_ref, body, updated_at) "
             "VALUES ('scene', ?, ?, ?, datetime('now'))",
             (scene.id, str(prepared.chapter), scene.summary),
         )
-    con.execute(
-        "INSERT OR REPLACE INTO summary (level, ref_id, parent_ref, body, updated_at) "
-        "VALUES ('chapter', ?, NULL, ?, datetime('now'))",
-        (str(prepared.chapter), prepared.chapter_summary),
+    levels.write(
+        con,
+        [
+            levels.SummaryToWrite(
+                level="chapter",
+                ref_id=str(prepared.chapter),
+                body=prepared.chapter_summary,
+                covers_to=prepared.chapter,
+            ),
+            *prepared.higher_summaries,
+        ],
     )
 
 

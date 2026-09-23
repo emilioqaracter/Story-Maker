@@ -20,8 +20,10 @@ from commons.types.primitives import Provenance
 
 def _claim(**kw: object) -> Claim:
     base: dict[str, object] = {
-        "fact_key": "marcos.estado", "value": "sano",
-        "provenance": Provenance.PROSE, "frozen": False,
+        "fact_key": "marcos.estado",
+        "value": "sano",
+        "provenance": Provenance.PROSE,
+        "frozen": False,
     }
     base.update(kw)
     return Claim(**base)  # type: ignore[arg-type]
@@ -39,6 +41,7 @@ _claims = st.builds(
 
 
 # --------------------------------------------------- las cuatro reglas
+
 
 def test_el_canon_congelado_gana_al_delta_nuevo() -> None:
     v = arbitrate(_claim(frozen=True), _claim(value="lesionado"))
@@ -79,6 +82,7 @@ def test_el_orden_de_las_reglas_manda() -> None:
 
 
 # ------------------------------------------------- totalidad y sin ciclos
+
 
 @settings(max_examples=100, deadline=None)
 @given(a=_claims, b=_claims)
@@ -137,15 +141,14 @@ def test_dos_hechos_distintos_no_son_un_conflicto() -> None:
 
 # ---------------------------------------------------------- asociatividad
 
+
 @settings(max_examples=60, deadline=None)
 @given(
     a=st.lists(_claims, max_size=3),
     b=st.lists(_claims, max_size=3),
     c=st.lists(_claims, max_size=3),
 )
-def test_fusionar_deltas_es_asociativo(
-    a: list[Claim], b: list[Claim], c: list[Claim]
-) -> None:
+def test_fusionar_deltas_es_asociativo(a: list[Claim], b: list[Claim], c: list[Claim]) -> None:
     """RF-62. El orden en que llegan los deltas de dos capitulos no puede
     cambiar el canon resultante."""
     izq = merge_deltas(merge_deltas(tuple(a), tuple(b)), tuple(c))
@@ -156,7 +159,8 @@ def test_fusionar_deltas_es_asociativo(
 def test_el_arbitraje_registra_la_regla_no_solo_el_ganador() -> None:
     """Sin la regla, revisar una tirada de treinta capitulos es adivinar por que
     el sistema decidio lo que decidio."""
-    v = arbitrate(_claim(frozen=True), _claim(value="lesionado"),
-                  affected_passages=("cap-3-esc-2",))
+    v = arbitrate(
+        _claim(frozen=True), _claim(value="lesionado"), affected_passages=("cap-3-esc-2",)
+    )
     assert v.rule is Rule.FROZEN_OVER_NEW
     assert v.affected_passages == ("cap-3-esc-2",)

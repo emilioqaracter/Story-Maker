@@ -16,12 +16,16 @@ Antes de crear cualquier fichero, pasa por el proceso C de `AGENTS.md` §6.4.
 ```
 frontend/
 ├── commons/         · cliente generado, tipos y componentes compartidos
-├── manuscript/      · lectura de capítulos congelados
+├── interview/       · entrevista que produce el brief y sus enmiendas
+├── manuscript/      · lectura de capítulos congelados por versión, y solicitud de cambio desde la lectura
+├── story-bible/     · ficha de personajes y lugares con enlace a sus capítulos
 ├── entity-graph/    · grafo de entidades con vigencia
 ├── tension-curve/   · curva de tensión de la obra
 ├── narrative-debt/  · setups abiertos sin payoff
 └── run-health/      · métricas de salud de la tirada
 ```
+
+`main.tsx` y `routes.tsx`, en la raíz de `frontend/`, son la raíz de composición: montan las direcciones de cada funcionalidad bajo `/app/` (`architecture.md` §2.3). Ninguna funcionalidad importa de ellos.
 
 Cada funcionalidad lleva dentro sus componentes, sus hooks, su estado local y sus tests. Dos reglas:
 
@@ -42,7 +46,7 @@ Consecuencias prácticas:
 
 - Ningún botón «aprobar capítulo», «rechazar escena», «forzar regeneración» ni «continuar».
 - Ningún formulario que escriba en el canon.
-- El brief (PRO-01) sí entra desde aquí: es un encargo, ocurre antes del ciclo y no lo interrumpe.
+- El brief (PRO-01) sí entra desde aquí, y también sus enmiendas —«el perro se llama Nala»— pedidas desde la lectura: son encargos, cambian lo que se pide y no revisan lo que se escribió (`architecture.md` §2.2, §8). El SRS del frontend es `specs/srs-frontend-v1.md`.
 
 ## 3. El cliente no se escribe a mano
 
@@ -56,7 +60,9 @@ El objetivo es que un cambio incompatible del backend **rompa la compilación, n
 
 | Vista | Fuente |
 |---|---|
-| Manuscrito | Solo capítulos congelados. Un borrador (PRO-06) no sale del backend |
+| Entrevista | El brief en construcción tal como el backend lo devuelve en cada turno: datos que faltan, contradicciones y hechos propuestos desde texto libre. El frontend no decide qué es obligatorio |
+| Manuscrito | Solo capítulos congelados, por versión (PRO-08), con los capítulos cambiados marcados. Un borrador (PRO-06) no sale del backend |
+| Ficha de personajes y lugares | Proyección del canon (CAN-03): alias, hechos con procedencia, relaciones vigentes y capítulos donde aparece cada entidad |
 | Grafo de entidades | Proyección del grafo, con relaciones tipadas y su vigencia |
 | Curva de tensión | Proyección a lo largo de la obra |
 | Deuda narrativa | Setups abiertos sin payoff |
@@ -80,4 +86,4 @@ No la fijes de facto metiendo una dependencia sin pasar por el proceso B. Si nec
 
 - No se replica lógica de dominio del backend. Si el frontend necesita calcular algo sobre el canon, la proyección la calcula el backend y la sirve.
 - No se guarda estado del canon en el cliente. Lo que se cachea son respuestas, y se invalidan al congelar un capítulo.
-- No se añade una ruta que escriba. Si parece que hace falta, es el proceso B de `AGENTS.md` §6.3, no un `POST` nuevo.
+- No se añade una ruta que escriba fuera de los encargos que `architecture.md` §2.2 autoriza: brief, turnos de la entrevista, arranque de la tirada y enmiendas al brief. Si parece que hace falta otra, es el proceso B de `AGENTS.md` §6.3, no un `POST` nuevo.

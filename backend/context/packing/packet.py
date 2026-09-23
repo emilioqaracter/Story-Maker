@@ -98,13 +98,17 @@ class Packet(BaseModel):
         llamada entera sin dar error.
         """
         return "\n\n".join(
-            b.content for b in self.blocks if b.priority is Priority.UNTOUCHABLE and b.name == "ancla"
+            b.content
+            for b in self.blocks
+            if b.priority is Priority.UNTOUCHABLE and b.name == "ancla"
         )
 
     def body(self) -> str:
         """Todo lo que va detras del prefijo cacheable."""
         return "\n\n".join(
-            b.content for b in self.blocks if not (b.priority is Priority.UNTOUCHABLE and b.name == "ancla")
+            b.content
+            for b in self.blocks
+            if not (b.priority is Priority.UNTOUCHABLE and b.name == "ancla")
         )
 
 

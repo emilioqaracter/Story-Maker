@@ -60,9 +60,10 @@ def test_no_escribe_canon(novela: Path, sql: str) -> None:
     Las variantes estan aqui porque la deteccion es sintactica: si solo
     cubriera `INSERT INTO`, un `INSERT OR REPLACE` se colaria.
     """
-    with pytest.raises(ForbiddenTableError, match="memoria de trabajo"), working_memory_writer(
-        novela
-    ) as wm:
+    with (
+        pytest.raises(ForbiddenTableError, match="memoria de trabajo"),
+        working_memory_writer(novela) as wm,
+    ):
         wm.execute(sql)
 
 

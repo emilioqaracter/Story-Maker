@@ -33,9 +33,15 @@ def write_index(con: sqlite3.Connection, prepared: PreparedChapter) -> None:
             " world_seq, function, summary, vector, vector_model, vector_dim) "
             "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
             (
-                scene.id, scene.chapter, scene.scene_number, scene.pov_entity,
-                scene.place_entity, scene.world_time.stamp, scene.world_time.seq,
-                scene.function, scene.summary,
+                scene.id,
+                scene.chapter,
+                scene.scene_number,
+                scene.pov_entity,
+                scene.place_entity,
+                scene.world_time.stamp,
+                scene.world_time.seq,
+                scene.function,
+                scene.summary,
                 pack_vector(vec.values) if vec else None,
                 vec.model_id if vec else None,
                 vec.dimension if vec else None,
@@ -46,9 +52,7 @@ def write_index(con: sqlite3.Connection, prepared: PreparedChapter) -> None:
             [(scene.id, e) for e in scene.present],
         )
 
-    vec_por_frag = {
-        c.id: v for c, v in zip(prepared.chunks, prepared.chunk_vectors, strict=False)
-    }
+    vec_por_frag = {c.id: v for c, v in zip(prepared.chunks, prepared.chunk_vectors, strict=False)}
     for chunk in prepared.chunks:
         vec = vec_por_frag.get(chunk.id)
         con.execute(
@@ -56,7 +60,10 @@ def write_index(con: sqlite3.Connection, prepared: PreparedChapter) -> None:
             "(id, scene_id, ordinal, text, vector, vector_model, vector_dim) "
             "VALUES (?,?,?,?,?,?,?)",
             (
-                chunk.id, chunk.scene_id, chunk.ordinal, chunk.text,
+                chunk.id,
+                chunk.scene_id,
+                chunk.ordinal,
+                chunk.text,
                 pack_vector(vec.values) if vec else None,
                 vec.model_id if vec else None,
                 vec.dimension if vec else None,

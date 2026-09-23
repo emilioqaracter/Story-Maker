@@ -7,9 +7,9 @@ name: backend
 on:
   push:
     branches: [main, v2, v2-oneshot]
-    paths: ["backend/**", ".github/workflows/backend.yml"]
+    paths: ["backend/**", "docs/**", "specs/**", "AGENTS.md", ".github/workflows/backend.yml"]
   pull_request:
-    paths: ["backend/**", ".github/workflows/backend.yml"]
+    paths: ["backend/**", "docs/**", "specs/**", "AGENTS.md", ".github/workflows/backend.yml"]
   schedule:
     # Lo lento, una vez al dia: tarda minutos y correria decenas de veces
     # al dia sin encontrar nada nuevo.
@@ -70,6 +70,13 @@ jobs:
       # Corren AQUI y no en la puerta local por dos motivos: tardan minutos, y
       # la herramienta no funciona de forma nativa en Windows, que es donde se
       # desarrolla. Este trabajo corre en Linux, asi que es su sitio.
+      # Model checking del ciclo de vida del capitulo (VER-18). TLC prueba el
+      # flujo modelado; la distancia con el orquestador la cubre VER-05.
+      - name: Model checking del ciclo del capitulo
+        run: |
+          curl -sSL -o /tmp/tla2tools.jar https://github.com/tlaplus/tlaplus/releases/latest/download/tla2tools.jar
+          cd orchestration/model && java -XX:+UseParallelGC -jar /tmp/tla2tools.jar -workers auto -config chapter.cfg chapter.tla
+
       - name: Mutacion sobre los verificadores
         run: |
           python -m mutmut run --max-children 4 || true

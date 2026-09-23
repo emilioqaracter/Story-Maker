@@ -53,25 +53,45 @@ def _valida() -> Outline:
     )
     return Outline(
         arcs=(
-            Arc(id="competitivo", kind=ArcKind.COMPETITIVE, subject="equipo",
-                start_scene="s1", crisis_scene="s3", resolution_scene="s5"),
-            Arc(id="interno", kind=ArcKind.INTERNAL, subject="marcos",
-                start_scene="s1", crisis_scene="s4", resolution_scene="s6"),
+            Arc(
+                id="competitivo",
+                kind=ArcKind.COMPETITIVE,
+                subject="equipo",
+                start_scene="s1",
+                crisis_scene="s3",
+                resolution_scene="s5",
+            ),
+            Arc(
+                id="interno",
+                kind=ArcKind.INTERNAL,
+                subject="marcos",
+                start_scene="s1",
+                crisis_scene="s4",
+                resolution_scene="s6",
+            ),
         ),
         acts=(ActPlan(number=1, tension=(3, 5)), ActPlan(number=2, tension=(8,))),
         scenes=scenes,
-        setups=(Setup(id="la-lesion", planted_scene="s2", payoff_scene="s5",
-                      description="El tobillo que cruje"),),
+        setups=(
+            Setup(
+                id="la-lesion",
+                planted_scene="s2",
+                payoff_scene="s5",
+                description="El tobillo que cruje",
+            ),
+        ),
     )
 
 
 # ------------------------------------------------------- la mitad que acepta
+
 
 def test_una_escaleta_valida_pasa() -> None:
     assert check(_valida(), word_range=RANGO) == []
 
 
 # ------------------------------------------------------ la mitad que rechaza
+
 
 def test_un_arco_sin_resolucion_no_se_puede_ni_construir() -> None:
     """EST-I2 no admite el silencio: o se cierra o se declara abierto.
@@ -81,17 +101,16 @@ def test_un_arco_sin_resolucion_no_se_puede_ni_construir() -> None:
     deberia poder existir.
     """
     with pytest.raises(ValueError, match="no se cierra ni se declara abierto"):
-        Arc(id="x", kind=ArcKind.INTERNAL, subject="marcos",
-            start_scene="s1", crisis_scene="s2")
+        Arc(id="x", kind=ArcKind.INTERNAL, subject="marcos", start_scene="s1", crisis_scene="s2")
 
 
 def test_un_arco_que_resuelve_en_una_escena_inexistente_falla() -> None:
     """Declarar la resolucion no basta: la escena tiene que estar en la escaleta,
     o el arco no se resuelve en ningun sitio y nadie lo nota hasta el final."""
     o = _valida()
-    roto = o.model_copy(update={
-        "arcs": (o.arcs[0].model_copy(update={"resolution_scene": "fantasma"}), o.arcs[1])
-    })
+    roto = o.model_copy(
+        update={"arcs": (o.arcs[0].model_copy(update={"resolution_scene": "fantasma"}), o.arcs[1])}
+    )
     assert any(d.kind == "arco-sin-escena" for d in check(roto, word_range=RANGO))
 
 
@@ -99,9 +118,9 @@ def test_el_doble_arco_no_puede_colapsar() -> None:
     """DEP-20. Si ganan y madura en la misma escena, la victoria explica el
     cambio interior y lo abarata."""
     o = _valida()
-    roto = o.model_copy(update={
-        "arcs": (o.arcs[0], o.arcs[1].model_copy(update={"resolution_scene": "s5"}))
-    })
+    roto = o.model_copy(
+        update={"arcs": (o.arcs[0], o.arcs[1].model_copy(update={"resolution_scene": "s5"}))}
+    )
     defectos = check(roto, word_range=RANGO)
     assert any(d.kind == "doble-arco-colapsado" for d in defectos)
 
@@ -128,24 +147,27 @@ def test_la_tension_plana_dentro_de_un_acto_es_legitima() -> None:
 
 def test_un_setup_que_se_cobra_antes_de_plantarse_falla() -> None:
     o = _valida()
-    roto = o.model_copy(update={
-        "setups": (o.setups[0].model_copy(update={"planted_scene": "s5", "payoff_scene": "s2"}),)
-    })
+    roto = o.model_copy(
+        update={
+            "setups": (
+                o.setups[0].model_copy(update={"planted_scene": "s5", "payoff_scene": "s2"}),
+            )
+        }
+    )
     assert any(d.kind == "setup-invertido" for d in check(roto, word_range=RANGO))
 
 
 def test_un_setup_sin_payoff_planificado_falla() -> None:
     o = _valida()
-    roto = o.model_copy(update={
-        "setups": (o.setups[0].model_copy(update={"payoff_scene": "nunca"}),)
-    })
+    roto = o.model_copy(
+        update={"setups": (o.setups[0].model_copy(update={"payoff_scene": "nunca"}),)}
+    )
     assert any(d.kind == "setup-sin-escena" for d in check(roto, word_range=RANGO))
 
 
 def test_una_obra_fuera_del_rango_del_brief_falla() -> None:
     assert any(
-        d.kind == "longitud-fuera-de-rango"
-        for d in check(_valida(), word_range=(100_000, 200_000))
+        d.kind == "longitud-fuera-de-rango" for d in check(_valida(), word_range=(100_000, 200_000))
     )
 
 
@@ -155,30 +177,33 @@ def test_un_capitulo_fuera_del_rango_de_est07_falla() -> None:
     # Las dos escenas del capitulo 1 al minimo de escena: 800 palabras en total,
     # por debajo de las 1.500 que EST-07 pide para un capitulo. Cada escena por
     # separado es legal; el capitulo no. Esa es justo la comprobacion.
-    corto = o.model_copy(update={
-        "scenes": tuple(
-            sc.model_copy(update={"target_words": 400}) if sc.chapter == 1 else sc
-            for sc in o.scenes
-        )
-    })
+    corto = o.model_copy(
+        update={
+            "scenes": tuple(
+                sc.model_copy(update={"target_words": 400}) if sc.chapter == 1 else sc
+                for sc in o.scenes
+            )
+        }
+    )
     defectos = check(corto, word_range=(4_000, 9_000))
     assert any(d.kind == "capitulo-fuera-de-rango" for d in defectos)
 
 
 def test_dos_escenas_en_la_misma_posicion_fallan() -> None:
     o = _valida()
-    roto = o.model_copy(update={
-        "scenes": (*o.scenes, _escena("s7", 1, 1, words=500))
-    })
+    roto = o.model_copy(update={"scenes": (*o.scenes, _escena("s7", 1, 1, words=500))})
     assert any(d.kind == "posicion-ocupada" for d in check(roto, word_range=RANGO))
 
 
 def test_huecos_en_la_numeracion_de_capitulos_fallan() -> None:
     o = _valida()
-    roto = o.model_copy(update={
-        "scenes": tuple(s.model_copy(update={"chapter": 5}) if s.chapter == 3 else s
-                        for s in o.scenes)
-    })
+    roto = o.model_copy(
+        update={
+            "scenes": tuple(
+                s.model_copy(update={"chapter": 5}) if s.chapter == 3 else s for s in o.scenes
+            )
+        }
+    )
     assert any(d.kind == "capitulos-con-huecos" for d in check(roto, word_range=RANGO))
 
 
@@ -187,7 +212,29 @@ def test_una_escena_sin_cambio_de_valor_no_se_puede_construir() -> None:
     en la escaleta: se rechaza al construirla."""
     with pytest.raises(ValueError):
         SceneEntry(
-            id="x", chapter=1, ordinal=1, act=1,
-            function=SceneFunction.COMPLICATE, pov="marcos", value_change="",
-            world_time=WorldTime(stamp="2026-01-01"), target_words=800,
+            id="x",
+            chapter=1,
+            ordinal=1,
+            act=1,
+            function=SceneFunction.COMPLICATE,
+            pov="marcos",
+            value_change="",
+            world_time=WorldTime(stamp="2026-01-01"),
+            target_words=800,
         )
+
+
+def test_el_ejemplo_del_esquema_del_arquitecto_pasa_su_propia_verificacion() -> None:
+    """Un ejemplo es lo que el modelo imita: si no cuadra, la escaleta tampoco.
+
+    Medido en la primera tirada real: con un ejemplo que declaraba dos valores
+    de tension para un acto de un capitulo, el Arquitecto ponia uno por escena.
+    """
+    import json
+
+    from planning.outline import prompts
+    from planning.outline.types import Outline
+
+    texto = prompts.schema()
+    ejemplo = Outline.model_validate(json.loads(texto[texto.index("{") :]))
+    assert check(ejemplo, word_range=(1_000, 20_000)) == []

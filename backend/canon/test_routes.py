@@ -36,7 +36,9 @@ def _brief_payload() -> dict[str, object]:
         title="Prueba",
         start={"stamp": "2026-01-01"},  # type: ignore[arg-type]
         entities=(
-            BriefEntity(id="marcos", kind="person", name="Marcos", attributes=(("estado", "sano"),)),
+            BriefEntity(
+                id="marcos", kind="person", name="Marcos", attributes=(("estado", "sano"),)
+            ),
         ),
         style_guide="Tercera persona.",
         target_words=1000,

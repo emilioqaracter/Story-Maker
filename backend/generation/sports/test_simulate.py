@@ -44,10 +44,7 @@ def test_el_mismo_seed_da_el_mismo_partido() -> None:
 def test_seeds_distintas_dan_partidos_distintos() -> None:
     resultados = {
         (r.home_goals, r.away_goals, tuple(m.minute for m in r.milestones))
-        for r in (
-            simulate(_squad("local"), _squad("visitante"), at=AT, seed=s)
-            for s in range(12)
-        )
+        for r in (simulate(_squad("local"), _squad("visitante"), at=AT, seed=s) for s in range(12))
     }
     assert len(resultados) > 1
 
@@ -73,8 +70,7 @@ def test_nadie_indisponible_aparece_en_el_encuentro(seed: int) -> None:
         players=(
             Player(entity_id="sano", name="Sano", skill=60),
             Player(entity_id="roto", name="Roto", availability=Availability.INJURED),
-            Player(entity_id="sancionado", name="Sancionado",
-                   availability=Availability.SUSPENDED),
+            Player(entity_id="sancionado", name="Sancionado", availability=Availability.SUSPENDED),
         ),
     )
     r = simulate(lesionados, _squad("visitante"), at=AT, seed=seed)
@@ -95,8 +91,7 @@ def test_la_cronologia_va_en_orden(seed: int) -> None:
 def test_un_equipo_sin_nadie_disponible_no_juega() -> None:
     vacio = Squad(
         team_id="local",
-        players=(Player(entity_id="roto", name="Roto",
-                        availability=Availability.INJURED),),
+        players=(Player(entity_id="roto", name="Roto", availability=Availability.INJURED),),
     )
     with pytest.raises(UnavailablePlayerError, match="ningun jugador disponible"):
         simulate(vacio, _squad("visitante"), at=AT, seed=1)

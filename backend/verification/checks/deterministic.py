@@ -46,7 +46,16 @@ def _normalize(word: str) -> str:
 
 # ------------------------------------------------------------ check.timeline
 
-_DATE = re.compile(r"\b(\d{1,2})\s+de\s+([a-zA-Zñáéíóú]+)\b|\b(\d{4}-\d{2}-\d{2})\b")
+#: Solo nombres de mes: "marco 2 de los 3 penaltis" no es una fecha, y con
+#: cualquier palabra detras del "de" el verificador daba S1 en prosa correcta.
+_MONTHS = (
+    "enero|febrero|marzo|abril|mayo|junio|julio|agosto|"
+    "septiembre|setiembre|octubre|noviembre|diciembre"
+)
+_DATE = re.compile(
+    rf"\b(\d{{1,2}})\s+de\s+((?:{_MONTHS}|m[aá]rzo))\b|\b(\d{{4}}-\d{{2}}-\d{{2}})\b",
+    re.IGNORECASE,
+)
 
 
 def check_timeline(text: str, *, allowed_dates: Sequence[str]) -> list[Defect]:
@@ -74,6 +83,7 @@ def check_timeline(text: str, *, allowed_dates: Sequence[str]) -> list[Defect]:
 
 # -------------------------------------------------------------- check.ledger
 
+
 def check_ledger(text: str, *, expected_score: str, team_names: Sequence[str]) -> list[Defect]:
     """El marcador narrado cuadra con el que resolvio el motor de reglas.
 
@@ -99,9 +109,8 @@ def check_ledger(text: str, *, expected_score: str, team_names: Sequence[str]) -
 
 # -------------------------------------------------------- check.availability
 
-def check_availability(
-    text: str, *, unavailable: Sequence[tuple[str, str]]
-) -> list[Defect]:
+
+def check_availability(text: str, *, unavailable: Sequence[tuple[str, str]]) -> list[Defect]:
     """Nadie actua estando indisponible en esa fecha (DEP-I2).
 
     `unavailable` son pares (nombre, motivo). Se pasa ya resuelto porque quien
@@ -132,9 +141,100 @@ _FIRST_PERSON = re.compile(r"\b(yo|me|mi|conmigo|nosotros|nuestro)\b", re.IGNORE
 #: sustantivos. Con verbos concretos el reconocimiento es exacto aunque no sea
 #: exhaustivo, y para decidir en que tiempo esta una escena entera basta con
 #: cual de los dos grupos domina.
-_PAST_FORMS = frozenset(["era", "eran", "estaba", "estaban", "habia", "habian", "tenia", "tenian", "fue", "fueron", "dijo", "dijeron", "miro", "miraron", "hizo", "hicieron", "vio", "vieron", "entro", "entraron", "salio", "salieron", "sintio", "sintieron", "supo", "supieron", "quiso", "quisieron", "pudo", "pudieron", "llego", "llegaron", "penso", "pensaron", "volvio", "volvieron", "paso", "pasaron", "dejo", "dejaron", "cogio", "cogieron"])
+_PAST_FORMS = frozenset(
+    [
+        "era",
+        "eran",
+        "estaba",
+        "estaban",
+        "habia",
+        "habian",
+        "tenia",
+        "tenian",
+        "fue",
+        "fueron",
+        "dijo",
+        "dijeron",
+        "miro",
+        "miraron",
+        "hizo",
+        "hicieron",
+        "vio",
+        "vieron",
+        "entro",
+        "entraron",
+        "salio",
+        "salieron",
+        "sintio",
+        "sintieron",
+        "supo",
+        "supieron",
+        "quiso",
+        "quisieron",
+        "pudo",
+        "pudieron",
+        "llego",
+        "llegaron",
+        "penso",
+        "pensaron",
+        "volvio",
+        "volvieron",
+        "paso",
+        "pasaron",
+        "dejo",
+        "dejaron",
+        "cogio",
+        "cogieron",
+    ]
+)
 
-_PRESENT_FORMS = frozenset(["es", "son", "esta", "estan", "hay", "ha", "han", "tiene", "tienen", "va", "van", "dice", "dicen", "mira", "miran", "hace", "hacen", "ve", "ven", "entra", "entran", "sale", "salen", "siente", "sienten", "sabe", "saben", "quiere", "quieren", "puede", "pueden", "llega", "llegan", "piensa", "piensan", "vuelve", "vuelven", "pasa", "pasan", "deja", "dejan", "coge", "cogen"])
+_PRESENT_FORMS = frozenset(
+    [
+        "es",
+        "son",
+        "esta",
+        "estan",
+        "hay",
+        "ha",
+        "han",
+        "tiene",
+        "tienen",
+        "va",
+        "van",
+        "dice",
+        "dicen",
+        "mira",
+        "miran",
+        "hace",
+        "hacen",
+        "ve",
+        "ven",
+        "entra",
+        "entran",
+        "sale",
+        "salen",
+        "siente",
+        "sienten",
+        "sabe",
+        "saben",
+        "quiere",
+        "quieren",
+        "puede",
+        "pueden",
+        "llega",
+        "llegan",
+        "piensa",
+        "piensan",
+        "vuelve",
+        "vuelven",
+        "pasa",
+        "pasan",
+        "deja",
+        "dejan",
+        "coge",
+        "cogen",
+    ]
+)
 
 #: Cuantas formas del tiempo equivocado hacen falta para marcar, y cuanto tiene
 #: que dominar. Un pasaje en pasado puede llevar presentes legitimos --una
@@ -253,6 +353,7 @@ def _inside_quotes(text: str, position: int) -> bool:
 
 # ---------------------------------------------------------- check.repetition
 
+
 def check_repetition(
     text: str, *, frozen_ngrams: Sequence[str], proscribed: Sequence[str], n: int = 4
 ) -> list[Defect]:
@@ -293,7 +394,10 @@ def check_repetition(
 
 # ------------------------------------------------------------- check.lexicon
 
-def check_lexicon(text: str, *, known_names: Sequence[str], candidates: Sequence[str]) -> list[Defect]:
+
+def check_lexicon(
+    text: str, *, known_names: Sequence[str], candidates: Sequence[str]
+) -> list[Defect]:
     """Nombres propios que no estan en el canon.
 
     `candidates` son los nombres que aparecen en el texto, ya extraidos. Se pasa
@@ -315,6 +419,7 @@ def check_lexicon(text: str, *, known_names: Sequence[str], candidates: Sequence
 
 # ----------------------------------------------------------- check.knowledge
 
+
 def check_knowledge(
     text: str, *, pov_knows: Sequence[str], mentioned_facts: Sequence[tuple[str, str]]
 ) -> list[Defect]:
@@ -335,4 +440,28 @@ def check_knowledge(
         )
         for clave, cita in mentioned_facts
         if clave not in sabe
+    ]
+
+
+# ---------------------------------------------------------- check.milestones
+
+
+def check_milestones(text: str, *, scorers: Sequence[str]) -> list[Defect]:
+    """Todo goleador de la cronologia aparece en la prosa (RF-44).
+
+    Complementa a `check.ledger`: aquel comprueba que el marcador narrado cuadre;
+    este, que la prosa cuente los hitos que el motor de reglas decidio. Un gol
+    que la cronologia registra y la prosa omite es **S1**: el lector y la
+    clasificacion dejan de contar lo mismo.
+    """
+    plano = _normalize(text)
+    return [
+        Defect(
+            kind="check.ledger",
+            severity=Severity.S1,
+            evidence=Evidence(quote=text[:80] or nombre, offset=0),
+            rule=f"la cronologia registra un gol de {nombre} y la prosa no lo cuenta",
+        )
+        for nombre in scorers
+        if _normalize(nombre) not in plano
     ]

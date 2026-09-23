@@ -93,9 +93,7 @@ class SceneEntry(BaseModel):
     act: int = Field(ge=1)
     function: SceneFunction
     pov: str = Field(min_length=1, description="EST-I1: exactamente uno")
-    value_change: str = Field(
-        min_length=1, description="EST-13. Una escena sin el es relleno"
-    )
+    value_change: str = Field(min_length=1, description="EST-13. Una escena sin el es relleno")
     world_time: WorldTime
     target_words: int = Field(ge=SCENE_WORDS[0], le=SCENE_WORDS[1])
     is_match: bool = Field(default=False, description="DEP-06")

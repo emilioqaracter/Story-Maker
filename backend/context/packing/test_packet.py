@@ -15,7 +15,10 @@ from context.packing.packet import Block, Packet, Priority, assemble, compact
 
 def _b(name: str, tokens: int, priority: Priority, **kw: object) -> Block:
     base: dict[str, object] = {
-        "name": name, "content": f"<{name}>", "tokens": tokens, "priority": priority,
+        "name": name,
+        "content": f"<{name}>",
+        "tokens": tokens,
+        "priority": priority,
         "provenance": BlockProvenance.CANON,
     }
     base.update(kw)
@@ -33,6 +36,7 @@ def _minimo() -> list[Block]:
 
 # ------------------------------------------------------------------ el orden
 
+
 def test_el_ancla_va_primera_y_la_especificacion_ultima() -> None:
     """RF-34. Aprovecha el sesgo de recencia en vez de sufrirlo."""
     p = assemble(agent="escritor", blocks=list(reversed(_minimo())))
@@ -49,6 +53,7 @@ def test_el_prefijo_cacheable_no_lleva_nada_voluble() -> None:
 
 
 # ------------------------------------------------------------ la compactacion
+
 
 def test_se_sacrifica_primero_lo_recuperado() -> None:
     bloques = [
@@ -103,13 +108,27 @@ def test_ensamblar_no_muta_lo_que_recibe() -> None:
 
 # ------------------------------------------------------------------ auditoria
 
+
 def _ok_packet() -> Packet:
-    return assemble(agent="escritor", blocks=[
-        Block(name="ancla", content="estilo e invariantes", tokens=4_500,
-              priority=Priority.UNTOUCHABLE, provenance=BlockProvenance.CANON),
-        Block(name="fichas", content="marcos elena", tokens=1_600,
-              priority=Priority.SECONDARY_CARDS, provenance=BlockProvenance.CANON),
-    ])
+    return assemble(
+        agent="escritor",
+        blocks=[
+            Block(
+                name="ancla",
+                content="estilo e invariantes",
+                tokens=4_500,
+                priority=Priority.UNTOUCHABLE,
+                provenance=BlockProvenance.CANON,
+            ),
+            Block(
+                name="fichas",
+                content="marcos elena",
+                tokens=1_600,
+                priority=Priority.SECONDARY_CARDS,
+                provenance=BlockProvenance.CANON,
+            ),
+        ],
+    )
 
 
 def test_un_paquete_sano_pasa() -> None:
@@ -120,8 +139,12 @@ def test_un_paquete_sano_pasa() -> None:
 def test_dos_versiones_del_mismo_hecho_bloquean() -> None:
     """CTX-15. Va al Arbitro antes de generar: arbitrar es mas barato que
     reparar prosa escrita sobre una contradiccion."""
-    r = audit(_ok_packet(), active_cast=["marcos", "elena"], budget=20_000,
-              facts=[("marcos.estado", "sano"), ("marcos.estado", "lesionado")])
+    r = audit(
+        _ok_packet(),
+        active_cast=["marcos", "elena"],
+        budget=20_000,
+        facts=[("marcos.estado", "sano"), ("marcos.estado", "lesionado")],
+    )
     assert r.conflict and r.blocks_generation
 
 
@@ -131,21 +154,44 @@ def test_un_elenco_sin_ficha_bloquea() -> None:
 
 
 def test_un_paquete_sin_ancla_bloquea() -> None:
-    p = assemble(agent="escritor", blocks=[
-        Block(name="fichas", content="marcos", tokens=10, priority=Priority.SECONDARY_CARDS,
-              provenance=BlockProvenance.CANON)])
+    p = assemble(
+        agent="escritor",
+        blocks=[
+            Block(
+                name="fichas",
+                content="marcos",
+                tokens=10,
+                priority=Priority.SECONDARY_CARDS,
+                provenance=BlockProvenance.CANON,
+            )
+        ],
+    )
     assert audit(p, active_cast=["marcos"], budget=20_000).blocks_generation
 
 
 def test_un_fragmento_sin_cupo_bloquea() -> None:
     """RF-80. Un fragmento sin motivo no se puede justificar, asi que se
     descarta."""
-    p = assemble(agent="escritor", blocks=[
-        Block(name="ancla", content="x", tokens=10, priority=Priority.UNTOUCHABLE,
-              provenance=BlockProvenance.CANON),
-        Block(name="frag", content="y", tokens=10, priority=Priority.RETRIEVED,
-              provenance=BlockProvenance.FROZEN_PROSE, source_chapter=1),
-    ])
+    p = assemble(
+        agent="escritor",
+        blocks=[
+            Block(
+                name="ancla",
+                content="x",
+                tokens=10,
+                priority=Priority.UNTOUCHABLE,
+                provenance=BlockProvenance.CANON,
+            ),
+            Block(
+                name="frag",
+                content="y",
+                tokens=10,
+                priority=Priority.RETRIEVED,
+                provenance=BlockProvenance.FROZEN_PROSE,
+                source_chapter=1,
+            ),
+        ],
+    )
     r = audit(p, active_cast=[], budget=20_000)
     assert any(f.kind == "fragmento-sin-motivo" for f in r.findings)
 
@@ -153,12 +199,26 @@ def test_un_fragmento_sin_cupo_bloquea() -> None:
 def test_prosa_congelada_sin_capitulo_bloquea() -> None:
     """Sin el capitulo, la procedencia no sirve para nada: no se puede volver a
     la fuente ni saber si el hecho sigue vigente."""
-    p = assemble(agent="escritor", blocks=[
-        Block(name="ancla", content="x", tokens=10, priority=Priority.UNTOUCHABLE,
-              provenance=BlockProvenance.CANON),
-        Block(name="frag", content="y", tokens=10, priority=Priority.RETRIEVED,
-              provenance=BlockProvenance.FROZEN_PROSE, quota=Quota.FREE),
-    ])
+    p = assemble(
+        agent="escritor",
+        blocks=[
+            Block(
+                name="ancla",
+                content="x",
+                tokens=10,
+                priority=Priority.UNTOUCHABLE,
+                provenance=BlockProvenance.CANON,
+            ),
+            Block(
+                name="frag",
+                content="y",
+                tokens=10,
+                priority=Priority.RETRIEVED,
+                provenance=BlockProvenance.FROZEN_PROSE,
+                quota=Quota.FREE,
+            ),
+        ],
+    )
     r = audit(p, active_cast=[], budget=20_000)
     assert any(f.kind == "prosa-sin-capitulo" for f in r.findings)
 

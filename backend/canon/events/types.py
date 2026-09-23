@@ -27,9 +27,11 @@ class EventType(StrEnum):
     KNOWLEDGE_GAINED = "knowledge.gained"
     COMPETENCE_SET = "competence.set"
     DOCUMENT_VERSION = "document.version"
+    ENTITY_RENAMED = "entity.renamed"
 
 
 # ------------------------------------------------------------------- payloads
+
 
 class EntityCreated(BaseModel):
     model_config = ConfigDict(frozen=True)
@@ -88,6 +90,20 @@ class DocumentVersion(BaseModel):
     body: str = Field(min_length=1)
 
 
+class EntityRenamed(BaseModel):
+    """RF-210, D-76. El nombre canonico cambia en todo el canon, desde siempre.
+
+    Solo lo produce una enmienda al brief: quien encarga no dice «desde el
+    capitulo 7 se llama Nala», dice que se llama Nala. El nombre anterior no
+    queda como alias, o `check.lexicon` lo seguiria aceptando.
+    """
+
+    model_config = ConfigDict(frozen=True)
+    type: Literal[EventType.ENTITY_RENAMED] = EventType.ENTITY_RENAMED
+    entity_id: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+
+
 Payload = (
     EntityCreated
     | AliasAdded
@@ -96,10 +112,12 @@ Payload = (
     | KnowledgeGained
     | CompetenceSet
     | DocumentVersion
+    | EntityRenamed
 )
 
 
 # --------------------------------------------------------------------- evento
+
 
 class Event(BaseModel):
     """Un hecho canonico fechado.
@@ -121,14 +139,10 @@ class Event(BaseModel):
     @model_validator(mode="after")
     def _check(self) -> Self:
         if not self.entities:
-            raise ValueError(
-                "un evento sin entidad afectada no se puede proyectar sobre nada"
-            )
+            raise ValueError("un evento sin entidad afectada no se puede proyectar sobre nada")
         brief = self.provenance is Provenance.BRIEF
         if brief != (self.chapter_origin is None):
-            raise ValueError(
-                "solo el brief va sin capitulo de origen, y el brief nunca lo lleva"
-            )
+            raise ValueError("solo el brief va sin capitulo de origen, y el brief nunca lo lleva")
         return self
 
 

@@ -73,9 +73,7 @@ def _sql_interpolations() -> list[tuple[str, int, str]]:
             for parte in nodo.values:
                 if isinstance(parte, ast.FormattedValue):
                     nombre = ast.unparse(parte.value)
-                    hallazgos.append(
-                        (str(ruta.relative_to(_ROOT)), nodo.lineno, nombre)
-                    )
+                    hallazgos.append((str(ruta.relative_to(_ROOT)), nodo.lineno, nombre))
     return hallazgos
 
 

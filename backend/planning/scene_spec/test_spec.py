@@ -17,10 +17,15 @@ from planning.scene_spec.spec import from_entry
 
 def _entry(**kw: object) -> SceneEntry:
     base: dict[str, object] = {
-        "id": "s1", "chapter": 2, "ordinal": 1, "act": 1,
-        "function": SceneFunction.REVEAL, "pov": "marcos",
+        "id": "s1",
+        "chapter": 2,
+        "ordinal": 1,
+        "act": 1,
+        "function": SceneFunction.REVEAL,
+        "pov": "marcos",
         "value_change": "de la confianza a la sospecha",
-        "world_time": WorldTime(stamp="2026-02-01", seq=0), "target_words": 900,
+        "world_time": WorldTime(stamp="2026-02-01", seq=0),
+        "target_words": 900,
     }
     base.update(kw)
     return SceneEntry(**base)  # type: ignore[arg-type]
@@ -28,9 +33,11 @@ def _entry(**kw: object) -> SceneEntry:
 
 def _spec(**kw: object):  # type: ignore[no-untyped-def]
     args: dict[str, object] = {
-        "place": "vestuario", "cast": ("marcos", "elena"),
+        "place": "vestuario",
+        "cast": ("marcos", "elena"),
         "beats": ("entra", "descubre", "calla"),
-        "objective": "saber si le han vendido", "obstacle": "nadie se lo dira",
+        "objective": "saber si le han vendido",
+        "obstacle": "nadie se lo dira",
         "ends_with": "sale sabiendo menos de lo que creia",
     }
     args.update(kw)
@@ -56,8 +63,12 @@ def test_un_encuentro_se_marca_como_tal() -> None:
     """RF-30. Lo marcado decide si el motor de reglas lo resuelve antes de que
     se narre."""
     spec = from_entry(
-        _entry(is_match=True), place="estadio", cast=("marcos",),
-        beats=("saca",), objective="ganar", obstacle="el rival",
+        _entry(is_match=True),
+        place="estadio",
+        cast=("marcos",),
+        beats=("saca",),
+        objective="ganar",
+        obstacle="el rival",
         ends_with="pierden",
     )
     assert spec.is_match

@@ -23,16 +23,18 @@ from verification.checks.deterministic import (
 
 # --------------------------------------------------------------- toda cita
 
+
 def test_todo_defecto_trae_cita_localizable() -> None:
     """Un veredicto sin cita se descarta, y el Reparador necesita saber QUE
     arreglar, no que algo esta mal."""
     texto = "El 14 de marzo llovia sobre el estadio."
     [d] = check_timeline(texto, allowed_dates=["10 de marzo"])
     assert d.evidence.quote in texto
-    assert texto[d.evidence.offset:].startswith(d.evidence.quote)
+    assert texto[d.evidence.offset :].startswith(d.evidence.quote)
 
 
 # ----------------------------------------------------------- check.timeline
+
 
 def test_una_fecha_fuera_del_calendario_es_grave() -> None:
     [d] = check_timeline("Fue el 14 de marzo.", allowed_dates=["10 de marzo"])
@@ -51,6 +53,7 @@ def test_las_tildes_no_hacen_falsos_positivos() -> None:
 
 # ------------------------------------------------------------- check.ledger
 
+
 def test_un_marcador_que_no_cuadra_es_grave() -> None:
     """Contradice el canon y rompe la clasificacion de toda la temporada."""
     [d] = check_ledger("Ganaron 3-1.", expected_score="2-1", team_names=[])
@@ -64,18 +67,18 @@ def test_el_marcador_correcto_no_se_marca() -> None:
 
 # ------------------------------------------------------- check.availability
 
+
 def test_alguien_lesionado_actuando_es_grave() -> None:
-    [d] = check_availability("Marcos remato de cabeza.",
-                             unavailable=[("Marcos", "lesionado")])
+    [d] = check_availability("Marcos remato de cabeza.", unavailable=[("Marcos", "lesionado")])
     assert d.severity is Severity.S1
 
 
 def test_quien_no_aparece_no_se_marca() -> None:
-    assert check_availability("Elena miro el reloj.",
-                              unavailable=[("Marcos", "lesionado")]) == []
+    assert check_availability("Elena miro el reloj.", unavailable=[("Marcos", "lesionado")]) == []
 
 
 # ------------------------------------------------------------- check.format
+
 
 def test_la_primera_persona_fuera_de_dialogo_es_grave() -> None:
     """Rompe el punto de vista unico, que es una invariante estructural."""
@@ -122,12 +125,14 @@ def test_la_narracion_en_pasado_no_se_marca() -> None:
 def test_el_presente_en_dialogo_no_cuenta() -> None:
     """Los personajes hablan en presente con toda naturalidad; contar sus verbos
     haria que una escena con mucho dialogo se marcara siempre."""
-    mixto = "\n".join([
-        "Marcos entro en el vestuario. El tecnico estaba de espaldas.",
-        "\u2014Esto no es lo que parece. Yo se lo que hay y se que va a pasar",
-        "\u2014dijo\u2014. Nadie sale de aqui, nadie dice nada, nadie tiene la culpa.",
-        "Marcos lo miro y no contesto. Salio despacio.",
-    ])
+    mixto = "\n".join(
+        [
+            "Marcos entro en el vestuario. El tecnico estaba de espaldas.",
+            "\u2014Esto no es lo que parece. Yo se lo que hay y se que va a pasar",
+            "\u2014dijo\u2014. Nadie sale de aqui, nadie dice nada, nadie tiene la culpa.",
+            "Marcos lo miro y no contesto. Salio despacio.",
+        ]
+    )
     assert not [x for x in check_format(mixto) if "presente" in x.rule]
 
 
@@ -154,6 +159,7 @@ def test_una_escena_dentro_de_rango_no_se_marca() -> None:
 
 # --------------------------------------------------------- check.repetition
 
+
 def test_un_ngrama_ya_usado_se_marca_como_menos_grave() -> None:
     texto = "El cesped mojado olia a gasoil esa manana."
     [d] = check_repetition(texto, frozen_ngrams=["cesped mojado olia a"], proscribed=[])
@@ -161,40 +167,92 @@ def test_un_ngrama_ya_usado_se_marca_como_menos_grave() -> None:
 
 
 def test_un_termino_proscrito_se_marca() -> None:
-    [d] = check_repetition("Un silencio sepulcral.", frozen_ngrams=[],
-                           proscribed=["silencio sepulcral"])
+    [d] = check_repetition(
+        "Un silencio sepulcral.", frozen_ngrams=[], proscribed=["silencio sepulcral"]
+    )
     assert "proscripcion" in d.rule
 
 
 def test_texto_limpio_no_se_marca() -> None:
-    assert check_repetition("Algo nuevo y distinto aqui.",
-                            frozen_ngrams=["otra cosa muy distinta"], proscribed=[]) == []
+    assert (
+        check_repetition(
+            "Algo nuevo y distinto aqui.", frozen_ngrams=["otra cosa muy distinta"], proscribed=[]
+        )
+        == []
+    )
 
 
 # ------------------------------------------------------------ check.lexicon
 
+
 def test_un_nombre_que_no_es_del_canon_es_grave() -> None:
-    [d] = check_lexicon("Hablo con Ramirez.", known_names=["Marcos", "Elena"],
-                        candidates=["Ramirez"])
+    [d] = check_lexicon(
+        "Hablo con Ramirez.", known_names=["Marcos", "Elena"], candidates=["Ramirez"]
+    )
     assert d.severity is Severity.S1
 
 
 def test_un_alias_vigente_no_se_marca() -> None:
-    assert check_lexicon("Hablo con el Chino.",
-                         known_names=["Marcos Vela", "el Chino"],
-                         candidates=["el Chino"]) == []
+    assert (
+        check_lexicon(
+            "Hablo con el Chino.", known_names=["Marcos Vela", "el Chino"], candidates=["el Chino"]
+        )
+        == []
+    )
 
 
 # ---------------------------------------------------------- check.knowledge
 
+
 def test_mencionar_lo_que_no_se_sabe_es_grave() -> None:
     """No es un desliz de estilo: es una contradiccion del canon, y de las que
     un lector detecta."""
-    [d] = check_knowledge("Sabia que Elena se iba.", pov_knows=["otra.cosa"],
-                          mentioned_facts=[("elena.se.va", "Elena se iba")])
+    [d] = check_knowledge(
+        "Sabia que Elena se iba.",
+        pov_knows=["otra.cosa"],
+        mentioned_facts=[("elena.se.va", "Elena se iba")],
+    )
     assert d.severity is Severity.S1
 
 
 def test_mencionar_lo_que_si_se_sabe_no_se_marca() -> None:
-    assert check_knowledge("Sabia que Elena se iba.", pov_knows=["elena.se.va"],
-                           mentioned_facts=[("elena.se.va", "Elena se iba")]) == []
+    assert (
+        check_knowledge(
+            "Sabia que Elena se iba.",
+            pov_knows=["elena.se.va"],
+            mentioned_facts=[("elena.se.va", "Elena se iba")],
+        )
+        == []
+    )
+
+
+# ---------------------------------------------------------- check.milestones
+
+
+def test_un_goleador_que_la_prosa_no_cuenta_es_grave() -> None:
+    from verification.checks.deterministic import check_milestones
+
+    defectos = check_milestones(
+        "Marcos marco de cabeza y el estadio se vino abajo.", scorers=["Marcos", "Iker Landa"]
+    )
+    assert len(defectos) == 1
+    assert defectos[0].severity is Severity.S1
+    assert "Iker Landa" in defectos[0].rule
+
+
+def test_si_todos_los_goleadores_aparecen_no_hay_defecto() -> None:
+    from verification.checks.deterministic import check_milestones
+
+    assert (
+        check_milestones("Marcos y luego Íker Landa marcaron.", scorers=["Marcos", "Iker Landa"])
+        == []
+    )
+
+
+def test_un_numero_de_algo_que_no_es_mes_no_es_una_fecha() -> None:
+    """Falso positivo medido: 'marco 2 de los 3 penaltis' no es una fecha."""
+    assert (
+        check_timeline("Marco 2 de los 3 penaltis. Era el 1 de esta serie.", allowed_dates=[]) == []
+    )
+    [d] = check_timeline("Llego el 3 de Abril.", allowed_dates=["10 de marzo"])
+    assert d.severity is Severity.S1

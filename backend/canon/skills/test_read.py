@@ -59,7 +59,12 @@ def novela(tmp_path: Path) -> Path:
         log.append(
             con,
             [
-                _ev(EntityCreated(entity_id=e, kind="person", name=e.upper()), "2026-01-01", {e}, None)
+                _ev(
+                    EntityCreated(entity_id=e, kind="person", name=e.upper()),
+                    "2026-01-01",
+                    {e},
+                    None,
+                )
                 for e in ("marcos", "elena", "tecnico", "rival")
             ],
         )
@@ -67,12 +72,43 @@ def novela(tmp_path: Path) -> Path:
             con,
             [
                 _ev(AliasAdded(entity_id="marcos", alias="el Chino"), "2026-01-01", {"marcos"}),
-                _ev(AttributeSet(entity_id="marcos", name="estado", value="sano"), "2026-01-01", {"marcos"}),
-                _ev(AttributeSet(entity_id="marcos", name="estado", value="lesionado"), "2026-06-01", {"marcos"}, 8),
-                _ev(KnowledgeGained(entity_id="marcos", fact_key="elena.se.va"), "2026-05-01", {"marcos"}, 7),
-                _ev(RelationSet(source_id="marcos", target_id="elena", kind="pareja"), "2026-01-01", {"marcos", "elena"}),
-                _ev(RelationSet(source_id="elena", target_id="tecnico", kind="hija"), "2026-01-01", {"elena", "tecnico"}),
-                _ev(RelationSet(source_id="tecnico", target_id="rival", kind="rivalidad", valid_to=WorldTime(stamp="2026-02-01")), "2026-01-01", {"tecnico", "rival"}),
+                _ev(
+                    AttributeSet(entity_id="marcos", name="estado", value="sano"),
+                    "2026-01-01",
+                    {"marcos"},
+                ),
+                _ev(
+                    AttributeSet(entity_id="marcos", name="estado", value="lesionado"),
+                    "2026-06-01",
+                    {"marcos"},
+                    8,
+                ),
+                _ev(
+                    KnowledgeGained(entity_id="marcos", fact_key="elena.se.va"),
+                    "2026-05-01",
+                    {"marcos"},
+                    7,
+                ),
+                _ev(
+                    RelationSet(source_id="marcos", target_id="elena", kind="pareja"),
+                    "2026-01-01",
+                    {"marcos", "elena"},
+                ),
+                _ev(
+                    RelationSet(source_id="elena", target_id="tecnico", kind="hija"),
+                    "2026-01-01",
+                    {"elena", "tecnico"},
+                ),
+                _ev(
+                    RelationSet(
+                        source_id="tecnico",
+                        target_id="rival",
+                        kind="rivalidad",
+                        valid_to=WorldTime(stamp="2026-02-01"),
+                    ),
+                    "2026-01-01",
+                    {"tecnico", "rival"},
+                ),
             ],
         )
         rebuild.rebuild(con)
@@ -121,6 +157,17 @@ def test_estado_del_mundo_recorre_todas_las_entidades(novela: Path) -> None:
     with connection.reader(novela) as con:
         estado = read.state_at(con, T_MID)
     assert {c.entity_id for c in estado.cards} == {"marcos", "elena", "tecnico", "rival"}
+
+
+def test_estado_del_mundo_lleva_solo_las_relaciones_vigentes(novela: Path) -> None:
+    """MUN-10. La rivalidad cerro en febrero: en marzo no esta, en enero si."""
+    with connection.reader(novela) as con:
+        marzo = read.state_at(con, T_MID)
+        enero = read.state_at(con, T0)
+    pares = {(r.source_id, r.target_id) for r in marzo.relations}
+    assert all("rival" not in par for par in pares)
+    assert any("rival" in (r.source_id, r.target_id) for r in enero.relations)
+    assert all(r.valid_from <= T_MID.stamp for r in marzo.relations)
 
 
 def test_sin_semillas_no_hay_consulta(novela: Path) -> None:

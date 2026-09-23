@@ -21,7 +21,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 
-SCHEMA_VERSION = 1
+from canon.db.migrations import SCHEMA_VERSION, migrate
 
 _SCHEMA_PATH = Path(__file__).with_name("schema.sql")
 
@@ -52,10 +52,10 @@ def create(path: Path) -> None:
     try:
         con.executescript(_SCHEMA_PATH.read_text(encoding="utf-8"))
         con.execute(
-            "INSERT OR IGNORE INTO schema_version (version, applied_at) "
-            "VALUES (?, datetime('now'))",
-            (SCHEMA_VERSION,),
+            "INSERT OR IGNORE INTO schema_version (version, applied_at) VALUES (1, datetime('now'))"
         )
+        con.row_factory = sqlite3.Row
+        migrate(con)
         con.commit()
     finally:
         con.close()
@@ -93,6 +93,8 @@ def canon_writer(path: Path) -> Iterator[sqlite3.Connection]:
     con = _connect(path, read_only=False)
     try:
         _check_version(con)
+        # RD-10, RI-35: hacia delante, en escritura. Leer no migra.
+        migrate(con)
         yield con
         con.commit()
     except BaseException:

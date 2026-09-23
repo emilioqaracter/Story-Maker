@@ -56,12 +56,7 @@ class ForbiddenTableError(RuntimeError):
 
 def _targets(sql: str) -> Sequence[str]:
     """Las tablas que una sentencia escribe. Una por grupo alternativo."""
-    return [
-        g.lower()
-        for m in _TARGET.finditer(sql)
-        for g in m.groups()
-        if g is not None
-    ]
+    return [g.lower() for m in _TARGET.finditer(sql) for g in m.groups() if g is not None]
 
 
 class WorkingMemoryConnection:
