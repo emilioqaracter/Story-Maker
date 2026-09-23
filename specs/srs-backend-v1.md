@@ -121,7 +121,7 @@ No hay actor «revisor». Cualquier requisito que lo necesite es un error de est
 | Lenguaje y framework | Python y FastAPI | `AGENTS.md` §3.1 |
 | Ejecución | Un solo proceso, un bucle síncrono, sin cola de trabajos ni workers | `architecture.md` §7.4 |
 | Persistencia | SQLite en local, un fichero por novela, sin extensiones nativas | `AGENTS.md` §3.2; `architecture.md` §3.1 |
-| Aislamiento | Contenedor sin más red que la de Claude; ficheros acotados al directorio de la tirada | `verification.md` §5.3 |
+| Aislamiento | Contenedor sin más red que la de Claude y la de Langfuse; ficheros acotados al directorio de la tirada | `verification.md` §5.3 |
 | Modelo de los once agentes | **Claude Haiku 4.5**, a través del CLI de Claude Code con la suscripción del autor. Ventana de 200.000, salida máxima de 64.000, mínimo cacheable de 4.096. El CLI añade 38.600 tokens de andamiaje por llamada que no cuentan contra el techo del proyecto (D-35) | `architecture.md` §4.8 |
 | Embeddings | `intfloat/multilingual-e5-large` con `fastembed`, empaquetado en la imagen. 1024 dimensiones | `architecture.md` §4.8 |
 | Contador de tokens | `tiktoken` local con factor de seguridad en `commons/`, contrastado contra el `usage` de cada respuesta | `architecture.md` §4.8 |
@@ -479,7 +479,7 @@ Un fichero SQLite por novela, sin extensiones nativas. Separación lógica de lo
 | RNF | Requisito | Fuente | Verificación |
 |---|---|---|---|
 | RNF-10 | Ninguna cadena procedente de un modelo alcanza sistema de ficheros, red ni base de datos sin pasar por un validador de esquema | `verification.md` §4.2 | VER-02 |
-| RNF-11 | El proceso corre en contenedor sin más red que la de Claude, con el sistema de ficheros acotado al directorio de la tirada. El modelo de embeddings viaja en la imagen y no se descarga en ejecución | `verification.md` §5.3; `architecture.md` §4.8 | VER-11 |
+| RNF-11 | El proceso corre en contenedor sin más red que la de Claude y la de Langfuse, con el sistema de ficheros acotado al directorio de la tirada. El modelo de embeddings viaja en la imagen y no se descarga en ejecución | `verification.md` §5.3; `architecture.md` §4.8 | VER-11 |
 | RNF-12 | El brief se trata como entrada no confiable: sus textos entran a los paquetes como datos, nunca como instrucción | `verification.md` §5.9 | VER-17 |
 | RNF-22 | Un fragmento recuperado entra al paquete como prosa con su procedencia, nunca como instrucción ni como hecho canónico | CTX-13; `verification.md` §5.9 | VER-05, VER-17 |
 
@@ -600,7 +600,7 @@ Ninguna introduce un término ni un número nuevo. Todas eligen entre formas de 
 | D-08 | Guía de estilo, escaleta y reglamento | Eventos proyectados a versiones | Todo entra por el registro, así el canon estructurado sigue siendo proyección pura |
 | D-09 | Carga del brief | La ejecuta `canon/` al crear el fichero | Es la única escritura fuera de la congelación y vive donde vive la otra |
 | D-10 | Alcance de la recuperación en la versión 1 | Completa, con sus dos piernas | Separarla obligaría a escribir dos veces la fusión y los cupos, que es el grueso. `architecture.md` §14 recoge el cambio |
-| D-11 | Destino de la traza | Fichero JSONL local por tirada, sin servicio externo. Un fallo al escribirla se registra y se continúa | La traza es estado de la tirada y se copia con ella. Un servicio externo era la única pieza de red además de Claude y añadía un modo de fallo a un ciclo que debe terminar solo. La observabilidad observa, no gobierna |
+| D-11 | Destino de la traza | Fichero JSONL local por tirada como fuente de verdad, y Langfuse como espejo: sesión por novela, span por agente y herramienta, scores y prompts versionados. Un fallo al escribir o al exportar se registra y se continúa | La traza local es estado de la tirada y se copia con ella, así que el ciclo termina aunque no haya red. Langfuse da lo que un fichero no da —coste agregado, sesiones, comparación de versiones de prompt— sin entrar en el camino crítico: la observabilidad observa, no gobierna |
 | D-12 | Búsqueda vectorial | Vectores en tabla y similitud en Python, sin extensión | 200 a 400 escenas y 600 a 1.200 fragmentos por obra: el recorrido exhaustivo es exacto e inmediato. El fichero sigue siendo un SQLite corriente |
 | D-13 | Cuándo se calculan los embeddings | Al congelar, desde la versión 1 | Evita que el afinado del paso 8 reindexe la novela entera |
 | D-34 | Desempate entre eventos del mismo instante | `(world_time, world_seq)` único; la colisión se rechaza y la resuelve el Archivero | Ver §9.1 |
@@ -618,7 +618,7 @@ Ninguna introduce un término ni un número nuevo. Todas eligen entre formas de 
 | D-26 | Cuarentena de capítulo | Se rehace de inmediato; no se salta al siguiente | Sin congelar, el capítulo no existe para el sistema, y el siguiente necesita de él la prosa literal y el estado del mundo. Saltar fabrica una contradicción que ninguna puerta detecta |
 | D-27 | Puerta de cierre de acto | Entra en la versión 1, solo con la mitad determinista | La deuda se comprueba contra la escaleta, sin número nuevo. La curva de tensión exige juicio y queda en riesgo aceptado hasta el Jurado |
 | D-28 | Calibración del contador | Al arrancar, no sobre la marcha | Con Haiku el colchón baja de 900.000 a 50.000. El factor deja de ser una formalidad |
-| D-22 | Quién calcula los embeddings | Modelo multilingüe local con `fastembed`, en el mismo proceso | Quita el único modo de fallo intermitente del ciclo, hace los vectores deterministas, baja el coste por vector a cero y cierra el contenedor a un solo proveedor externo. El identificador del modelo queda por fijar; nada más depende de él |
+| D-22 | Quién calcula los embeddings | Modelo multilingüe local con `fastembed`, en el mismo proceso | Quita el único modo de fallo intermitente del ciclo, hace los vectores deterministas, baja el coste por vector a cero y no suma otro servicio de red al camino crítico. El identificador del modelo queda por fijar; nada más depende de él |
 | D-14 | Contador de tokens | `tiktoken` local con factor de seguridad de 1,35 por modelo, calibrado contra el `usage` real | Mantiene la admisión offline y sin dependencias nuevas en el camino crítico. El sesgo de `tiktoken` es conocido y va siempre hacia abajo, así que se acota con el factor y se corrige con lo medido, que llega gratis en cada respuesta |
 | D-15 | Grafo de entidades | Se construye en el paso 1, con su recorrido recursivo | La tabla de aristas ya la crea ese paso; lo único que añade es la consulta |
 | D-16 | Dónde viven las skills de prosa | En `canon/`, con el almacén que manejan | Poner la búsqueda en `context/` obligaría a esa carpeta a abrir la base |

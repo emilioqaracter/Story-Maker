@@ -21,6 +21,8 @@ Dos restricciones fijan todo el diseño:
 | **Backend** — `backend/` | **Python + FastAPI** |
 | **Frontend** — `frontend/` | **React** |
 | **Persistencia** | **SQLite en local**, un fichero por novela |
+| **Servicios externos** | **Claude**, único proveedor de modelo, y **Langfuse**, espejo de la traza local (`docs/architecture.md` §4.8 y §11) |
+| **Verificación formal** | **Lean 4** sobre la cronología del canon y **TLA+** sobre el flujo (`docs/verification.md` §4.4 y §5.10) |
 | **Intervención humana en la novela** | Ninguna (§5.3.1) |
 
 La idea central del dominio: **una novela larga no es un texto largo, es un estado del mundo que evoluciona**. El texto es la proyección visible. El sistema gestiona el estado; la prosa es consecuencia.

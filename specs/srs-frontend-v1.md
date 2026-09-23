@@ -193,7 +193,7 @@ Requisitos transversales de este contrato:
 
 ### 3.4 Navegador
 
-- **RI-56** El frontend corre en el navegador de quien encarga, sirve como sitio estático y no necesita más red que la del backend. No llama a ningún proveedor de modelo ni a ningún servicio externo: el único proveedor externo del sistema es Claude y solo el backend habla con él (`architecture.md` §4.8).
+- **RI-56** El frontend corre en el navegador de quien encarga, sirve como sitio estático y no necesita más red que la del backend. No llama a ningún proveedor de modelo ni a ningún servicio externo: los servicios externos del sistema son Claude y Langfuse, y solo el backend habla con ellos (`architecture.md` §4.8).
 
 ---
 

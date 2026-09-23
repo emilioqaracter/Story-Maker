@@ -484,18 +484,19 @@ El aislamiento acota **lo que cada agente ve**, no **cuántos corren a la vez**.
 
 ### 4.8 Proveedores externos y contador de tokens
 
-El sistema depende de **un solo proveedor externo** y de un contador de tokens que hace cumplir todos los presupuestos de esta sección.
+El sistema depende de **dos servicios externos** —Claude, que escribe y juzga, y Langfuse, que observa— y de un contador de tokens que hace cumplir todos los presupuestos de esta sección.
 
 | Uso | Proveedor | Quién lo consume |
 |---|---|---|
 | Los once agentes de modelo | **Claude Haiku 4.5**, a través del CLI de Claude Code con la suscripción del autor | `planning/`, `generation/`, `verification/` y `canon/`, siempre a través del puerto de `commons/` |
 | Embeddings del índice de prosa | **Modelo local con `fastembed`** | `canon/` al congelar, `context/` al recuperar |
+| Observabilidad: trazas, sesiones, scores y prompts versionados | **Langfuse**, espejo de la traza local (§11) | `commons/tracing/`, siempre a través de su exportador |
 
 Esto no cambia que el Orquestador y el Documentalista sean código (§6): Claude es el modelo que hay detrás de los once agentes que sí consumen ventana, no el que dirige el flujo.
 
 **Un puerto, dos operaciones.** Ningún agente importa el SDK de un proveedor. `commons/` expone un puerto con `complete`, que recibe instrucción, paquete de contexto y esquema de salida, y `embed`, que recibe texto y devuelve vector. El motivo es que §12 ya prevé modelos distintos por rol y `verification.md` §5.8 trata cambiar de modelo como un despliegue: con el puerto, cambiar de modelo es cambiar una configuración y no tocar once agentes.
 
-**Solo hay un proveedor externo: Claude.** La prosa es donde se juega la calidad de la obra, así que va a Claude sin intermediario. Los embeddings, en cambio, **no salen de la máquina**: los calcula un modelo local servido por `fastembed`.
+**Claude es el único proveedor de modelo.** La prosa es donde se juega la calidad de la obra, así que va a Claude sin intermediario. Los embeddings, en cambio, **no salen de la máquina**: los calcula un modelo local servido por `fastembed`. **Langfuse no es un proveedor del ciclo sino un espejo de lo que el ciclo ya traza**: recibe una copia, nunca decide nada, y que no responda no para ni degrada una tirada (§11).
 
 #### El CLI de Claude Code como proveedor
 
@@ -514,7 +515,7 @@ Un modelo cuantizado de unos 30 a 130 MB, cargado en proceso. Lo que compra, en 
 | **Desaparece un modo de fallo entero** | La red ya no puede tumbar la indexación al congelar ni degradar la recuperación a solo léxico. Era la única pieza del ciclo que fallaba de forma intermitente |
 | **Determinismo real** | Pesos fijos y locales: el mismo texto da el mismo vector siempre. Refuerza la propiedad de §4.4 de que el mismo canon produce el mismo paquete |
 | **Coste cero por vector** | Una obra son 600 a 1.200 fragmentos más sus consultas, recalculados en cada reindexación |
-| **Un servicio externo menos** | El contenedor de `verification.md` §5.3 se cierra más: solo Claude |
+| **Un servicio externo menos** | El contenedor de `verification.md` §5.3 no suma otro servicio en el camino crítico: su red se limita a Claude y al espejo de observabilidad |
 
 **El modelo tiene que ser multilingüe, y esto no es negociable.** La novela se escribe en español. Un modelo entrenado en inglés —como `BAAI/bge-small-en-v1.5`, que lo lleva en el nombre— produce vectores que no separan bien el español, y la pierna semántica es justamente la que existe para encontrar lo que la léxica no encuentra: la escena espejo que no comparte ni una palabra con la consulta. Con un modelo inglés sobre texto español esa pierna devuelve ruido, y la recuperación se queda de hecho con una sola pierna, que es el escenario que §4.4 trata como degradado.
 
@@ -1489,6 +1490,8 @@ Reglas duras: el delta se propone y se valida, nunca se aplica en bruto; todo he
 Por cada fragmento se guarda: versión del paquete de contexto, ocupación real en tokens por bloque, ocupación concurrente en el momento de admitir la llamada, tiempo en cola, agente, skill, parámetros, defectos, puntuaciones con evidencia y decisiones de arbitraje.
 
 En un sistema sin supervisión externa, la observabilidad no es un extra: es el único mecanismo para detectar que algo se ha estado degradando durante diez capítulos.
+
+**Dos destinos, una sola fuente.** La traza local JSONL de cada novela (RI-16) es la fuente de verdad: se escribe siempre, sin red, y se copia con la tirada. **Langfuse es su espejo**: una sesión por novela, que agrupa la entrevista, la tirada y las solicitudes de cambio; un span por agente y por llamada a herramienta; tokens, coste y latencia por llamada; los resultados de cada verificador, del Jurado y de la verificación formal como scores; y los prompts de cada agente versionados, para que un resultado diga qué versión lo produjo. El espejo observa y no gobierna: un fallo al exportar se registra en la traza local y la tirada sigue, y todo lo que muestra Langfuse se puede reconstruir desde el JSONL.
 
 | Métrica | Señal de alarma |
 |---|---|

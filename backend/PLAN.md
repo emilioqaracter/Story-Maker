@@ -79,7 +79,7 @@ Están en el SRS §9 y en `architecture.md`. Si al implementar parece que alguna
 
 | Decisión | Dónde |
 |---|---|
-| Traza local JSONL por tirada, sin servicio externo; un fallo al trazar se registra y se continúa | D-11, RI-16, RNF-13 |
+| Traza local JSONL por tirada como fuente de verdad, con Langfuse como espejo; un fallo al trazar o al exportar se registra y se continúa | D-11, RI-16, RNF-13 |
 | Claude Haiku 4.5 a través del CLI de Claude Code, con la suscripción del autor | D-23, `architecture.md` §4.8 |
 | El andamiaje del CLI —38.600 tokens medidos— no cuenta contra el techo de 100.000; sí contra la ventana real, donde la admisión lo descuenta | D-35 |
 | Capítulo en cuarentena se rehace de inmediato; no se salta al siguiente | D-26, RF-107 |

@@ -65,7 +65,7 @@ Ese techo es del sistema al redactar la novela. No limita el código, limita lo 
 
 ## 4.1 Proveedores y contador de tokens
 
-El único proveedor externo está fijado en `architecture.md` §4.8: **Claude**, para los once agentes de modelo. Los embeddings del índice de prosa los calcula un **modelo local multilingüe servido por `fastembed`**, empaquetado en la imagen y verificado al arrancar.
+Los servicios externos están fijados en `architecture.md` §4.8: **Claude**, único proveedor de modelo, para los once agentes, y **Langfuse**, espejo de la traza que nunca decide nada. Los embeddings del índice de prosa los calcula un **modelo local multilingüe servido por `fastembed`**, empaquetado en la imagen y verificado al arrancar.
 
 - **Nadie importa el SDK de un proveedor fuera del puerto de `commons/`**, que expone `complete` y `embed`. Un agente que importe el SDK ata once ficheros a un proveedor y convierte un cambio de modelo, que `verification.md` §5.8 trata como un despliegue, en una refactorización.
 - **Hay un solo contador de tokens**, en `commons/`: `tiktoken` local con codificación fija como estimador, y el bloque `usage` de cada respuesta como fuente de verdad. Lo usan el empaquetado, la admisión, las herramientas y el guardarraíl. Dos contadores distintos dejan CTX-I1 sin forma de comprobarse.
@@ -93,6 +93,6 @@ El Orquestador y el Documentalista no son llamadas a modelo: son módulos de Pyt
 ## 8. Lo que no se hace aquí
 
 - No se escribe canon fuera del Archivero.
-- No se añade una segunda capa de observabilidad: VER-09 está adjudicado a la traza local de `commons/tracing`.
+- No se instrumenta fuera de `commons/tracing`: la traza local es la fuente de verdad de VER-09 y Langfuse se alimenta solo desde su exportador. Ningún agente importa el SDK de Langfuse, igual que ninguno importa el de Claude.
 - No se crea una carpeta `api/`. Las rutas viven en su funcionalidad y la aplicación se compone en `orchestration/` (`architecture.md` §2.3).
 - No se inventan umbrales. Salen de los documentos, o se declaran como propuesta explicando su origen.

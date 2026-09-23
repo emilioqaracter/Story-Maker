@@ -48,7 +48,7 @@ Todo elemento verificable recibe **una** clase. La clase dice cómo se obtiene l
 | VER-01 | Type checking | Producto | A | Pre-commit y CI |
 | VER-02 | Static analysis y SAST | Producto | A | Pre-commit y CI |
 | VER-03 | Symbolic execution | Producto | A | CI nocturno |
-| VER-04 | Formal verification | Producto | A | Fuera de CI, por diseño |
+| VER-04 | Formal verification | Producto | A | Lean: antes de cada congelación. Modelo formal: al cambiar el diseño |
 | VER-05 | Unit e integration testing | Producto | T | CI, en cada push |
 | VER-06 | Property-based testing | Producto | T | CI, en cada push |
 | VER-07 | Mutation testing | Producto | T | CI semanal |
@@ -57,7 +57,7 @@ Todo elemento verificable recibe **una** clase. La clase dice cómo se obtiene l
 | VER-10 | Evals | Proceso | T · I | CI y por lotes |
 | VER-11 | Sandboxed execution | Proceso | D | Siempre, en toda ejecución |
 | VER-12 | Guardrails | Proceso | A | En línea, antes de cada acción |
-| VER-13 | Human-in-the-loop review | Proceso | I | **Excluido** · ver §5.5 |
+| VER-13 | Human-in-the-loop review | Proceso | I | **Excluido del ciclo** · evaluación fuera de él, ver §5.5 |
 | VER-14 | Multi-agent verification | Proceso | I | En línea, por artefacto |
 | VER-15 | CI/CD integration | Proceso | T | En cada cambio de código |
 | VER-16 | Progressive rollout | Proceso | D | Al cambiar prompt o modelo |
@@ -118,12 +118,12 @@ Demostración matemática de que el código satisface una especificación para *
 
 | Atributo | Valor |
 |---|---|
-| **Qué verifica aquí** | Solo dos propiedades, por coste: que el protocolo de congelación no admite escritura en canon antes de superar la puerta, y que la política de precedencia PRO-10 es total y sin ciclos, es decir, que todo conflicto tiene exactamente un ganador |
+| **Qué verifica aquí** | Dos objetos. **La historia**: la cronología del canon (MUN-05) se exporta a un fichero Lean con eventos, instante, personajes presentes, lugar y fechas de nacimiento, y se demuestran sus invariantes temporales —orden de los eventos, edad coherente con la fecha de nacimiento, nadie en dos lugares en el mismo instante, nadie presente tras un evento que lo excluye—. **El diseño**: que el protocolo de congelación no admite escritura en canon antes de superar la puerta, y que la política de precedencia PRO-10 es total y sin ciclos |
 | **Clase** | A |
-| **Herramienta** | `TLA+` o `Alloy`, sobre el modelo y no sobre el código |
-| **Límite** | Prueba el modelo, no la implementación. La distancia entre ambos se cubre con VER-18 y VER-05 |
+| **Herramienta** | `Lean 4` con `lake build` para la cronología, generado desde el SQLite de la novela; `TLA+` o `Alloy` para el diseño, sobre el modelo y no sobre el código |
+| **Límite** | Lean prueba los hechos exportados, no que la prosa los narre; esa distancia la cubren VER-05 y los verificadores de CAL-03. El modelo del diseño prueba el modelo, no la implementación; esa distancia la cubren VER-18 y VER-05 |
 
-Justificación de un alcance tan estrecho: si la precedencia admite un ciclo, un conflicto de canon no tiene resolución, y sin persona a quien preguntar el sistema se detiene. Es la única clase de fallo que rompe la autonomía por construcción, así que es la única que paga una prueba formal.
+Por qué estos dos objetos. Si la precedencia admite un ciclo, un conflicto de canon no tiene resolución, y sin persona a quien preguntar el sistema se detiene: es la clase de fallo que rompe la autonomía por construcción. Y la cronología es el único canon cuya coherencia se puede **demostrar** para todos los hechos a la vez, no solo muestrear: un fallo de Lean es un defecto S1 del capítulo que se iba a congelar, y vuelve al bucle de reparación como cualquier otro.
 
 ### 4.5 VER-05 · Unit e integration testing
 
@@ -190,7 +190,7 @@ Instrumentar al agente para que su trayectoria real (llamadas a skills, tokens, 
 |---|---|
 | **Qué verifica aquí** | Toda ejecución: qué contexto entró, qué skill se llamó, cuántos tokens consumió, qué defectos se dispararon, cuántos reintentos hubo. Es la implementación de PRO-09, trazabilidad |
 | **Clase** | D |
-| **Herramienta** | Traza local en fichero: un JSONL append-only por novela, junto a su SQLite, escrito desde `backend/commons/tracing`. Un registro por llamada a agente, nombrado por agente, capítulo e intento; los datos de `architecture.md` §11 van como campos del registro. Sin servicio externo: la traza es parte del estado de la tirada y se copia con ella |
+| **Herramienta** | Traza local en fichero: un JSONL append-only por novela, junto a su SQLite, escrito desde `backend/commons/tracing`. Un registro por llamada a agente, nombrado por agente, capítulo e intento; los datos de `architecture.md` §11 van como campos del registro. Es la fuente de verdad: parte del estado de la tirada, se copia con ella. **Langfuse es su espejo** (`architecture.md` §11): sesión por novela, span por agente y por herramienta, scores de los verificadores y prompts versionados. Un fallo al exportar se registra y la tirada sigue |
 | **Límite** | Observa, no juzga. Dice qué pasó, nunca si estuvo bien |
 
 Es prerrequisito de casi todo lo demás: sin traza no hay eval reproducible (VER-10), ni diagnóstico de deriva (VER-16), ni evidencia de un ataque (VER-17). Se instrumenta primero, no al final.
@@ -220,7 +220,7 @@ Ejecutar el código del agente en un entorno aislado, de modo que una acción ma
 
 | Atributo | Valor |
 |---|---|
-| **Qué verifica aquí** | El backend entero, que es el único proceso (`architecture.md` §7.4) y por tanto toda llamada a agente, corre en un contenedor sin más red que la de Claude, porque los embeddings son locales (`architecture.md` §4.8), con el sistema de ficheros acotado al directorio de la tirada y con el canon montado en **solo lectura**. La escritura al canon pasa exclusivamente por el Archivero tras congelar |
+| **Qué verifica aquí** | El backend entero, que es el único proceso (`architecture.md` §7.4) y por tanto toda llamada a agente, corre en un contenedor sin más red que la de Claude y la del espejo de observabilidad, Langfuse, porque los embeddings son locales (`architecture.md` §4.8), con el sistema de ficheros acotado al directorio de la tirada y con el canon montado en **solo lectura**. La escritura al canon pasa exclusivamente por el Archivero tras congelar |
 | **Clase** | D |
 | **Límite** | Contiene el daño, no lo previene. Un agente sandboxeado puede seguir escribiendo prosa incoherente con total libertad |
 
@@ -253,6 +253,8 @@ Una persona aprueba, rechaza o edita las acciones de alto impacto, y su decisió
 La tabla de sustitutos vive en [`architecture.md`](architecture.md) §8 y no se repite aquí: mantener dos copias de la misma tabla es garantizar que una se quede atrás. En corto: lo que haría la persona lo hacen las puertas con umbral (CAL-09), el Árbitro con la precedencia PRO-10, el conjunto dorado (CAL-10) con la dispersión del jurado (CAL-11), y la cuarentena (CAL-13) con la replanificación (PRO-12).
 
 La única entrada humana del sistema es el brief (PRO-01), inicial o enmendado después de una congelación (`architecture.md` §2.2). Eso es un encargo, no una revisión: cambia lo que se pide y no interrumpe el capítulo en curso.
+
+**Fuera del ciclo sí hay lectura humana, y no es este método.** Una persona puede leer una novela ya congelada y puntuarla con las mismas dimensiones que el Jurado, para medir cuánto se parece el juicio del sistema al humano. Es un eval (VER-10) sobre un artefacto cerrado: no aprueba, no corrige y no entra en ninguna tirada, así que no toca PRO-11. Su resultado alimenta la calibración del Jurado, igual que el conjunto dorado.
 
 Es el único método del catálogo sin línea de límite, y es correcto que no la tenga: un método excluido no cubre nada, así que no hay cobertura que acotar.
 
@@ -429,6 +431,7 @@ Dos detalles de orden que no son decorativos. **VER-20 corre antes que VER-14**,
 | Flujo del orquestador | VER-05, 18 | A |
 | Memoria de trabajo PRO-13 | VER-01, 05, 06 | T |
 | Reanudación de una tirada | VER-06, 18 | A |
+| Cronología del canon MUN-05 | VER-04, 05 | A |
 | Prompt de un agente | VER-10, 16, 17 | T · D |
 | Prosa generada | VER-10, 14, 20 | T · I |
 | Delta canónico | VER-08, 12, 14, 17 | A · I |
