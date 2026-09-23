@@ -18,7 +18,8 @@ META="${TMPDIR:-${TEMP:-/tmp}}/story-maker-tlc"
 FILTER="${1:-}"
 MODEL_DIR="$(pwd -W 2>/dev/null || pwd)"
 COMMIT="$(git rev-parse --short HEAD 2>/dev/null || echo desconocido)"
-DIRTY="$(git status --porcelain -- . 2>/dev/null | grep -q . && echo ' (con cambios sin commitear en model/)' || true)"
+# Las salidas y el README no son el modelo: no cuentan como cambio.
+DIRTY="$(git status --porcelain -- . ':!tlc' ':!README.md' 2>/dev/null | grep -q . && echo ' (con cambios sin commitear en model/)' || true)"
 VERSION="$("$JAVA" -cp "$JAR" tlc2.TLC -h 2>&1 | grep -m1 -o 'Version [0-9.]* of [0-9A-Za-z ]*' || echo desconocida)"
 mkdir -p tlc
 fallos=0
