@@ -103,6 +103,13 @@ CHECKS: tuple[Check, ...] = (
         command=["python", "-m", "pytest", "-q"],
     ),
     Check(
+        name="verificacion formal (Lean)",
+        what="Compila con lake build la cronologia de las dos fixtures: la limpia se "
+        "demuestra y la sembrada falla en sus cuatro teoremas y en nada mas. Sin "
+        "lake, falla (RF-246, VER-04)",
+        command=["python", "-m", "verification.formal.fixtures"],
+    ),
+    Check(
         name="vulnerabilidades en dependencias",
         what="Contrasta las librerias instaladas contra vulnerabilidades conocidas",
         command=["python", "-m", "pip_audit", "--skip-editable"],
