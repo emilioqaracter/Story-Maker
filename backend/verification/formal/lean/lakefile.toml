@@ -1,0 +1,21 @@
+name = "storymaker"
+version = "0.1.0"
+defaultTargets = ["StoryMaker"]
+
+# Tipos, invariantes y la cronología de la fixture limpia. Es lo que compila
+# `lake build` sin argumentos, y tiene que pasar (RF-246).
+[[lean_lib]]
+name = "StoryMaker"
+roots = ["StoryMaker.Types", "StoryMaker.Invariants", "StoryMaker.Fixture"]
+
+# La fixture sembrada: una incoherencia por invariante. `lake build Seeded`
+# tiene que fallar en sus cuatro teoremas y en nada más (RF-246). No es un
+# objetivo por defecto, o `lake build` a secas nunca pasaría.
+[[lean_lib]]
+name = "Seeded"
+roots = ["Seeded"]
+
+# Lo que genera `run_lean` sobre el canon de una tirada. No se versiona.
+[[lean_lib]]
+name = "Generated"
+globs = ["Generated.+"]

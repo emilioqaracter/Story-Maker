@@ -22,3 +22,7 @@ frontend/dist/
 
 # auditoria-entrega: informe generado, no es codigo
 .claude/auditoria-entrega/
+
+# Lean: compilados de Lake y cronologias que genera run_lean
+backend/verification/formal/lean/.lake/
+backend/verification/formal/lean/Generated/

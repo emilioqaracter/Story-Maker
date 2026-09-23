@@ -36,6 +36,15 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
 
+      # Verificacion formal de la cronologia (VER-04, RF-246). La puerta
+      # compila las dos fixtures de Lean y, sin `lake`, falla cerrada. elan
+      # instala la version que fija verification/formal/lean/lean-toolchain la
+      # primera vez que `lake` corre en esa carpeta.
+      - name: Instalar Lean
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y --default-toolchain none
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+
       - name: Puerta
         run: python gate.py
 
