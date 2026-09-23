@@ -154,19 +154,27 @@ def test_tres_llamadas_en_paralelo_respetan_el_techo_y_el_orden() -> None:
     """RF-160, CTX-I1. Tres hilos piden plaza a la vez; nunca hay mas en vuelo
     que el techo, y el que no cabe espera en vez de colarse."""
     import threading
-    import time
 
     from orchestration.admission import Admission, Reservation
 
     adm = Admission(ceiling=25_000)
     maximo = [0]
+    entradas = [0]
     candado = threading.Lock()
+    # Los dos primeros en entrar se esperan dentro: el solapamiento no depende
+    # del reloj, y el test no falla con la maquina cargada.
+    juntos = threading.Barrier(2)
 
     def llamada(agent: str) -> None:
         with adm.hold(Reservation(agent=agent, packet_tokens=11_500)):
             with candado:
                 maximo[0] = max(maximo[0], adm.in_flight)
-            time.sleep(0.05)
+                entradas[0] += 1
+                espera = entradas[0] <= 2
+            if espera:
+                juntos.wait(timeout=5)
+                with candado:
+                    maximo[0] = max(maximo[0], adm.in_flight)
 
     hilos = [threading.Thread(target=llamada, args=(f"juez-{i}",)) for i in range(3)]
     for h in hilos:
