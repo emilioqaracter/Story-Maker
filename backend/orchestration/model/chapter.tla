@@ -236,10 +236,11 @@ DeltaAccepted ==
     /\ UNCHANGED Keep
 
 (* RF-151. Ante un rechazo, el Arbitro puede proponer un retcon; la regla  *)
-(* dura de RF-152 decide si es admisible. Acotado por los intentos.        *)
+(* dura de RF-152 decide si es admisible. Sin tope propio, como el codigo:  *)
+(* `loop.py` `_try_retcon` no cuenta retcons. Lo acota la escalera, porque  *)
+(* todo pase que no congela consume un intento: `RetconsBounded` lo prueba. *)
 RetconProposed ==
     /\ state = "Arbitrating"
-    /\ retcons < SceneAttempts
     /\ Call("Retconning")
     /\ UNCHANGED << scene, sceneAttempts, chapterAttempts, arcReplans, canonWritten,
                     gatesPassed, juryPassed, openS1, deltaClean, repaired,
@@ -254,6 +255,19 @@ RetconApplied ==
     /\ UNCHANGED << scene, sceneAttempts, chapterAttempts, arcReplans, canonWritten,
                     gatesPassed, juryPassed, openS1, repaired, inFlight,
                     jurorsIn, jurorsDone, lastClosed >>
+
+(* Se retconean unos rechazos y quedan otros: lo retconeado ya es canon, lo *)
+(* que queda es un S1 que vuelve a la reparacion (`_extract_and_validate`,   *)
+(* la lista `restantes`).                                                  *)
+RetconPartial ==
+    /\ state = "Retconning"
+    /\ retcons' = retcons + 1
+    /\ deltaClean' = FALSE
+    /\ gatesPassed' = FALSE
+    /\ juryPassed' = FALSE
+    /\ ToRepair
+    /\ UNCHANGED << scene, chapterAttempts, arcReplans, canonWritten, openS1, repaired,
+                    inFlight, jurorsIn, jurorsDone, lastClosed >>
 
 (* Sin propuesta o inadmisible: gana lo congelado y el rechazo es un S1. *)
 RetconRefused ==
@@ -335,7 +349,7 @@ Next ==
     \/ JurorAdmitted \/ JurorReturns \/ JuryPasses \/ JuryFails
     \/ Polish \/ Reverify \/ Repair \/ Revalidate
     \/ Extract \/ DeltaAccepted \/ DeltaRejected
-    \/ RetconProposed \/ RetconApplied \/ RetconRefused
+    \/ RetconProposed \/ RetconApplied \/ RetconPartial \/ RetconRefused
     \/ Freeze \/ Supervise
     \/ QuarantineRespec \/ QuarantineReplan \/ QuarantineAbort
     \/ Done
@@ -365,13 +379,18 @@ RepairRevalidates ==
 \* Nunca hay mas de CTX-20 tokens en vuelo, tampoco con el Jurado en paralelo.
 CtxI1 == inFlight <= Ceiling
 
-\* Nunca se reanuda desde un punto que no este cerrado.
-ResumeOnlyClosed == lastClosed <= scene
+\* La reanudacion no se modela aqui: un capitulo solo no tiene caida. Las
+\* acciones Crash y Resume, y el invariante ResumeOnlyClosed, estan en run.tla.
 
-\* La escalera esta acotada, y el retcon tambien.
+\* La escalera esta acotada.
 LadderBounded ==
     /\ arcReplans <= ArcReplans /\ chapterAttempts <= ChapterAttempts
-    /\ sceneAttempts <= SceneAttempts /\ retcons <= SceneAttempts
+    /\ sceneAttempts <= SceneAttempts
+
+\* Y el retcon tambien, sin contador propio: cada pase que llega al Arbitro y no
+\* congela consume un intento de escena, hay SceneAttempts pases por
+\* aprobacion y ChapterAttempts + ArcReplans aprobaciones por capitulo.
+RetconsBounded == retcons <= SceneAttempts * (ChapterAttempts + ArcReplans)
 
 \* Y termina: toda ejecucion acaba supervisada o abortada.
 Terminates == <>(state \in { "Supervised", "Aborted" })
