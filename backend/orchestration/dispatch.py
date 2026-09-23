@@ -19,6 +19,7 @@ Tres cosas ocurren aqui y en ningun otro sitio:
 from __future__ import annotations
 
 import json
+import time
 from collections.abc import Mapping, Sequence
 
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, ValidationError
@@ -48,6 +49,8 @@ class DispatchResult(BaseModel):
     raw: str
     completion: Completion
     tool_calls: int = Field(default=0, ge=0)
+    #: RF-235. Lo que tardo la llamada, bucle de herramientas incluido.
+    duration_ms: int = Field(default=0, ge=0)
 
     @property
     def real_input_tokens(self) -> int:
@@ -96,9 +99,14 @@ def dispatch(
         else None
     )
 
+    if tools and server is None:
+        raise ValueError(f"{agent!r} declara herramientas y no se le paso quien las sirve")
+
+    # RF-235. Reloj monotono alrededor de la llamada entera, bucle de
+    # herramientas incluido: es la latencia que ve el ciclo, no la del proveedor.
+    inicio = time.monotonic()
     if tools:
-        if server is None:
-            raise ValueError(f"{agent!r} declara herramientas y no se le paso quien las sirve")
+        assert server is not None
         completion = port.complete_with_tools(
             cacheable_prefix=cacheable_prefix,
             packet=packet,
@@ -118,6 +126,7 @@ def dispatch(
             max_output_tokens=tope,
             json_schema=esquema_json,
         )
+    duracion = max(0, round((time.monotonic() - inicio) * 1000))
 
     real = completion.usage.total_input
     harness = completion.harness_tokens
@@ -147,6 +156,14 @@ def dispatch(
             real_input=real,
             harness_tokens=harness,
             output_tokens=completion.usage.output_tokens,
+            # RF-235: los cuatro campos de uso por separado, para que el espejo
+            # pueda dar la generation con su cache; `real_input` es su suma.
+            input_tokens=completion.usage.input_tokens,
+            cache_creation_tokens=completion.usage.cache_creation_tokens,
+            cache_read_tokens=completion.usage.cache_read_tokens,
+            model=completion.model or None,
+            cost_usd=completion.cost_usd,
+            duration_ms=duracion,
             tool_calls=len(completion.tool_calls),
             # RNF-19: el estimado mas el andamiaje nunca queda por debajo del
             # real. Si queda, el factor del contador se ha quedado corto.
@@ -165,4 +182,5 @@ def dispatch(
         raw=completion.text,
         completion=completion,
         tool_calls=len(completion.tool_calls),
+        duration_ms=duracion,
     )

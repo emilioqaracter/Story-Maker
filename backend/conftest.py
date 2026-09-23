@@ -17,6 +17,22 @@ settings.register_profile("ci", deadline=None)
 settings.load_profile("ci")
 
 
+def pytest_configure(config: pytest.Config) -> None:
+    """Ninguna prueba habla con Langfuse de verdad (RNF-53, RI-60).
+
+    Se quitan las variables antes de recoger las pruebas, porque importar
+    `orchestration.app` ya instala el espejo si las encuentra. Sin ellas no se
+    engancha nada: las pruebas que lo ejercitan instalan un cliente doble a
+    proposito. Sin esto, una maquina con las claves en el entorno mandaria las
+    tiradas de prueba a un servicio real.
+    """
+    import os
+
+    for k in list(os.environ):
+        if k.upper().startswith(("LANGFUSE_", "OTEL_")):
+            del os.environ[k]
+
+
 @pytest.fixture(scope="session", autouse=True)
 def _warm_token_encoder() -> None:
     """Paga una sola vez la carga del codificador, fuera de lo medido."""

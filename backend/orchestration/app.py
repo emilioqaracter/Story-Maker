@@ -19,6 +19,7 @@ from brief.extract import Extractor, model_extractor
 from brief.routes import get_extractor
 from brief.routes import router as brief_router
 from canon.routes import router as canon_router
+from commons.tracing.langfuse_export import install_live_export
 from orchestration.routes import router as orchestration_router
 from planning.routes import router as planning_router
 from supervision.routes import router as supervision_router
@@ -42,6 +43,10 @@ def create_app() -> FastAPI:
     app.include_router(brief_router)
     # RI-59: `brief/` no conoce el transporte del modelo; se lo da la raiz.
     app.dependency_overrides[get_extractor] = _extractor
+    # D-85. El espejo de Langfuse en vivo, si hay claves: toda traza que abran
+    # las rutas o las tiradas queda observada. Sin claves no engancha nada y el
+    # sistema es el mismo (RI-60).
+    install_live_export()
     _mount_frontend(app, FRONTEND_DIST)
     return app
 
