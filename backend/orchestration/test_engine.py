@@ -15,8 +15,10 @@ from pathlib import Path
 
 import pytest
 
+from canon.arbiter.retcon import RetconPlan
 from canon.brief import Brief, BriefEntity, create_novel
 from canon.db import connection
+from canon.freeze.freeze import SceneToFreeze, commit_chapter, prepare
 from commons.provider.port import (
     Completion,
     Embedding,
@@ -28,6 +30,7 @@ from commons.provider.port import (
 from commons.tokens.counter import TokenCounter
 from commons.tokens.factors import ModelFactors
 from commons.tracing.trace import Trace
+from commons.types.primitives import WorldTime
 from context.packing.recipes import BUDGETS
 from orchestration.admission import Admission
 from orchestration.engine import Composer, specs_provider
@@ -466,6 +469,30 @@ def test_la_admision_reserva_el_cupo_de_tiron_de_los_agentes_que_lo_tienen(
     assert all(int(str(r.fields["reserved"])) >= BUDGETS["archivero"].tool_quota for r in archivero)
 
 
+def test_en_una_tirada_el_estimado_no_queda_corto_y_lo_en_vuelo_no_pasa_de_100000(
+    composer: tuple[Composer, ScriptedPort, Trace, Path],
+) -> None:
+    """RNF-19, CTX-I1. Las dos lecturas del techo, medidas en la traza de una tirada."""
+    from orchestration.admission import CONCURRENCY_CEILING
+
+    c, _puerto, traza, path = composer
+    run(
+        path,
+        _brief(),
+        c.engine(),
+        novel_id="p",
+        chapters=2,
+        specs_for=specs_provider(c),
+        trace=traza,
+    )
+    llamadas = traza.records("call")
+    assert llamadas and all(r.fields["estimate_short"] is False for r in llamadas)
+    admisiones = traza.records("admission")
+    assert admisiones
+    assert max(int(str(r.fields["in_flight"])) for r in admisiones) <= CONCURRENCY_CEILING
+    assert all(int(str(r.fields["reserved"])) <= CONCURRENCY_CEILING for r in admisiones)
+
+
 def test_tras_congelar_no_queda_borrador_y_el_canon_evoluciono(
     composer: tuple[Composer, ScriptedPort, Trace, Path],
 ) -> None:
@@ -578,3 +605,169 @@ def test_una_cita_del_jurado_que_no_ancla_vuelve_al_juez_con_el_motivo(tmp_path:
     reintentos = [r for r in traza.records("retry") if "sin anclar" in str(r.fields.get("reason"))]
     assert reintentos, "la cita recortada volvio al juez"
     assert all(ch.jury is not None and ch.jury.passed for ch in informe.chapters)
+
+
+# ------------------------------------ enmiendas con el Reparador del motor
+
+
+def _congelar_capitulo(path: Path) -> str:
+    """Un capitulo congelado sin tirada: la escena c1e1, con Marcos en el elenco."""
+    texto = PROSA * 12 + _closing(0)
+    escena = SceneToFreeze(
+        id="c1e1",
+        chapter=1,
+        scene_number=1,
+        pov_entity="marcos",
+        place_entity="vestuario",
+        world_time=WorldTime(stamp="2026-08-10"),
+        function="establecer",
+        text=texto,
+        summary="Marcos entra en el vestuario.",
+        present=("marcos", "tecnico"),
+    )
+    prep = prepare([escena], chapter=1, chapter_summary="cap 1", embed=_Embedder())
+    with connection.canon_writer(path) as con:
+        commit_chapter(con, prep)
+    return texto
+
+
+def _renombrado(texto: str, nuevo: str) -> str:
+    return texto.replace("Marcos Vela", nuevo).replace("Marcos", nuevo.split()[0])
+
+
+class _RepairPort(ScriptedPort):
+    """El Reparador devuelve un texto fijado por la prueba; el resto, como siempre."""
+
+    def __init__(self, reparado: str) -> None:
+        super().__init__()
+        self.reparado = reparado
+
+    def _answer(self, prefix: str, instruction: str) -> str:
+        if "Reparas escenas" in prefix:
+            self.calls.append("reparador")
+            return self.reparado
+        return super()._answer(prefix, instruction)
+
+
+#: Un nombre propio que no esta en el canon, dos veces en mitad de frase: `check.lexicon`.
+_AJENO = " Mateo habló con Toby, y Toby no contestó."
+
+
+def _plan_marcos(nuevo: str) -> RetconPlan:
+    return RetconPlan(
+        fact_key="marcos.nombre",
+        entity_id="marcos",
+        attribute="nombre",
+        previous_value="Marcos Vela",
+        new_value=nuevo,
+        frozen_since="2026-08-01",
+        scenes=("c1e1",),
+        paid=False,
+    )
+
+
+def test_la_reescritura_de_una_enmienda_se_reverifica_con_checks_y_continuista(
+    composer: tuple[Composer, ScriptedPort, Trace, Path],
+) -> None:
+    """RF-224, RF-153. El `retcon_rewrite` real, no el doble de `test_loop.py`.
+
+    Tras el Reparador corren `check.*` y el Continuista sobre el texto nuevo. Un
+    reparado limpio no trae defecto de lexico; uno con un nombre ajeno, si.
+    """
+    c, _puerto, _traza, path = composer
+    texto = _congelar_capitulo(path)
+
+    limpio = _RepairPort(_renombrado(texto, "Mateo"))
+    c.port = limpio
+    escena, defectos = c.engine().retcon_rewrite("c1e1", texto, _plan_marcos("Mateo"))
+    assert escena.scene_id == "c1e1" and "Marcos" not in escena.text
+    assert "reparador" in limpio.calls
+    assert "continuista" in limpio.calls[limpio.calls.index("reparador") :]
+    assert not [d for d in defectos if d.kind == "check.lexicon"], defectos
+
+    sucio = _RepairPort(_renombrado(texto, "Mateo") + _AJENO)
+    c.port = sucio
+    _escena, defectos = c.engine().retcon_rewrite("c1e1", texto, _plan_marcos("Mateo"))
+    assert "continuista" in sucio.calls[sucio.calls.index("reparador") :]
+    lexico = [d for d in defectos if d.kind == "check.lexicon"]
+    assert lexico and lexico[0].evidence.quote == "Toby", defectos
+
+
+def _pedir_mateo(path: Path, nuevo: str) -> None:
+    from brief.interpret import RawInterpretation
+    from orchestration import amend
+
+    s = amend.create_request(
+        path,
+        f"Marcos se llama {nuevo}",
+        amend.FactAnchor(entity_id="marcos", attribute="nombre"),
+        lambda *_: RawInterpretation(entity_id="marcos", attribute="nombre", new_value=nuevo),
+        Trace.disabled(),
+    )
+    assert s.status == "queued", s.reason
+
+
+def test_una_enmienda_con_el_motor_real_se_aplica_si_la_reverificacion_esta_limpia(
+    composer: tuple[Composer, ScriptedPort, Trace, Path],
+) -> None:
+    """RF-223, RF-224. El camino entero, con el Reparador y el Continuista del motor."""
+    from canon import manuscript
+    from orchestration import amend
+
+    c, _puerto, traza, path = composer
+    texto = _congelar_capitulo(path)
+    _pedir_mateo(path, "Mateo")
+    puerto = _RepairPort(_renombrado(texto, "Mateo"))
+    c.port = puerto
+
+    assert amend.apply_pending(path, c.engine(), traza) == [2]
+    assert "continuista" in puerto.calls
+    with connection.reader(path) as con:
+        assert manuscript.current_version(con) == 2
+        (escena,) = manuscript.chapter_at(con, 1, 2) or []
+    assert escena.changed and "Marcos" not in escena.text
+
+
+def test_una_enmienda_con_el_motor_real_rechaza_un_s1_ajeno(
+    composer: tuple[Composer, ScriptedPort, Trace, Path],
+) -> None:
+    """RF-225. El S1 lo encuentra la reverificacion del motor, no un doble que lo trae hecho."""
+    from canon import manuscript
+    from orchestration import amend
+
+    c, _puerto, traza, path = composer
+    texto = _congelar_capitulo(path)
+    _pedir_mateo(path, "Mateo")
+    c.port = _RepairPort(_renombrado(texto, "Mateo") + _AJENO)
+    with connection.reader(path) as con:
+        antes = [e.text for e in manuscript.chapter_at(con, 1, 1) or []]
+
+    assert amend.apply_pending(path, c.engine(), traza) == []
+    with connection.reader(path) as con:
+        s = manuscript.request(con, 1)
+        assert manuscript.current_version(con) == 1
+        despues = [e.text for e in manuscript.chapter_at(con, 1, 1) or []]
+    assert s is not None and s.status == "rejected" and "Toby" in s.reason
+    assert despues == antes and "Marcos Vela" in despues[0]
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "bug: D-78 solo exime el defecto que contiene el valor nuevo entero. check.lexicon "
+        "cita una palabra suelta del nombre nuevo («Ruiz» de «Mateo Ruiz»), amend.counts la "
+        "cuenta y un renombrado a dos palabras con un Reparador perfecto se rechaza"
+    ),
+)
+def test_un_renombrado_a_nombre_de_dos_palabras_con_reparado_limpio_se_aplica(
+    composer: tuple[Composer, ScriptedPort, Trace, Path],
+) -> None:
+    """RF-225, D-78. El canon aun dice «Marcos Vela» al reverificar: «Ruiz» es la enmienda misma."""
+    from orchestration import amend
+
+    c, _puerto, traza, path = composer
+    texto = _congelar_capitulo(path)
+    _pedir_mateo(path, "Mateo Ruiz")
+    c.port = _RepairPort(_renombrado(texto, "Mateo Ruiz"))
+
+    assert amend.apply_pending(path, c.engine(), traza) == [2]

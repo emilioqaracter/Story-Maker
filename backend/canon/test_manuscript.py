@@ -178,11 +178,22 @@ def test_el_renombrado_cambia_el_nombre_y_no_deja_alias(novela: Path) -> None:
     assert alias == []
 
 
-def test_la_historia_no_se_reescribe(novela: Path) -> None:
-    """RD-34. Append-only: una version publicada no cambia."""
+@pytest.mark.parametrize(
+    "sentencia",
+    [
+        "UPDATE scene_text_history SET text = 'otro'",
+        "DELETE FROM scene_text_history",
+        "UPDATE manuscript_version SET cause = 0",
+    ],
+)
+def test_la_historia_no_se_reescribe(novela: Path, sentencia: str) -> None:
+    """RD-34. Append-only: una version publicada no cambia, ni se borra su historia."""
+    antes = _texto(novela, 1, 1)
     _rename(novela, "el perro se llama Nala", "Rex", "Nala")
     with connection.canon_writer(novela) as con, pytest.raises(sqlite3.DatabaseError):
-        con.execute("UPDATE scene_text_history SET text = 'otro'")
+        con.execute(sentencia)
+    assert _texto(novela, 1, 1) == antes
+    assert [v.number for v in manuscript_versions(novela)] == [1, 2]
 
 
 @settings(
@@ -250,3 +261,152 @@ def test_sin_solicitudes_la_version_vigente_es_la_1(novela: Path) -> None:
     with connection.reader(novela) as con:
         assert manuscript.requests(con) == []
         assert manuscript.current_version(con) == 1
+
+
+# ------------------------------------------------------ capas de la lectura
+
+
+def _filas_de_indice(path: Path, scene_id: str) -> list[tuple[object, ...]]:
+    with connection.reader(path) as con:
+        return [
+            tuple(r)
+            for r in con.execute(
+                "SELECT rowid, id, scene_id, ordinal, text, vector, vector_model, vector_dim "
+                "FROM prose_chunk WHERE scene_id = ? ORDER BY ordinal",
+                (scene_id,),
+            )
+        ]
+
+
+def test_la_enmienda_no_toca_el_indice_de_las_escenas_que_no_nombran_el_hecho(
+    novela: Path,
+) -> None:
+    """RF-203, RF-224 (ENT-15). c1e2 no nombra a Rex: sus fragmentos y vectores quedan igual."""
+    intacta = _filas_de_indice(novela, "c1e2")
+    tocada = _filas_de_indice(novela, "c1e1")
+    assert intacta and tocada
+
+    _rename(novela, "el perro se llama Nala", "Rex", "Nala")
+
+    assert _filas_de_indice(novela, "c1e2") == intacta
+    despues = _filas_de_indice(novela, "c1e1")
+    assert despues != tocada and all("Nala" in str(f[4]) for f in despues)
+
+
+def test_una_recongelacion_que_falla_a_medias_no_deja_version_ni_historia(
+    novela: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """RNF-50 (ENT-18). La caida llega despues de recongelar y antes de confirmar."""
+    real = refreeze.commit
+
+    def cae(*args: object, **kw: object) -> None:
+        real(*args, **kw)  # type: ignore[arg-type]
+        raise RuntimeError("caida a mitad de la transaccion")
+
+    monkeypatch.setattr(refreeze, "commit", cae)
+    antes = [_texto(novela, 1, 1), _texto(novela, 2, 1)]
+    with pytest.raises(RuntimeError, match="caida"):
+        _rename(novela, "el perro se llama Nala", "Rex", "Nala")
+
+    with connection.reader(novela) as con:
+        assert manuscript.current_version(con) == 1
+        assert con.execute("SELECT count(*) FROM scene_text_history").fetchone()[0] == 0
+        nombre = con.execute("SELECT name FROM entity WHERE id = 'rex'").fetchone()[0]
+        textos = scene_texts(con)
+    assert [_texto(novela, 1, 1), _texto(novela, 2, 1)] == antes
+    assert nombre == "Rex" and not any("Nala" in t for t in textos.values())
+
+
+def test_una_entidad_que_no_sale_en_ninguna_escena_no_tiene_capitulos_ni_enlaces(
+    tmp_path: Path,
+) -> None:
+    """RF-207, RF-208 (ENT-11). Sin POV, lugar ni elenco no hay aparicion que enlazar."""
+    path = tmp_path / "n.sqlite"
+    create_novel(path, _brief())
+    _congelar(path, 1, [_escena(1, 1, "Lucía miró las nubes sola.", ("lucia",))])
+    with connection.reader(path) as con:
+        rex = {e.entity_id: e for e in entities.list_entities(con)}["rex"]
+        ficha = entities.entity_file(con, "rex")
+    assert rex.chapters == ()
+    assert ficha is not None and ficha.appearances == ()
+
+
+@settings(
+    max_examples=15, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+)
+@given(
+    capitulos=st.lists(st.lists(st.booleans(), min_size=1, max_size=3), min_size=1, max_size=3),
+    renombrar=st.booleans(),
+)
+def test_toda_aparicion_de_la_ficha_apunta_a_una_escena_de_ese_capitulo(
+    tmp_path_factory: pytest.TempPathFactory, capitulos: list[list[bool]], renombrar: bool
+) -> None:
+    """RF-206 a RF-208 (ENT-11). Cada enlace de la ficha llega a una escena de la vigente.
+
+    `capitulos[c][e]` dice si Rex esta en el elenco de la escena e del capitulo c.
+    """
+    path = tmp_path_factory.mktemp("f") / "n.sqlite"
+    create_novel(path, _brief())
+    esperadas: set[tuple[int, str]] = set()
+    for c, escenas in enumerate(capitulos, start=1):
+        lote = []
+        for e, con_rex in enumerate(escenas, start=1):
+            texto = "Lucía llegó al parque con Rex." if con_rex else "Lucía miró las nubes sola."
+            lote.append(_escena(c, e, texto, ("lucia", "rex") if con_rex else ("lucia",)))
+            if con_rex:
+                esperadas.add((c, f"c{c}e{e}"))
+        _congelar(path, c, lote)
+    if renombrar and esperadas:
+        _rename(path, "el perro se llama Nala", "Rex", "Nala")
+
+    with connection.reader(path) as con:
+        vigente = manuscript.current_version(con)
+        for resumen in entities.list_entities(con):
+            ficha = entities.entity_file(con, resumen.entity_id)
+            assert ficha is not None
+            assert resumen.chapters == tuple(sorted({a.chapter for a in ficha.appearances}))
+            for a in ficha.appearances:
+                escenas_cap = manuscript.chapter_at(con, a.chapter, vigente) or []
+                assert a.scene_id in {s.scene_id for s in escenas_cap}, (a, vigente)
+        rex = entities.entity_file(con, "rex")
+    assert rex is not None
+    assert {(a.chapter, a.scene_id) for a in rex.appearances} == esperadas
+
+
+@settings(
+    max_examples=12, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+)
+@given(st.lists(st.sampled_from(["Nala", "Toby", "Luna", "Kira"]), min_size=1, max_size=3))
+def test_una_escena_sin_marca_se_lee_igual_que_en_la_version_anterior(
+    tmp_path_factory: pytest.TempPathFactory, nombres: list[str]
+) -> None:
+    """RF-204, RF-206; RF-186 del frontend (ENT-17). La marca de cambio no miente en ningun sentido."""
+    path = tmp_path_factory.mktemp("m") / "n.sqlite"
+    create_novel(path, _brief())
+    _congelar(
+        path,
+        1,
+        [
+            _escena(1, 1, "Lucía llegó al parque con Rex.", ("lucia", "rex")),
+            _escena(1, 2, "Lucía miró las nubes sola.", ("lucia",)),
+        ],
+    )
+    _congelar(path, 2, [_escena(2, 1, "Rex ladró al ver la pelota.", ("lucia", "rex"))])
+    actual = "Rex"
+    for nombre in nombres:
+        if nombre != actual:
+            _rename(path, f"se llama {nombre}", actual, nombre)
+            actual = nombre
+
+    with connection.reader(path) as con:
+        for v in manuscript.versions(con)[1:]:
+            for c in manuscript.chapters_in(con, v.number):
+                ahora = manuscript.chapter_at(con, c, v.number) or []
+                previa = manuscript.chapter_at(con, c, v.number - 1) or []
+                antes = {s.scene_id: s.text for s in previa}
+                for s in ahora:
+                    if s.changed:
+                        assert s.text != antes[s.scene_id], (v.number, s.scene_id)
+                    else:
+                        assert s.text == antes[s.scene_id], (v.number, s.scene_id)
+                assert any(s.changed for s in ahora) == (c in v.changed_chapters), (v.number, c)

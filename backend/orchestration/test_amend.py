@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 from brief.interpret import Candidate, RawInterpretation
 from canon import manuscript
 from canon.arbiter.refreeze import RefrozenScene
+from canon.arbiter.retcon import RetconPlan
 from canon.brief import create_novel
 from canon.db import connection
 from canon.test_manuscript import _brief, _congelar, _escena
@@ -152,18 +153,42 @@ def test_si_el_reparador_deja_el_valor_anterior_se_rechaza(novela: Path) -> None
     assert s is not None and s.status == "rejected" and "Rex" in s.reason
 
 
-def test_un_cambio_de_atributo_solo_toca_escenas_donde_esta_la_entidad(novela: Path) -> None:
+class _Espia:
+    """Un Reparador de reemplazo literal que anota que escenas le piden reescribir."""
+
+    def __init__(self) -> None:
+        self.escenas: list[str] = []
+
+    def __call__(
+        self, sid: str, texto: str, plan: RetconPlan
+    ) -> tuple[RefrozenScene, list[Defect]]:
+        self.escenas.append(sid)
+        nuevo = texto.replace(plan.previous_value, plan.new_value)
+        return RefrozenScene(scene_id=sid, text=nuevo, summary=f"resumen retcon {sid}"), []
+
+
+def test_un_cambio_de_atributo_solo_toca_escenas_donde_esta_la_entidad(tmp_path: Path) -> None:
     """RF-224. «negro» sin Rex en el elenco no se toca."""
+    path = tmp_path / "rex-color.sqlite"
+    create_novel(path, _brief())
+    _congelar(path, 1, [_escena(1, 1, "Rex, negro como el carbón, corrió.", ("lucia", "rex"))])
+    # «negro» esta, pero Rex no es POV, lugar ni elenco: el valor no habla de el.
+    _congelar(path, 2, [_escena(2, 1, "Lucía miró el cielo negro sin luna.", ("lucia",))])
+    antes = _textos(path, 1)
     s = amend.create_request(
-        novela,
+        path,
         "Rex es blanco",
         FactAnchor(entity_id="rex", attribute="color"),
         lambda *_: RawInterpretation(entity_id="rex", attribute="color", new_value="blanco"),
         Trace.disabled(),
     )
     assert s.status == "queued"
-    assert amend.apply_pending(novela, _engine(), Trace.disabled()) == [2]
-    with connection.reader(novela) as con:
+    espia = _Espia()
+    assert amend.apply_pending(path, _engine(retcon_rewrite=espia), Trace.disabled()) == [2]
+    assert espia.escenas == ["c1e1"]
+    assert _textos(path, 2) == ["Rex, blanco como el carbón, corrió.", antes[1]]
+    with connection.reader(path) as con:
+        solicitud = manuscript.request(con, 1)
         color = con.execute(
             "SELECT value FROM attribute WHERE entity_id = 'rex' AND name = 'color' AND valid_to IS NULL"
         ).fetchone()[0]
@@ -171,7 +196,48 @@ def test_un_cambio_de_atributo_solo_toca_escenas_donde_esta_la_entidad(novela: P
             "SELECT e.provenance FROM attribute a JOIN event e ON e.id = a.source_event "
             "WHERE a.entity_id = 'rex' AND a.name = 'color' AND a.valid_to IS NULL"
         ).fetchone()[0]
+        cap2 = manuscript.chapter_at(con, 2, 2) or []
+    assert solicitud is not None and solicitud.changed_chapters == (1,)
+    assert cap2 and not any(e.changed for e in cap2)
     assert color == "blanco" and prov == "brief"
+
+
+def test_un_cambio_de_nombre_solo_marca_los_capitulos_que_lo_nombran(tmp_path: Path) -> None:
+    """RF-224, D-48. El impacto de la enmienda son las escenas que nombran el hecho, ni una mas.
+
+    Tres capitulos, «Rex» en el 1 y el 3. El 2 no se reescribe, no se marca y
+    se lee igual en las dos versiones.
+    """
+    path = tmp_path / "rex-tres.sqlite"
+    create_novel(path, _brief())
+    _congelar(
+        path,
+        1,
+        [
+            _escena(1, 1, "Lucía llegó al parque con Rex.", ("lucia", "rex")),
+            _escena(1, 2, "Lucía miró las nubes sola.", ("lucia",)),
+        ],
+    )
+    _congelar(path, 2, [_escena(2, 1, "Lucía corrió sola hasta la fuente.", ("lucia",))])
+    _congelar(path, 3, [_escena(3, 1, "Rex volvió a casa con Lucía.", ("lucia", "rex"))])
+    _pedir(path)
+    espia = _Espia()
+
+    assert amend.apply_pending(path, _engine(retcon_rewrite=espia), Trace.disabled()) == [2]
+
+    assert espia.escenas == ["c1e1", "c3e1"]
+    with connection.reader(path) as con:
+        solicitud = manuscript.request(con, 1)
+        version = manuscript.versions(con)[-1]
+        cap1 = manuscript.chapter_at(con, 1, 2) or []
+        cap2_v1 = manuscript.chapter_at(con, 2, 1) or []
+        cap2_v2 = manuscript.chapter_at(con, 2, 2) or []
+    assert solicitud is not None and solicitud.status == "applied"
+    assert solicitud.changed_chapters == (1, 3)
+    assert (version.number, version.changed_chapters) == (2, (1, 3))
+    assert [e.changed for e in cap1] == [True, False]
+    assert cap2_v2 and not any(e.changed for e in cap2_v2)
+    assert [e.text for e in cap2_v2] == [e.text for e in cap2_v1]
 
 
 def _textos(path: Path, version: int) -> list[str]:
