@@ -88,6 +88,7 @@ from planning.scene_spec import prompts as planner_prompts
 from supervision import prompts as supervision_prompts
 from supervision.prompts import HealthVerdict
 from verification.checks import deterministic as checks
+from verification.checks import forbidden
 from verification.continuity import prompts as continuity_prompts
 from verification.continuity import review
 from verification.continuity.review import Anchored
@@ -784,7 +785,12 @@ class Composer:
 
     def verify_scene(self, spec: SceneSpec, text: str) -> list[Defect]:
         with connection.reader(self.path) as con:
-            proscritos = [r["term"] for r in con.execute("SELECT term FROM proscribed")]
+            # RF-236, D-91. Las prohibidas de los tres niveles van a
+            # `check.forbidden`, S1; a `check.repetition` solo le queda lo de
+            # estilo. Una sola fuente por termino: dos avisos de lo mismo con
+            # severidades distintas no dicen que hacer.
+            prohibidas = forbidden.read_terms(con)
+            estilo = forbidden.read_style_terms(con)
             fechas = [r["world_time"] for r in con.execute("SELECT DISTINCT world_time FROM event")]
             fechas += [
                 r["world_time"] for r in con.execute("SELECT DISTINCT world_time FROM prose_scene")
@@ -801,7 +807,8 @@ class Composer:
             word_range=SCENE_WORDS,
         )
         defectos += checks.check_timeline(text, allowed_dates=fechas)
-        defectos += checks.check_repetition(text, frozen_ngrams=[], proscribed=proscritos)
+        defectos += forbidden.check_forbidden(text, terms=prohibidas)
+        defectos += checks.check_repetition(text, frozen_ngrams=[], proscribed=estilo)
         defectos += checks.check_lexicon(
             text, known_names=self._known_names(), candidates=self._name_candidates(text)
         )

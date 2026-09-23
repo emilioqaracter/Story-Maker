@@ -34,7 +34,7 @@ from commons.types.primitives import Defect, WorldTime
 from context.packing.recipes import BUDGETS
 from orchestration.admission import Admission
 from orchestration.engine import Composer, specs_provider
-from orchestration.loop import run
+from orchestration.loop import RunAbortedError, run
 from verification.checks.deterministic import check_lexicon
 
 PROSA = (
@@ -861,3 +861,116 @@ def test_un_nombre_nuevo_repetido_sigue_siendo_candidato(tmp_path: Path) -> None
     texto = "Marcos hablo con Ramirez. Luego, Ramirez se fue."
     assert c._name_candidates(texto) == ["Ramirez"]
     assert c._name_candidates("Marcos hablo con Ramirez y se fue.") == []
+
+
+# --------------------------------------- la sonda del guardarrail (T41, D-90)
+#
+# La de la auditoria: el motor real, el proveedor guionizado y un brief con una
+# prohibida que la prosa del Escritor contiene. Antes de T41 cerraba la obra con
+# ocho fragmentos congelados que la llevaban dentro.
+
+_LIMPIA = PROSA.replace("linimento", "sudor")
+
+
+class _ProbePort(ScriptedPort):
+    """El Escritor pone «linimento»; si `repairs`, el reintento con defecto la quita.
+
+    Sin `repairs`, el Reparador tampoco la quita y la replanificacion devuelve el
+    mismo tramo: la escalera se agota y la tirada tiene que pararse.
+    """
+
+    def __init__(self, *, repairs: bool) -> None:
+        super().__init__()
+        self.repairs = repairs
+
+    def _answer(self, prefix: str, instruction: str) -> str:
+        if "Escribes escenas" in prefix and self.repairs and "SE RECHAZO" in instruction:
+            self.calls.append("escritor")
+            self.written += 1
+            return _LIMPIA * 12 + _closing(self.written)
+        if "Replanificas" in prefix:
+            self.calls.append("replan")
+            tramo = json.loads(_outline_json())
+            escenas = [e for e in tramo["scenes"] if e["act"] == 1]
+            return json.dumps({"scenes": escenas, "tension": [3]})
+        return super()._answer(prefix, instruction)
+
+
+def _composer_sonda(tmp_path: Path, port: ScriptedPort) -> tuple[Composer, Trace, Path, Brief]:
+    brief = _brief().model_copy(update={"forbidden_words": ("linimento",)})
+    path = tmp_path / "sonda.sqlite"
+    create_novel(path, brief, global_terms=())
+    traza = Trace(tmp_path / "sonda.trace.jsonl")
+    factores = ModelFactors()
+    factores.set("haiku", 1.35)
+    c = Composer(
+        port=port,
+        path=path,
+        brief=brief,
+        embedder=_Embedder(),
+        counter=TokenCounter(factores),
+        model_id="haiku",
+        trace=traza,
+        admission=Admission(trace=traza),
+    )
+    return c, traza, path, brief
+
+
+def _fragmentos_con(path: Path, palabra: str) -> int:
+    with connection.reader(path) as con:
+        return int(
+            con.execute(
+                "SELECT count(*) FROM prose_chunk WHERE lower(text) LIKE ?", (f"%{palabra}%",)
+            ).fetchone()[0]
+        )
+
+
+def test_forbidden_sonda_el_reintento_repara_y_no_congela_la_palabra(tmp_path: Path) -> None:
+    """Puerta de T41: con el reintento que la quita, la obra cierra sin la palabra."""
+    c, traza, path, brief = _composer_sonda(tmp_path, _ProbePort(repairs=True))
+    informe = run(
+        path, brief, c.engine(), novel_id="p", chapters=2, specs_for=specs_provider(c), trace=traza
+    )
+
+    assert all(ch.frozen for ch in informe.chapters)
+    assert _fragmentos_con(path, "linimento") == 0
+    intentos = traza.records("scene.attempt")
+    assert any("check.forbidden:S1" in r.fields["defects"] for r in intentos)  # type: ignore[operator]
+    coincidencias = traza.records("guardrail.match")
+    assert coincidencias and {r.fields["level"] for r in coincidencias} == {"cliente"}
+    assert {r.fields["decision"] for r in coincidencias} == {"reintentar"}
+
+
+def test_forbidden_sonda_sin_reparacion_acaba_en_aborto_con_termino_y_nivel(
+    tmp_path: Path,
+) -> None:
+    """Puerta de T41: si nada la quita, `RunAbortedError` con termino y nivel, y nada congelado."""
+    c, traza, path, brief = _composer_sonda(tmp_path, _ProbePort(repairs=False))
+    with pytest.raises(RunAbortedError) as exc:
+        run(
+            path,
+            brief,
+            c.engine(),
+            novel_id="p",
+            chapters=2,
+            specs_for=specs_provider(c),
+            trace=traza,
+        )
+
+    motivo = str(exc.value)
+    assert "check.forbidden" in motivo and "«linimento»" in motivo and "cliente" in motivo
+    assert _fragmentos_con(path, "linimento") == 0
+    with connection.reader(path) as con:
+        assert con.execute("SELECT count(*) FROM prose_scene").fetchone()[0] == 0
+    [cierre] = traza.records("work.close")
+    assert cierre.fields["closed"] is False
+
+
+def test_verify_scene_da_la_prohibida_como_s1_y_no_como_repeticion(tmp_path: Path) -> None:
+    """RF-236: una sola fuente. `check.repetition` ya no ve las prohibidas del encargo."""
+    c, _traza, _path, _brief_ = _composer_sonda(tmp_path, ScriptedPort())
+    spec = specs_provider(c)(c.plan_outline(_brief_, 2, []), 1)[0]
+    defectos = c.engine().verify_scene(spec, "Marcos Vela olia a Linimentos.")
+    prohibidas = [d for d in defectos if d.kind == "check.forbidden"]
+    assert [(d.severity.value, d.evidence.quote) for d in prohibidas] == [("S1", "Linimentos")]
+    assert not [d for d in defectos if d.kind == "check.repetition"]

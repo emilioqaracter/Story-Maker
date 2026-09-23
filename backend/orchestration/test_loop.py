@@ -12,7 +12,7 @@ Las llamadas a modelo real son evals, no pruebas (RNF-17).
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from pathlib import Path
 
 import pytest
@@ -25,15 +25,18 @@ from canon.db import connection
 from canon.events.types import AttributeSet
 from canon.skills import read
 from commons.provider.port import Embedding
+from commons.settings import Settings
 from commons.tracing.trace import Trace
 from commons.types.primitives import Defect, Evidence, Severity, WorldTime
 from commons.types.scene import SceneFunction, SceneSpec
 from generation.sports.simulate import MatchResult, Milestone, MilestoneKind
 from orchestration.checkpoint import load
 from orchestration.loop import Engine, RunAbortedError, as_json, run
+from orchestration.routes import _state
 from planning.outline.types import ActPlan, Arc, ArcKind, Outline, SceneEntry, Setup
 from planning.scene_spec.spec import from_entry
 from supervision.prompts import HealthVerdict
+from verification.checks import forbidden
 from verification.continuity.review import Anchored
 from verification.jury.verdict import JuryVerdict
 from verification.quiz.build import Question
@@ -1077,3 +1080,248 @@ def test_sin_propuesta_gana_el_canon_como_en_la_version_1(novela: Path) -> None:
     )
     with connection.reader(novela) as con:
         assert con.execute("SELECT count(*) AS n FROM retcon").fetchone()["n"] == 0
+
+
+# ------------------------------------------- guardarrail de prohibidas (T41)
+
+
+def _novela_con_prohibida(tmp_path: Path, *words: str) -> tuple[Path, Brief]:
+    brief = _brief().model_copy(update={"forbidden_words": words or ("linimento",)})
+    path = tmp_path / "prohibida.sqlite"
+    create_novel(path, brief, global_terms=())
+    return path, brief
+
+
+def _verifica_prohibidas(path: Path) -> Callable[[SceneSpec, str], list[Defect]]:
+    """`verify_scene` con el `check.forbidden` real y las prohibidas de la novela."""
+
+    def verifica(_s: SceneSpec, texto: str) -> list[Defect]:
+        with connection.reader(path) as con:
+            terminos = forbidden.read_terms(con)
+        return forbidden.check_forbidden(texto, terms=terminos)
+
+    return verifica
+
+
+def _prosa(spec: SceneSpec, *, con: str = "") -> str:
+    palabras = ["palabra"] * spec.output.target_words
+    if con:
+        palabras[5] = con
+    return " ".join(palabras)
+
+
+def _congelado_con(path: Path, palabra: str) -> int:
+    with connection.reader(path) as con:
+        return int(
+            con.execute(
+                "SELECT count(*) AS n FROM prose_chunk WHERE lower(text) LIKE ?", (f"%{palabra}%",)
+            ).fetchone()["n"]
+        )
+
+
+def test_forbidden_bloquea_la_escena_y_el_reintento_lleva_su_cita(tmp_path: Path) -> None:
+    """RF-236, RF-238, RF-240: S1, vuelve al Escritor con la cita, y consta en la traza."""
+    path, brief = _novela_con_prohibida(tmp_path)
+    previos: list[list[Defect]] = []
+
+    def escribe(spec: SceneSpec, anteriores: Sequence[Defect]) -> str:
+        previos.append(list(anteriores))
+        primera = spec.identity.scene_id == "c1e1" and len(previos) == 1
+        return _prosa(spec, con="LINIMENTO" if primera else "")
+
+    traza = Trace(tmp_path / "t.jsonl")
+    informe = run(
+        path,
+        brief,
+        _engine(write_scene=escribe, verify_scene=_verifica_prohibidas(path)),
+        novel_id="p",
+        chapters=2,
+        specs_for=_specs,
+        trace=traza,
+    )
+
+    assert informe.closed, informe.reason
+    assert informe.chapters[0].scenes[0].attempts == 2
+    [defecto] = previos[1]
+    assert defecto.kind == "check.forbidden" and defecto.evidence.quote == "LINIMENTO"
+    [registro] = traza.records("guardrail.match")
+    assert registro.fields == {
+        "chapter": 1,
+        "scene": 1,
+        "attempt": 1,
+        "term": "linimento",
+        "level": "cliente",
+        "quote": "LINIMENTO",
+        "offset": defecto.evidence.offset,
+        "decision": "reintentar",
+        "stage": "escena",
+    }
+    assert _congelado_con(path, "linimento") == 0
+
+
+def test_forbidden_agotada_la_escalera_aborta_con_termino_y_nivel(tmp_path: Path) -> None:
+    """RF-238: agotada la escalera, `RunAbortedError` nombra verificador, termino y nivel.
+
+    Y RI-03 lo muestra en `reason`: la ruta de estado lee el ultimo `work.close`.
+    """
+    settings = Settings(runs_dir=tmp_path)
+    brief = _brief().model_copy(update={"forbidden_words": ("linimento",)})
+    path = settings.novel_path("prohibida")
+    create_novel(path, brief, global_terms=())
+    escrituras: list[int] = []
+
+    def escribe(spec: SceneSpec, _p: Sequence[Defect]) -> str:
+        escrituras.append(1)
+        return _prosa(spec, con="linimentos")
+
+    traza = Trace(settings.trace_path("prohibida"))
+    with pytest.raises(RunAbortedError) as exc:
+        run(
+            path,
+            brief,
+            _engine(write_scene=escribe, verify_scene=_verifica_prohibidas(path)),
+            novel_id="prohibida",
+            chapters=2,
+            specs_for=_specs,
+            trace=traza,
+        )
+
+    motivo = str(exc.value)
+    assert "check.forbidden" in motivo and "«linimento»" in motivo and "cliente" in motivo
+    # La escalera es finita: tres intentos por escena, y cada peldano la repite.
+    assert 3 <= len(escrituras) <= 40
+    assert _congelado_con(path, "linimento") == 0
+    decisiones = {r.fields["decision"] for r in traza.records("guardrail.match")}
+    assert decisiones == {"reintentar", "abortar"}
+    [cierre] = traza.records("work.close")
+    assert cierre.fields["closed"] is False and "check.forbidden" in str(cierre.fields["reason"])
+    estado = _state(settings, "prohibida")
+    assert estado.closed is False and "«linimento»" in estado.reason
+
+
+def test_forbidden_antes_de_congelar_vuelve_a_reparacion(tmp_path: Path) -> None:
+    """RF-236: la segunda red. Un termino partido entre dos escenas no lo ve ninguna sola."""
+    path, brief = _novela_con_prohibida(tmp_path, "silencio sepulcral")
+    reparadas: list[list[str]] = []
+
+    def escribe(spec: SceneSpec, _p: Sequence[Defect]) -> str:
+        texto = _prosa(spec)
+        if spec.identity.scene_id == "c1e1":
+            return texto + " silencio"
+        if spec.identity.scene_id == "c1e2":
+            return "Sepulcral " + texto
+        return texto
+
+    def repara(_s: SceneSpec, texto: str, defectos: Sequence[Defect]) -> str:
+        reparadas.append([d.kind for d in defectos])
+        return texto.replace(" silencio", "")
+
+    traza = Trace(tmp_path / "t.jsonl")
+    informe = run(
+        path,
+        brief,
+        _engine(write_scene=escribe, verify_scene=_verifica_prohibidas(path), repair_scene=repara),
+        novel_id="p",
+        chapters=2,
+        specs_for=_specs,
+        trace=traza,
+    )
+
+    assert informe.chapters[0].frozen
+    assert reparadas[0] == ["check.forbidden"]
+    [registro] = traza.records("guardrail.match")
+    assert registro.fields["stage"] == "congelacion" and registro.fields["decision"] == "reparar"
+    assert registro.fields["scene"] == 1 and registro.fields["level"] == "cliente"
+    assert _congelado_con(path, "silencio") == 0
+
+
+def test_forbidden_antes_de_congelar_sin_reparacion_no_congela(tmp_path: Path) -> None:
+    """Un verificador de escena que no mira las prohibidas no basta para congelar una."""
+    path, brief = _novela_con_prohibida(tmp_path)
+    with pytest.raises(RunAbortedError, match=r"check\.forbidden"):
+        run(
+            path,
+            brief,
+            _engine(write_scene=lambda spec, _p: _prosa(spec, con="linimento")),
+            novel_id="p",
+            chapters=2,
+            specs_for=_specs,
+        )
+    assert _congelado_con(path, "linimento") == 0
+
+
+def test_la_traza_dice_cuantas_hay_por_nivel_y_que_colapso(tmp_path: Path) -> None:
+    """RF-239, D-91: un termino del cliente que ya era global se queda global."""
+    brief = _brief().model_copy(update={"forbidden_words": ("Linimento", "sangre")})
+    path = tmp_path / "n.sqlite"
+    create_novel(path, brief, global_terms=("linimento",))
+    traza = Trace(tmp_path / "t.jsonl")
+    run(path, brief, _engine(), novel_id="p", chapters=2, specs_for=_specs, trace=traza)
+    [niveles] = traza.records("guardrail.levels")
+    assert niveles.fields["levels"] == {"global": 1, "cliente": 1, "novela": 0}
+    assert niveles.fields["collapsed"] == ["linimento: cliente -> global"]
+
+
+# ------------------------------------------- longitud de capitulo (RF-232)
+
+
+def _dos_s2(textos: Sequence[str]) -> Anchored:
+    capitulo = "\n\n".join(textos)
+    return Anchored(
+        defects=tuple(
+            Defect(
+                kind="continuity.state",
+                severity=Severity.S2,
+                evidence=Evidence(quote=capitulo[:30], offset=0),
+                rule=f"matiz {i}",
+            )
+            for i in (1, 2)
+        ),
+        discarded=(),
+    )
+
+
+def test_un_capitulo_escrito_de_1200_palabras_no_pasa_la_puerta(novela: Path) -> None:
+    """RF-232, D-97: S2 de `check.format` que cuenta en el maximo de 2 S2 de la puerta.
+
+    Con los dos S2 del Continuista el capitulo corto ya no pasa, y `chapter.gate`
+    cita la cifra y el rango. Con la longitud en rango, los mismos dos pasan.
+    """
+    revisiones: list[int] = []
+
+    def continuista(_s: Sequence[SceneSpec], textos: Sequence[str]) -> Anchored:
+        revisiones.append(1)
+        return _dos_s2(textos) if len(revisiones) == 1 else Anchored(defects=(), discarded=())
+
+    traza = Trace(novela.with_suffix(".trace.jsonl"))
+    informe = run(
+        novela,
+        _brief(),
+        _engine(write_scene=lambda _s, _p: " ".join(["palabra"] * 600), review_chapter=continuista),
+        novel_id="p",
+        chapters=2,
+        specs_for=_specs,
+        trace=traza,
+    )
+
+    primera = traza.records("chapter.gate")[0]
+    assert primera.fields["passed"] is False and primera.fields["s2"] == 3
+    citas = " ".join(str(d) for d in primera.fields["defects"])  # type: ignore[union-attr]
+    assert "check.format" in citas and "1200 palabras" in citas and "1500-4000" in citas
+    assert traza.records("repair"), "fuera de la puerta, el capitulo va a reparacion"
+    assert informe.chapters[0].frozen
+
+
+def test_con_la_longitud_en_rango_los_mismos_dos_s2_pasan(novela: Path) -> None:
+    traza = Trace(novela.with_suffix(".trace.jsonl"))
+    run(
+        novela,
+        _brief(),
+        _engine(review_chapter=lambda _s, textos: _dos_s2(textos)),
+        novel_id="p",
+        chapters=2,
+        specs_for=_specs,
+        trace=traza,
+    )
+    primera = traza.records("chapter.gate")[0]
+    assert primera.fields["passed"] is True and primera.fields["s2"] == 2

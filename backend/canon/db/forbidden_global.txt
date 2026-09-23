@@ -1,0 +1,3 @@
+# Lista global de palabras prohibidas (RD-38, D-91). Un termino por linea.
+# Las lineas vacias y las que empiezan por # no cuentan. Nace vacia:
+# llenarla exige un origen que no sea gusto (srs-backend-v4.md, decisiones abiertas).

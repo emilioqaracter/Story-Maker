@@ -15,12 +15,14 @@ presupuestado.
 
 from __future__ import annotations
 
+import sqlite3
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Self
+from typing import Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from canon import brief_rules
+from canon import brief_rules, normalize
 from canon.db import connection
 from canon.events import log
 from canon.events.types import (
@@ -223,24 +225,88 @@ def load_brief(path: Path) -> Brief:
     return Brief.model_validate_json(row["body"])
 
 
-def create_novel(path: Path, brief: Brief) -> int:
+# ------------------------------------------------------ niveles de prohibidas
+
+#: RF-239, D-91. Los tres niveles del guardarrail, del mas fuerte al mas debil.
+#: `estilo` no es guardarrail: son los n-gramas de POE-12 que proscribe la
+#: congelacion, y los mira `check.repetition`, no `check.forbidden`.
+ForbiddenLevel = Literal["global", "cliente", "novela"]
+FORBIDDEN_LEVELS: tuple[ForbiddenLevel, ...] = ("global", "cliente", "novela")
+STYLE_LEVEL = "estilo"
+_RANK = {"global": 0, "cliente": 1, "novela": 2, STYLE_LEVEL: 3}
+
+#: RD-38. La lista global, versionada, un termino por linea. Se copia a cada
+#: novela al crearla para que el fichero de la novela siga siendo el estado
+#: completo (AGENTS.md §3.2). Nace vacia: no se inventa una lista.
+GLOBAL_FORBIDDEN = Path(__file__).parent / "db" / "forbidden_global.txt"
+
+
+def read_global_forbidden(path: Path = GLOBAL_FORBIDDEN) -> tuple[str, ...]:
+    """Los terminos de la lista global. Las lineas vacias y las `#` no cuentan."""
+    if not path.exists():
+        # Fallo cerrado: sin el fichero versionado no se sabe que falta.
+        raise FileNotFoundError(f"falta la lista global de prohibidas: {path}")
+    lineas = path.read_text(encoding="utf-8").splitlines()
+    return tuple(t.strip() for t in lineas if t.strip() and not t.strip().startswith("#"))
+
+
+def store_forbidden(
+    con: sqlite3.Connection, term: str, *, level: ForbiddenLevel, chapter: int = 0
+) -> str | None:
+    """Guarda una prohibida en su nivel. Devuelve el nivel en que queda.
+
+    D-91: un termino que ya esta en otro nivel se queda en el **mas fuerte**
+    --global, cliente, novela-- y uno que era un n-grama de estilo sube al
+    guardarrail. Dos terminos son el mismo si normalizan igual (RF-237):
+    «Cabrón» del cliente y «cabron» de la global son una fila, no dos. Quien
+    llama compara el nivel devuelto con el pedido para trazar el colapso.
+
+    `None` si el termino no tiene ninguna palabra: una prohibida en blanco no
+    prohibe nada. La usa la carga del brief y la usara la solicitud de cambio de
+    tipo `forbid` (RF-256), siempre con la conexion de escritura de canon.
+    """
+    limpio = term.strip().lower()
+    clave = normalize.key(limpio)
+    if not clave:
+        return None
+    for row in con.execute("SELECT term, level FROM proscribed"):
+        if normalize.key(row["term"]) != clave:
+            continue
+        actual = str(row["level"])
+        if _RANK[actual] <= _RANK[level]:
+            return actual
+        con.execute(
+            "UPDATE proscribed SET level = ?, kind = 'term' WHERE term = ?", (level, row["term"])
+        )
+        return level
+    con.execute(
+        "INSERT INTO proscribed (term, kind, level, added_chapter, added_at) "
+        "VALUES (?, 'term', ?, ?, datetime('now'))",
+        (limpio, level, chapter),
+    )
+    return level
+
+
+def create_novel(path: Path, brief: Brief, *, global_terms: Sequence[str] | None = None) -> int:
     """Crea el fichero de la novela y carga el brief. Devuelve cuantos eventos.
 
     Todo dentro de una transaccion: un brief a medias dejaria una novela con
     entidades sin relaciones y nadie sabria que falta.
+
+    `global_terms` sustituye a la lista global versionada; si no se pasa, se lee
+    `forbidden_global.txt` (RD-38).
     """
+    globales = read_global_forbidden() if global_terms is None else tuple(global_terms)
     connection.create(path)
     events = to_events(brief)
     with connection.canon_writer(path) as con:
         log.append(con, events)
         rebuild.rebuild(con)
-        # RF-202. Lo que quien encarga prohibio entra como proscrito desde la
-        # primera escena, y `check.repetition` lo detecta sin modelo (POE-12).
+        # RF-239, D-91. Las prohibidas entran por niveles desde la primera
+        # escena: la global primero, porque es la mas fuerte, y despues las que
+        # quien encarga dio en la entrevista. Las detecta `check.forbidden`.
+        for term in globales:
+            store_forbidden(con, term, level="global")
         for word in brief.forbidden_words:
-            if word.strip():
-                con.execute(
-                    "INSERT OR IGNORE INTO proscribed (term, kind, added_chapter, added_at) "
-                    "VALUES (?, 'brief', 0, datetime('now'))",
-                    (word.strip().lower(),),
-                )
+            store_forbidden(con, word, level="cliente")
     return len(events)
