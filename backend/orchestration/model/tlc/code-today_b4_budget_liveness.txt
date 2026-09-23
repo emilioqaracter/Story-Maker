@@ -1,38 +1,38 @@
 # code-today_b4_budget_liveness
-# commit: 2c5c044
-# fecha: 2026-09-23T16:13:44Z
+# commit: bd6e735
+# fecha: 2026-09-23T17:19:48Z
 # TLC: Version 2.19 of 08 August 2024
 # comando: java -XX:+UseParallelGC -DTLA-Library=<model> -cp tla2tools.jar tlc2.TLC -config code-today/b4_budget_liveness.cfg -workers auto run.tla   (en .)
 # esperado: No error has been found
 
 TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)
-Running breadth-first search Model-Checking with fp 76 and seed -8681218183096926142 with 4 workers on 4 cores with 3641MB heap and 64MB offheap memory [pid: 17880] (Windows 11 10.0 amd64, Eclipse Adoptium 21.0.12.1 x86_64, MSBDiskFPSet, DiskStateQueue).
-Parsing file C:\Users\student\Desktop\SM-tla\backend\orchestration\model\run.tla
+Running breadth-first search Model-Checking with fp 78 and seed -8653380526698598796 with 4 workers on 4 cores with 3641MB heap and 64MB offheap memory [pid: 12032] (Windows 11 10.0 amd64, Eclipse Adoptium 21.0.12.1 x86_64, MSBDiskFPSet, DiskStateQueue).
+Parsing file C:\Users\student\Desktop\SM-fix\backend\orchestration\model\run.tla
 Parsing file C:\Users\student\AppData\Local\Temp\Naturals.tla
 Parsing file C:\Users\student\AppData\Local\Temp\Sequences.tla
 Parsing file C:\Users\student\AppData\Local\Temp\FiniteSets.tla
-Parsing file C:\Users\student\Desktop\SM-tla\backend\orchestration\model\chapter.tla
+Parsing file C:\Users\student\Desktop\SM-fix\backend\orchestration\model\chapter.tla
 Semantic processing of module Naturals
 Semantic processing of module Sequences
 Semantic processing of module FiniteSets
 Semantic processing of module chapter
 Semantic processing of module run
-Starting... (2026-09-23 16:13:44)
+Starting... (2026-09-23 17:19:48)
 Implied-temporal checking--satisfiability problem has 2 branches.
 Computing initial states...
-Finished computing initial states: 1 distinct state generated at 2026-09-23 16:13:44.
-Checking 2 branches of temporal properties for the current state space with 67875 total distinct states at (2026-09-23 16:13:47)
-Finished checking temporal properties in 00s at 2026-09-23 16:13:48
-Progress(73) at 2026-09-23 16:13:48: 65,904 states generated (65,904 s/min), 34,019 distinct states found (34,019 ds/min), 1,536 states left on queue.
-Progress(254) at 2026-09-23 16:14:33: 1,685,760 states generated, 922,216 distinct states found, 0 states left on queue.
-Checking 2 branches of temporal properties for the complete state space with 1844432 total distinct states at (2026-09-23 16:14:33)
-Finished checking temporal properties in 22s at 2026-09-23 16:14:56
+Finished computing initial states: 1 distinct state generated at 2026-09-23 17:19:48.
+Checking 2 branches of temporal properties for the current state space with 54789 total distinct states at (2026-09-23 17:19:51)
+Finished checking temporal properties in 00s at 2026-09-23 17:19:52
+Progress(70) at 2026-09-23 17:19:52: 53,397 states generated (53,397 s/min), 27,462 distinct states found (27,462 ds/min), 1,319 states left on queue.
+Progress(255) at 2026-09-23 17:20:42: 1,681,505 states generated, 920,140 distinct states found, 0 states left on queue.
+Checking 2 branches of temporal properties for the complete state space with 1840280 total distinct states at (2026-09-23 17:20:42)
+Finished checking temporal properties in 29s at 2026-09-23 17:21:12
 Model checking completed. No error has been found.
   Estimates of the probability that TLC did not check all reachable states
   because two distinct states had the same fingerprint:
   calculated (optimistic):  val = 3.8E-8
-  based on the actual fingerprints:  val = 2.1E-8
-1685760 states generated, 922216 distinct states found, 0 states left on queue.
-The depth of the complete state graph search is 254.
+  based on the actual fingerprints:  val = 4.6E-8
+1681505 states generated, 920140 distinct states found, 0 states left on queue.
+The depth of the complete state graph search is 255.
 The average outdegree of the complete state graph is 1 (minimum is 0, the maximum 10 and the 95th percentile is 2).
-Finished in 01min 12s at (2026-09-23 16:14:56)
+Finished in 01min 24s at (2026-09-23 17:21:12)

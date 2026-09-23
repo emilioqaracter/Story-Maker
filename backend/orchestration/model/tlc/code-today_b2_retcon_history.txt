@@ -1,25 +1,25 @@
 # code-today_b2_retcon_history
-# commit: 2c5c044
-# fecha: 2026-09-23T16:13:37Z
+# commit: bd6e735
+# fecha: 2026-09-23T17:19:41Z
 # TLC: Version 2.19 of 08 August 2024
 # comando: java -XX:+UseParallelGC -DTLA-Library=<model> -cp tla2tools.jar tlc2.TLC -config code-today/b2_retcon_history.cfg -workers auto run.tla   (en .)
 # esperado: Invariant PreviousVersionPreserved is violated
 
 TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)
-Running breadth-first search Model-Checking with fp 49 and seed 6331726046825020491 with 4 workers on 4 cores with 3641MB heap and 64MB offheap memory [pid: 1444] (Windows 11 10.0 amd64, Eclipse Adoptium 21.0.12.1 x86_64, MSBDiskFPSet, DiskStateQueue).
-Parsing file C:\Users\student\Desktop\SM-tla\backend\orchestration\model\run.tla
+Running breadth-first search Model-Checking with fp 41 and seed 3054726108410128908 with 4 workers on 4 cores with 3641MB heap and 64MB offheap memory [pid: 7256] (Windows 11 10.0 amd64, Eclipse Adoptium 21.0.12.1 x86_64, MSBDiskFPSet, DiskStateQueue).
+Parsing file C:\Users\student\Desktop\SM-fix\backend\orchestration\model\run.tla
 Parsing file C:\Users\student\AppData\Local\Temp\Naturals.tla
 Parsing file C:\Users\student\AppData\Local\Temp\Sequences.tla
 Parsing file C:\Users\student\AppData\Local\Temp\FiniteSets.tla
-Parsing file C:\Users\student\Desktop\SM-tla\backend\orchestration\model\chapter.tla
+Parsing file C:\Users\student\Desktop\SM-fix\backend\orchestration\model\chapter.tla
 Semantic processing of module Naturals
 Semantic processing of module Sequences
 Semantic processing of module FiniteSets
 Semantic processing of module chapter
 Semantic processing of module run
-Starting... (2026-09-23 16:13:38)
+Starting... (2026-09-23 17:19:42)
 Computing initial states...
-Finished computing initial states: 1 distinct state generated at 2026-09-23 16:13:38.
+Finished computing initial states: 1 distinct state generated at 2026-09-23 17:19:42.
 Error: Invariant PreviousVersionPreserved is violated.
 Error: The behavior up to this point is:
 State 1: <Initial predicate>
@@ -59,7 +59,7 @@ State 1: <Initial predicate>
 /\ scenesOk = TRUE
 /\ drafts = <<"none", "none">>
 
-State 2: <Configure line 148, col 5 to line 151, col 104 of module run>
+State 2: <Configure line 149, col 5 to line 152, col 104 of module run>
 /\ phase = "Planning"
 /\ arcReplans = 0
 /\ vmax = <<0, 0>>
@@ -96,7 +96,44 @@ State 2: <Configure line 148, col 5 to line 151, col 104 of module run>
 /\ scenesOk = TRUE
 /\ drafts = <<"none", "none">>
 
-State 3: <PlanPasses line 180, col 5 to line 202, col 67 of module run>
+State 3: <PlanFails line 162, col 5 to line 166, col 104 of module run>
+/\ phase = "Planning"
+/\ arcReplans = 0
+/\ vmax = <<0, 0>>
+/\ freezes = <<0, 0, 0, 0, 0>>
+/\ spentCh = 0
+/\ repaired = FALSE
+/\ ckScene = 0
+/\ snap = <<<<0, 0, 0, 0, 0>>, <<0, 0, 0, 0, 0>>>>
+/\ cv = 1
+/\ deltaClean = FALSE
+/\ state = "Writing"
+/\ spentArc = 0
+/\ retcons = 0
+/\ hist = <<{}, {}, {}, {}, {}>>
+/\ jurorsDone = 0
+/\ scene = 1
+/\ revs = <<<<>>, <<>>, <<>>, <<>>, <<>>>>
+/\ gatesPassed = FALSE
+/\ juryPassed = FALSE
+/\ chapterAttempts = 0
+/\ chap = 1
+/\ canonWritten = FALSE
+/\ queue = 0
+/\ jurorsIn = 0
+/\ inFlight = 0
+/\ crashes = 0
+/\ ckCh = 1
+/\ planTries = 1
+/\ lastClosed = 0
+/\ sceneAttempts = 0
+/\ openS1 = FALSE
+/\ touched = {}
+/\ requested = 0
+/\ scenesOk = TRUE
+/\ drafts = <<"none", "none">>
+
+State 4: <PlanPasses line 181, col 5 to line 203, col 67 of module run>
 /\ phase = "Running"
 /\ arcReplans = 0
 /\ vmax = <<0, 0>>
@@ -133,7 +170,7 @@ State 3: <PlanPasses line 180, col 5 to line 202, col 67 of module run>
 /\ scenesOk = TRUE
 /\ drafts = <<"none", "none">>
 
-State 4: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
+State 5: <ChapterStep line 210, col 5 to line 221, col 85 of module run>
 /\ phase = "Running"
 /\ arcReplans = 0
 /\ vmax = <<0, 0>>
@@ -170,7 +207,7 @@ State 4: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
 /\ scenesOk = TRUE
 /\ drafts = <<"none", "none">>
 
-State 5: <ScenePasses line 224, col 5 to line 230, col 79 of module run>
+State 6: <ScenePasses line 225, col 5 to line 231, col 79 of module run>
 /\ phase = "Running"
 /\ arcReplans = 0
 /\ vmax = <<0, 0>>
@@ -207,7 +244,7 @@ State 5: <ScenePasses line 224, col 5 to line 230, col 79 of module run>
 /\ scenesOk = TRUE
 /\ drafts = <<"ok", "none">>
 
-State 6: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
+State 7: <ChapterStep line 210, col 5 to line 221, col 85 of module run>
 /\ phase = "Running"
 /\ arcReplans = 0
 /\ vmax = <<0, 0>>
@@ -244,44 +281,7 @@ State 6: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
 /\ scenesOk = TRUE
 /\ drafts = <<"ok", "none">>
 
-State 7: <AmendRequested line 373, col 5 to line 378, col 95 of module run>
-/\ phase = "Running"
-/\ arcReplans = 0
-/\ vmax = <<0, 0>>
-/\ freezes = <<0, 0, 0, 0, 0>>
-/\ spentCh = 0
-/\ repaired = FALSE
-/\ ckScene = 1
-/\ snap = <<<<0, 0, 0, 0, 0>>, <<0, 0, 0, 0, 0>>>>
-/\ cv = 1
-/\ deltaClean = FALSE
-/\ state = "SceneGate"
-/\ spentArc = 0
-/\ retcons = 0
-/\ hist = <<{}, {}, {}, {}, {}>>
-/\ jurorsDone = 0
-/\ scene = 2
-/\ revs = <<<<>>, <<>>, <<>>, <<>>, <<>>>>
-/\ gatesPassed = FALSE
-/\ juryPassed = FALSE
-/\ chapterAttempts = 0
-/\ chap = 1
-/\ canonWritten = FALSE
-/\ queue = 1
-/\ jurorsIn = 0
-/\ inFlight = 0
-/\ crashes = 0
-/\ ckCh = 1
-/\ planTries = 0
-/\ lastClosed = 1
-/\ sceneAttempts = 0
-/\ openS1 = FALSE
-/\ touched = {}
-/\ requested = 1
-/\ scenesOk = TRUE
-/\ drafts = <<"ok", "none">>
-
-State 8: <ScenePasses line 224, col 5 to line 230, col 79 of module run>
+State 8: <ScenePasses line 225, col 5 to line 231, col 79 of module run>
 /\ phase = "Running"
 /\ arcReplans = 0
 /\ vmax = <<0, 0>>
@@ -304,7 +304,7 @@ State 8: <ScenePasses line 224, col 5 to line 230, col 79 of module run>
 /\ chapterAttempts = 0
 /\ chap = 1
 /\ canonWritten = FALSE
-/\ queue = 1
+/\ queue = 0
 /\ jurorsIn = 0
 /\ inFlight = 0
 /\ crashes = 0
@@ -314,11 +314,11 @@ State 8: <ScenePasses line 224, col 5 to line 230, col 79 of module run>
 /\ sceneAttempts = 0
 /\ openS1 = FALSE
 /\ touched = {}
-/\ requested = 1
+/\ requested = 0
 /\ scenesOk = TRUE
 /\ drafts = <<"ok", "ok">>
 
-State 9: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
+State 9: <ChapterStep line 210, col 5 to line 221, col 85 of module run>
 /\ phase = "Running"
 /\ arcReplans = 0
 /\ vmax = <<0, 0>>
@@ -341,7 +341,7 @@ State 9: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
 /\ chapterAttempts = 0
 /\ chap = 1
 /\ canonWritten = FALSE
-/\ queue = 1
+/\ queue = 0
 /\ jurorsIn = 0
 /\ inFlight = 0
 /\ crashes = 0
@@ -351,11 +351,11 @@ State 9: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
 /\ sceneAttempts = 0
 /\ openS1 = FALSE
 /\ touched = {}
-/\ requested = 1
+/\ requested = 0
 /\ scenesOk = TRUE
 /\ drafts = <<"ok", "ok">>
 
-State 10: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
+State 10: <ChapterStep line 210, col 5 to line 221, col 85 of module run>
 /\ phase = "Running"
 /\ arcReplans = 0
 /\ vmax = <<0, 0>>
@@ -378,7 +378,7 @@ State 10: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
 /\ chapterAttempts = 0
 /\ chap = 1
 /\ canonWritten = FALSE
-/\ queue = 1
+/\ queue = 0
 /\ jurorsIn = 1
 /\ inFlight = 11500
 /\ crashes = 0
@@ -388,11 +388,85 @@ State 10: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
 /\ sceneAttempts = 0
 /\ openS1 = FALSE
 /\ touched = {}
-/\ requested = 1
+/\ requested = 0
 /\ scenesOk = TRUE
 /\ drafts = <<"ok", "ok">>
 
-State 11: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
+State 11: <ChapterStep line 210, col 5 to line 221, col 85 of module run>
+/\ phase = "Running"
+/\ arcReplans = 0
+/\ vmax = <<0, 0>>
+/\ freezes = <<0, 0, 0, 0, 0>>
+/\ spentCh = 0
+/\ repaired = FALSE
+/\ ckScene = 2
+/\ snap = <<<<0, 0, 0, 0, 0>>, <<0, 0, 0, 0, 0>>>>
+/\ cv = 1
+/\ deltaClean = FALSE
+/\ state = "Judging"
+/\ spentArc = 0
+/\ retcons = 0
+/\ hist = <<{}, {}, {}, {}, {}>>
+/\ jurorsDone = 0
+/\ scene = 2
+/\ revs = <<<<>>, <<>>, <<>>, <<>>, <<>>>>
+/\ gatesPassed = TRUE
+/\ juryPassed = FALSE
+/\ chapterAttempts = 0
+/\ chap = 1
+/\ canonWritten = FALSE
+/\ queue = 0
+/\ jurorsIn = 2
+/\ inFlight = 23000
+/\ crashes = 0
+/\ ckCh = 1
+/\ planTries = 0
+/\ lastClosed = 2
+/\ sceneAttempts = 0
+/\ openS1 = FALSE
+/\ touched = {}
+/\ requested = 0
+/\ scenesOk = TRUE
+/\ drafts = <<"ok", "ok">>
+
+State 12: <ChapterStep line 210, col 5 to line 221, col 85 of module run>
+/\ phase = "Running"
+/\ arcReplans = 0
+/\ vmax = <<0, 0>>
+/\ freezes = <<0, 0, 0, 0, 0>>
+/\ spentCh = 0
+/\ repaired = FALSE
+/\ ckScene = 2
+/\ snap = <<<<0, 0, 0, 0, 0>>, <<0, 0, 0, 0, 0>>>>
+/\ cv = 1
+/\ deltaClean = FALSE
+/\ state = "Judging"
+/\ spentArc = 0
+/\ retcons = 0
+/\ hist = <<{}, {}, {}, {}, {}>>
+/\ jurorsDone = 0
+/\ scene = 2
+/\ revs = <<<<>>, <<>>, <<>>, <<>>, <<>>>>
+/\ gatesPassed = TRUE
+/\ juryPassed = FALSE
+/\ chapterAttempts = 0
+/\ chap = 1
+/\ canonWritten = FALSE
+/\ queue = 0
+/\ jurorsIn = 3
+/\ inFlight = 34500
+/\ crashes = 0
+/\ ckCh = 1
+/\ planTries = 0
+/\ lastClosed = 2
+/\ sceneAttempts = 0
+/\ openS1 = FALSE
+/\ touched = {}
+/\ requested = 0
+/\ scenesOk = TRUE
+/\ drafts = <<"ok", "ok">>
+
+State 13: <AmendRequested line 378, col 5 to line 383, col 95 of module run>
 /\ phase = "Running"
 /\ arcReplans = 0
 /\ vmax = <<0, 0>>
@@ -416,8 +490,8 @@ State 11: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
 /\ chap = 1
 /\ canonWritten = FALSE
 /\ queue = 1
-/\ jurorsIn = 2
-/\ inFlight = 23000
+/\ jurorsIn = 3
+/\ inFlight = 34500
 /\ crashes = 0
 /\ ckCh = 1
 /\ planTries = 0
@@ -429,7 +503,7 @@ State 11: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
 /\ scenesOk = TRUE
 /\ drafts = <<"ok", "ok">>
 
-State 12: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
+State 14: <ChapterStep line 210, col 5 to line 221, col 85 of module run>
 /\ phase = "Running"
 /\ arcReplans = 0
 /\ vmax = <<0, 0>>
@@ -453,43 +527,6 @@ State 12: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
 /\ chap = 1
 /\ canonWritten = FALSE
 /\ queue = 1
-/\ jurorsIn = 1
-/\ inFlight = 11500
-/\ crashes = 0
-/\ ckCh = 1
-/\ planTries = 0
-/\ lastClosed = 2
-/\ sceneAttempts = 0
-/\ openS1 = FALSE
-/\ touched = {}
-/\ requested = 1
-/\ scenesOk = TRUE
-/\ drafts = <<"ok", "ok">>
-
-State 13: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
-/\ phase = "Running"
-/\ arcReplans = 0
-/\ vmax = <<0, 0>>
-/\ freezes = <<0, 0, 0, 0, 0>>
-/\ spentCh = 0
-/\ repaired = FALSE
-/\ ckScene = 2
-/\ snap = <<<<0, 0, 0, 0, 0>>, <<0, 0, 0, 0, 0>>>>
-/\ cv = 1
-/\ deltaClean = FALSE
-/\ state = "Judging"
-/\ spentArc = 0
-/\ retcons = 0
-/\ hist = <<{}, {}, {}, {}, {}>>
-/\ jurorsDone = 1
-/\ scene = 2
-/\ revs = <<<<>>, <<>>, <<>>, <<>>, <<>>>>
-/\ gatesPassed = TRUE
-/\ juryPassed = FALSE
-/\ chapterAttempts = 0
-/\ chap = 1
-/\ canonWritten = FALSE
-/\ queue = 1
 /\ jurorsIn = 2
 /\ inFlight = 23000
 /\ crashes = 0
@@ -503,7 +540,7 @@ State 13: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
 /\ scenesOk = TRUE
 /\ drafts = <<"ok", "ok">>
 
-State 14: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
+State 15: <ChapterStep line 210, col 5 to line 221, col 85 of module run>
 /\ phase = "Running"
 /\ arcReplans = 0
 /\ vmax = <<0, 0>>
@@ -540,7 +577,7 @@ State 14: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
 /\ scenesOk = TRUE
 /\ drafts = <<"ok", "ok">>
 
-State 15: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
+State 16: <ChapterStep line 210, col 5 to line 221, col 85 of module run>
 /\ phase = "Running"
 /\ arcReplans = 0
 /\ vmax = <<0, 0>>
@@ -577,7 +614,7 @@ State 15: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
 /\ scenesOk = TRUE
 /\ drafts = <<"ok", "ok">>
 
-State 16: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
+State 17: <ChapterStep line 210, col 5 to line 221, col 85 of module run>
 /\ phase = "Running"
 /\ arcReplans = 0
 /\ vmax = <<0, 0>>
@@ -614,7 +651,7 @@ State 16: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
 /\ scenesOk = TRUE
 /\ drafts = <<"ok", "ok">>
 
-State 17: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
+State 18: <ChapterStep line 210, col 5 to line 221, col 85 of module run>
 /\ phase = "Running"
 /\ arcReplans = 0
 /\ vmax = <<0, 0>>
@@ -651,7 +688,7 @@ State 17: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
 /\ scenesOk = TRUE
 /\ drafts = <<"ok", "ok">>
 
-State 18: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
+State 19: <ChapterStep line 210, col 5 to line 221, col 85 of module run>
 /\ phase = "Running"
 /\ arcReplans = 0
 /\ vmax = <<0, 0>>
@@ -688,7 +725,7 @@ State 18: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
 /\ scenesOk = TRUE
 /\ drafts = <<"ok", "ok">>
 
-State 19: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
+State 20: <ChapterStep line 210, col 5 to line 221, col 85 of module run>
 /\ phase = "Running"
 /\ arcReplans = 0
 /\ vmax = <<0, 0>>
@@ -725,7 +762,7 @@ State 19: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
 /\ scenesOk = TRUE
 /\ drafts = <<"ok", "ok">>
 
-State 20: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
+State 21: <ChapterStep line 210, col 5 to line 221, col 85 of module run>
 /\ phase = "Running"
 /\ arcReplans = 0
 /\ vmax = <<0, 0>>
@@ -762,7 +799,7 @@ State 20: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
 /\ scenesOk = TRUE
 /\ drafts = <<"ok", "ok">>
 
-State 21: <Freeze line 274, col 5 to line 281, col 73 of module run>
+State 22: <Freeze line 277, col 5 to line 284, col 73 of module run>
 /\ phase = "Running"
 /\ arcReplans = 0
 /\ vmax = <<0, 0>>
@@ -799,7 +836,7 @@ State 21: <Freeze line 274, col 5 to line 281, col 73 of module run>
 /\ scenesOk = TRUE
 /\ drafts = <<"none", "none">>
 
-State 22: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
+State 23: <ChapterStep line 210, col 5 to line 221, col 85 of module run>
 /\ phase = "Running"
 /\ arcReplans = 0
 /\ vmax = <<0, 0>>
@@ -836,7 +873,7 @@ State 22: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
 /\ scenesOk = TRUE
 /\ drafts = <<"none", "none">>
 
-State 23: <SaveNext line 302, col 5 to line 307, col 79 of module run>
+State 24: <SaveNext line 305, col 5 to line 310, col 79 of module run>
 /\ phase = "Between"
 /\ arcReplans = 0
 /\ vmax = <<0, 0>>
@@ -873,7 +910,7 @@ State 23: <SaveNext line 302, col 5 to line 307, col 79 of module run>
 /\ scenesOk = TRUE
 /\ drafts = <<"none", "none">>
 
-State 24: <AmendApplied line 387, col 5 to line 398, col 69 of module run>
+State 25: <AmendApplied line 392, col 5 to line 403, col 69 of module run>
 /\ phase = "Between"
 /\ arcReplans = 0
 /\ vmax = <<0, 1>>
@@ -910,7 +947,7 @@ State 24: <AmendApplied line 387, col 5 to line 398, col 69 of module run>
 /\ scenesOk = TRUE
 /\ drafts = <<"none", "none">>
 
-State 25: <StartChapter line 311, col 5 to line 321, col 54 of module run>
+State 26: <StartChapter line 314, col 5 to line 324, col 54 of module run>
 /\ phase = "Running"
 /\ arcReplans = 0
 /\ vmax = <<0, 1>>
@@ -947,7 +984,7 @@ State 25: <StartChapter line 311, col 5 to line 321, col 54 of module run>
 /\ scenesOk = TRUE
 /\ drafts = <<"none", "none">>
 
-State 26: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
+State 27: <ChapterStep line 210, col 5 to line 221, col 85 of module run>
 /\ phase = "Running"
 /\ arcReplans = 0
 /\ vmax = <<0, 1>>
@@ -984,7 +1021,7 @@ State 26: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
 /\ scenesOk = TRUE
 /\ drafts = <<"none", "none">>
 
-State 27: <ScenePasses line 224, col 5 to line 230, col 79 of module run>
+State 28: <ScenePasses line 225, col 5 to line 231, col 79 of module run>
 /\ phase = "Running"
 /\ arcReplans = 0
 /\ vmax = <<0, 1>>
@@ -1021,7 +1058,7 @@ State 27: <ScenePasses line 224, col 5 to line 230, col 79 of module run>
 /\ scenesOk = TRUE
 /\ drafts = <<"ok", "none">>
 
-State 28: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
+State 29: <ChapterStep line 210, col 5 to line 221, col 85 of module run>
 /\ phase = "Running"
 /\ arcReplans = 0
 /\ vmax = <<0, 1>>
@@ -1058,7 +1095,7 @@ State 28: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
 /\ scenesOk = TRUE
 /\ drafts = <<"ok", "none">>
 
-State 29: <ScenePasses line 224, col 5 to line 230, col 79 of module run>
+State 30: <ScenePasses line 225, col 5 to line 231, col 79 of module run>
 /\ phase = "Running"
 /\ arcReplans = 0
 /\ vmax = <<0, 1>>
@@ -1095,7 +1132,7 @@ State 29: <ScenePasses line 224, col 5 to line 230, col 79 of module run>
 /\ scenesOk = TRUE
 /\ drafts = <<"ok", "ok">>
 
-State 30: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
+State 31: <ChapterStep line 210, col 5 to line 221, col 85 of module run>
 /\ phase = "Running"
 /\ arcReplans = 0
 /\ vmax = <<0, 1>>
@@ -1132,7 +1169,7 @@ State 30: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
 /\ scenesOk = TRUE
 /\ drafts = <<"ok", "ok">>
 
-State 31: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
+State 32: <ChapterStep line 210, col 5 to line 221, col 85 of module run>
 /\ phase = "Running"
 /\ arcReplans = 0
 /\ vmax = <<0, 1>>
@@ -1169,7 +1206,7 @@ State 31: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
 /\ scenesOk = TRUE
 /\ drafts = <<"ok", "ok">>
 
-State 32: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
+State 33: <ChapterStep line 210, col 5 to line 221, col 85 of module run>
 /\ phase = "Running"
 /\ arcReplans = 0
 /\ vmax = <<0, 1>>
@@ -1206,7 +1243,7 @@ State 32: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
 /\ scenesOk = TRUE
 /\ drafts = <<"ok", "ok">>
 
-State 33: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
+State 34: <ChapterStep line 210, col 5 to line 221, col 85 of module run>
 /\ phase = "Running"
 /\ arcReplans = 0
 /\ vmax = <<0, 1>>
@@ -1243,7 +1280,7 @@ State 33: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
 /\ scenesOk = TRUE
 /\ drafts = <<"ok", "ok">>
 
-State 34: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
+State 35: <ChapterStep line 210, col 5 to line 221, col 85 of module run>
 /\ phase = "Running"
 /\ arcReplans = 0
 /\ vmax = <<0, 1>>
@@ -1280,7 +1317,7 @@ State 34: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
 /\ scenesOk = TRUE
 /\ drafts = <<"ok", "ok">>
 
-State 35: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
+State 36: <ChapterStep line 210, col 5 to line 221, col 85 of module run>
 /\ phase = "Running"
 /\ arcReplans = 0
 /\ vmax = <<0, 1>>
@@ -1317,7 +1354,7 @@ State 35: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
 /\ scenesOk = TRUE
 /\ drafts = <<"ok", "ok">>
 
-State 36: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
+State 37: <ChapterStep line 210, col 5 to line 221, col 85 of module run>
 /\ phase = "Running"
 /\ arcReplans = 0
 /\ vmax = <<0, 1>>
@@ -1354,7 +1391,7 @@ State 36: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
 /\ scenesOk = TRUE
 /\ drafts = <<"ok", "ok">>
 
-State 37: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
+State 38: <ChapterStep line 210, col 5 to line 221, col 85 of module run>
 /\ phase = "Running"
 /\ arcReplans = 0
 /\ vmax = <<0, 1>>
@@ -1391,7 +1428,7 @@ State 37: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
 /\ scenesOk = TRUE
 /\ drafts = <<"ok", "ok">>
 
-State 38: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
+State 39: <ChapterStep line 210, col 5 to line 221, col 85 of module run>
 /\ phase = "Running"
 /\ arcReplans = 0
 /\ vmax = <<0, 1>>
@@ -1428,7 +1465,7 @@ State 38: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
 /\ scenesOk = TRUE
 /\ drafts = <<"ok", "ok">>
 
-State 39: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
+State 40: <ChapterStep line 210, col 5 to line 221, col 85 of module run>
 /\ phase = "Running"
 /\ arcReplans = 0
 /\ vmax = <<0, 1>>
@@ -1465,7 +1502,7 @@ State 39: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
 /\ scenesOk = TRUE
 /\ drafts = <<"ok", "ok">>
 
-State 40: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
+State 41: <ChapterStep line 210, col 5 to line 221, col 85 of module run>
 /\ phase = "Running"
 /\ arcReplans = 0
 /\ vmax = <<0, 1>>
@@ -1502,7 +1539,7 @@ State 40: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
 /\ scenesOk = TRUE
 /\ drafts = <<"ok", "ok">>
 
-State 41: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
+State 42: <ChapterStep line 210, col 5 to line 221, col 85 of module run>
 /\ phase = "Running"
 /\ arcReplans = 0
 /\ vmax = <<0, 1>>
@@ -1539,7 +1576,7 @@ State 41: <ChapterStep line 209, col 5 to line 220, col 85 of module run>
 /\ scenesOk = TRUE
 /\ drafts = <<"ok", "ok">>
 
-State 42: <RetconApplied line 256, col 5 to line 261, col 83 of module run>
+State 43: <RetconApplied line 259, col 5 to line 264, col 83 of module run>
 /\ phase = "Running"
 /\ arcReplans = 0
 /\ vmax = <<0, 1>>
@@ -1576,7 +1613,7 @@ State 42: <RetconApplied line 256, col 5 to line 261, col 83 of module run>
 /\ scenesOk = TRUE
 /\ drafts = <<"ok", "ok">>
 
-11764 states generated, 5542 distinct states found, 373 states left on queue.
-The depth of the complete state graph search is 46.
-The average outdegree of the complete state graph is 1 (minimum is 0, the maximum 4 and the 95th percentile is 2).
-Finished in 01s at (2026-09-23 16:13:39)
+11164 states generated, 5273 distinct states found, 346 states left on queue.
+The depth of the complete state graph search is 47.
+The average outdegree of the complete state graph is 1 (minimum is 0, the maximum 4 and the 95th percentile is 3).
+Finished in 01s at (2026-09-23 17:19:43)

@@ -1,25 +1,25 @@
 # mutation_m1_freeze_sin_puerta
-# commit: 2c5c044
-# fecha: 2026-09-23T16:14:56Z
+# commit: bd6e735
+# fecha: 2026-09-23T17:21:13Z
 # TLC: Version 2.19 of 08 August 2024
 # comando: java -XX:+UseParallelGC -DTLA-Library=<model> -cp tla2tools.jar tlc2.TLC -config m1_freeze_sin_puerta.cfg -workers auto m1_freeze_sin_puerta.tla   (en mutations)
 # esperado: Invariant NeverPublishUngated is violated
 
 TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)
-Running breadth-first search Model-Checking with fp 59 and seed 1637963077309236628 with 4 workers on 4 cores with 3641MB heap and 64MB offheap memory [pid: 11952] (Windows 11 10.0 amd64, Eclipse Adoptium 21.0.12.1 x86_64, MSBDiskFPSet, DiskStateQueue).
-Parsing file C:\Users\student\Desktop\SM-tla\backend\orchestration\model\mutations\m1_freeze_sin_puerta.tla
+Running breadth-first search Model-Checking with fp 125 and seed 1995200190766241624 with 4 workers on 4 cores with 3641MB heap and 64MB offheap memory [pid: 2276] (Windows 11 10.0 amd64, Eclipse Adoptium 21.0.12.1 x86_64, MSBDiskFPSet, DiskStateQueue).
+Parsing file C:\Users\student\Desktop\SM-fix\backend\orchestration\model\mutations\m1_freeze_sin_puerta.tla
 Parsing file C:\Users\student\AppData\Local\Temp\Naturals.tla
 Parsing file C:\Users\student\AppData\Local\Temp\Sequences.tla
 Parsing file C:\Users\student\AppData\Local\Temp\FiniteSets.tla
-Parsing file C:\Users\student\Desktop\SM-tla\backend\orchestration\model\chapter.tla
+Parsing file C:\Users\student\Desktop\SM-fix\backend\orchestration\model\chapter.tla
 Semantic processing of module Naturals
 Semantic processing of module Sequences
 Semantic processing of module FiniteSets
 Semantic processing of module chapter
 Semantic processing of module m1_freeze_sin_puerta
-Starting... (2026-09-23 16:14:57)
+Starting... (2026-09-23 17:21:13)
 Computing initial states...
-Finished computing initial states: 1 distinct state generated at 2026-09-23 16:14:57.
+Finished computing initial states: 1 distinct state generated at 2026-09-23 17:21:13.
 Error: Invariant NeverPublishUngated is violated.
 Error: The behavior up to this point is:
 State 1: <Initial predicate>
@@ -96,44 +96,7 @@ State 2: <Configure line 150, col 5 to line 153, col 104 of module m1_freeze_sin
 /\ scenesOk = TRUE
 /\ drafts = <<"none", "none">>
 
-State 3: <PlanFails line 163, col 5 to line 167, col 104 of module m1_freeze_sin_puerta>
-/\ phase = "Planning"
-/\ arcReplans = 0
-/\ vmax = <<0, 0>>
-/\ freezes = <<0, 0, 0, 0, 0>>
-/\ spentCh = 0
-/\ repaired = FALSE
-/\ ckScene = 0
-/\ snap = <<<<0, 0, 0, 0, 0>>, <<0, 0, 0, 0, 0>>>>
-/\ cv = 1
-/\ deltaClean = FALSE
-/\ state = "Writing"
-/\ spentArc = 0
-/\ retcons = 0
-/\ hist = <<{}, {}, {}, {}, {}>>
-/\ jurorsDone = 0
-/\ scene = 1
-/\ revs = <<<<>>, <<>>, <<>>, <<>>, <<>>>>
-/\ gatesPassed = FALSE
-/\ juryPassed = FALSE
-/\ chapterAttempts = 0
-/\ chap = 1
-/\ canonWritten = FALSE
-/\ queue = 0
-/\ jurorsIn = 0
-/\ inFlight = 0
-/\ crashes = 0
-/\ ckCh = 1
-/\ planTries = 1
-/\ lastClosed = 0
-/\ sceneAttempts = 0
-/\ openS1 = FALSE
-/\ touched = {}
-/\ requested = 0
-/\ scenesOk = TRUE
-/\ drafts = <<"none", "none">>
-
-State 4: <PlanPasses line 182, col 5 to line 204, col 67 of module m1_freeze_sin_puerta>
+State 3: <PlanPasses line 182, col 5 to line 204, col 67 of module m1_freeze_sin_puerta>
 /\ phase = "Running"
 /\ arcReplans = 0
 /\ vmax = <<0, 0>>
@@ -170,7 +133,7 @@ State 4: <PlanPasses line 182, col 5 to line 204, col 67 of module m1_freeze_sin
 /\ scenesOk = TRUE
 /\ drafts = <<"none", "none">>
 
-State 5: <ChapterStep line 229, col 5 to line 240, col 85 of module m1_freeze_sin_puerta>
+State 4: <ChapterStep line 229, col 5 to line 240, col 85 of module m1_freeze_sin_puerta>
 /\ phase = "Running"
 /\ arcReplans = 0
 /\ vmax = <<0, 0>>
@@ -207,7 +170,7 @@ State 5: <ChapterStep line 229, col 5 to line 240, col 85 of module m1_freeze_si
 /\ scenesOk = TRUE
 /\ drafts = <<"none", "none">>
 
-State 6: <ScenePasses line 244, col 5 to line 250, col 79 of module m1_freeze_sin_puerta>
+State 5: <ScenePasses line 244, col 5 to line 250, col 79 of module m1_freeze_sin_puerta>
 /\ phase = "Running"
 /\ arcReplans = 0
 /\ vmax = <<0, 0>>
@@ -244,7 +207,7 @@ State 6: <ScenePasses line 244, col 5 to line 250, col 79 of module m1_freeze_si
 /\ scenesOk = TRUE
 /\ drafts = <<"ok", "none">>
 
-State 7: <ChapterStep line 229, col 5 to line 240, col 85 of module m1_freeze_sin_puerta>
+State 6: <ChapterStep line 229, col 5 to line 240, col 85 of module m1_freeze_sin_puerta>
 /\ phase = "Running"
 /\ arcReplans = 0
 /\ vmax = <<0, 0>>
@@ -281,7 +244,7 @@ State 7: <ChapterStep line 229, col 5 to line 240, col 85 of module m1_freeze_si
 /\ scenesOk = TRUE
 /\ drafts = <<"ok", "none">>
 
-State 8: <ScenePasses line 244, col 5 to line 250, col 79 of module m1_freeze_sin_puerta>
+State 7: <ScenePasses line 244, col 5 to line 250, col 79 of module m1_freeze_sin_puerta>
 /\ phase = "Running"
 /\ arcReplans = 0
 /\ vmax = <<0, 0>>
@@ -300,6 +263,43 @@ State 8: <ScenePasses line 244, col 5 to line 250, col 79 of module m1_freeze_si
 /\ scene = 2
 /\ revs = <<<<>>, <<>>, <<>>, <<>>, <<>>>>
 /\ gatesPassed = FALSE
+/\ juryPassed = FALSE
+/\ chapterAttempts = 0
+/\ chap = 1
+/\ canonWritten = FALSE
+/\ queue = 0
+/\ jurorsIn = 0
+/\ inFlight = 0
+/\ crashes = 0
+/\ ckCh = 1
+/\ planTries = 0
+/\ lastClosed = 2
+/\ sceneAttempts = 0
+/\ openS1 = FALSE
+/\ touched = {}
+/\ requested = 0
+/\ scenesOk = TRUE
+/\ drafts = <<"ok", "ok">>
+
+State 8: <ChapterStep line 229, col 5 to line 240, col 85 of module m1_freeze_sin_puerta>
+/\ phase = "Running"
+/\ arcReplans = 0
+/\ vmax = <<0, 0>>
+/\ freezes = <<0, 0, 0, 0, 0>>
+/\ spentCh = 0
+/\ repaired = FALSE
+/\ ckScene = 2
+/\ snap = <<<<0, 0, 0, 0, 0>>, <<0, 0, 0, 0, 0>>>>
+/\ cv = 1
+/\ deltaClean = FALSE
+/\ state = "Judging"
+/\ spentArc = 0
+/\ retcons = 0
+/\ hist = <<{}, {}, {}, {}, {}>>
+/\ jurorsDone = 0
+/\ scene = 2
+/\ revs = <<<<>>, <<>>, <<>>, <<>>, <<>>>>
+/\ gatesPassed = TRUE
 /\ juryPassed = FALSE
 /\ chapterAttempts = 0
 /\ chap = 1
@@ -342,8 +342,8 @@ State 9: <ChapterStep line 229, col 5 to line 240, col 85 of module m1_freeze_si
 /\ chap = 1
 /\ canonWritten = FALSE
 /\ queue = 0
-/\ jurorsIn = 0
-/\ inFlight = 0
+/\ jurorsIn = 1
+/\ inFlight = 11500
 /\ crashes = 0
 /\ ckCh = 1
 /\ planTries = 0
@@ -370,7 +370,7 @@ State 10: <ChapterStep line 229, col 5 to line 240, col 85 of module m1_freeze_s
 /\ spentArc = 0
 /\ retcons = 0
 /\ hist = <<{}, {}, {}, {}, {}>>
-/\ jurorsDone = 0
+/\ jurorsDone = 1
 /\ scene = 2
 /\ revs = <<<<>>, <<>>, <<>>, <<>>, <<>>>>
 /\ gatesPassed = TRUE
@@ -379,8 +379,8 @@ State 10: <ChapterStep line 229, col 5 to line 240, col 85 of module m1_freeze_s
 /\ chap = 1
 /\ canonWritten = FALSE
 /\ queue = 0
-/\ jurorsIn = 1
-/\ inFlight = 11500
+/\ jurorsIn = 0
+/\ inFlight = 0
 /\ crashes = 0
 /\ ckCh = 1
 /\ planTries = 0
@@ -407,7 +407,7 @@ State 11: <ChapterStep line 229, col 5 to line 240, col 85 of module m1_freeze_s
 /\ spentArc = 0
 /\ retcons = 0
 /\ hist = <<{}, {}, {}, {}, {}>>
-/\ jurorsDone = 0
+/\ jurorsDone = 1
 /\ scene = 2
 /\ revs = <<<<>>, <<>>, <<>>, <<>>, <<>>>>
 /\ gatesPassed = TRUE
@@ -416,8 +416,8 @@ State 11: <ChapterStep line 229, col 5 to line 240, col 85 of module m1_freeze_s
 /\ chap = 1
 /\ canonWritten = FALSE
 /\ queue = 0
-/\ jurorsIn = 2
-/\ inFlight = 23000
+/\ jurorsIn = 1
+/\ inFlight = 11500
 /\ crashes = 0
 /\ ckCh = 1
 /\ planTries = 0
@@ -430,43 +430,6 @@ State 11: <ChapterStep line 229, col 5 to line 240, col 85 of module m1_freeze_s
 /\ drafts = <<"ok", "ok">>
 
 State 12: <ChapterStep line 229, col 5 to line 240, col 85 of module m1_freeze_sin_puerta>
-/\ phase = "Running"
-/\ arcReplans = 0
-/\ vmax = <<0, 0>>
-/\ freezes = <<0, 0, 0, 0, 0>>
-/\ spentCh = 0
-/\ repaired = FALSE
-/\ ckScene = 2
-/\ snap = <<<<0, 0, 0, 0, 0>>, <<0, 0, 0, 0, 0>>>>
-/\ cv = 1
-/\ deltaClean = FALSE
-/\ state = "Judging"
-/\ spentArc = 0
-/\ retcons = 0
-/\ hist = <<{}, {}, {}, {}, {}>>
-/\ jurorsDone = 0
-/\ scene = 2
-/\ revs = <<<<>>, <<>>, <<>>, <<>>, <<>>>>
-/\ gatesPassed = TRUE
-/\ juryPassed = FALSE
-/\ chapterAttempts = 0
-/\ chap = 1
-/\ canonWritten = FALSE
-/\ queue = 0
-/\ jurorsIn = 3
-/\ inFlight = 34500
-/\ crashes = 0
-/\ ckCh = 1
-/\ planTries = 0
-/\ lastClosed = 2
-/\ sceneAttempts = 0
-/\ openS1 = FALSE
-/\ touched = {}
-/\ requested = 0
-/\ scenesOk = TRUE
-/\ drafts = <<"ok", "ok">>
-
-State 13: <ChapterStep line 229, col 5 to line 240, col 85 of module m1_freeze_sin_puerta>
 /\ phase = "Running"
 /\ arcReplans = 0
 /\ vmax = <<0, 0>>
@@ -503,7 +466,7 @@ State 13: <ChapterStep line 229, col 5 to line 240, col 85 of module m1_freeze_s
 /\ scenesOk = TRUE
 /\ drafts = <<"ok", "ok">>
 
-State 14: <ChapterStep line 229, col 5 to line 240, col 85 of module m1_freeze_sin_puerta>
+State 13: <ChapterStep line 229, col 5 to line 240, col 85 of module m1_freeze_sin_puerta>
 /\ phase = "Running"
 /\ arcReplans = 0
 /\ vmax = <<0, 0>>
@@ -540,7 +503,7 @@ State 14: <ChapterStep line 229, col 5 to line 240, col 85 of module m1_freeze_s
 /\ scenesOk = TRUE
 /\ drafts = <<"ok", "ok">>
 
-State 15: <ChapterStep line 229, col 5 to line 240, col 85 of module m1_freeze_sin_puerta>
+State 14: <ChapterStep line 229, col 5 to line 240, col 85 of module m1_freeze_sin_puerta>
 /\ phase = "Running"
 /\ arcReplans = 0
 /\ vmax = <<0, 0>>
@@ -577,7 +540,7 @@ State 15: <ChapterStep line 229, col 5 to line 240, col 85 of module m1_freeze_s
 /\ scenesOk = TRUE
 /\ drafts = <<"ok", "ok">>
 
-State 16: <ChapterStep line 229, col 5 to line 240, col 85 of module m1_freeze_sin_puerta>
+State 15: <ChapterStep line 229, col 5 to line 240, col 85 of module m1_freeze_sin_puerta>
 /\ phase = "Running"
 /\ arcReplans = 0
 /\ vmax = <<0, 0>>
@@ -614,7 +577,7 @@ State 16: <ChapterStep line 229, col 5 to line 240, col 85 of module m1_freeze_s
 /\ scenesOk = TRUE
 /\ drafts = <<"ok", "ok">>
 
-State 17: <ChapterStep line 229, col 5 to line 240, col 85 of module m1_freeze_sin_puerta>
+State 16: <ChapterStep line 229, col 5 to line 240, col 85 of module m1_freeze_sin_puerta>
 /\ phase = "Running"
 /\ arcReplans = 0
 /\ vmax = <<0, 0>>
@@ -651,7 +614,7 @@ State 17: <ChapterStep line 229, col 5 to line 240, col 85 of module m1_freeze_s
 /\ scenesOk = TRUE
 /\ drafts = <<"ok", "ok">>
 
-State 18: <ChapterStep line 229, col 5 to line 240, col 85 of module m1_freeze_sin_puerta>
+State 17: <ChapterStep line 229, col 5 to line 240, col 85 of module m1_freeze_sin_puerta>
 /\ phase = "Running"
 /\ arcReplans = 0
 /\ vmax = <<0, 0>>
@@ -688,7 +651,7 @@ State 18: <ChapterStep line 229, col 5 to line 240, col 85 of module m1_freeze_s
 /\ scenesOk = TRUE
 /\ drafts = <<"ok", "ok">>
 
-State 19: <ChapterStep line 229, col 5 to line 240, col 85 of module m1_freeze_sin_puerta>
+State 18: <ChapterStep line 229, col 5 to line 240, col 85 of module m1_freeze_sin_puerta>
 /\ phase = "Running"
 /\ arcReplans = 0
 /\ vmax = <<0, 0>>
@@ -725,7 +688,7 @@ State 19: <ChapterStep line 229, col 5 to line 240, col 85 of module m1_freeze_s
 /\ scenesOk = TRUE
 /\ drafts = <<"ok", "ok">>
 
-State 20: <ChapterStep line 229, col 5 to line 240, col 85 of module m1_freeze_sin_puerta>
+State 19: <ChapterStep line 229, col 5 to line 240, col 85 of module m1_freeze_sin_puerta>
 /\ phase = "Running"
 /\ arcReplans = 0
 /\ vmax = <<0, 0>>
@@ -762,7 +725,7 @@ State 20: <ChapterStep line 229, col 5 to line 240, col 85 of module m1_freeze_s
 /\ scenesOk = TRUE
 /\ drafts = <<"ok", "ok">>
 
-State 21: <Freeze line 294, col 5 to line 301, col 73 of module m1_freeze_sin_puerta>
+State 20: <Freeze line 294, col 5 to line 301, col 73 of module m1_freeze_sin_puerta>
 /\ phase = "Running"
 /\ arcReplans = 0
 /\ vmax = <<0, 0>>
@@ -799,7 +762,7 @@ State 21: <Freeze line 294, col 5 to line 301, col 73 of module m1_freeze_sin_pu
 /\ scenesOk = TRUE
 /\ drafts = <<"none", "none">>
 
-1494 states generated, 699 distinct states found, 83 states left on queue.
+1436 states generated, 683 distinct states found, 81 states left on queue.
 The depth of the complete state graph search is 24.
-The average outdegree of the complete state graph is 1 (minimum is 0, the maximum 4 and the 95th percentile is 3).
-Finished in 00s at (2026-09-23 16:14:57)
+The average outdegree of the complete state graph is 1 (minimum is 0, the maximum 4 and the 95th percentile is 2).
+Finished in 00s at (2026-09-23 17:21:14)
