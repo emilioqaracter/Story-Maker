@@ -1082,6 +1082,67 @@ def test_sin_propuesta_gana_el_canon_como_en_la_version_1(novela: Path) -> None:
         assert con.execute("SELECT count(*) AS n FROM retcon").fetchone()["n"] == 0
 
 
+def test_b2_un_retcon_con_la_version_2_creada_no_cambia_la_1(novela: Path) -> None:
+    """B2, `PreviousVersionPreserved`, RD-34, PRO-08. El capitulo 1 congela, una
+    enmienda que no toca ninguna escena crea la version 2, y el capitulo 2
+    dispara un retcon que reescribe las del 1. La version 1 se sigue leyendo
+    como era; la 2, la vigente, ya lleva el retcon y lo marca."""
+    from canon import manuscript
+
+    def escribe(spec: SceneSpec, _p: Sequence[Defect]) -> str:
+        return f"Marcos v1 {spec.identity.scene_id} " + " ".join(
+            ["palabra"] * spec.output.target_words
+        )
+
+    def reescribe(specs: Sequence[SceneSpec], _t: Sequence[str], _e: object) -> DeltaProposal:
+        cap = specs[0].identity.chapter
+        stamp = "2026-08-01" if cap == 2 else specs[0].identity.world_time.stamp
+        return DeltaProposal(
+            events=(
+                ProposedEvent(
+                    world_time=WorldTime(stamp=stamp, seq=0),
+                    payload=AttributeSet(entity_id="marcos", name="estado", value=f"v{cap}"),
+                    quote=CITA,
+                ),
+            )
+        )
+
+    def enmienda_sin_escenas() -> None:
+        # Lo que deja `commit_amendment` cuando el hecho no se nombra en ninguna
+        # escena congelada: la version 2, sin historia de texto.
+        with connection.canon_writer(novela) as con:
+            if manuscript.current_version(con) == 1:
+                con.execute(
+                    "INSERT INTO manuscript_version (version, cause, changed_chapters, "
+                    "max_chapter, created_at) VALUES (2, NULL, '[]', 1, datetime('now'))"
+                )
+
+    traza = Trace(novela.with_suffix(".trace.jsonl"))
+    run(
+        novela,
+        _brief(),
+        _engine(
+            write_scene=escribe,
+            extract_delta=reescribe,
+            propose_retcon=lambda _r, _p: RetconProposal(propose=True),
+        ),
+        novel_id="p",
+        chapters=2,
+        specs_for=_specs,
+        trace=traza,
+        after_freeze=enmienda_sin_escenas,
+    )
+
+    [aplicado] = traza.records("retcon.applied")
+    assert aplicado.fields["refrozen"] == ["c1e1", "c1e2"]
+    with connection.reader(novela) as con:
+        v1 = manuscript.chapter_at(con, 1, 1) or []
+        v2 = manuscript.chapter_at(con, 1, 2) or []
+    assert [s.text.split()[1] for s in v1] == ["v1", "v1"], "la version 1 no cambio"
+    assert [s.text.split()[1] for s in v2] == ["v2", "v2"], "la vigente lleva el retcon"
+    assert all(s.changed for s in v2) and not any(s.changed for s in v1)
+
+
 # ------------------------------------------- guardarrail de prohibidas (T41)
 
 

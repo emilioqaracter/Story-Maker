@@ -31,7 +31,7 @@ from collections.abc import Callable
 from canon.prose_index import chronology
 
 #: Version que este codigo escribe.
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 
 Step = str | Callable[[sqlite3.Connection], None]
 
@@ -48,6 +48,31 @@ def _add_proscribed_level(con: sqlite3.Connection) -> None:
         "ALTER TABLE proscribed ADD COLUMN level TEXT NOT NULL DEFAULT 'estilo' "
         "CHECK (level IN ('global', 'cliente', 'novela', 'estilo'))"
     )
+
+
+def _add_run_state_resume(con: sqlite3.Connection) -> None:
+    """`architecture.md` §7.4. El punto de reanudacion gana lo que una caida no
+    puede perder: los reintentos consumidos del capitulo y la escaleta vigente.
+
+    Son columnas de `wm_run_state` y no una tabla nueva porque son el mismo
+    estado --por donde va la tirada-- y se escriben y se borran con el.
+    """
+    tiene = _columns(con, "wm_run_state")
+    if "chapter_attempts" not in tiene:
+        con.execute(
+            "ALTER TABLE wm_run_state ADD COLUMN chapter_attempts INTEGER NOT NULL DEFAULT 0 "
+            "CHECK (chapter_attempts >= 0)"
+        )
+    if "arc_replans" not in tiene:
+        con.execute(
+            "ALTER TABLE wm_run_state ADD COLUMN arc_replans INTEGER NOT NULL DEFAULT 0 "
+            "CHECK (arc_replans >= 0)"
+        )
+    if "outline" not in tiene:
+        con.execute(
+            "ALTER TABLE wm_run_state ADD COLUMN outline TEXT "
+            "CHECK (outline IS NULL OR json_valid(outline))"
+        )
 
 
 MIGRATIONS: dict[int, tuple[Step, ...]] = {
@@ -290,6 +315,12 @@ MIGRATIONS: dict[int, tuple[Step, ...]] = {
         END
         """,
     ),
+    # `architecture.md` §7.4, contraejemplos B4 y R1 de TLC
+    # (`orchestration/model/README.md` §7.1): la reanudacion conserva los
+    # reintentos consumidos y la escaleta vigente. Memoria de trabajo: sin relleno,
+    # una tirada a medias de un fichero anterior reanuda con la cuenta a cero y
+    # replanifica una vez, como hacia hasta ahora.
+    6: (_add_run_state_resume,),
 }
 
 

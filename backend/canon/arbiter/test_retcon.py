@@ -143,6 +143,56 @@ def test_la_recongelacion_reemplaza_indice_termina_la_vigencia_y_registra(novela
     assert versiones >= 1, "el resumen regenerado queda versionado (RD-23)"
 
 
+def _recongela_sano(path: Path) -> None:
+    with connection.reader(path) as con:
+        p = retcon.plan(con, _rechazo(path), payoff_scenes=())  # type: ignore[arg-type]
+        assert p is not None
+        ev = retcon.event_for(con, p, chapter=2)
+    nuevas = [
+        refreeze.RefrozenScene(scene_id=s, text=f"Marcos estaba sano en {s}.", summary="s")
+        for s in p.scenes
+    ]
+    with connection.canon_writer(path) as con:
+        refreeze.commit(
+            con,
+            refreeze.prepare(nuevas, embed=_Embedder()),
+            retcon=p,
+            event=ev,
+            chapter_summaries={},
+            rule="retcon-admisible",
+            chapter_origin=2,
+        )
+
+
+def _historia(path: Path) -> list[tuple[str, int, str]]:
+    with connection.reader(path) as con:
+        return [
+            (r["scene_id"], r["until_version"], r["text"])
+            for r in con.execute("SELECT * FROM scene_text_history ORDER BY scene_id")
+        ]
+
+
+def test_con_la_version_1_vigente_recongelar_no_guarda_historia(novela: Path) -> None:
+    """RD-34: no hay version anterior que proteger."""
+    _recongela_sano(novela)
+    assert _historia(novela) == []
+
+
+def test_recongelar_con_la_version_2_guarda_lo_que_ve_la_1(novela: Path) -> None:
+    """B2, RD-34, PRO-08. La version 2 existe y no toco estas escenas: el retcon
+    guarda su texto hasta la 1 antes de reemplazarlo, una sola vez."""
+    with connection.canon_writer(novela) as con:
+        con.execute(
+            "INSERT INTO manuscript_version (version, cause, changed_chapters, max_chapter, "
+            "created_at) VALUES (2, NULL, '[]', 1, datetime('now'))"
+        )
+    _recongela_sano(novela)
+    assert _historia(novela) == [
+        ("c1e1", 1, "Marcos seguia lesionado aquella tarde 1."),
+        ("c1e2", 1, "Marcos seguia lesionado aquella tarde 2."),
+    ]
+
+
 def test_una_recongelacion_que_falla_no_toca_nada(novela: Path) -> None:
     """RNF-30. Todo junto o nada."""
     with connection.reader(novela) as con:

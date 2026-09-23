@@ -12,6 +12,14 @@ aplicar.
 Se reconstruye entero en vez de aplicar el evento suelto porque el retcon
 escribe en un instante ya proyectado, y la aplicacion incremental solo vale
 hacia delante (`projections.rebuild.apply_all`).
+
+**Toda recongelacion conserva lo que ven las versiones anteriores** (RD-34,
+PRO-08). Antes de reemplazar una escena, su texto vigente se guarda en
+`scene_text_history` para la ultima version que ya no es la vigente, si esa
+version no tiene ya uno guardado. La enmienda lo guarda ella misma, para la
+version que deja de ser vigente, y aqui no se anade nada; el retcon del Arbitro
+no crea version, y sin esto reescribiria la version 1 despues de publicada la 2:
+el contraejemplo B2 de `orchestration/model/README.md` §7.1.
 """
 
 from __future__ import annotations
@@ -28,6 +36,7 @@ from canon.events.types import Event
 from canon.projections import rebuild
 from canon.prose_index import usage
 from canon.prose_index.chunk import Chunk, chunk_scene
+from canon.prose_index.reindex import scene_text_from_chunks
 from canon.summaries import levels
 from commons.provider.port import Embedding
 from commons.types.vectors import pack_vector
@@ -77,6 +86,7 @@ def commit(
     ids = [s.scene_id for s in prepared.scenes]
     marks = ",".join("?" * len(ids))
     antes = usage.vigente(con)
+    _keep_history(con, ids)
     con.execute(
         f"DELETE FROM prose_chunk_fts WHERE rowid IN (SELECT rowid FROM prose_chunk WHERE scene_id IN ({marks}))",  # nosec B608
         ids,
@@ -143,6 +153,47 @@ def commit(
     # RF-241. Recongelar reescribe las filas de las escenas recongeladas; el
     # valor que el evento deja de hacer vigente pierde las suyas.
     usage.refresh(con, scenes=ids, before=antes)
+
+
+def _keep_history(con: sqlite3.Connection, scene_ids: Sequence[str]) -> None:
+    """RD-34. El texto que las versiones no vigentes siguen viendo, antes de tocarlo.
+
+    Con la version `v` vigente, una version anterior lee de la escena la fila de
+    historia de menor `until_version >= version` o, sin ninguna, el texto
+    vigente (`manuscript.text_at`). Si ninguna fila llega a `v - 1`, la version
+    `v - 1` y las que la siguen sin fila propia estan leyendo el texto vigente, y
+    reemplazarlo las cambiaria: se guarda hasta `v - 1`. Con la version 1 vigente
+    no hay version anterior que proteger, y una escena de un capitulo congelado
+    despues de crearse la `v` no esta en ninguna anterior (`manuscript.chapters_in`).
+    """
+    row = con.execute(
+        "SELECT version, max_chapter FROM manuscript_version ORDER BY version DESC LIMIT 1"
+    ).fetchone()
+    if row is None:
+        return
+    vigente, ultimo = int(row["version"]), int(row["max_chapter"])
+    capitulo_de = {
+        r["id"]: int(r["chapter"]) for r in con.execute("SELECT id, chapter FROM prose_scene")
+    }
+    for sid in scene_ids:
+        if capitulo_de.get(sid, ultimo + 1) > ultimo:
+            continue
+        cubierta = con.execute(
+            "SELECT 1 FROM scene_text_history WHERE scene_id = ? AND until_version >= ?",
+            (sid, vigente - 1),
+        ).fetchone()
+        if cubierta is not None:
+            continue
+        trozos = [
+            r["text"]
+            for r in con.execute(
+                "SELECT text FROM prose_chunk WHERE scene_id = ? ORDER BY ordinal", (sid,)
+            )
+        ]
+        con.execute(
+            "INSERT INTO scene_text_history (scene_id, until_version, text) VALUES (?, ?, ?)",
+            (sid, vigente - 1, scene_text_from_chunks(trozos)),
+        )
 
 
 def read_retcons(con: sqlite3.Connection) -> list[dict[str, object]]:

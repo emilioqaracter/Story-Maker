@@ -45,7 +45,14 @@ from commons.types.primitives import Defect
 from commons.types.scene import SceneSpec
 from generation.sports.simulate import MatchResult
 from generation.writer import drafts
-from orchestration.checkpoint import ResumePoint, load, save
+from orchestration.checkpoint import (
+    ResumePoint,
+    load,
+    load_outline,
+    save,
+    save_budget,
+    save_outline,
+)
 from orchestration.retries import (
     ARC_REPLANS,
     CHAPTER_ATTEMPTS,
@@ -266,8 +273,26 @@ def _run_chapters(
     trace: Trace,
     after_freeze: Callable[[], object] | None,
 ) -> tuple[set[str], Outline]:
-    """La escaleta y los capitulos, en orden. Devuelve lo congelado y la escaleta final."""
-    outline = _plan_with_gate(brief, engine, chapters=chapters, trace=trace)
+    """La escaleta y los capitulos, en orden. Devuelve lo congelado y la escaleta final.
+
+    Reanudar es relanzar esto sobre el mismo fichero. Lo que la tirada sabia
+    antes de caer lo lee del punto de reanudacion (`architecture.md` §7.4): el
+    capitulo y la escena, los reintentos consumidos y la escaleta vigente.
+    """
+    # RD-10: hacia delante, en escritura. Un fichero de una version anterior del
+    # esquema sube antes de que el punto escriba sus columnas nuevas.
+    with connection.canon_writer(path):
+        pass
+
+    # R1. Reanudar sigue con la escaleta vigente, con sus replanificaciones. Solo
+    # una tirada que aun no la tiene se la pide al Arquitecto.
+    guardada = load_outline(path)
+    if guardada is None:
+        outline = _plan_with_gate(brief, engine, chapters=chapters, trace=trace)
+        save_outline(path, outline.model_dump_json())
+    else:
+        outline = Outline.model_validate_json(guardada)
+        trace.emit("outline.resumed", scenes=len(outline.scenes))
 
     punto = load(path) or ResumePoint(chapter=1)
     congeladas: set[str] = _frozen_scene_ids(path)
@@ -283,17 +308,31 @@ def _run_chapters(
                 "empezar porque necesita su prosa y su estado del mundo"
             )
 
-        # RF-18, §7.3: la escalera es por capitulo. Lo que el anterior consumio
-        # no se le descuenta a este (medido en la tercera tirada real: el
-        # capitulo 2 dio por agotada su primera escena al primer fallo).
-        capitulo, _presupuesto, outline = _write_chapter(
-            path, outline, numero, engine, specs_for, Budget(), trace
-        )
-        report.chapters.append(capitulo)
-        congeladas |= {s.spec.identity.scene_id for s in capitulo.scenes}
+        if _chapter_frozen(path, numero):
+            # B1. La tirada cayo despues de congelarlo y antes de avanzar el
+            # punto. Reescribirlo sustituiria prosa congelada y duplicaria su
+            # delta en el registro: se sigue desde su puerta de acto.
+            trace.emit("chapter.resumed", chapter=numero, frozen=True)
+        else:
+            # RF-18, §7.3: la escalera es por capitulo. Lo que el anterior
+            # consumio no se le descuenta a este (medido en la tercera tirada
+            # real: el capitulo 2 dio por agotada su primera escena al primer
+            # fallo). Lo que este mismo capitulo gasto antes de una caida, si
+            # (§7.4, B4): reanudar no regala una escalera.
+            presupuesto = (
+                Budget(chapter_attempts=punto.chapter_attempts, arc_replans=punto.arc_replans)
+                if numero == punto.chapter
+                else Budget()
+            )
+            capitulo, _presupuesto, outline = _write_chapter(
+                path, outline, numero, engine, specs_for, presupuesto, trace
+            )
+            report.chapters.append(capitulo)
+            congeladas |= {s.spec.identity.scene_id for s in capitulo.scenes}
 
         outline = _close_act_if_needed(outline, numero, congeladas, engine, brief, trace, path)
         outline = _supervise(path, outline, numero, chapters, engine, brief, trace)
+        save_outline(path, outline.model_dump_json())
         if levels.work_due(numero):
             _golden_check(engine, numero, trace)
         save(path, ResumePoint(chapter=numero + 1))
@@ -433,7 +472,9 @@ def _plan_with_gate(brief: Brief, engine: Engine, *, chapters: int, trace: Trace
         trace.emit(
             "retry", level=str(decision.level), action=str(decision.action), reason=decision.reason
         )
-        if decision.action is Action.RECOMPUTE_ARC and presupuesto.arc_replans > 2:
+        # RF-18: la escaleta tiene los mismos intentos que cualquier
+        # replanificacion de arco (`_replan`), no un numero propio.
+        if decision.action is Action.RECOMPUTE_ARC and presupuesto.arc_replans > ARC_REPLANS:
             raise RunAbortedError(
                 "la escaleta no pasa la verificacion estructural tras varios "
                 f"intentos: {[d.kind for d in defectos]}"
@@ -469,17 +510,33 @@ def _write_chapter(
     # interrumpio a mitad, se reutilizan en vez de regenerarse.
     cerradas = {d.scene_number: d.text for d in drafts.load_drafts(path, chapter=numero)}
 
+    def guarda_presupuesto(b: Budget) -> None:
+        # §7.4, B4. En cuanto se gasta un peldano de capitulo o de tramo, no al
+        # cerrar la escena: una caida entre medias lo devolveria.
+        save_budget(
+            path, chapter=numero, chapter_attempts=b.chapter_attempts, arc_replans=b.arc_replans
+        )
+
     while True:
         intento_capitulo += 1
         resultados: list[SceneResult] = []
+        # PRO-I2, B3. El punto solo cubre escenas que pasaron su puerta, y todas
+        # las anteriores a el tambien: tras una escena que agoto su escalera
+        # sin pasar, este pase ya no avanza el punto.
+        cerrado_hasta_aqui = True
         for spec in specs:
             ordinal = spec.identity.ordinal
             if ordinal in cerradas and intento_capitulo == 1:
                 resultado = SceneResult(spec=spec, text=cerradas[ordinal])
                 trace.emit("scene.resumed", chapter=numero, scene=ordinal)
             else:
-                resultado, presupuesto = _write_scene(spec, engine, presupuesto, trace)
+                resultado, presupuesto = _write_scene(
+                    spec, engine, presupuesto, trace, on_budget=guarda_presupuesto
+                )
             resultados.append(resultado)
+            cerrado_hasta_aqui = cerrado_hasta_aqui and not resultado.blocking
+            if not cerrado_hasta_aqui:
+                continue
             # El punto de reanudacion se escribe al cerrar CADA escena, con su
             # borrador: una caida pierde como mucho la que estaba en curso.
             drafts.save_draft(
@@ -489,7 +546,15 @@ def _write_chapter(
                 attempt=resultado.attempts,
                 text=resultado.text,
             )
-            save(path, ResumePoint(chapter=numero, last_closed_scene=ordinal))
+            save(
+                path,
+                ResumePoint(
+                    chapter=numero,
+                    last_closed_scene=ordinal,
+                    chapter_attempts=presupuesto.chapter_attempts,
+                    arc_replans=presupuesto.arc_replans,
+                ),
+            )
 
         capitulo = ChapterResult(
             number=numero, scenes=resultados, chapter_attempts=intento_capitulo
@@ -528,6 +593,18 @@ def _write_chapter(
         trace.emit(
             "retry", level=str(decision.level), action=str(decision.action), reason=decision.reason
         )
+        # D-26: la cuarentena rehace el capitulo entero, asi que ninguna escena
+        # del pase que se descarta sigue cerrada. El punto vuelve al principio
+        # del capitulo con el peldano ya gastado (§7.4): una caida a partir de
+        # aqui reanuda el capitulo rehecho, no el que no paso.
+        save(
+            path,
+            ResumePoint(
+                chapter=numero,
+                chapter_attempts=presupuesto.chapter_attempts,
+                arc_replans=presupuesto.arc_replans,
+            ),
+        )
         # RF-238. Las prohibidas van delante: si la tirada se para, su motivo
         # nombra `check.forbidden`, el termino y el nivel aunque haya mas.
         ordenados = sorted(defectos, key=lambda d: d.kind != forbidden.KIND)
@@ -539,6 +616,8 @@ def _write_chapter(
                 outline = _replan(
                     outline, engine, _act_of(outline, numero), numero, (), motivos, trace
                 )
+                # R1. La escaleta replanificada es la vigente desde ya.
+                save_outline(path, outline.model_dump_json())
                 specs = list(specs_for(outline, numero))
             case _:
                 _emit_matches(
@@ -562,7 +641,12 @@ def _act_of(outline: Outline, chapter: int) -> int:
 
 
 def _write_scene(
-    spec: SceneSpec, engine: Engine, presupuesto: Budget, trace: Trace
+    spec: SceneSpec,
+    engine: Engine,
+    presupuesto: Budget,
+    trace: Trace,
+    *,
+    on_budget: Callable[[Budget], None] | None = None,
 ) -> tuple[SceneResult, Budget]:
     """RF-22. Escribe hasta que pase la puerta de escena o se agote la escalera.
 
@@ -627,6 +711,10 @@ def _write_scene(
         if decision.action is Action.RETRY:
             anteriores = list(defectos)
             continue
+        # Agotada la escena se gasta un intento de capitulo: quien llama lo
+        # guarda en el punto de reanudacion antes de seguir (§7.4).
+        if on_budget is not None:
+            on_budget(presupuesto)
         if presupuesto.chapter_attempts >= CHAPTER_ATTEMPTS:
             # La escena ya se reespecifico y sigue sin pasar: el problema esta
             # mas arriba. Se devuelve con sus defectos y el capitulo escala.
