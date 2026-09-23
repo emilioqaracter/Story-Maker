@@ -15,7 +15,8 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import shutil
-import subprocess  # nosec B404 - git con lista de argumentos, sin shell
+# git con lista de argumentos y sin shell.
+import subprocess  # nosec B404
 import sys
 import tempfile
 from collections.abc import Sequence

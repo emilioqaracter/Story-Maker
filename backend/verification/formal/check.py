@@ -18,7 +18,8 @@ import json
 import re
 import shutil
 import sqlite3
-import subprocess  # nosec B404 - lake con lista de argumentos, sin shell
+# lake con lista de argumentos y sin shell.
+import subprocess  # nosec B404
 import time
 from collections.abc import Sequence
 from pathlib import Path
