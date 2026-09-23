@@ -177,3 +177,31 @@ def test_tres_llamadas_en_paralelo_respetan_el_techo_y_el_orden() -> None:
     assert maximo[0] <= 25_000
     assert maximo[0] == 23_000, "dos caben a la vez; el tercero espera"
     assert adm.in_flight == 0
+
+
+def test_el_techo_por_defecto_es_100000_y_100001_no_entra() -> None:
+    """CTX-20, RF-14, RF-97. El limite exacto con el techo por defecto, sin inyectar otro.
+
+    100.000 entra con el sistema vacio; 100.001 no, ni por `admit` ni por `hold`,
+    y tampoco cuando el sobrante lo pone el cupo de tiron (se reserva entero).
+    """
+    from orchestration.admission import CONCURRENCY_CEILING
+
+    assert CONCURRENCY_CEILING == 100_000
+    a = Admission()
+    justo = Reservation(agent="x", packet_tokens=100_000)
+    with a.hold(justo):
+        assert a.in_flight == 100_000
+    assert a.in_flight == 0
+    assert a.admit(justo, call_id="c1") and a.in_flight == 100_000
+    a.release(justo)
+
+    for de_mas in (
+        Reservation(agent="x", packet_tokens=100_001),
+        Reservation(agent="x", packet_tokens=99_000, tool_quota=1_001),
+    ):
+        with pytest.raises(CeilingTooSmallError), a.hold(de_mas):
+            pass
+        with pytest.raises(CeilingTooSmallError):
+            a.admit(de_mas, call_id="c2")
+    assert a.in_flight == 0 and a.queued == 0
