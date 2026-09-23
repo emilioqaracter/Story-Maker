@@ -58,6 +58,7 @@ check code-today_b2_retcon_history       . run code-today/b2_retcon_history.cfg 
 check code-today_b3_checkpoint           . run code-today/b3_checkpoint.cfg           "Invariant ResumeOnlyClosed is violated"
 check code-today_b3_blocked_scene_frozen . run code-today/b3_blocked_scene_frozen.cfg "Invariant NeverPublishUngated is violated"
 check code-today_b4_budget               . run code-today/b4_budget.cfg               "Invariant RetriesWithinLimit is violated"
+check code-today_b4_budget_liveness      . run code-today/b4_budget_liveness.cfg      "No error has been found"
 
 check mutation_m1_freeze_sin_puerta      mutations m1_freeze_sin_puerta      m1_freeze_sin_puerta.cfg      "Invariant NeverPublishUngated is violated"
 check mutation_m2_caidas_sin_tope        mutations m2_caidas_sin_tope        m2_caidas_sin_tope.cfg        "Temporal properties were violated"
