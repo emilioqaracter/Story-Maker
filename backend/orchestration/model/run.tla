@@ -12,9 +12,10 @@
 (* sus acciones. Solo se envuelven las que tocan algo que sobrevive a una  *)
 (* caida (borradores, punto de reanudacion, canon, versiones).             *)
 (*                                                                         *)
-(* Cuatro banderas eligen entre el codigo de hoy (FALSE) y el arreglo que  *)
-(* propone el README (TRUE). run.cfg las pone a TRUE; los .cfg de          *)
-(* code-today/ ponen una a FALSE y dan el contraejemplo de su fallo.       *)
+(* Cuatro banderas eligen entre el codigo anterior al commit 91a1457      *)
+(* (FALSE) y el arreglo (TRUE), que es el codigo desde ese commit.        *)
+(* run.cfg las pone a TRUE; los .cfg de code-today/ ponen una a FALSE y   *)
+(* conservan el contraejemplo de su fallo, README §7.1.                   *)
 (*                                                                         *)
 (* Prueba el flujo modelado, no el orquestador que lo implementa: esa      *)
 (* distancia la cubre VER-05.                                              *)
@@ -24,10 +25,10 @@ EXTENDS Naturals, Sequences, FiniteSets
 CONSTANTS Scenes, SceneAttempts, ChapterAttempts, ArcReplans,   \* chapter.tla
           Ceiling, Reserve, Jurors, JuryReserve,                \* chapter.tla
           Chapters,          \* capitulos de la tirada. Numero de modelo
-          PlanAttempts,      \* 3: `_plan_with_gate` aborta con arc_replans > 2
+          PlanAttempts,      \* 2: `_plan_with_gate` aborta con arc_replans > ARC_REPLANS
           MaxCrashes,        \* caidas como mucho. Numero de modelo, no del codigo
           MaxAmends,         \* solicitudes del lector como mucho. Numero de modelo
-          \* Las cuatro correcciones. FALSE es el codigo de hoy.
+          \* Las cuatro correcciones. FALSE es el codigo anterior a 91a1457.
           CheckpointOnlyPassed, \* el punto solo avanza con escenas que pasaron
           ResumeSkipsFrozen,    \* reanudar no reescribe un capitulo ya congelado
           ResumeKeepsBudget,    \* reanudar conserva los intentos consumidos, §7.4
@@ -229,8 +230,9 @@ ScenePasses ==
     /\ UNCHANGED << phase, chap, planTries, scenesOk, ckCh, freezes, revs, hist, touched, cv,
                     vmax, snap, queue, requested, crashes, spentCh, spentArc >>
 
-\* La escena agota su escalera. El codigo guarda su borrador y avanza el punto
-\* igual que si hubiera pasado (`_write_chapter`, tras `_write_scene`).
+\* La escena agota su escalera. Antes de 91a1457 el codigo guardaba su
+\* borrador y avanzaba el punto igual que si hubiera pasado; desde entonces
+\* `_write_chapter` no avanza el punto tras una escena bloqueante (B3).
 SceneFailsEscalate ==
     /\ phase = "Running"
     /\ Ch!SceneFailsEscalate
@@ -251,7 +253,8 @@ ExtractEmpty ==
                     revs, hist, touched, cv, vmax, snap, queue, requested, crashes, spentCh, spentArc >>
 
 \* Un retcon reescribe escenas ya congeladas (`_try_retcon`, `refreeze.commit`).
-\* El codigo no guarda su texto anterior: RetconKeepsHistory es el arreglo.
+\* Desde 91a1457 `refreeze.commit` guarda el texto anterior (B2):
+\* RetconKeepsHistory.
 RetconApplied ==
     /\ phase = "Running"
     /\ Ch!RetconApplied
@@ -358,7 +361,9 @@ Crash ==
     /\ UNCHANGED << chap, drafts, ckCh, ckScene, freezes, revs, hist, touched, cv, vmax, snap,
                     queue, requested, spentCh, spentArc >>
 
-\* Se relanza la tirada: `run` vuelve a planificar y lee el punto (PlanPasses).
+\* Se relanza la tirada y lee el punto (PlanPasses). Desde 91a1457 `run`
+\* reanuda con la escaleta guardada y ya no planifica (R1): que Resume pase
+\* por Planning, con PlanFails y PlanAborts, es una sobreaproximacion.
 Resume ==
     /\ phase = "Crashed"
     /\ phase' = "Planning"

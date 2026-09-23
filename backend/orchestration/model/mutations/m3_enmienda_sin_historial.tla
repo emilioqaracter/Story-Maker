@@ -26,10 +26,10 @@ EXTENDS Naturals, Sequences, FiniteSets
 CONSTANTS Scenes, SceneAttempts, ChapterAttempts, ArcReplans,   \* chapter.tla
           Ceiling, Reserve, Jurors, JuryReserve,                \* chapter.tla
           Chapters,          \* capitulos de la tirada. Numero de modelo
-          PlanAttempts,      \* 3: `_plan_with_gate` aborta con arc_replans > 2
+          PlanAttempts,      \* 2: `_plan_with_gate` aborta con arc_replans > ARC_REPLANS
           MaxCrashes,        \* caidas como mucho. Numero de modelo, no del codigo
           MaxAmends,         \* solicitudes del lector como mucho. Numero de modelo
-          \* Las cuatro correcciones. FALSE es el codigo de hoy.
+          \* Las cuatro correcciones. FALSE es el codigo anterior a 91a1457.
           CheckpointOnlyPassed, \* el punto solo avanza con escenas que pasaron
           ResumeSkipsFrozen,    \* reanudar no reescribe un capitulo ya congelado
           ResumeKeepsBudget,    \* reanudar conserva los intentos consumidos, §7.4
