@@ -1,17 +1,17 @@
 Ultima ejecucion real de las fixtures de Lean (specs/srs-backend-v4.md RF-246, D-88).
 Se escribe con `python -m verification.formal.fixtures --record`.
 
-commit: 1c71a0057c6c6b906365bf3a3a84ef326d0f97be
-fecha:  2026-09-23T16:50:37+00:00
+commit: 9eace81c1acff227180d86ad5084b5b1a327f240
+fecha:  2026-09-23T16:50:52+00:00
 
-== lake build (fixture limpia): pasa en 3.3 s
-✔ [2/5] Built StoryMaker.Types (1.1s)
-✔ [3/5] Built StoryMaker.Invariants (1.2s)
-✔ [4/5] Built StoryMaker.Fixture (920ms)
+== lake build (fixture limpia): pasa en 2.9 s
+✔ [2/5] Built StoryMaker.Types (925ms)
+✔ [3/5] Built StoryMaker.Invariants (978ms)
+✔ [4/5] Built StoryMaker.Fixture (735ms)
 Build completed successfully (5 jobs).
 
-== lake build Seeded (fixture sembrada): falla en i1_born_before_present, i2_one_place_at_a_time, i3_validity_ordered, i4_absent_after_exclusion en 2.0 s
-✖ [4/5] Building Seeded (842ms)
+== lake build Seeded (fixture sembrada): falla en i1_born_before_present, i2_one_place_at_a_time, i3_validity_ordered, i4_absent_after_exclusion en 1.7 s
+✖ [4/5] Building Seeded (747ms)
 trace: .> LEAN_PATH=C:\Users\student\Desktop\SM-lean\backend\verification\formal\lean\.lake\build\lib\lean c:\Users\student\.elan\toolchains\leanprover--lean4---v4.34.0\bin\lean.exe C:\Users\student\Desktop\SM-lean\backend\verification\formal\lean\Seeded.lean -o C:\Users\student\Desktop\SM-lean\backend\verification\formal\lean\.lake\build\lib\lean\Seeded.olean -i C:\Users\student\Desktop\SM-lean\backend\verification\formal\lean\.lake\build\lib\lean\Seeded.ilean -c C:\Users\student\Desktop\SM-lean\backend\verification\formal\lean\.lake\build\ir\Seeded.c --setup C:\Users\student\Desktop\SM-lean\backend\verification\formal\lean\.lake\build\ir\Seeded.setup.json --json
 error: Seeded.lean:87:65: Tactic `decide` proved that the proposition
   I1.check chronicle = true
