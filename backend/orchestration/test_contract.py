@@ -84,6 +84,21 @@ def test_ningun_esquema_nuestro_es_un_objeto_libre(openapi: dict[str, Any]) -> N
     assert not libres, f"objetos sin forma en el contrato: {libres}"
 
 
+def test_el_brief_y_sus_partes_no_admiten_campos_de_mas(openapi: dict[str, Any]) -> None:
+    """RI-64, RF-248, D-93. El contrato lo declara, y el cliente generado lo hereda.
+
+    RI-01 lo recibe y RI-39 y RI-40 lo devuelven dentro del estado de la
+    entrevista: el mismo esquema en los tres sitios.
+    """
+    esquemas = openapi["components"]["schemas"]
+    for nombre in ("Brief", "BriefEntity", "BriefRelation", "Recipient", "WorldTime"):
+        assert esquemas[nombre].get("additionalProperties") is False, nombre
+    cuerpo = openapi["paths"]["/novels"]["post"]["requestBody"]["content"]["application/json"]
+    assert cuerpo["schema"]["$ref"].endswith("/Brief")
+    estado = esquemas["InterviewState"]["properties"]["brief"]
+    assert {"$ref": "#/components/schemas/Brief"} in estado["anyOf"]
+
+
 def test_toda_ruta_declara_su_respuesta(openapi: dict[str, Any]) -> None:
     sin_esquema: list[str] = []
     for ruta, metodos in openapi["paths"].items():

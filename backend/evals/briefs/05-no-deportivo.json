@@ -1,0 +1,29 @@
+{
+  "title": "La luz de Punta Serena",
+  "start": {"stamp": "2026-11-20", "seq": 0},
+  "entities": [
+    {"id": "aitana", "kind": "person", "name": "Aitana Robles",
+     "attributes": [["papel", "protagonista"], ["oficio", "restauradora"]]},
+    {"id": "ulises", "kind": "person", "name": "Ulises Barreiro",
+     "attributes": [["oficio", "farero jubilado"]]},
+    {"id": "cofradia", "kind": "institution", "name": "la cofradía de pescadores de Punta Serena"},
+    {"id": "faro", "kind": "place", "name": "el faro de Punta Serena"},
+    {"id": "puerto", "kind": "place", "name": "el puerto de Punta Serena"}
+  ],
+  "relations": [
+    {"source": "aitana", "target": "ulises", "kind": "confianza"}
+  ],
+  "style_guide": "Premisa: Aitana vuelve al pueblo para restaurar la lente del faro y descubre que alguien lo enciende de noche aunque lleva años apagado.\nGénero: misterio. Tono: melancólico.\nTercera persona, tiempo pasado, un solo punto de vista por escena. Nada de explicaciones al cierre: el misterio avanza por lo que se ve.",
+  "target_words": 4500,
+  "word_tolerance": 0.35,
+  "genre": "misterio",
+  "tone": "melancólico",
+  "dedication": "Para Aitana, que siempre vuelve",
+  "recipient": {
+    "entity_id": "aitana",
+    "age": 34,
+    "traits": ["meticulosa"],
+    "memories": ["el invierno en que subió por primera vez los ciento doce escalones del faro"],
+    "role": "protagonista"
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "title": "El nueve del Molinón",
+  "start": {"stamp": "2026-08-01", "seq": 0},
+  "entities": [
+    {"id": "marcos", "kind": "person", "name": "Marcos Vela", "aliases": ["el Chino"],
+     "attributes": [["estado", "disponible"], ["dorsal", "9"], ["equipo", "sporting"], ["nivel", "62"], ["posicion", "delantero"]],
+     "competences": [["remate", "alto"], ["liderazgo", "bajo"]]},
+    {"id": "dani", "kind": "person", "name": "Dani Roldán",
+     "attributes": [["estado", "disponible"], ["dorsal", "10"], ["equipo", "sporting"], ["nivel", "58"], ["posicion", "mediocentro"]]},
+    {"id": "pol", "kind": "person", "name": "Pol Ferrer",
+     "attributes": [["estado", "disponible"], ["dorsal", "1"], ["equipo", "sporting"], ["nivel", "55"], ["posicion", "portero"]]},
+    {"id": "tecnico", "kind": "person", "name": "Aurelio Peña", "aliases": ["el míster"],
+     "attributes": [["cargo", "entrenador"], ["equipo", "sporting"], ["nivel", "50"]]},
+    {"id": "iker", "kind": "person", "name": "Iker Landa",
+     "attributes": [["estado", "disponible"], ["dorsal", "9"], ["equipo", "racing"], ["nivel", "64"], ["posicion", "delantero"]]},
+    {"id": "unai", "kind": "person", "name": "Unai Beitia",
+     "attributes": [["estado", "disponible"], ["dorsal", "5"], ["equipo", "racing"], ["nivel", "57"], ["posicion", "central"]]},
+    {"id": "sporting", "kind": "institution", "name": "el Sporting"},
+    {"id": "racing", "kind": "institution", "name": "el Racing"},
+    {"id": "molinon", "kind": "place", "name": "el Molinón"},
+    {"id": "vestuario", "kind": "place", "name": "el vestuario del Molinón"}
+  ],
+  "relations": [
+    {"source": "tecnico", "target": "marcos", "kind": "entrena"},
+    {"source": "tecnico", "target": "dani", "kind": "entrena"},
+    {"source": "marcos", "target": "dani", "kind": "amistad"},
+    {"source": "marcos", "target": "iker", "kind": "rivalidad"}
+  ],
+  "style_guide": "Tercera persona, tiempo pasado, un solo punto de vista por escena. Frases cortas y concretas; nada de adjetivos de valoración. El fútbol se cuenta desde el cuerpo: cansancio, frío, dolor, ruido. Los diálogos con raya. Nada de moralejas ni de resúmenes al cierre de escena: la escena termina cuando algo ha cambiado y el lector lo ve. Se evita el cliché deportivo: ni «dejarse el alma» ni «el gol de la esperanza».",
+  "rulebook": "Fútbol. Dos tiempos de 45 minutos. Once contra once; cinco cambios. Un jugador lesionado no puede volver al campo en ese encuentro ni en los siguientes hasta que el canon lo dé por disponible. Un jugador sancionado no se alinea. La clasificación se calcula desde los resultados: tres puntos por victoria, uno por empate.",
+  "target_words": 5500,
+  "word_tolerance": 0.35
+}

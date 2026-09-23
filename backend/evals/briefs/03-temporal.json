@@ -1,0 +1,33 @@
+{
+  "title": "El relevo de Iria",
+  "start": {"stamp": "2026-09-01", "seq": 0},
+  "entities": [
+    {"id": "iria", "kind": "person", "name": "Iria Souto",
+     "attributes": [["papel", "protagonista"], ["equipo", "valdeolmos"]]},
+    {"id": "chema", "kind": "person", "name": "Chema Souto",
+     "attributes": [["parentesco", "abuelo de Iria"]]},
+    {"id": "valdeolmos", "kind": "institution", "name": "el Atlético Valdeolmos"},
+    {"id": "pista", "kind": "place", "name": "la pista municipal de Valdeolmos"}
+  ],
+  "relations": [
+    {"source": "chema", "target": "iria", "kind": "abuelo"}
+  ],
+  "style_guide": "Premisa: Iria prepara su primer relevo con el club de su pueblo y recuerda lo que le enseñó su abuelo.\nGénero: épica deportiva. Tono: emotivo.\nTercera persona, tiempo pasado, un solo punto de vista por escena. Los recuerdos se cuentan como recuerdos, con su fecha.",
+  "rulebook": "Atletismo. Relevo 4x100: cuatro corredores, cada uno cubre cien metros y entrega el testigo dentro de la zona de transferencia de treinta metros. Un testigo entregado fuera de la zona descalifica al equipo.",
+  "target_words": 3500,
+  "word_tolerance": 0.35,
+  "genre": "épica deportiva",
+  "tone": "emotivo",
+  "dedication": "Para Iria, que corre como el viento",
+  "recipient": {
+    "entity_id": "iria",
+    "age": 9,
+    "birth_date": "2017-04-02",
+    "traits": ["tenaz"],
+    "memories": [
+      "el 14 de marzo de 2015 su abuelo Chema le enseñó a atarse las zapatillas en la pista de Valdeolmos",
+      "la final del 31 de junio en que el Atlético Valdeolmos ganó el relevo"
+    ],
+    "role": "protagonista"
+  }
+}
