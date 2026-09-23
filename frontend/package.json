@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
-    "gate": "node gate.mjs"
+    "gate": "node gate.mjs",
+    "visual": "vite build && node visual/tour.mjs"
   },
   "dependencies": {
     "openapi-fetch": "0.17.0",
@@ -32,6 +33,7 @@
     "jsdom": "26.1.0",
     "msw": "2.15.0",
     "openapi-typescript": "7.13.0",
+    "playwright": "1.63.0",
     "typescript": "5.9.3",
     "typescript-eslint": "8.70.1",
     "vite": "7.3.6",
