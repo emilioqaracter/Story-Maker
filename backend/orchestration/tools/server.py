@@ -54,6 +54,12 @@ class BudgetArgs(BaseModel):
 #: modelo que valida: dos copias --una en prosa, otra en codigo-- se desalinean.
 LOOKUP_INPUT_SCHEMA: dict[str, Any] = LookupArgs.model_json_schema()
 
+#: Los esquemas de entrada por herramienta, para ensenarselos al modelo.
+INPUT_SCHEMAS: dict[str, dict[str, Any]] = {
+    "canon.lookup": LOOKUP_INPUT_SCHEMA,
+    "context.budget": BudgetArgs.model_json_schema(),
+}
+
 
 class ToolArgumentsError(RuntimeError):
     """Los argumentos de una herramienta no encajan con su esquema (RF-91).
@@ -132,6 +138,14 @@ class ToolServer:
         self._at = at
         self._estimate = estimate
         self._model_id = model_id
+
+    def input_schemas(self) -> dict[str, dict[str, Any]]:
+        """RF-230. El esquema de entrada de cada herramienta de la lista, el mismo que valida.
+
+        Es lo que el transporte le ensena al modelo (`claude_cli._tool_protocol`):
+        `commons/` no puede importar este modulo, asi que el servidor se lo da.
+        """
+        return {k: v for k, v in INPUT_SCHEMAS.items() if k in self._allowed}
 
     def serve(self, call: ToolCall) -> ToolResult:
         if call.name not in self._allowed:

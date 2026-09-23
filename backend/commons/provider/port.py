@@ -83,6 +83,13 @@ class Completion(BaseModel):
     #: descuenta al contrastar el estimado del paquete con el real (RNF-19):
     #: sin esto la comparacion dispara siempre.
     harness_tokens: int = Field(default=0, ge=0)
+    #: RF-235. El coste que el transporte declara por la llamada, como
+    #: equivalente de API. `None` si no lo declara: nunca se calcula aqui con
+    #: una tabla de precios propia, porque seria un numero inventado (D-86).
+    cost_usd: float | None = Field(default=None, ge=0)
+    #: El modelo que respondio, tal como lo nombra el transporte. Vacio si no lo
+    #: dice. Es el `model` de la generation en el espejo (RF-235).
+    model: str = ""
 
 
 class Embedding(BaseModel):
@@ -106,6 +113,11 @@ class ToolServer(Protocol):
 
     Vive en `orchestration/`, que es quien lleva el contador de la llamada. El
     puerto solo necesita saber invocarlo.
+
+    Si ademas expone `input_schemas() -> Mapping[str, Mapping]`, el esquema de
+    entrada de cada herramienta que sirve, el transporte se lo ensena al modelo
+    tal cual (RF-230): el esquema que ve el modelo es el mismo que valida. Es
+    opcional para que un doble de pruebas no tenga que declararlo.
     """
 
     def serve(self, call: ToolCall) -> ToolResult: ...

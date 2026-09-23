@@ -6,17 +6,25 @@ tipado, y todo lo que pase sin validar contamina el canon sin que nadie lo vea.
 
 from __future__ import annotations
 
+import json
+import sqlite3
+import time
 from collections.abc import Sequence
+from pathlib import Path
 
 import pytest
 from pydantic import BaseModel
 
+from commons.provider.claude_cli import _server_schemas, _tool_protocol
 from commons.provider.port import Completion, ToolCall, ToolResult, Usage
+from commons.tracing.trace import Trace
+from commons.types.primitives import WorldTime
 from orchestration.dispatch import (
     MAX_OUTPUT_TOKENS,
     OutputValidationError,
     dispatch,
 )
+from orchestration.tools.server import LOOKUP_INPUT_SCHEMA, CallBudget, ToolServer
 
 
 class Esperado(BaseModel):
@@ -128,3 +136,73 @@ def test_la_entrada_real_suma_los_tres_campos() -> None:
     lo servido desde cache ocupa ventana igual."""
     r = _dispatch(_Puerto(), parse=Esperado)
     assert r.real_input_tokens == 100 + 4_000 + 50
+
+
+# ------------------------------------------------ RF-235 · coste y latencia
+
+
+class _PuertoLento(_Puerto):
+    """Tarda y declara coste y modelo, como el CLI."""
+
+    def _completion(self) -> Completion:
+        time.sleep(0.03)
+        return (
+            super()
+            ._completion()
+            .model_copy(update={"cost_usd": 0.0042, "model": "claude-haiku-4-5"})
+        )
+
+
+def test_la_llamada_se_traza_con_coste_modelo_uso_y_latencia(tmp_path: Path) -> None:
+    """RF-235, RD-44: `cost_usd` del transporte y `duration_ms` medido aqui."""
+    traza = Trace(tmp_path / "n.trace.jsonl")
+    r = _dispatch(_PuertoLento(), parse=Esperado, trace=traza, estimated_input=5_000)
+    (call,) = traza.records("call")
+    f = call.fields
+    assert f["cost_usd"] == 0.0042
+    assert f["model"] == "claude-haiku-4-5"
+    assert isinstance(f["duration_ms"], int) and f["duration_ms"] >= 25
+    assert r.duration_ms == f["duration_ms"]
+    assert (f["input_tokens"], f["cache_creation_tokens"], f["cache_read_tokens"]) == (
+        100,
+        50,
+        4_000,
+    )
+    assert f["real_input"] == 4_150 and f["output_tokens"] == 200
+
+
+def test_sin_coste_declarado_la_llamada_lo_traza_nulo(tmp_path: Path) -> None:
+    traza = Trace(tmp_path / "n.trace.jsonl")
+    _dispatch(_Puerto(), parse=Esperado, trace=traza)
+    (call,) = traza.records("call")
+    assert call.fields["cost_usd"] is None
+    assert call.fields["model"] is None
+
+
+def test_la_latencia_incluye_el_bucle_de_herramientas(tmp_path: Path) -> None:
+    traza = Trace(tmp_path / "n.trace.jsonl")
+    _dispatch(
+        _PuertoLento(), tools=["canon.lookup"], server=_Servidor(), parse=Esperado, trace=traza
+    )
+    (call,) = traza.records("call")
+    assert call.fields["duration_ms"] >= 25  # type: ignore[operator]
+
+
+# ------------------------------------------------ RF-230 · protocolo de herramientas
+
+
+def test_el_protocolo_del_cli_ensena_el_esquema_que_exporta_el_servidor() -> None:
+    """RF-230: `json.dumps(LOOKUP_INPUT_SCHEMA)` tal cual, y solo de lo que el agente tiene."""
+    con = sqlite3.connect(":memory:")
+    servidor = ToolServer(
+        con,
+        CallBudget(ceiling=1_000, quota=100),
+        allowed=["canon.lookup"],
+        at=WorldTime(stamp="2026-08-01"),
+        estimate=len,
+        model_id="haiku",
+    )
+    texto = _tool_protocol(["canon.lookup"], _server_schemas(servidor))
+    assert json.dumps(LOOKUP_INPUT_SCHEMA, ensure_ascii=False, sort_keys=True) in texto
+    assert "context.budget" not in texto
+    assert servidor.input_schemas() == {"canon.lookup": LOOKUP_INPUT_SCHEMA}

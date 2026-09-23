@@ -16,6 +16,10 @@ dependencies = [
     # D-40: analisis morfologico para la huella estilistica. El modelo
     # es_core_news_sm viaja en la imagen, como el de embeddings.
     "spacy>=3.7",
+    # D-85, RI-60. El espejo de la traza. Se importa de forma perezosa en
+    # `commons/tracing/langfuse_export.py`: sin la libreria o sin claves, el
+    # sistema funciona igual.
+    "langfuse>=4.15,<5",
 ]
 
 [project.optional-dependencies]

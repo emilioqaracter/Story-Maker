@@ -20,18 +20,28 @@ El techo de 100.000 nunca estuvo pensado para usarse entero, y aqui se nota.
 37.154 fichas de cache en vez de crearlas-- asi que el andamiaje se paga caro
 una vez y barato despues. Por eso el prefijo cacheable va en la instruccion del
 sistema, que es lo unico estable entre llamadas del mismo agente.
+
+**El CLI del motor no carga la configuracion de quien lo ejecuta** (RI-62,
+D-85). Ni la de usuario ni la del proyecto --ni plugins, ni hooks, ni
+`CLAUDE.md`, ni skills, ni servidores MCP-- y sin variables `LANGFUSE_*` ni
+`OTEL_*` en su entorno. El motivo es de datos: un plugin de observabilidad del
+usuario engancharia cada llamada de la novela y mandaria el brief a un servicio
+por una via que nadie decidio. Lo que sale hacia Langfuse sale solo por el
+exportador de `commons/tracing/`.
 """
 
 from __future__ import annotations
 
 import json
+import os
 import shutil
 
 # La lista de comandos se arma en este modulo y no entra nada del exterior:
 # el unico dato variable es la ruta que resuelve `shutil.which`.
 import subprocess  # nosec B404
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from typing import Any
 
 from commons.provider.port import (
     Completion,
@@ -55,8 +65,39 @@ _TRIM = (
     "--no-session-persistence",  # cada llamada es independiente
 )
 
+#: RI-62. Lo que aisla el CLI del motor de la configuracion de quien lo lanza.
+#: Comprobado contra la ayuda del CLI instalado (2.1.263), sin llamar al modelo:
+#: `--setting-sources ""` no carga ni usuario, ni proyecto, ni local --el valor
+#: vacio se acepta y uno desconocido se rechaza al analizar los argumentos-- y
+#: `--safe-mode` desactiva CLAUDE.md, skills, plugins, hooks y servidores MCP
+#: sin tocar la autenticacion por suscripcion. `--bare` lo haria tambien, pero
+#: exige clave de API.
+_ISOLATION = (
+    "--setting-sources",
+    "",
+    "--safe-mode",
+)
+
+#: RI-62. Prefijos de variable que no llegan al subproceso. Con ellos, un
+#: plugin o la telemetria del propio CLI podrian exportar la llamada por su
+#: cuenta.
+_STRIPPED_ENV_PREFIXES = ("LANGFUSE_", "OTEL_")
+
+
+def engine_env(environ: Mapping[str, str] | None = None) -> dict[str, str]:
+    """El entorno del `claude -p` del motor: el del proceso sin `LANGFUSE_*` ni `OTEL_*`.
+
+    Se compara sin distinguir mayusculas porque en Windows el entorno no las
+    distingue y `langfuse_public_key` seria la misma variable.
+    """
+    fuente = os.environ if environ is None else environ
+    return {k: v for k, v in fuente.items() if not k.upper().startswith(_STRIPPED_ENV_PREFIXES)}
+
+
 #: Suelo de andamiaje medido. Se descuenta del presupuesto disponible para que
-#: la admision cuente lo que de verdad va a ocupar la llamada.
+#: la admision cuente lo que de verdad va a ocupar la llamada. Se midio antes
+#: del aislamiento de RI-62; hasta volver a medirlo con esa forma se conserva,
+#: porque sobreestimar el andamiaje es el lado seguro.
 HARNESS_TOKENS = 38_600
 
 #: Red de seguridad del bucle de herramientas, no un cupo: el cupo lo lleva el
@@ -66,21 +107,53 @@ HARNESS_TOKENS = 38_600
 MAX_TOOL_TURNS = 12
 
 
-def _tool_protocol(tools: Sequence[str]) -> str:
-    """Como se pide una herramienta. Va en el prefijo: es estable por agente."""
+def _tool_protocol(
+    tools: Sequence[str], schemas: Mapping[str, Mapping[str, Any]] | None = None
+) -> str:
+    """Como se pide una herramienta. Va en el prefijo: es estable por agente.
+
+    RF-230: los `arguments` de cada herramienta se ensenan con el esquema JSON
+    que exporta el servidor, el mismo modelo que los valida. Una descripcion en
+    prosa al lado seria una segunda copia, y las dos copias se desalinean.
+    """
     if not tools:
         return ""
-    lista = "\n".join(f"- {t}" for t in tools)
+    esquemas = schemas or {}
+    lineas = []
+    for t in tools:
+        lineas.append(f"- {t}")
+        if t in esquemas:
+            lineas.append(
+                "  arguments, con este esquema JSON exacto: "
+                + json.dumps(esquemas[t], ensure_ascii=False, sort_keys=True)
+            )
     return (
         "\n\nHERRAMIENTAS\n"
         "Puedes consultar antes de concluir. Para pedir una consulta, devuelve SOLO "
         'este JSON y nada mas: {"tool": "<nombre>", "arguments": {...}}. '
-        "Recibiras el resultado y volveras a decidir. Solo existen estas:\n" + lista + "\n"
-        "canon.lookup admite arguments: {kind: entity|knowledge|related, entity_ids: [...], "
-        "entity_id: ..., full: true|false}. context.budget no lleva arguments.\n"
+        "Recibiras el resultado y volveras a decidir. Solo existen estas:\n"
+        + "\n".join(lineas)
+        + "\n"
+        "Unos arguments que no cumplan su esquema se rechazan con el motivo.\n"
         "Cada resultado consume tu cupo; cuando no quepa, se te dira y tendras que "
         "concluir con lo que tienes."
     )
+
+
+def _server_schemas(server: object) -> Mapping[str, Mapping[str, Any]]:
+    """Los esquemas de entrada que declara el servidor, si los declara (RF-230)."""
+    declara = getattr(server, "input_schemas", None)
+    if not callable(declara):
+        return {}
+    esquemas = declara()
+    return esquemas if isinstance(esquemas, Mapping) else {}
+
+
+def _sum_cost(a: float | None, b: float | None) -> float | None:
+    """RF-235. Un turno sin coste declarado deja el total sin coste: nulo, no a medias."""
+    if a is None or b is None:
+        return None
+    return a + b
 
 
 def _tool_request(text: str) -> ToolCall | None:
@@ -191,13 +264,14 @@ class ClaudeCli:
         prefijo cacheado es asumible, y es el precio de no depender de una via
         que exige clave de API.
         """
-        system = cacheable_prefix + _tool_protocol(tools)
+        system = cacheable_prefix + _tool_protocol(tools, _server_schemas(server))
         cola_esquema = _schema_tail(output_schema, when_done=True)
 
         exchanges: list[str] = []
         calls: list[ToolCall] = []
         refusals = 0
         usage = Usage(input_tokens=0, output_tokens=0)
+        coste: float | None = 0.0
         stop = "end_turn"
 
         for turno in range(MAX_TOOL_TURNS):
@@ -211,6 +285,7 @@ class ClaudeCli:
                 entrada += "\n\n---\n\nNo quedan consultas: concluye AHORA con tu respuesta final."
             paso = self._run(system=system, stdin=entrada, max_output_tokens=max_output_tokens)
             usage = _sum_usage(usage, paso.usage)
+            coste = _sum_cost(coste, paso.cost_usd)
             stop = paso.stop_reason
 
             peticion = _tool_request(paso.text)
@@ -221,6 +296,8 @@ class ClaudeCli:
                     stop_reason=stop,
                     tool_calls=tuple(calls),
                     harness_tokens=HARNESS_TOKENS,
+                    cost_usd=coste,
+                    model=paso.model,
                 )
 
             calls.append(peticion)
@@ -268,13 +345,16 @@ class ClaudeCli:
             )
         return ruta
 
-    def _run(
-        self, *, system: str, stdin: str, max_output_tokens: int, json_schema: str | None = None
-    ) -> Completion:
+    def command(self, executable: str, *, system: str, json_schema: str | None = None) -> list[str]:
+        """La lista de argumentos de un `claude -p` del motor (RI-62).
+
+        Publica para que una prueba la fije sin lanzar nada: lo que el motor
+        carga o deja de cargar se decide aqui y en ningun otro sitio.
+        """
         # Con esquema, el CLI resuelve la salida estructurada en un turno mas:
         # el modelo produce el JSON como una llamada interna y el CLI la valida.
-        cmd = [
-            self._resolve(),
+        return [
+            executable,
             "-p",
             "--model",
             self.model,
@@ -286,7 +366,13 @@ class ClaudeCli:
             system,
             *(["--json-schema", json_schema] if json_schema else []),
             *_TRIM,
+            *_ISOLATION,
         ]
+
+    def _run(
+        self, *, system: str, stdin: str, max_output_tokens: int, json_schema: str | None = None
+    ) -> Completion:
+        cmd = self.command(self._resolve(), system=system, json_schema=json_schema)
 
         try:
             proc = subprocess.run(  # nosec B603
@@ -297,6 +383,7 @@ class ClaudeCli:
                 encoding="utf-8",
                 timeout=self.timeout_s,
                 check=False,
+                env=engine_env(),
             )
         except subprocess.TimeoutExpired as exc:
             raise ClaudeCliError(f"el CLI no respondio en {self.timeout_s}s") from exc
@@ -312,6 +399,10 @@ class ClaudeCli:
         if data.get("is_error"):
             raise ClaudeCliError(f"el CLI devolvio error: {data.get('result', '')[:300]}")
 
+        return self._completion(data, json_schema=json_schema)
+
+    def _completion(self, data: Mapping[str, Any], *, json_schema: str | None) -> Completion:
+        """La respuesta del CLI, ya leida, como `Completion`."""
         u = data.get("usage", {})
         salida = data.get("structured_output")
         texto = (
@@ -334,7 +425,38 @@ class ClaudeCli:
             # leidos de cache en una llamada minima). Se declara, para que
             # RNF-19 compare lo comparable.
             harness_tokens=HARNESS_TOKENS * (2 if json_schema else 1),
+            cost_usd=_cost(data),
+            model=_model(data, fallback=self.model),
         )
+
+
+def _cost(data: Mapping[str, Any]) -> float | None:
+    """RF-235. El coste que el CLI declara como equivalente de API, o nulo.
+
+    Nunca se calcula: con la suscripcion no se factura, y una tabla de precios
+    propia seria un numero sin origen (D-86).
+    """
+    valor = data.get("total_cost_usd")
+    if isinstance(valor, bool) or not isinstance(valor, int | float) or valor < 0:
+        return None
+    return float(valor)
+
+
+def _model(data: Mapping[str, Any], *, fallback: str) -> str:
+    """El modelo que respondio segun el CLI: el que mas salida produjo en `modelUsage`.
+
+    El CLI puede usar un modelo auxiliar por su cuenta; el de la respuesta es el
+    que escribio. Sin `modelUsage`, el alias con el que se lanzo.
+    """
+    uso = data.get("modelUsage")
+    if not isinstance(uso, Mapping) or not uso:
+        return fallback
+
+    def salida(item: tuple[str, Any]) -> int:
+        v = item[1]
+        return int(v.get("outputTokens", 0)) if isinstance(v, Mapping) else 0
+
+    return str(max(sorted(uso.items()), key=salida)[0])
 
 
 def _schema_tail(output_schema: str, *, when_done: bool = False) -> str:
