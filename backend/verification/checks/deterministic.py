@@ -290,6 +290,30 @@ def check_format(
     return out
 
 
+def check_chapter_length(text: str, *, word_range: tuple[int, int]) -> list[Defect]:
+    """Longitud **escrita** de un capitulo frente a su rango (EST-07).
+
+    La escaleta ya comprueba lo planificado; esto mide lo que de verdad se
+    escribio, que es lo que lee el lector. Es la misma restriccion formal que
+    `check.format` aplica a la escena (`architecture.md` §9.1), con la misma
+    cuenta de palabras y la misma severidad: un capitulo largo o corto de mas
+    degrada el ritmo, no contradice el canon. El rango lo pasa quien llama,
+    porque sale de la escaleta y este modulo no importa de `planning/`.
+    """
+    palabras = len(text.split())
+    low, high = word_range
+    if low <= palabras <= high:
+        return []
+    return [
+        Defect(
+            kind="check.format",
+            severity=Severity.S2,
+            evidence=Evidence(quote=text[:80] or "(capitulo vacio)", offset=0),
+            rule=f"el capitulo tiene {palabras} palabras y el rango es {low}-{high}",
+        )
+    ]
+
+
 def _check_tense(text: str, *, tense: str) -> list[Defect]:
     """Tiempo verbal de la narracion.
 
@@ -403,18 +427,71 @@ def check_lexicon(
     `candidates` son los nombres que aparecen en el texto, ya extraidos. Se pasa
     resuelto porque extraerlos bien exige analisis morfologico, y este modulo
     tiene que poder comprobarse sin dependencias pesadas.
+
+    Un nombre vale solo si esta **exactamente** como en el canon, con sus tildes;
+    la mayuscula no cuenta. Si no esta pero se queda a una edicion de uno que si
+    --"Nalah" o "Nála" frente a "Nala"--, el defecto lo dice: al Reparador le
+    sirve saber que es una errata del nombre y no un personaje que sobra.
     """
-    conocidos = {_normalize(n) for n in known_names}
-    return [
-        Defect(
-            kind="check.lexicon",
-            severity=Severity.S1,
-            evidence=_cite(text, nombre),
-            rule=f"{nombre!r} no es una entidad del canon ni un alias vigente",
+    exactos = {n.casefold() for n in known_names}
+    out: list[Defect] = []
+    for nombre in candidates:
+        if nombre.casefold() in exactos:
+            continue
+        origen = misspelling_of(nombre, known_names)
+        regla = (
+            f"{nombre!r} es una variante mal escrita de {origen!r}, nombre del canon"
+            if origen is not None
+            else f"{nombre!r} no es una entidad del canon ni un alias vigente"
         )
-        for nombre in candidates
-        if _normalize(nombre) not in conocidos
-    ]
+        out.append(
+            Defect(
+                kind="check.lexicon",
+                severity=Severity.S1,
+                evidence=_cite(text, nombre),
+                rule=regla,
+            )
+        )
+    return out
+
+
+def edit_distance(a: str, b: str) -> int:
+    """Distancia de Damerau-Levenshtein restringida (alineamiento optimo).
+
+    Cuenta insercion, borrado, sustitucion y trasposicion de dos letras
+    contiguas, que son las cuatro erratas de teclado. Una tilde cambiada es una
+    sustitucion: "a" y "á" son letras distintas.
+    """
+    prev2: list[int] = []
+    prev = list(range(len(b) + 1))
+    for i in range(1, len(a) + 1):
+        cur = [i] + [0] * len(b)
+        for j in range(1, len(b) + 1):
+            coste = 0 if a[i - 1] == b[j - 1] else 1
+            cur[j] = min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + coste)
+            if i > 1 and j > 1 and a[i - 1] == b[j - 2] and a[i - 2] == b[j - 1]:
+                cur[j] = min(cur[j], prev2[j - 2] + 1)
+        prev2, prev = prev, cur
+    return prev[len(b)]
+
+
+def misspelling_of(word: str, known_names: Sequence[str]) -> str | None:
+    """El nombre del canon del que `word` es una errata, o `None`.
+
+    Errata es estar a una edicion de un nombre del canon (`edit_distance` 1,
+    con tildes) o ser igual a el salvo tildes. Solo cuentan los nombres que
+    empiezan en mayuscula: el "el" de "el Chino" es un articulo, no un nombre,
+    y sin este filtro "Del" seria su errata. Un nombre que ya esta en el canon
+    no es errata de nada, aunque se parezca a otro.
+    """
+    w = word.casefold()
+    if any(w == n.casefold() for n in known_names):
+        return None
+    for nombre in sorted(n for n in known_names if n[:1].isupper()):
+        k = nombre.casefold()
+        if _normalize(w) == _normalize(k) or edit_distance(w, k) == 1:
+            return nombre
+    return None
 
 
 # ----------------------------------------------------------- check.knowledge

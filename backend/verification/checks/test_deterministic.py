@@ -10,15 +10,22 @@ tiene que marcar, y que NO marca lo que no.
 
 from __future__ import annotations
 
+import pytest
+from hypothesis import assume, given
+from hypothesis import strategies as st
+
 from commons.types.primitives import Severity
 from verification.checks.deterministic import (
     check_availability,
+    check_chapter_length,
     check_format,
     check_knowledge,
     check_ledger,
     check_lexicon,
     check_repetition,
     check_timeline,
+    edit_distance,
+    misspelling_of,
 )
 
 # --------------------------------------------------------------- toda cita
@@ -199,6 +206,163 @@ def test_un_alias_vigente_no_se_marca() -> None:
         )
         == []
     )
+
+
+def test_una_tilde_cambiada_ya_no_da_el_nombre_por_bueno() -> None:
+    """La rubrica pide el nombre *exactamente* como en el canon. Antes se
+    comparaba sin tildes y "Nála" pasaba por "Nala"."""
+    [d] = check_lexicon("Llamo a Nála.", known_names=["Nala"], candidates=["Nála"])
+    assert d.severity is Severity.S1
+    assert d.evidence.quote == "Nála"
+    assert "'Nala'" in d.rule
+
+
+def test_una_letra_de_mas_es_una_variante_del_canon() -> None:
+    [d] = check_lexicon("Llamo a Nalah.", known_names=["Nala"], candidates=["Nalah"])
+    assert d.severity is Severity.S1
+    assert d.evidence.quote == "Nalah"
+    assert "variante" in d.rule
+    assert "'Nala'" in d.rule
+
+
+def test_un_nombre_lejano_sigue_siendo_ajeno_al_canon() -> None:
+    [d] = check_lexicon("Hablo con Ramirez.", known_names=["Nala"], candidates=["Ramirez"])
+    assert "no es una entidad del canon" in d.rule
+    assert "variante" not in d.rule
+
+
+def test_el_nombre_exacto_con_su_tilde_no_se_marca() -> None:
+    assert (
+        check_lexicon(
+            "Peña y Nala.",
+            known_names=["Aurelio Peña", "Peña", "Nala"],
+            candidates=["Peña", "Nala"],
+        )
+        == []
+    )
+
+
+@pytest.mark.parametrize(
+    ("a", "b", "distancia"),
+    [
+        ("nala", "nala", 0),
+        ("nala", "nalah", 1),  # insercion
+        ("nala", "nla", 1),  # borrado
+        ("nala", "nata", 1),  # sustitucion
+        ("nala", "nála", 1),  # tilde
+        ("nala", "nlaa", 1),  # trasposicion: Levenshtein daria 2
+        ("nala", "anla", 1),
+        ("nala", "lana", 2),
+        ("", "abc", 3),
+        ("abc", "", 3),
+        ("kitten", "sitting", 3),
+        ("ca", "abc", 3),  # restringida: no edita dos veces la misma subcadena
+    ],
+)
+def test_la_distancia_de_edicion(a: str, b: str, distancia: int) -> None:
+    assert edit_distance(a, b) == distancia
+    assert edit_distance(b, a) == distancia
+
+
+def test_solo_los_nombres_con_mayuscula_admiten_variantes() -> None:
+    """Los articulos de un alias --el "el" de "el Chino"-- no son nombres: sin
+    este filtro "Del" al principio de frase seria una variante de "el"."""
+    assert misspelling_of("Del", ["el Chino", "el", "Chino"]) is None
+    assert misspelling_of("Chinos", ["el Chino", "el", "Chino"]) == "Chino"
+
+
+def test_un_nombre_del_canon_no_es_variante_de_si_mismo() -> None:
+    assert misspelling_of("Nala", ["Nala"]) is None
+    assert misspelling_of("NALA", ["Nala"]) is None
+    assert misspelling_of("Ramirez", ["Nala"]) is None
+
+
+def test_dos_tildes_cambiadas_tambien_son_variante() -> None:
+    """A distancia 2 pero igual sin tildes: sigue siendo el mismo nombre mal
+    escrito, no un personaje nuevo."""
+    assert misspelling_of("Rámirez", ["Ramírez"]) == "Ramírez"
+
+
+_LETRAS = "abcdefghijlmnoprstuvz"
+_TILDES = {"a": "á", "e": "é", "i": "í", "o": "ó", "u": "ú", "n": "ñ"}
+
+
+@st.composite
+def _nombre_y_variante(draw: st.DrawFn) -> tuple[str, str]:
+    """Un nombre propio y una variante a una sola edicion: letra de mas, de
+    menos, cambiada, trasladada o con la tilde cambiada."""
+    cuerpo = draw(st.text(alphabet=_LETRAS, min_size=4, max_size=9))
+    nombre = cuerpo.capitalize()
+    i = draw(st.integers(min_value=0, max_value=len(cuerpo) - 1))
+    letra = draw(st.sampled_from(_LETRAS))
+    edicion = draw(
+        st.sampled_from(["insercion", "borrado", "sustitucion", "trasposicion", "tilde"])
+    )
+    if edicion == "insercion":
+        v = cuerpo[:i] + letra + cuerpo[i:]
+    elif edicion == "borrado":
+        v = cuerpo[:i] + cuerpo[i + 1 :]
+    elif edicion == "sustitucion":
+        v = cuerpo[:i] + letra + cuerpo[i + 1 :]
+    elif edicion == "trasposicion":
+        j = min(i + 1, len(cuerpo) - 1)
+        v = cuerpo[:i] + cuerpo[j] + cuerpo[i] + cuerpo[j + 1 :] if j > i else cuerpo
+    else:
+        v = cuerpo[:i] + _TILDES.get(cuerpo[i], "á") + cuerpo[i + 1 :]
+    variante = v.capitalize()
+    assume(variante.casefold() != nombre.casefold())
+    return nombre, variante
+
+
+@given(_nombre_y_variante())
+def test_toda_variante_a_una_edicion_de_un_nombre_del_canon_salta(par: tuple[str, str]) -> None:
+    """VER-06. Letra de mas, de menos, cambiada, trasladada o tilde cambiada:
+    toda variante a una edicion de un nombre del canon es un S1 con su cita."""
+    nombre, variante = par
+    assert misspelling_of(variante, [nombre]) == nombre
+    texto = f"Marcos llamo a {variante} y se fue."
+    [d] = check_lexicon(texto, known_names=[nombre], candidates=[variante])
+    assert d.severity is Severity.S1
+    assert d.evidence.quote == variante
+    assert texto[d.evidence.offset :].startswith(variante)
+
+
+@given(st.text(alphabet=_LETRAS, min_size=3, max_size=9))
+def test_un_nombre_bien_escrito_nunca_salta(cuerpo: str) -> None:
+    nombre = cuerpo.capitalize()
+    assert misspelling_of(nombre, [nombre, "Marcos"]) is None
+    assert check_lexicon(nombre, known_names=[nombre], candidates=[nombre]) == []
+
+
+# ------------------------------------------------------ longitud de capitulo
+
+
+def _palabras(n: int) -> str:
+    return " ".join(["palabra"] * n)
+
+
+@pytest.mark.parametrize(
+    ("palabras", "salta"),
+    [(1_499, True), (1_500, False), (2_750, False), (4_000, False), (4_001, True), (0, True)],
+)
+def test_la_longitud_del_capitulo_contra_su_rango(palabras: int, salta: bool) -> None:
+    """EST-07. Lo que se mide es lo **escrito**, no lo planificado en la
+    escaleta."""
+    defectos = check_chapter_length(_palabras(palabras), word_range=(1_500, 4_000))
+    assert bool(defectos) is salta
+    for d in defectos:
+        assert d.kind == "check.format"
+        assert f"{palabras} palabras" in d.rule
+        assert "1500-4000" in d.rule
+        assert d.evidence.quote
+
+
+def test_la_longitud_del_capitulo_tiene_la_severidad_de_la_de_escena() -> None:
+    """La misma que `check.format` da a una escena fuera de rango: degrada el
+    ritmo, no contradice el canon."""
+    [capitulo] = check_chapter_length(_palabras(10), word_range=(1_500, 4_000))
+    [escena] = check_format(_palabras(10), word_range=(400, 1_500))
+    assert capitulo.severity is escena.severity is Severity.S2
 
 
 # ---------------------------------------------------------- check.knowledge

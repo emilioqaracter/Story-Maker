@@ -16,31 +16,71 @@ que toca el canon.
 
 from __future__ import annotations
 
-import json
 import sqlite3
-from collections.abc import Mapping, Sequence
+from collections.abc import Sequence
+from typing import Any, Literal, assert_never
 
-from pydantic import BaseModel, ConfigDict, Field, JsonValue
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from canon.skills import read
 from commons.provider.port import ToolCall, ToolResult
 from commons.types.primitives import BlockProvenance, WorldTime
 
 
-def _as_ids(raw: JsonValue) -> list[str]:
-    """Identificadores de una lista que llega de JSON.
+class LookupArgs(BaseModel):
+    """Argumentos de `canon.lookup`. Es el esquema **y** el validador.
 
-    Lo que el modelo manda es texto libre hasta que se comprueba: una lista de
-    numeros, o `None`, o un solo identificador suelto son todos posibles, y
-    ninguno debe reventar aqui sino salir como consulta vacia o acotada.
+    Estricto y cerrado a proposito: lo que el modelo manda es texto libre hasta
+    que se comprueba, y un argumento mal tipado no se corrige aqui, se rechaza
+    con el motivo. Coercionarlo --`"full": "no"` como `True`, `5` como `["5"]`--
+    entrega algo que el modelo no pidio sin que se entere, y se fia de ello.
     """
-    if raw is None:
-        return []
-    if isinstance(raw, str):
-        return [raw]
-    if isinstance(raw, list):
-        return [str(x) for x in raw]
-    return [str(raw)]
+
+    model_config = ConfigDict(extra="forbid", strict=True, frozen=True)
+
+    kind: Literal["entity", "knowledge", "related"]
+    entity_ids: tuple[str, ...] = ()
+    entity_id: str = ""
+    full: bool = False
+
+
+class BudgetArgs(BaseModel):
+    """`context.budget` no lleva argumentos: cualquier clave es de mas."""
+
+    model_config = ConfigDict(extra="forbid", strict=True, frozen=True)
+
+
+#: El esquema de entrada que se le puede ensenar al modelo. Sale del mismo
+#: modelo que valida: dos copias --una en prosa, otra en codigo-- se desalinean.
+LOOKUP_INPUT_SCHEMA: dict[str, Any] = LookupArgs.model_json_schema()
+
+
+class ToolArgumentsError(RuntimeError):
+    """Los argumentos de una herramienta no encajan con su esquema (RF-91).
+
+    Incluye el JSON malformado. Es un error **de la llamada**, no de la tirada:
+    el bucle de herramientas se lo devuelve al modelo con el motivo y cuenta
+    como una negativa, igual que una herramienta fuera de lista.
+    """
+
+
+def _parse[A: BaseModel](model: type[A], call: ToolCall) -> A:
+    """Valida los argumentos crudos contra su modelo, sin coercion.
+
+    Los tres primeros errores con su ruta, como hace `dispatch` con la salida de
+    un agente: "no encaja" sin decir donde no le deja al modelo corregir nada.
+    """
+    try:
+        return model.model_validate_json(call.arguments)
+    except ValidationError as exc:
+        detalles = "; ".join(
+            f"{'.'.join(str(x) for x in e['loc']) or '(raiz)'}: {e['msg']}"
+            for e in exc.errors()[:3]
+        )
+        raise ToolArgumentsError(
+            f"argumentos de {call.name!r} rechazados: {exc.error_count()} error(es) "
+            f"[{detalles}]. Esquema: {model.model_json_schema()}"
+        ) from exc
 
 
 class ToolNotAllowedError(RuntimeError):
@@ -101,9 +141,10 @@ class ToolServer:
         self._budget.queries += 1
 
         if call.name == "context.budget":
+            _parse(BudgetArgs, call)
             return self._budget_tool()
         if call.name == "canon.lookup":
-            return self._lookup(json.loads(call.arguments))
+            return self._lookup(_parse(LookupArgs, call))
         raise ToolNotAllowedError(f"{call.name!r} no es una herramienta conocida")
 
     # ------------------------------------------------------- context.budget
@@ -120,10 +161,9 @@ class ToolServer:
 
     # --------------------------------------------------------- canon.lookup
 
-    def _lookup(self, args: Mapping[str, JsonValue]) -> ToolResult:
+    def _lookup(self, args: LookupArgs) -> ToolResult:
         """RF-93 a RF-96. Mide el candidato **antes** de entregarlo."""
-        kind = str(args.get("kind", ""))
-        contenido, procedencia = self._resolve(kind, args)
+        contenido, procedencia = self._resolve(args)
 
         coste = self._estimate.estimate(contenido, self._model_id)  # type: ignore[attr-defined]
 
@@ -145,17 +185,16 @@ class ToolServer:
         self._budget.quota_used += coste
         return ToolResult(content=contenido, provenance=procedencia, tokens=coste)
 
-    def _resolve(self, kind: str, args: Mapping[str, JsonValue]) -> tuple[str, BlockProvenance]:
+    def _resolve(self, args: LookupArgs) -> tuple[str, BlockProvenance]:
         """Delega en las skills de lectura de `canon/`.
 
         Toda respuesta sale con procedencia: sin ella, un fragmento de prosa que
         describia una intencion se lee igual que un hecho canonico (RF-95).
         """
         at = self._at
-        match kind:
+        match args.kind:
             case "entity":
-                ids = _as_ids(args.get("entity_ids"))
-                cards = read.query(self._con, ids, at=at, full=bool(args.get("full")))
+                cards = read.query(self._con, list(args.entity_ids), at=at, full=args.full)
                 return (
                     "\n".join(
                         f"{c.name} ({c.entity_id}): "
@@ -165,16 +204,12 @@ class ToolServer:
                     BlockProvenance.CANON,
                 )
             case "knowledge":
-                quien = str(args.get("entity_id", ""))
-                hechos = read.knowledge_of(self._con, quien, at)
+                hechos = read.knowledge_of(self._con, args.entity_id, at)
                 return ("\n".join(sorted(hechos)), BlockProvenance.CANON)
             case "related":
-                semillas = _as_ids(args.get("entity_ids"))
                 return (
-                    "\n".join(sorted(read.related(self._con, semillas, at=at))),
+                    "\n".join(sorted(read.related(self._con, list(args.entity_ids), at=at))),
                     BlockProvenance.CANON,
                 )
-            case _:
-                raise ToolNotAllowedError(
-                    f"tipo de consulta desconocido: {kind!r}. Validos: entity, knowledge, related"
-                )
+            case _:  # pragma: no cover - el Literal de LookupArgs lo hace inalcanzable
+                assert_never(args.kind)
