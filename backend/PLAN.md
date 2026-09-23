@@ -3,7 +3,7 @@
 > Compañero de [`specs/srs-backend-v1.md`](../specs/srs-backend-v1.md), que dice **qué** hay que construir. Este documento dice **de dónde se parte, en qué orden se sigue y con qué ficheros**.
 > No es un SRS y no añade requisitos: todo lo que aparece aquí tiene su `RF`, `RD`, `RI` o `RNF` en la spec, o su sección en `architecture.md`. Si algo no lo tiene, es un error de este documento.
 
-El plan tiene dos bloques. El **bloque 1** cierra la versión 1 —pasos 1 a 6 de `architecture.md` §14— hasta que una tirada real va del brief al cierre de obra sin intervención. El **bloque 2** son los pasos 7 a 10, que compran escala y calidad, y no empieza hasta que el bloque 1 pasa su puerta. Sin esa frontera se pule calidad sobre un canon que todavía no evoluciona.
+El plan tiene tres bloques. El **bloque 1** cierra la versión 1 —pasos 1 a 6 de `architecture.md` §14— hasta que una tirada real va del brief al cierre de obra sin intervención. El **bloque 2** son los pasos 7 a 10, que compran escala y calidad, y no empieza hasta que el bloque 1 pasa su puerta. Sin esa frontera se pule calidad sobre un canon que todavía no evoluciona. El **bloque 3** es la versión 4 (§8): verificación formal, guardarraíl, observabilidad y evaluación, sin paso nuevo.
 
 ---
 
@@ -118,6 +118,8 @@ Producen código que funciona en la demo y falla en el capítulo 20.
 | T18, T19 | Puerta pasada con dobles; la medida sobre la semilla espera a T16 |
 | T20 a T23 | Construidos, cableados en el bucle y en verde |
 | T24 | Bucle completo, rutas RI-29 y RI-30, TLC sin contraejemplo; falta la tirada real de la versión 2 y su comparación con la semilla |
+| T37 | Hecho: `specs/srs-backend-v4.md` y su propagación |
+| T38 a T52 | Especificados en `specs/srs-backend-v4.md`; se construyen en las olas de §8 |
 
 ---
 
@@ -445,28 +447,153 @@ Una fila por sección. Lo que queda sin tramo en el bloque 1 está en el bloque 
 | Sección | Tramo | Estado |
 |---|---|---|
 | §1 Principios | §1.6, las trampas | Cubierto |
-| §2.1 a §2.3 Monorepo y paquete por funcionalidad | En verde; `supervision/` en T22, `evals/` en T19 | Cubierto |
-| §3.1 Cinco almacenes | T1, T6 entregados; delta en T10 | Cubierto en T10 |
+| §2.1 a §2.3 Monorepo y paquete por funcionalidad | En verde; `supervision/` en T22, `evals/` en T19; `verification/formal/` en T43, `.claude/` en T45, `frontend/visual/` en T49 | Cubierto |
+| §3.1 Cinco almacenes | T1, T6 entregados; delta en T10; niveles de proscripción en T41, hecho × escena y cronología en T42, elementos del brief en T47 | Cubierto en T10; bloque 3 |
 | §3.2 Memoria de trabajo | T0 entregado | Cubierto |
-| §3.3 Escritura del índice | T6 entregado | Cubierto |
-| §4.1 a §4.3 Techos y presupuestos | T0, T8 entregados; andamiaje en T9 | Cubierto en T9 |
+| §3.3 Escritura del índice | T6 entregado; hecho × escena en T42 | Cubierto |
+| §4.1 a §4.3 Techos y presupuestos | T0, T8 entregados; andamiaje en T9; Jurado a 13.200 en T47 | Cubierto en T9 |
 | §4.4 Recuperación híbrida | T3 entregado; afinado en T19 | Cubierto |
 | §4.5 Resúmenes jerárquicos | Niveles bajos en T10; arco y obra en T18 | Cubierto |
 | §4.6 Control de deriva | Proscripción en T10; huella en T21 | Cubierto |
 | §4.7 Aislamiento | T3 entregado como propiedad | Cubierto |
-| §4.8 Proveedores, CLI y contador | T0 entregado; D-35 en T9 | Cubierto |
-| §4.9 Recetas por agente | T14 | Cubierto en T14 |
+| §4.8 Proveedores, CLI y contador | T0 entregado; D-35 en T9; CLI aislado y Langfuse en T40 | Cubierto |
+| §4.9 Recetas por agente | T14; receta del Jurado con el encargo en T47 | Cubierto en T14 |
 | §4.10 Contexto en el ciclo | T15 | Cubierto en T15 |
-| §5 Skills y herramientas | Repartidas por tramo; `*.audit` en T20, `style.*` en T21, `metrics.report` en T22, `retcon.propose` en T23 | Cubierto |
+| §5 Skills y herramientas | Repartidas por tramo; `*.audit` en T20, `style.*` en T21, `metrics.report` en T22, `retcon.propose` en T23; la longitud de capítulo en `check.format` y los argumentos estrictos en T39 y T41, `check.forbidden` en T41, `check.formal` en T43, las `*.audit` nuevas en T47 | Cubierto |
 | §6 Agentes | §1.3 y T10 a T14; Jurado T20, Estilista T21, Supervisor T22 | Cubierto |
 | §7.1 a §7.3 Flujos, reparación y cuarentena | T14, T15; el flujo completo en T24 | Cubierto |
 | §7.4 Orquestador como código | T8 entregado; cableado en T15 | Cubierto en T15 |
 | §8 Sustitutos de decisiones humanas | Repartido; el retcon en T23 | Cubierto |
-| §9.1 Verificadores deterministas | T5 entregado | Cubierto |
-| §9.2 Jurado | T20 | Bloque 2 |
-| §9.3 Puertas | T12, T14, T15; la mitad de juicio en T20 y T22 | Cubierto |
-| §10 Escritura de canon | T10, T11; el retcon en T23 | Cubierto |
-| §11 Observabilidad | T9; las trece señales en T22 | Cubierto |
+| §9.1 Verificadores deterministas | T5 entregado; T39, T41 y T43 los endurecen; la tabla validador × punto se contrasta en la puerta en T50 | Cubierto |
+| §9.2 Jurado | T20; rúbricas versión 2 en T47 | Bloques 2 y 3 |
+| §9.3 Puertas | T12, T14, T15; la mitad de juicio en T20 y T22; prohibidas y cronología antes de congelar en T41 y T46; elementos en el cierre en T47 | Cubierto |
+| §10 Escritura de canon | T10, T11; el retcon en T23; comprobaciones antes de toda congelación en T41 y T46 | Cubierto |
+| §11 Observabilidad | T9; las trece señales en T22; Langfuse en T40 y T48; audit log en T45 | Cubierto |
 | §12 Riesgos | §6 de este plan y SRS §7.4 | Cubierto |
 | §13 Decisiones abiertas | T17 cierra nº 2, 3, 4 y 9; T19 cierra nº 10 | Cubierto |
-| §14 Orden de construcción | §2 y §3 de este plan | Cubierto |
+| §14 Orden de construcción | §2 y §3 de este plan; la versión 4, en §8 | Cubierto |
+
+### 7.1 Tramos de la versión 4: requisito, método y ficheros
+
+Los tramos de `specs/srs-backend-v4.md` §11 con los requisitos que entrega cada uno, su método principal, los ficheros que toca y la ola y la sesión que lo construye. **Un fichero con dos dueños en la misma ola se integra en el orden de la columna de la derecha**, y el segundo parte del commit del primero.
+
+| Tramo | ENT | Requisitos | Método principal | Ficheros | Ola · sesión · orden |
+|---|---|---|---|---|---|
+| T37 | 42 en su parte de documento | — | VER-15 | `specs/srs-backend-v4.md`; `docs/architecture.md`, `verification.md`, `definitions.md`; `specs/srs-backend-v2.md` y `v3.md` en su sitio; `backend/PLAN.md`; `frontend/PLAN.md`; `AGENTS.md` | 1 · S-DOC |
+| T38 | 51 a 57 | RF-228, RF-229 | VER-18 | `orchestration/model/run.tla`, `run.cfg`, `chapter.tla`, `chapter.cfg`, `mutations/`, `tlc/`, `README.md`; `.github/workflows/backend.yml` (paso de TLC con versión fija, al cambiar el modelo) | 1 · S-TLA |
+| T39 | 26, 37; 38 en su medida | RF-230, RF-231 | VER-05 | `orchestration/tools/server.py` y `test_server.py`; `verification/checks/deterministic.py` y `test_deterministic.py`, con `check_chapter_length` ya escrita y sin llamar; `orchestration/engine.py`, solo `_name_candidates`, y `test_engine.py` | 1 · S-CHECKS · antes de S-B |
+| T40 | 28, 63, 67 | RF-233 a RF-235, RI-60 a RI-62, RD-44, RNF-53, RNF-54 | VER-05, VER-09, VER-11 | `commons/tracing/langfuse_export.py` y su test; `commons/tracing/trace.py`, solo el observador; `commons/provider/port.py`, `claude_cli.py` y `test_claude_cli.py`; `orchestration/dispatch.py` y `test_dispatch.py`; `orchestration/compose.py` y `app.py`, que enganchan el conductor en vivo y emiten `work.cost`; `pyproject.toml`. Además, lo que T39 dejó en `commons/`: `claude_cli.py:_tool_protocol` pasa a mostrar el esquema que exporta el servidor de herramientas (RF-230) | 2 · S-A · 1.º |
+| T41 | 38; 40, 70, 71, 72, 73, 75; 74 en su parte local | RF-232, RF-236 a RF-240, RD-37, RD-38 | VER-12, VER-06, VER-05, VER-09 | `verification/checks/forbidden.py` y `test_forbidden.py`; `verification/checks/deterministic.py`, para quitar las prohibidas de `check_repetition`; `orchestration/engine.py`, `verify_scene`; `orchestration/loop.py`, comprobación antes de `_freeze`, motivo del aborto, `guardrail.match` y la llamada a `check_chapter_length` en `_approve_chapter` (RF-232), con su prueba y la de `_work_closes` fuera de rango; `canon/db/migrations.py`, una migración; `canon/db/schema.sql`, comentario; `canon/db/forbidden_global.txt`; `canon/brief.py`, solo la carga por niveles en `create_novel`; pruebas de `loop`, `engine` y migraciones | 2 · S-B · 2.º |
+| T42 | 30, 31; 18 en su parte de esquema | RF-241, RF-242, RD-39, RD-40, RD-34 | VER-06, VER-05 | `canon/db/migrations.py`, una migración, que además añade el disparador que impide borrar de `manuscript_version` (RD-34); `canon/prose_index/index.py`; `canon/freeze/freeze.py`; `canon/arbiter/refreeze.py`; lectura de `chronology` en `canon/`; `orchestration/amend.py`, solo la lectura del registro en `affected_scenes`; pruebas | 2 · S-M · 3.º |
+| T43 | 32, 46, 47, 48 | RF-243 a RF-246, RI-63, RD-41, RNF-55 | VER-04, VER-06, VER-05, VER-15 | `verification/formal/`: `generate.py`, `check.py`, `fixtures/`, `lean/` con `lakefile.toml`, `lean-toolchain`, `StoryMaker/Types.lean`, `Invariants.lean`, `Fixture.lean` y `last-build.txt`, y sus pruebas; `gate.py`; `.github/workflows/backend.yml`, tras el paso de TLC de T38; `.gitignore`, `.lake/` y los ficheros generados | 2 · S-C · 4.º |
+| T44 | 04, 07, 58, 59, 60 | RF-247 a RF-250, RI-64, RD-42, RD-43 | VER-05, VER-08, VER-10 | `canon/brief_rules.py`, con la normalización de T41; `canon/brief.py`, modelos y `to_events`; `brief/extract.py`; `brief/draft.py`; `backend/openapi.json`; cliente regenerado en `frontend/commons/api/`; `backend/evals/briefs/01` a `05`; `evals/test_briefs.py` y `test_temporal.py`; pruebas de reglas, entrevista y rutas | 2 · S-F · después de S-B |
+| T45 | 24, 25, 76 | RF-251 a RF-253, RI-65, RI-66, RD-45, RNF-56 | VER-05, VER-12, VER-06 | `.claude/settings.json`; `.claude/hooks/chapter_gate.py` y `policy.py`; `commons/tracing/trace.py` y `test_trace.py`, la cadena; `orchestration/routes.py`, RI-27; `openapi.json` y cliente; pruebas con subprocess dentro de `backend/`; `.gitignore`, `.claude/audit/` | 3 · S-E · 1.º |
+| T46 | 49; 71 en su nivel `novela`; 16 en el renombrado de dos palabras | RF-254 a RF-256, RI-67, RD-49, RF-225 | VER-05 | `orchestration/loop.py`, `_extract_and_validate` y `_try_retcon`; `orchestration/amend.py`, `_apply`, `forbid` y `counts` con la forma de hoy de RF-225 y D-78, que quita el `xfail` que dejó S-TESTS; `orchestration/engine.py`, `formal_check`; `orchestration/compose.py` y `app.py`, `lake` al arrancar; `brief/interpret.py`; `canon/manuscript.py`, la solicitud con `kind` y `term`; `canon/db/migrations.py`, una migración; `orchestration/routes.py`, RI-49; `openapi.json` y cliente; pruebas de `loop` y `amend` | 3 · S-G · 2.º |
+| T47 | 39, 43 | RF-257 a RF-261, RD-47, RNF-57 | VER-05, VER-17, VER-19, VER-12 | `commons/types/rubrics.py`; `verification/jury/prompts.py` y `verdict.py`; `context/packing/recipes.py`, receta del Jurado; `orchestration/engine.py`, `judge_chapter` y el Archivero; `orchestration/loop.py`, traza del Jurado; `canon/events/types.py`; `canon/db/migrations.py`, una migración; `canon/brief.py`, eventos de los elementos; `canon/archivist/prompts.py` y `extract.py`; `canon/freeze/`, usos anclados; `planning/outline/check.py` y `prompts.py`; `planning/ledger/setups.py`; pruebas | 3 · S-J · 3.º |
+| T48 | 64, 65, 66, 68, 69, 74 | RF-262 a RF-266, RI-68, RD-46 | VER-09, VER-05, VER-16 | `commons/tracing/langfuse_export.py`; `commons/settings.py`, ruta de la traza de entrevista; `brief/extract.py`, `interpret.py`, `routes.py` y `store.py`; `orchestration/tools/server.py` y `engine.py`, el registro `tool`; `orchestration/dispatch.py`; `orchestration/prompts_sync.py`; `orchestration/app.py`, reexportación de la entrevista al crear la novela; `evals/compare.py` | 3 · S-S · 4.º |
+| T49 | 41 | RF-267, RI-69 | VER-05 | `.mcp.json`; `frontend/visual/tour.mjs` y `results/`; `frontend/package.json` | 3 · S-V · 5.º |
+| T50 | 42 | RF-268 | VER-15 | `backend/coherence.py` y su prueba | 3 · quien integra, después de T39, T41, T43 y T46 |
+| T51 | 44, 45, 61 en su parte de código | RF-269 a RF-271, RD-48 | VER-10 | `evals/brief_table.py`, `human_template.py`, `human_vs_jury.py` y sus pruebas; esquema de `evals/human/` | 3 o 4 · con dobles, sin tirada |
+| T52 | 44, 45, 50, 61, 62 | RF-272, RNF-58 | VER-10, VER-16 | `evals/results/briefs.md`, `human-vs-jury.md`, `tuning-01.md` y `traces/`; `evals/formal/CASOS.md` y `test_case.py`; `evals/human/<novela>.json`; enlace desde §1.4 | 4 · en secuencia, cuando T16 termine |
+
+---
+
+## 8. Bloque 3 · versión 4
+
+Su spec es [`specs/srs-backend-v4.md`](../specs/srs-backend-v4.md), que es T37. No añade paso al orden de construcción: endurece los pasos 4, 5, 9 y 11. Los ficheros de cada tramo están en §7.1; los requisitos y las puertas son los de la spec y no se repiten distintos aquí.
+
+**Orden de integración.** Una sola sesión integra en `v2-oneshot`, en el orden de §7.1, y pasa `python gate.py` después de cada merge. Las migraciones de `canon/db/migrations.py` se numeran en ese mismo orden: T41, T42, T46 y T47. Las tiradas con modelo de T52 van de una en una y sobre un commit etiquetado (RNF-58).
+
+### T37 · `specs/srs-backend-v4.md`
+
+Hecho. Autoriza lo que construyen las olas 2 y 3 y deja escritas en su §9 las respuestas del interrogatorio.
+
+### T38 · TLA+ del flujo completo
+
+| Requisitos | RF-228, RF-229 |
+|---|---|
+| **Puerta** | TLC sin error sobre `chapter.cfg` y `run.cfg`, con la salida guardada; cada mutación de `model/mutations/` da contraejemplo |
+
+### T39 · Verificadores endurecidos
+
+| Requisitos | RF-230, RF-231 |
+|---|---|
+| **Puerta** | «Nalah» suelto, al principio de frase o con tilde cambiada da S1 con Nala en el canon; `"full": "no"` y una clave de más se rechazan; `check_chapter_length` marca 1.499 y 4.001 palabras y no 1.500 ni 4.000 |
+
+### T40 · Langfuse base
+
+| Requisitos | RF-233 a RF-235, RI-60 a RI-62, RD-44, RNF-53, RNF-54 |
+|---|---|
+| **Puerta** | Con un cliente doble, una tirada con dobles da una traza por generación con `session_id`, generations con tokens, coste y latencia, y `work.cost`; si el cliente lanza, la tirada cierra igual; la lista de argumentos del CLI no carga configuración de usuario ni de proyecto |
+
+### T41 · Guardarraíl de prohibidas
+
+| Requisitos | RF-232, RF-236 a RF-240, RD-37, RD-38 |
+|---|---|
+| **Puerta** | La tirada de la sonda de la auditoría, con una prohibida en la prosa, no congela ningún capítulo con la palabra dentro: o repara, o acaba en `RunAbortedError` con término y nivel; `mar` no casa en `Marcos` y `luz` sí en `luces`; una prueba por nivel; un capítulo escrito de 1.200 palabras no pasa la puerta de capítulo y `chapter.gate` lo cita |
+
+### T42 · Hecho × capítulo y cronología
+
+| Requisitos | RF-241, RF-242, RD-39, RD-40, RD-34 |
+|---|---|
+| **Puerta** | Tras congelar dos capítulos, `fact_usage` y `affected_scenes` dan las mismas escenas; `chronology` devuelve las escenas en orden de mundo aunque se congelaran en otro; un `DELETE` sobre `manuscript_version` falla |
+
+### T43 · Lean
+
+| Requisitos | RF-243 a RF-246, RI-63, RD-41, RNF-55 |
+|---|---|
+| **Puerta** | La fixture limpia compila con `lake build` y la sembrada falla en su teorema; dos generaciones del mismo canon dan el mismo fichero; sin `lake`, `run_lean` devuelve fallo |
+
+### T44 · Brief
+
+| Requisitos | RF-247 a RF-250, RI-64, RD-42, RD-43 |
+|---|---|
+| **Puerta** | Seis años con tono «thriller erótico» es contradicción; un campo de más da 422 y un hecho extraído con un campo de más cuenta como inválido; los cinco briefs validan y cada uno cumple su propiedad |
+
+### T45 · Hooks de Claude Code y audit log
+
+| Requisitos | RF-251 a RF-253, RI-65, RI-66, RD-45, RNF-56 |
+|---|---|
+| **Puerta** | Escribir un `*.chapter.md` en presente queda bloqueado con el defecto; leer `.env` se deniega y la decisión queda en el audit log; borrar una línea de una traza lo señala `verify_chain` |
+
+### T46 · Puerta formal y prohibición por solicitud
+
+| Requisitos | RF-254 a RF-256, RI-67, RD-49, RF-225 |
+|---|---|
+| **Puerta** | Un fallo de Lean inyectado impide congelar hasta que la reparación lo arregla, y una enmienda que rompe un invariante se rechaza sin crear versión; pedir «que no aparezca X» produce la versión siguiente sin X; «Marcos Vela» a «Mateo Ruiz» con un reparado limpio se aplica |
+
+### T47 · Jurado versión 2 y elementos obligatorios
+
+| Requisitos | RF-257 a RF-261, RD-47, RNF-57 |
+|---|---|
+| **Puerta** | El Jurado puntúa nueve dimensiones con justificación trazada y cabe en 13.200; un recuerdo obligatorio sin uso anclado impide cerrar la obra y el motivo lo nombra |
+
+### T48 · Langfuse completo
+
+| Requisitos | RF-262 a RF-266, RI-68, RD-46 |
+|---|---|
+| **Puerta** | Con un cliente doble, entrevista, tirada y solicitud de la misma novela comparten sesión; cada agente sale con su rol; cada herramienta es un hijo de su generation; cada verificador de la traza tiene su score; publicar dos veces los prompts sin cambios no crea versión |
+
+### T49 · Validación visual
+
+| Requisitos | RF-267, RI-69 |
+|---|---|
+| **Puerta** | El recorrido pasa sobre una copia sana y falla, con su registro fechado, sobre una copia sin dedicatoria |
+
+### T50 · Tabla de validadores en la puerta
+
+| Requisitos | RF-268 |
+|---|---|
+| **Puerta** | Borrar una fila `check.*` de `architecture.md` §9.1, o añadir un `kind` sin fila, hace fallar `coherence.py` |
+
+### T51 · Herramientas de evaluación
+
+| Requisitos | RF-269 a RF-271, RD-48 |
+|---|---|
+| **Puerta** | La tabla por brief, la plantilla humana y la comparación se regeneran idénticas desde ficheros de prueba |
+
+### T52 · Tiradas de evaluación
+
+| Requisitos | RF-272, RNF-58 |
+|---|---|
+| **Puerta** | `evals/results/briefs.md`, `human-vs-jury.md`, `tuning-01.md` y `evals/formal/CASOS.md` existen, versionados, y se regeneran con un comando desde ficheros versionados |

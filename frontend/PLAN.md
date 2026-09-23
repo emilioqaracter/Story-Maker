@@ -22,6 +22,7 @@ Medido el 2026-09-23 sobre la rama `v2-oneshot`:
 | `backend/coherence.py` | Contrasta también este plan: tramo por tramo contra la spec §11, cada fila de §7.2 con su tramo, cada sección de `architecture.md` con su fila en §7.1, y las carpetas de `frontend/` contra el árbol de `architecture.md` §2.3 |
 | CI | `.github/workflows/frontend.yml`: la puerta en cada cambio de `frontend/` o de `backend/openapi.json`; `npm audit` a diario |
 | Backend v3 | `specs/srs-backend-v3.md`, T33 a T36: brief extendido, entrevista en `brief/`, versiones, fichas, lista de novelas y solicitudes de cambio. `python gate.py` en verde |
+| Backend v4 | `specs/srs-backend-v4.md`, por construir. Toca al frontend en tres puntos, sin pantallas ni rutas nuevas: el cliente se regenera por los campos añadidos de RI-27 y RI-49 y por el 422 de RI-01 ante un campo de más (T44 a T46), y la validación visual vive en `frontend/visual/` con el MCP de navegador de `.mcp.json` (T49, `backend/PLAN.md` §7.1) |
 | Tirada real | Con `runs-real/real.sqlite`, la aplicación montada en `/app/` sirve el sitio y se leen sus 2 capítulos y 4 escenas. Con modelo real, sobre una copia: entrevista con extracción del texto libre, novela creada por RI-01 y una solicitud de cambio interpretada y aplicada (T32) |
 
 ### 1.2 Estado por tramo de la spec

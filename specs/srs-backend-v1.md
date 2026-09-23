@@ -391,7 +391,7 @@ Refina `architecture.md` §5.3, §6.3 y §4.10. Una herramienta la invoca el pro
 
 | RF | Requisito | Fuente | Verificación |
 |---|---|---|---|
-| RF-91 | Cada agente de modelo declara una lista **cerrada** de herramientas, la de la matriz de `architecture.md` §6.3. Una llamada a algo fuera de su lista se rechaza, consume un reintento y se traza | `architecture.md` §5.3, §6.3 | VER-05, VER-12 |
+| RF-91 | Cada agente de modelo declara una lista **cerrada** de herramientas, la de la matriz de `architecture.md` §6.3. Una llamada a algo fuera de su lista se rechaza, consume un reintento y se traza. Sus argumentos se validan contra un esquema estricto y cerrado, sin coercionar (`srs-backend-v4.md` RF-230) | `architecture.md` §5.3, §6.3 | VER-05, VER-12 |
 | RF-92 | `context.budget` devuelve consumido, disponible y techo. El consumido es el recuento real del `usage` de la última respuesta del turno, **no una estimación** | `architecture.md` §4.8, §5.3 | VER-05 |
 | RF-93 | `canon.lookup` estima el candidato antes de entregarlo. Si lo consumido más el candidato supera el techo de la llamada, no lo entrega: devuelve su tamaño y en qué acotar la consulta | `architecture.md` §5.3 | VER-05, VER-06 |
 | RF-94 | `canon.lookup` nunca trunca un resultado. Si no cabe, se niega entero o se sustituye por el resumen de su escena | CTX-19; `architecture.md` §5.3 | VER-06 |

@@ -125,6 +125,8 @@ Demostración matemática de que el código satisface una especificación para *
 
 Por qué estos dos objetos. Si la precedencia admite un ciclo, un conflicto de canon no tiene resolución, y sin persona a quien preguntar el sistema se detiene: es la clase de fallo que rompe la autonomía por construcción. Y la cronología es el único canon cuya coherencia se puede **demostrar** para todos los hechos a la vez, no solo muestrear: un fallo de Lean es un defecto S1 del capítulo que se iba a congelar, y vuelve al bucle de reparación como cualquier otro.
 
+**Dónde corre Lean y qué pasa si no puede.** Antes de cada congelación, retcon y enmienda, sobre el canon más lo que va a entrar, y en la puerta de CI sobre una fixture limpia y otra sembrada (`specs/srs-backend-v4.md` RF-244 a RF-246 y RF-254). Por fallo cerrado, si `lake` no está la tirada no arranca, y agotar el tope de `lake build` cuenta como fallo. La fecha de nacimiento sale del atributo `birth_date`; si falta y hay edad, se deriva como intervalo y consta como derivada, y si faltan las dos el nacimiento se declara ausente: nunca se inventa.
+
 ### 4.5 VER-05 · Unit e integration testing
 
 Comprobación del comportamiento contra entradas de ejemplo concretas y salidas esperadas.
@@ -191,6 +193,7 @@ Instrumentar al agente para que su trayectoria real (llamadas a skills, tokens, 
 | **Qué verifica aquí** | Toda ejecución: qué contexto entró, qué skill se llamó, cuántos tokens consumió, qué defectos se dispararon, cuántos reintentos hubo. Es la implementación de PRO-09, trazabilidad |
 | **Clase** | D |
 | **Herramienta** | Traza local en fichero: un JSONL append-only por novela, junto a su SQLite, escrito desde `backend/commons/tracing`. Un registro por llamada a agente, nombrado por agente, capítulo e intento; los datos de `architecture.md` §11 van como campos del registro. Es la fuente de verdad: parte del estado de la tirada, se copia con ella. **Langfuse es su espejo** (`architecture.md` §11): sesión por novela, span por agente y por herramienta, scores de los verificadores y prompts versionados. Un fallo al exportar se registra y la tirada sigue |
+| **Audit log** | Cada registro lleva el hash del anterior. Borrar, editar o reordenar una línea se detecta con `verify_chain`, así que la traza sirve también de audit log de las decisiones del motor de políticas —arbitraje, retcon, guardarraíl y verificación formal— sin duplicarse en tablas del canon |
 | **Límite** | Observa, no juzga. Dice qué pasó, nunca si estuvo bien |
 
 Es prerrequisito de casi todo lo demás: sin traza no hay eval reproducible (VER-10), ni diagnóstico de deriva (VER-16), ni evidencia de un ataque (VER-17). Se instrumenta primero, no al final.
@@ -206,6 +209,8 @@ Pruebas estructuradas del comportamiento de un modelo o agente contra un conjunt
 | Task completion | ¿Cierra la novela con deuda narrativa cero y todos los arcos resueltos? |
 | Adversarial | Entradas de VER-17 convertidas en casos fijos del conjunto |
 | Live u online | Puntuación agregada por capítulo sobre ejecuciones reales, vigilada por el Supervisor |
+| Conjunto de briefs | Cinco briefs versionados —semilla, adversarial, trampa temporal, destinatario menor con prohibiciones y dominio no deportivo—, una tirada por cada uno y una tabla brief × verificador generada desde las trazas, nunca escrita a mano |
+| Evaluación humana de referencia | Una persona puntúa una novela ya congelada con la rúbrica del Jurado, y una comparación generada dice por dimensión cuánto se separan. Fuera del ciclo: ver §5.5 |
 
 | Atributo | Valor |
 |---|---|
@@ -234,8 +239,11 @@ Políticas o filtros que acotan qué acciones y qué salidas puede producir un a
 | Lista de skills permitidas | Cada agente declara las suyas; una llamada fuera de lista se rechaza y se traza |
 | Techo de tokens por llamada | Entrada ≤100.000 por llamada y ≤85.000 al ensamblarse el paquete; salida ≤50.000, que no cuenta contra el techo de entrada. Comprobado antes de llamar |
 | Techo de concurrencia (CTX-20) | La llamada se admite solo si lo que está en vuelo más su presupuesto no supera 100.000. Si no cabe, se encola en FIFO estricta. Si el presupuesto no se puede estimar, no se admite |
-| Léxico proscrito | La lista de proscripción de la capa POE se filtra en la salida del Estilista |
+| Léxico proscrito | La lista de proscripción de la capa POE, en su nivel `estilo`, se filtra en la salida del Estilista |
+| Palabras prohibidas del encargo | `check.forbidden`, S1, en cada intento de escena y sobre el capítulo entero antes de congelar. Normaliza mayúsculas, tildes, plurales y variantes simples y compara por palabra completa. Agotada la escalera, la tirada para con el motivo. Tres niveles: global, cliente y novela |
 | Canon de solo lectura | Ningún agente salvo el Archivero puede emitir una escritura canónica |
+| Argumentos de herramienta | `canon.lookup` rechaza tipos cambiados, claves de más y JSON malformado; no los coerciona |
+| Hooks de Claude Code | Sobre el agente de desarrollo, no sobre el sistema: un hook valida un fichero de capítulo con los verificadores reales y otro aplica la política —canon de solo lectura, secretos, lista global— y registra cada decisión. Fallan cerrados |
 
 | Atributo | Valor |
 |---|---|
@@ -328,10 +336,11 @@ Explorar de forma exhaustiva los estados y transiciones alcanzables del flujo pa
 
 | Atributo | Valor |
 |---|---|
-| **Qué verifica aquí** | La máquina de estados del ciclo de vida del capítulo de `architecture.md` §7 |
-| **Invariantes** | «Nunca se congela sin superar todas las puertas»; «nunca se escribe canon antes de congelar»; «toda reparación revalida desde la primera puerta»; «no hay ciclo que evite la cuarentena para siempre»; «nunca hay más de CTX-20 tokens en vuelo», que es CTX-I1; «nunca se reanuda desde un punto que no esté cerrado», que es PRO-I2 |
+| **Qué verifica aquí** | La tirada entera de `architecture.md` §7: configuración, planificación, cada capítulo con su ciclo de vida, caída y reanudación, enmiendas entre congelaciones y publicación de cada versión. El capítulo es un modelo propio que el de la tirada usa como subacción |
+| **Invariantes** | «Nunca se congela sin superar todas las puertas»; «nunca se escribe canon antes de congelar»; «toda reparación revalida desde la primera puerta»; «nunca hay más de CTX-20 tokens en vuelo», que es CTX-I1; «tras reanudar no queda borrador posterior al punto cerrado», que es PRO-I2 y se comprueba sobre el estado que deja la reanudación, no por construcción; «una enmienda solo se aplica entre congelaciones». Cada uno lo rompe al menos una mutación versionada: un invariante que ninguna mutación rompe es sospechoso de vacuidad |
+| **Propiedad de vivacidad** | «Toda generación acaba publicada o abortada», con equidad débil sobre las acciones de progreso y nunca sobre la caída, que se acota. Incluye «no hay ciclo que evite la cuarentena para siempre» |
 | **Clase** | A |
-| **Herramienta** | `TLA+` con TLC sobre el modelo de estados |
+| **Herramienta** | `TLA+` con TLC sobre el modelo de estados, con `tla2tools.jar` en versión fija. La salida de cada ejecución se guarda con su commit, y un README relaciona cada acción con la función del código que la implementa |
 | **Límite** | Prueba el flujo modelado, no el orquestador que lo implementa. Esa distancia la cubre VER-05 |
 
 El tercer invariante es el que más se rompe en la práctica: revalidar solo desde el punto que falló deja pasar la corrección de estilo que rompió la continuidad.
@@ -432,6 +441,11 @@ Dos detalles de orden que no son decorativos. **VER-20 corre antes que VER-14**,
 | Memoria de trabajo PRO-13 | VER-01, 05, 06 | T |
 | Reanudación de una tirada | VER-06, 18 | A |
 | Cronología del canon MUN-05 | VER-04, 05 | A |
+| Guardarraíl de palabras prohibidas | VER-05, 06, 12 | A |
+| Espejo de observabilidad y audit log | VER-05, 06, 09 | D |
+| Hooks del trabajo de desarrollo | VER-05, 12 | A |
+| Lectura visual del manuscrito | VER-05 | T |
+| Conjunto de evaluación del sistema | VER-10, 16 | T · I |
 | Prompt de un agente | VER-10, 16, 17 | T · D |
 | Prosa generada | VER-10, 14, 20 | T · I |
 | Delta canónico | VER-08, 12, 14, 17 | A · I |
@@ -454,7 +468,7 @@ La matriz anterior responde «¿está cubierto este artefacto?». Esta responde 
 | VER-01 | Tipo correcto con valor imposible | VER-03, VER-06 y los verificadores CAL-03 vía VER-05 |
 | VER-02 | Solo encuentra lo ya catalogado; nada sobre lógica de dominio | VER-03, VER-05, VER-06 |
 | VER-03 | Explota en coste con bucles y estado | VER-06 sobre lo que no es función pura |
-| VER-04 | Prueba el modelo, no la implementación | VER-07 sobre los módulos afectados, y §9 |
+| VER-04 | En el diseño, prueba el modelo y no la implementación; en la cronología, prueba los hechos exportados y no que la prosa los narre | VER-07 sobre los módulos afectados, y §9; en la cronología, VER-05 y los verificadores CAL-03 sobre la prosa |
 | VER-05 | Solo los ejemplos elegidos | VER-06, VER-07 |
 | VER-06 | Encuentra contraejemplos, no demuestra ausencia | VER-03, y VER-04 en sus dos propiedades |
 | VER-07 | Caro y lento; solo cubre el módulo crítico | **§9, riesgo aceptado** |
@@ -501,6 +515,8 @@ Lo que este catálogo **no** verifica, dicho de forma explícita. Es la clase U 
 | Que el modelo cambie de comportamiento tras una actualización del proveedor | No es observable por adelantado | Conjunto dorado ejecutado en cada cambio de versión de modelo, más VER-16 |
 | Que el proveedor de embeddings cambie el modelo y los vectores dejen de ser comparables entre sí | El cambio ocurre fuera del sistema y no se anuncia | Cada vector guarda su modelo y dimensión (`architecture.md` §3.1); una mezcla dispara reindexación completa |
 | Corrección de la implementación frente al modelo formal de VER-04 y VER-18 | La prueba cubre el modelo; cerrar la distancia exigiría código verificado, que no compensa | Cobertura de mutación de VER-07 sobre los módulos afectados |
+| Una palabra común al principio de frase, a una edición de un nombre corto del canon, que no sale en minúscula en la escena: `check.lexicon` la toma por errata y da un falso S1, como «Llena» con Elena en el canon | Sin diccionario del español no se distingue de una errata. La lista de palabras comunes lo reduce, no lo elimina | El defecto dice «variante mal escrita de X» y cita la palabra, así que el Reparador lo ve y la traza cuenta cuántos hay |
+| Que un tema prohibido del brief aparezca en la prosa | Un tema no se detecta sin modelo; la palabra prohibida sí, y esa la cubre VER-12 | Las dimensiones de tono y tema del Jurado, y la evaluación humana de referencia |
 
 Un riesgo en esta tabla es una decisión, no una omisión. Sacar una fila de aquí exige un método; meter una nueva exige motivo y señal.
 

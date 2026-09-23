@@ -122,7 +122,7 @@ Las de la versión 1 §2.5. Dos consecuencias propias de esta versión:
 | Supuesto | Si falla |
 |---|---|
 | La versión 1 pasó su puerta: existe `golden/v1-seed/` con una tirada real completa | Esta versión no tiene contra qué medir. No se empieza |
-| Los presupuestos de `architecture.md` §4.2 con el Jurado en 11.500 por instancia caben en la ventana real con el andamiaje del CLI (D-35) | 3 × (11.500 + 38.600) = 150.300 sobre tres ventanas independientes de 200.000: caben |
+| Los presupuestos de `architecture.md` §4.2 con el Jurado en 13.200 por instancia caben en la ventana real con el andamiaje del CLI (D-35) | Cada instancia ocupa 13.200 + 38.600 = 51.800 de su propia ventana de 200.000: caben |
 
 ---
 
@@ -200,8 +200,8 @@ Se añaden a la tabla de la versión 1 §3.5:
 | RF | Requisito | Fuente | Verificación |
 |---|---|---|---|
 | RF-126 | El Jurado son **tres** instancias con rúbricas CAL-02 y semillas distintas que evalúan el mismo capítulo en paralelo. Tres es el mínimo que mide dispersión (D-37) | `architecture.md` §9.2; CAL-11 | VER-05, VER-14 |
-| RF-127 | Cada instancia recibe exactamente el paquete de §4.9: invariantes sin guía de estilo, rúbrica de sus dimensiones, capítulo completo, fichas de voz de los POV, instrucción. Dentro de 11.500 de entrada y 1.500 de salida (D-36). Nunca el paquete del Escritor, su razonamiento ni los defectos ya detectados | `architecture.md` §4.9, §9.2 | VER-06, VER-12 |
-| RF-128 | Las dimensiones que el Jurado puntúa son las de CAL-01 que `definitions.md` asigna a juez: 4 tensión y ritmo (`pacing.audit`), 8 diálogo y subtexto (`subtext.audit`), 9 resonancia temática (`theme.audit`), y la parte no determinista de 2 voz (`voice.audit`) y 5 fidelidad a la guía. Cada rúbrica tiene cinco niveles con ejemplos (D-39) | `architecture.md` §5.2; CAL-01, CAL-02 | VER-05 |
+| RF-127 | Cada instancia recibe exactamente el paquete de §4.9: invariantes sin guía de estilo, rúbrica de sus dimensiones, capítulo completo, fichas de voz de los POV, el encargo del destinatario como dato (`srs-backend-v4.md` RF-258) e instrucción. Dentro de 13.200 de entrada y 1.500 de salida (D-36, `srs-backend-v4.md` RNF-57). Nunca el paquete del Escritor, su razonamiento ni los defectos ya detectados | `architecture.md` §4.9, §9.2 | VER-06, VER-12 |
+| RF-128 | Las dimensiones que el Jurado puntúa son las de CAL-01 que `definitions.md` asigna a juez: 4 tensión y ritmo (`pacing.audit`), 8 diálogo y subtexto (`subtext.audit`), 9 resonancia temática (`theme.audit`), y la parte no determinista de 2 voz (`voice.audit`) y 5 fidelidad a la guía. La versión 2 del conjunto de rúbricas añade continuidad de lectura, tono, arco y personalización (`srs-backend-v4.md` RF-257). Cada rúbrica tiene cinco niveles con ejemplos (D-39) | `architecture.md` §5.2; CAL-01, CAL-02 | VER-05 |
 | RF-129 | Toda puntuación cita el fragmento que la justifica y la cita **se comprueba** con `check.evidence` (RF-110) antes de evaluar la puntuación. Una puntuación sin cita anclada se descarta y el descarte se anota contra la instancia (RF-111) | `architecture.md` §5.2, §9.2; RI-19 | VER-05, VER-19 |
 | RF-130 | Dispersión por dimensión: el rango entre el nivel más alto y el más bajo de las tres instancias. Rango ≥ 2 niveles invalida el veredicto de esa dimensión; el sistema **no promedia**: fuerza una verificación adicional con las tres semillas cambiadas, y si vuelve a dispersar, la dimensión cuenta como bajo umbral (D-39) | `architecture.md` §9.2; CAL-11 | VER-05, VER-06 |
 | RF-131 | Umbral de aceptación CAL-09 por dimensión: nivel resultante ≥ 3 de 5, donde el resultante es la mediana de los tres cuando la dispersión es válida (D-39) | `architecture.md` §9.3; CAL-09 | VER-05 |
@@ -291,7 +291,7 @@ Se añaden a la tabla de la versión 1 §3.5:
 
 | RNF | Requisito | Fuente | Verificación |
 |---|---|---|---|
-| RNF-28 | La concurrencia real es el Jurado: 3 × 11.500 = 34.500 de entrada en vuelo. Continuista con su cupo más Jurado ×3 sumaría 107.000 y **no cabe**: la admisión encola al Jurado hasta que el Continuista termina, que es además el orden de §7.2 | `architecture.md` §4.2; CTX-I1 | VER-06, VER-18 |
+| RNF-28 | La concurrencia real es el Jurado: 3 × 13.200 = 39.600 de entrada en vuelo. Continuista con su cupo más Jurado ×3 sumaría 112.100 y **no cabe**: la admisión encola al Jurado hasta que el Continuista termina, que es además el orden de §7.2 | `architecture.md` §4.2; CTX-I1 | VER-06, VER-18 |
 | RNF-29 | El Continuista cabe en su presupuesto en el capítulo 20 de la semilla dorada gracias a los resúmenes de arco. Si no cabe, la decisión abierta nº 2 de §13 se reabre; hasta entonces opera por capítulo (D-38) | `architecture.md` §4.5, §12, §13 | VER-05 |
 
 ### 6.3 Fiabilidad
@@ -389,7 +389,7 @@ La de la versión 1 §7.2, con `supervision/`, `evals/` y `verification/jury/` y
 
 | D | Decisión | Elección | Por qué |
 |---|---|---|---|
-| D-36 | Capítulo en el techo de EST-07 frente al presupuesto del Jurado | Sube el presupuesto por instancia de 9.000 a **11.500**, con el capítulo en 8.000 —el mismo bloque que Estilista y Archivero— y 1.500 de salida. Tres instancias suman 34.500 | Evaluar por mitades rompe la dimensión de ritmo, que es de capítulo entero; acotar la escaleta por debajo de 2.750 palabras encoge EST-07 por una limitación del evaluador. La suma en vuelo sigue a un tercio del techo. Cierra la decisión abierta nº 9 y corrige `architecture.md` §4.2 y §4.9 |
+| D-36 | Capítulo en el techo de EST-07 frente al presupuesto del Jurado | Sube el presupuesto por instancia de 9.000 a **11.500**, con el capítulo en 8.000 —el mismo bloque que Estilista y Archivero— y 1.500 de salida. Tres instancias suman 34.500 | Evaluar por mitades rompe la dimensión de ritmo, que es de capítulo entero; acotar la escaleta por debajo de 2.750 palabras encoge EST-07 por una limitación del evaluador. La suma en vuelo sigue a un tercio del techo. Cierra la decisión abierta nº 9 y corrige `architecture.md` §4.2 y §4.9. Las rúbricas versión 2 lo suben a 13.200 (`srs-backend-v4.md` D-94) |
 | D-37 | Número de instancias del Jurado | Tres | Es el mínimo que mide dispersión; el coste se paga una vez por capítulo. Cierra la nº 3 |
 | D-38 | Continuista por capítulo o por par | Por capítulo, con los resúmenes de arco como lo que lo mantiene dentro | El par duplica su entrada; los resúmenes la reducen. Se mide en RNF-29 y se reabre si no cabe. Cierra la nº 2 |
 | D-39 | Escala de las rúbricas, dispersión y umbral | Cinco niveles; dispersión inválida con rango ≥ 2; umbral ≥ 3; resultante la mediana | **Propuesta.** Cinco niveles es la forma habitual de una rúbrica con ejemplos por nivel (CAL-02). Rango ≥ 2 significa que dos jueces no coinciden ni en niveles adyacentes. El 3 es la mediana de la escala: «cumple». La mediana y no la media porque con tres valores la media la arrastra el disidente. Cierra la nº 4 |

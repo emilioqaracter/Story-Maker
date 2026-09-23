@@ -70,6 +70,8 @@ El repositorio es un monorepo con dos artefactos desplegables.
 
 De ahí se sigue una prueba barata de que el diseño se respeta: **el sistema completa una novela con el frontend apagado**. El día que no pueda, hay un fallo de diseño.
 
+**Fuera de las dos mitades, la configuración del trabajo de desarrollo.** `.claude/settings.json` declara los hooks de Claude Code y `.claude/hooks/` sus guiones: uno valida un fichero de capítulo con los verificadores reales del backend y otro aplica la política sobre lo que hace el agente de desarrollo, con su audit log en `.claude/audit/` (`specs/srs-backend-v4.md` RF-251 a RF-253). `.mcp.json` declara el MCP de navegador de la validación visual (RF-267). Nada de esto corre dentro de una tirada, y los `claude -p` del motor no lo cargan (§4.8): actúa sobre quien construye el sistema, no sobre la novela.
+
 ### 2.2 Frontera entre las dos mitades
 
 | Qué cruza | Dirección | Forma |
@@ -117,11 +119,11 @@ backend/
 | `planning/` | 1 Arquitecto, 2 Planificador | `outline.plan`, `outline.check`, `scene.spec`, `replan.arc`, `setup.ledger` |
 | `context/` | 3 Documentalista | `context.*` |
 | `generation/` | 4 Escritor, 5 Especialista deportivo | `scene.write`, `match.simulate`, `match.narrate` |
-| `verification/` | 6 Continuista, 7 Jurado, 8 Reparador, 9 Estilista | `check.*`, `*.audit`, `revise.targeted`, `style.*`. El conjunto dorado de defectos sembrados (CAL-10) vive con el Jurado, que es a quien calibra |
+| `verification/` | 6 Continuista, 7 Jurado, 8 Reparador, 9 Estilista | `check.*`, `*.audit`, `revise.targeted`, `style.*`. El conjunto dorado de defectos sembrados (CAL-10) vive con el Jurado, que es a quien calibra. `verification/formal/` es la verificación formal de la cronología: el generador de Lean desde el SQLite y el proyecto Lake en `verification/formal/lean/` (`verification.md` §4.4) |
 | `canon/` | 10 Archivero, 11 Árbitro | `canon.*`, `prose.*`, `delta.extract`, `summarize.hierarchical`, `retcon.propose` |
 | `supervision/` | 12 Supervisor | `metrics.report`. **Lee** `setup.ledger` de `planning/` |
 | `brief/` | Ninguno | `brief.extract` y `amend.interpret`: dos llamadas de modelo que se despachan en código, como el examen, y no agentes. Las preguntas de la entrevista van por plantilla. La enmienda la aplica `orchestration/` (§8) |
-| `evals/` | Ninguno | Conjunto dorado de recuperación, medida de acierto de la recuperación, comparación de tiradas, campaña adversaria. Está en el piso de `orchestration/`: importa lo que mide y nadie lo importa |
+| `evals/` | Ninguno | Conjunto dorado de recuperación, medida de acierto de la recuperación, comparación de tiradas, campaña adversaria, conjunto de cinco briefs de evaluación con su tabla por brief, lectura humana comparada con el Jurado y casos de la verificación formal. Está en el piso de `orchestration/`: importa lo que mide y nadie lo importa |
 
 #### Frontend
 
@@ -136,7 +138,8 @@ frontend/
 ├── entity-graph/    · grafo de entidades con vigencia
 ├── tension-curve/   · curva de tensión de la obra
 ├── narrative-debt/  · setups abiertos sin payoff
-└── run-health/      · métricas de §11
+├── run-health/      · métricas de §11
+└── visual/          · validación visual repetible de portada, índice y ficha; no es una vista y ninguna ruta la monta
 ```
 
 La raíz de composición del frontend son `main.tsx` y `routes.tsx`, en la raíz de `frontend/`: montan las direcciones que exporta cada funcionalidad y sirven la aplicación bajo `/app/`. Son el equivalente de `orchestration/`: conocen a todas las funcionalidades y ninguna las conoce. No pueden vivir en `commons/`, porque todas importan de él.
@@ -203,6 +206,17 @@ Los dos niveles son baratos: una obra de 200.000 palabras da del orden de 200 a 
 
 **Consistencia entre almacenes**: el registro de eventos manda. Canon estructurado y grafo son proyecciones reconstruibles. El índice de prosa se reindexa al congelar un capítulo.
 
+**Cuatro piezas que se derivan y no guardan verdad propia** (`specs/srs-backend-v4.md` §4.4 a §4.10):
+
+| Pieza | Dónde | Qué da |
+|---|---|---|
+| Hecho × escena, `fact_usage` | Índice de prosa, escrito al congelar | Qué escenas y capítulos usan cada hecho `entidad.atributo`, y dónde aparece cada elemento obligatorio del destinatario. Misma regla que el cálculo de las escenas afectadas por una enmienda, así que no pueden discrepar sin que salte |
+| Cronología, vista `chronology` | Vista SQL sobre el índice de prosa | Una fila por escena congelada con instante, lugar y personajes presentes, en orden de mundo (MUN-05). Es lo que lee el generador de Lean |
+| Niveles de proscripción | Columna `level` de la lista de proscripción (POE-12) | `global`, copiado de un fichero versionado al crear la novela; `cliente`, las prohibidas de la entrevista; `novela`, las que añade una solicitud de cambio; y `estilo`, los n-gramas de §4.6, que no son guardarraíl |
+| Elementos del brief, `brief_element` | Proyección del evento `element.declared` | Rasgos y recuerdos del destinatario, obligatorios salvo los marcados opcionales |
+
+Tres atributos de persona tienen nombre reservado porque los lee la verificación formal: `birth_date`, `age` y `excluded`. Una fecha de nacimiento que falta se deriva de la edad como un intervalo de un año y consta como derivada (MET-09); si faltan las dos, se declara ausente. Nunca se inventa.
+
 ### 3.2 Corto plazo: la memoria de trabajo (PRO-13)
 
 Todo lo que el sistema sostiene mientras produce un capítulo y que **no es verdad todavía**. Vive en el mismo fichero, en tablas marcadas como efímeras.
@@ -242,6 +256,8 @@ El prefijo `wm_` no es una convención de nombres: es lo que hace **comprobable*
 
 La congelación (CAN-12) es el único momento en que el índice de prosa crece, y el orden importa porque una parte es red y otra es transacción.
 
+Cuando empieza, el capítulo ya pasó sus puertas y dos comprobaciones más que miran lo que va a entrar y no lo que ya está: `check.forbidden` sobre el capítulo entero y la verificación formal de la cronología sobre el canon más el delta (§10). Un fallo de cualquiera de las dos es un S1 que vuelve a reparación antes de tocar nada de lo que sigue.
+
 **Fuera de la transacción**, con el capítulo ya aprobado y antes de tocar la base:
 
 1. **Cortar los fragmentos** de cada escena del capítulo, por párrafos completos hasta 450 tokens con un párrafo de solape. Es determinista: el mismo capítulo produce siempre los mismos cortes.
@@ -252,9 +268,9 @@ La congelación (CAN-12) es el único momento en que el índice de prosa crece, 
 
 4. Aplicar los eventos del delta canónico (CAN-11) al registro.
 5. Recalcular las proyecciones del canon estructurado y del grafo.
-6. Insertar las filas de escena y de fragmento con sus vectores y sus entradas de FTS5.
+6. Insertar las filas de escena y de fragmento con sus vectores y sus entradas de FTS5, y las de hecho × escena (§3.1) con los hechos que cada escena usa y los elementos obligatorios cuya cita ancló.
 7. Escribir los resúmenes en su almacén y regenerar los de nivel superior que toque, según §4.5.
-8. **Insertar en la lista de proscripción** (POE-12) los n-gramas e imágenes que este capítulo hace repetidos, según §4.6.
+8. **Insertar en la lista de proscripción** (POE-12) los n-gramas e imágenes que este capítulo hace repetidos, según §4.6, con nivel `estilo`.
 9. Purgar la memoria de trabajo del capítulo (PRO-I1).
 
 La razón de partirlo en dos mitades es que la red y la transacción no se llevan bien: una transacción abierta esperando a un proveedor externo bloquea el fichero durante segundos y deja el estado a medias si el proceso cae. Con este orden, un fallo de red no deja rastro y un fallo de escritura revierte entero.
@@ -284,7 +300,7 @@ Reglas duras de ocupación (CTX-18) y de concurrencia (CTX-20):
 | Techo concurrente del sistema | 100.000 tokens de entrada (CTX-20) | Suma de la **entrada** de todo lo que está en vuelo. Cinco agentes en serie tienen 100.000 cada uno, porque en cada instante solo hay uno en vuelo |
 | Política de admisión | FIFO estricta | El Orquestador no arranca una llamada si no cabe: la encola. Sin reordenar por hueco, que mataría de hambre al Arquitecto y al Continuista, que son las llamadas grandes |
 
-**Consecuencia que conviene ver.** Con la salida fuera del recuento y el único paralelismo real siendo los tres jueces, que suman 27.000 de entrada, el techo concurrente deja de morder en el flujo de hoy. Sigue escrito porque es un guardarraíl para cuando el paralelismo crezca, no una descripción de lo que ocurre ahora.
+**Consecuencia que conviene ver.** Con la salida fuera del recuento y el único paralelismo real siendo los tres jueces, que suman 39.600 de entrada, el techo concurrente deja de morder en el flujo de hoy. Sigue escrito porque es un guardarraíl para cuando el paralelismo crezca, no una descripción de lo que ocurre ahora.
 
 **Antes de llamar, estos números se estiman; después, se miden.** Con qué, en §4.8. Dos cosas que conviene saber ya: **la cuenta es específica del modelo**, porque los tokenizadores difieren entre generaciones hasta un 30 % sobre el mismo texto, así que una calibración hecha contra un modelo no vale para otro; y **los tokens servidos desde caché ocupan ventana igual** que los demás, porque el caché cambia lo que se paga, no lo que ocupa.
 
@@ -300,7 +316,7 @@ Reglas duras de ocupación (CTX-18) y de concurrencia (CTX-20):
 | Especialista deportivo | 14.500 | 3.000 | 15 % | Por encuentro |
 | Continuista | 47.500 | 5.000 | 48 % | Por capítulo |
 | Estilista | 20.000 | 7.000 | 27 % | Por capítulo |
-| Juez (por instancia) | 11.500 | 1.500 | 13 % | 3 instancias por capítulo |
+| Juez (por instancia) | 13.200 | 1.500 | 13 % | 3 instancias por capítulo |
 | Reparador | 14.500 | 3.000 | 15 % | Por defecto agrupado |
 | Archivero | 24.500 | 5.000 | 25 % | Por capítulo |
 | Árbitro | 17.500 | 2.000 | 18 % | Por conflicto |
@@ -311,18 +327,18 @@ Reglas duras de ocupación (CTX-18) y de concurrencia (CTX-20):
 
 Las tres últimas filas **no son agentes**: son llamadas de modelo que se despachan en código, sin misión ni criterio de salida propios, igual que el tope de salida lo aplica `dispatch` y no el modelo (§5.3). Su entrada sale de números que ya están en este documento: 8.000 del capítulo completo —el mismo bloque que ya ocupan el Estilista y el Archivero en §4.9—, más 500 de preguntas y 500 de instrucción. La salida es menor que la de un juez porque son respuestas breves y no hay evidencia que citar. Las dos de los encargos también salen de números de este documento (`specs/srs-backend-v3.md` D-80): la extracción lleva el texto libre en el mismo bloque de 8.000 que un capítulo, más 500 de borrador y 500 de instrucción, y devuelve lo que el Árbitro; la interpretación lleva la cita en el techo de 4.500 de la prosa literal de §4.3, las fichas del bloque 2 de §4.3 y 1.000 de petición e instrucción, y devuelve un solo JSON.
 
-**Qué corre en paralelo.** Solo el Jurado: sus tres instancias son deliberadamente independientes entre sí (§9.2), así que se lanzan a la vez y suman 34.500 tokens de entrada. Todo lo demás va en serie. Las escenas de un capítulo **no** se paralelizan, y no por coste: el bloque 6 del paquete del Escritor es la prosa literal de la escena anterior (§4.3), no compactable, así que escribir la escena *n* exige tener escrita la *n−1*. Paralelizarlas compraría velocidad rompiendo justo el bloque que sostiene la voz.
+**Qué corre en paralelo.** Solo el Jurado: sus tres instancias son deliberadamente independientes entre sí (§9.2), así que se lanzan a la vez y suman 39.600 tokens de entrada. Todo lo demás va en serie. Las escenas de un capítulo **no** se paralelizan, y no por coste: el bloque 6 del paquete del Escritor es la prosa literal de la escena anterior (§4.3), no compactable, así que escribir la escena *n* exige tener escrita la *n−1*. Paralelizarlas compraría velocidad rompiendo justo el bloque que sostiene la voz.
 
 Con eso, las combinaciones que CTX-20 llega a acotar son estas. **Se suma entrada, y para los agentes con herramientas se suma también su cupo de tirón** (§6.3), que se reserva entero en la admisión:
 
 | Concurrencia | Suma de entrada | Cabe |
 |---|---:|:-:|
-| Jurado ×3 | 34.500 | Sí, de sobra |
-| Continuista con su cupo, más Jurado ×3 | 107.000 | No: el Jurado se encola hasta que el Continuista termina, que es además el orden de §7.2 |
+| Jurado ×3 | 39.600 | Sí, de sobra |
+| Continuista con su cupo, más Jurado ×3 | 112.100 | No: el Jurado se encola hasta que el Continuista termina, que es además el orden de §7.2 |
 | Arquitecto con su cupo, más Supervisor con el suyo | 130.000 | No |
 | Escritores de escena en paralelo | 19.700 cada uno | Máximo 5 |
 
-Las dos últimas filas no ocurren en el flujo de §7: el Supervisor corre sobre capítulo cerrado y el Arquitecto solo al planificar, y las escenas van en serie. CTX-20 está para que sigan sin ocurrir cuando el paralelismo crezca, no para describir lo que pasa hoy. Con la salida fuera del recuento, la única concurrencia real —los tres jueces— ocupa poco más de un tercio del techo.
+Las dos últimas filas no ocurren en el flujo de §7: el Supervisor corre sobre capítulo cerrado y el Arquitecto solo al planificar, y las escenas van en serie. CTX-20 está para que sigan sin ocurrir cuando el paralelismo crezca, no para describir lo que pasa hoy. Con la salida fuera del recuento, la única concurrencia real —los tres jueces— ocupa dos quintos del techo.
 
 El agente caro no es el que más escribe, es el **Continuista**: necesita el capítulo entero más el canon que podría contradecir. Es también el primero que tocará el techo cuando la novela crezca, y el que justifica la recuperación selectiva.
 
@@ -505,6 +521,8 @@ Los once agentes llegan a Claude a través del CLI de Claude Code, con la suscri
 Ese andamiaje **no cuenta contra el techo de 100.000 de §4.1**. El techo acota lo que el sistema ensambla y controla —paquete, instrucción, cupo de tirón—; el andamiaje es un coste fijo del transporte que el sistema ni decide ni puede compactar. Sí cuenta contra la ventana real del modelo, y ahí cabe: la llamada más cara, el Continuista con su cupo, suma 72.500 + 38.600 = 111.100 sobre una ventana de 200.000. La admisión (§7.4) descuenta el andamiaje del colchón real y no del techo del proyecto, y el contador lo suma al contrastar el estimado con el `usage` (RNF-19), porque el `usage` sí lo incluye.
 
 El cache del prefijo sobrevive entre invocaciones del CLI —medido: la segunda llamada leyó 37.154 fichas de cache—, así que el andamiaje se paga caro una vez por agente y barato después. Volver a la API es cambiar la implementación del puerto (RI-21), no tocar un agente.
+
+**El CLI del motor no carga la configuración de quien lo ejecuta.** Cada `claude -p` se lanza sin la configuración de usuario ni la del proyecto —ni plugins, ni hooks, ni `CLAUDE.md`, ni skills, ni servidores MCP— y con un entorno sin variables `LANGFUSE_*` ni `OTEL_*` (`specs/srs-backend-v4.md` RI-62). El motivo es de datos, no de tokens: un plugin de observabilidad del usuario engancharía cada llamada de la novela y mandaría el brief a un servicio por una vía que nadie decidió. Lo que sale hacia Langfuse sale solo por el exportador (§11). El suelo de 38.600 se vuelve a medir con esta forma; hasta entonces se conserva, porque sobreestimar el andamiaje es el lado seguro.
 
 #### Embeddings locales
 
@@ -796,18 +814,19 @@ Nunca ve rúbricas ni veredictos: extrae hechos, no juzga calidad.
 | Instrucción | 700 | |
 | **Total** | **16.000** | 91 % del presupuesto |
 
-#### Jurado · 11.500 por instancia
+#### Jurado · 13.200 por instancia
 
 | Bloque | Tokens | Nota |
 |---|---:|---|
 | Invariantes, sin guía de estilo | 500 | Ancla reducida: un juez que ve la guía puntúa la guía |
-| Rúbrica de sus dimensiones | 1.500 | CAL-02 |
+| Rúbrica de sus dimensiones | 2.700 | CAL-02. Nueve dimensiones a 300, el coste por dimensión de las cinco anteriores |
+| Encargo, como dato delimitado | 500 | Nombre, rasgos y recuerdos obligatorios del destinatario, y el tono pedido. El mismo bloque que el borrador de `brief.extract`, que ya contiene al destinatario entero |
 | Capítulo | 8.000 | El techo de EST-07, entero: la dimensión de ritmo es de capítulo completo |
 | Fichas de voz de los POV | 800 | |
 | Instrucción y formato de veredicto | 700 | |
-| **Total** | **11.500** | 100 % del presupuesto |
+| **Total** | **13.200** | 100 % del presupuesto |
 
-**No recibe el paquete del Escritor, ni su razonamiento, ni los defectos ya detectados** (§9.2). Un capítulo en el techo de EST-07 cabe entero: el bloque es el mismo que el del Estilista y el Archivero, y es lo que cerró la decisión nº 9 de §13.
+**No recibe el paquete del Escritor, ni su razonamiento, ni los defectos ya detectados** (§9.2). Un capítulo en el techo de EST-07 cabe entero: el bloque es el mismo que el del Estilista y el Archivero, y es lo que cerró la decisión nº 9 de §13. El encargo entra porque la personalización no se puede juzgar sin saber para quién es la novela; entra como dato y no como instrucción, igual que el texto libre de la entrevista (`verification.md` §5.9).
 
 #### Supervisor · 32.500
 
@@ -905,9 +924,11 @@ Una **skill** es una capacidad reutilizable con contrato fijo de entrada y salid
 | `check.timeline` | Fechas, orden de eventos, duración de elipsis | Defectos con evidencia |
 | `check.ledger` | Marcadores, clasificación y estadísticas recalculadas | Defectos con evidencia |
 | `check.availability` | Disponibilidad física y lesiones (DEP-I2) | Defectos con evidencia |
-| `check.format` | POV único, tiempo verbal, persona, longitud | Defectos con evidencia |
-| `check.repetition` | N-gramas repetidos y términos proscritos | Lista con recuento |
-| `check.lexicon` | Nombres, alias y léxico del mundo | Defectos con evidencia |
+| `check.format` | POV único, tiempo verbal, persona, longitud de escena y de capítulo | Defectos con evidencia |
+| `check.repetition` | N-gramas repetidos y términos proscritos de nivel `estilo` | Lista con recuento |
+| `check.forbidden` | Palabras prohibidas de nivel `global`, `cliente` y `novela`, por palabra normalizada con variantes simples | Defectos S1 con evidencia y nivel |
+| `check.lexicon` | Nombres, alias y léxico del mundo, y erratas de un nombre del canon | Defectos con evidencia |
+| `check.formal` | Genera la cronología en Lean desde el canon más lo pendiente y la compila con `lake build` (`verification.md` §4.4) | Teoremas demostrados, o defecto S1 con el teorema y las filas de origen |
 | `check.knowledge` | Menciones de hechos canónicos por personajes cuyo PER-10 no los incluye en ese instante (PER-I1) | Defectos con evidencia |
 | `check.evidence` | Comprueba que la cita de un veredicto existe literal y una sola vez en la escena citada, con 8 palabras o más (`verification.md` §5.11) | Cita anclada con su posición, o veredicto descartado |
 | `quiz.build` | Genera preguntas y solucionario desde la especificación de escena y el canon vigente: lo que el capítulo **debía** transmitir | Examen con su clave de corrección |
@@ -933,10 +954,14 @@ Las tres skills de prosa viven en `canon/` con el almacén que manejan, y `conte
 | `scene.write` | Escribe la prosa de una escena | Prosa |
 | `match.narrate` | Narra un encuentro ya resuelto por `match.simulate` | Prosa de secuencia |
 | `continuity.review` | Contrasta prosa contra canon en lo no determinista | Defectos con cita |
-| `voice.audit` | Verifica idiolecto y distinción entre voces | Puntuación con evidencia |
+| `voice.audit` | Verifica idiolecto, distinción entre voces y coherencia de las decisiones de cada personaje; y la fidelidad a la guía de estilo en lo que no mide el código | Puntuación con evidencia |
 | `pacing.audit` | Evalúa ritmo, densidad y cambio de valor | Puntuación con evidencia |
 | `subtext.audit` | Evalúa diálogo y subtexto | Puntuación con evidencia |
 | `theme.audit` | Evalúa resonancia temática y uso de motivos | Puntuación con evidencia |
+| `continuity.audit` | Evalúa si el capítulo se lee como continuación de lo anterior: transiciones, elipsis perceptibles, ecos. No si los hechos cuadran, que es de `continuity.review` | Puntuación con evidencia |
+| `tone.audit` | Evalúa si el tono (POE-04) es el pedido y se sostiene | Puntuación con evidencia |
+| `arc.audit` | Evalúa el avance de los arcos (EST-06) que el capítulo debía mover | Puntuación con evidencia |
+| `personalization.audit` | Evalúa si el destinatario, sus rasgos y sus recuerdos aparecen integrados y no pegados | Puntuación con evidencia |
 | `revise.targeted` | Corrige un fragmento dado el defecto y su evidencia | Fragmento corregido |
 | `dialogue.pass` | Pase específico sobre diálogo | Prosa revisada |
 | `style.polish` | Pase de estilo, poda y proscripción | Prosa pulida |
@@ -1012,7 +1037,7 @@ Las 50.000 fichas de salida de §4.1 las aplica `dispatch`, en el código, no el
 | 4 | **Escritor de escena** | Produce la prosa | `scene.write` | Escena generada dentro de longitud |
 | 5 | **Especialista deportivo** | Resuelve y narra encuentros; custodia DEP-19 | `match.simulate`, `match.narrate`, `check.availability` | Encuentro consistente con reglamento y plantilla |
 | 6 | **Continuista** | Verificación de continuidad de capítulo | `check.*`, `continuity.review` | Cero defectos S1 |
-| 7 | **Jurado** (3 instancias) | Evalúa las dimensiones subjetivas | `voice.audit`, `pacing.audit`, `subtext.audit`, `theme.audit` | Puntuaciones sobre umbral y dispersión baja |
+| 7 | **Jurado** (3 instancias) | Evalúa las dimensiones subjetivas | Las ocho `*.audit` de §5.2, sobre nueve dimensiones | Puntuaciones sobre umbral y dispersión baja |
 | 8 | **Reparador** | Corrección dirigida de defectos agrupados | `revise.targeted`, `dialogue.pass` | Defecto cerrado sin abrir otros |
 | 9 | **Estilista** | Pase de voz, poda y proscripción | `style.polish`, `style.fingerprint`, `check.repetition` | Huella dentro de tolerancia |
 | 10 | **Archivero** | Extrae el delta canónico y regenera resúmenes | `delta.extract`, `summarize.hierarchical` | Delta completo y estructurado |
@@ -1266,7 +1291,7 @@ sequenceDiagram
     O->>C: reverificación
   end
 
-  O->>J: capítulo + rúbricas · 3 instancias en paralelo · 27.000 tokens
+  O->>J: capítulo + rúbricas + encargo · 3 instancias en paralelo · 39.600 tokens
   J-->>O: puntuaciones con evidencia y dispersión
   alt bajo umbral y reintentos disponibles
     O->>R: defectos S2 y S3
@@ -1393,7 +1418,7 @@ Tres reglas que no se negocian: **FIFO estricta**, porque reordenar por hueco ma
 | Cerrar un capítulo | Puertas automáticas con umbrales por dimensión (CAL-09). |
 | Calibrar a los jueces | Conjunto dorado con defectos sembrados (CAL-10) ejecutado cada 5 capítulos, más dispersión del jurado (CAL-11) como señal de fiabilidad por veredicto. |
 | Rechazar y parar | No existe. Cuarentena (CAL-13) más replanificación (PRO-12). El artefacto cuarentenado se rehace de inmediato, sin esperar a nadie; a nivel de capítulo no se salta al siguiente (§7.3). |
-| Decidir que la novela está terminada | Condición de cierre verificable: deuda narrativa cero, todos los arcos con estado resuelto, curva de tensión completada, longitud dentro del rango del brief. |
+| Decidir que la novela está terminada | Condición de cierre verificable: deuda narrativa cero —que incluye los elementos obligatorios del destinatario, cobrados solo con un uso anclado—, todos los arcos con estado resuelto, curva de tensión completada, longitud dentro del rango del brief. |
 
 **Lo que se pierde y hay que compensar con medición**: el criterio de gusto. Un sistema autónomo puede garantizar coherencia, verosimilitud y ausencia de defectos, pero no puede decidir por sí mismo que una escena es memorable. La contramedida practicable es el conjunto dorado, que fija un suelo conocido, y la vigilancia de la huella estilística, que detecta el aplanamiento antes de que se acumule.
 
@@ -1411,29 +1436,79 @@ Coste despreciable, cero falsos positivos si están bien escritos. Se ejecutan s
 - Resultados y clasificación: el marcador narrado cuadra con `match.simulate`; la tabla recalculada coincide con lo afirmado.
 - Estadísticas acumuladas: suma de encuentros narrados.
 - Disponibilidad: nadie juega estando lesionado en esa fecha (DEP-I2).
-- Nombres, alias y léxico del mundo.
+- Nombres, alias y léxico del mundo. Un nombre vale solo escrito exactamente como en el canon, con sus tildes. Una palabra con mayúscula a una edición (Damerau-Levenshtein 1) de un nombre del canon, o igual a él salvo tildes, es una errata S1 aunque aparezca una sola vez; al principio de frase no cuenta si es una palabra común o si aparece también en minúscula en el texto.
 - Restricciones formales: tiempo verbal, persona, POV único por escena, longitud.
 - Repetición: n-gramas de 4 o más ya usados; frecuencia de términos proscritos.
 - Conocimiento (`check.knowledge`): menciones de hechos canónicos por personajes cuyo PER-10 no los incluye.
 - Anclaje de la evidencia (`check.evidence`): toda cita que acompaña a un defecto o a una puntuación existe literal y una sola vez en la escena que nombra. Corre sobre la salida de los jueces, no sobre la prosa.
+- Palabras prohibidas del encargo (`check.forbidden`): S1, por palabra normalizada con variantes simples, en cada intento y sobre el capítulo entero antes de congelar.
+- Longitud del capítulo escrito frente a EST-07, con `check.format` en la puerta de capítulo.
+- Cronología demostrada (`check.formal`): los invariantes de `verification.md` §4.4 sobre el canon más lo que va a entrar, con Lean.
+
+De la primera línea, la duración de las elipsis y, de la tercera, las estadísticas acumuladas no tienen hoy verificador propio: las ve el Continuista y constan como riesgo aceptado en `specs/srs-backend-v4.md` §7.4. El orden de los eventos lo demuestra `check.formal`.
+
+#### Cada validador, dónde corre y qué pasa si falla
+
+Cuatro tipos: programático, semántico, formal de la historia y formal del sistema, más los hooks del trabajo de desarrollo, que no son del ciclo. Los puntos de ejecución son los de `backend/orchestration/`: `engine.py` compone cada verificador y `loop.py` lo llama.
+
+| Tipo | Validador | Dónde vive | Punto de ejecución | Severidad | Si falla |
+|---|---|---|---|---|---|
+| Programático | `check.timeline` | `verification/checks/deterministic.py:check_timeline` | Puerta de escena: `engine.py:Composer.verify_scene`, en cada intento, tras reparar, tras pulir y en la reescritura de retcon o enmienda | S1 | Reintento de escena con el defecto delante (§7.3) |
+| Programático | `check.format` | `deterministic.py:check_format` | Puerta de escena, igual que la anterior | S1 en tiempo y persona; S2 en longitud de escena | Reintento de escena |
+| Programático | `check.lexicon` | `deterministic.py:check_lexicon` | Puerta de escena | S1 | Reintento de escena |
+| Programático | `check.knowledge` | `deterministic.py:check_knowledge` | Puerta de escena | S1 | Reintento de escena |
+| Programático | `check.repetition` | `deterministic.py:check_repetition` | Puerta de escena | S2 | El Estilista lo recibe en su pase |
+| Programático | `check.forbidden` | `verification/checks/forbidden.py:check_forbidden` | Puerta de escena en cada intento y, sobre el capítulo entero, justo antes de `loop.py:_freeze` | S1 | Reintento; agotada la escalera, `RunAbortedError` con término y nivel |
+| Programático | `check.ledger`, `check.availability` | `deterministic.py:check_ledger`, `check_availability`, `check_milestones` | Escena de encuentro: `engine.py:Composer.verify_match` | S1 | Reintento de escena |
+| Programático | `check.format`, longitud de capítulo | `deterministic.py:check_chapter_length` | Puerta de capítulo: `loop.py:_approve_chapter`, sobre las escenas unidas | S2 | Cuenta en el máximo de la puerta de capítulo; reparación |
+| Programático | `quiz.grade` | `verification/quiz/grade.py` | Puerta de capítulo, antes del Jurado | S2 por respuesta errónea | Reparación |
+| Programático | `check.evidence` | `verification/checks/evidence.py` | Sobre la salida del Continuista, del Jurado y del Archivero | — | La cita se descarta como defecto de proceso |
+| Programático | `outline.check` | `planning/outline/check.py` | Tras el Arquitecto: `loop.py:_plan_with_gate` | S1 | La escaleta vuelve con sus defectos; agotado, `RunAbortedError` |
+| Programático | Reglas del brief | `canon/brief_rules.py:contradictions` | Carga del brief (RI-01) y cada turno de la entrevista | — | 422 con la regla; en la entrevista, la contradicción se muestra |
+| Programático | Validación del delta | `canon/arbiter/entries.py:validate_delta` | Antes de congelar: `loop.py:_extract_and_validate` | S1 | Arbitraje y reparación (§10) |
+| Programático | Puerta de acto | `planning/act_gate/gate.py:check_act` | Al congelar el último capítulo de un acto | — | Replanifica el tramo siguiente |
+| Programático | Cierre de obra | `loop.py:_work_closes` | Tras el último capítulo | — | La obra no cierra y la traza dice por qué |
+| Semántico | `continuity.review` | `verification/continuity/review.py`, desde `engine.py:Composer.review_chapter` | Puerta de capítulo, y otra vez tras el pase de estilo | S1 y S2 | Reparación; la reparación que abre un S1 se revierte |
+| Semántico | Jurado, las `*.audit` | `verification/jury/verdict.py`, desde `engine.py:Composer.judge_chapter` | Tras pasar la puerta de capítulo | Por dimensión, según CAL-06 | Reparación; dispersión alta, segunda ronda |
+| Semántico | Conjunto dorado | `verification/jury/golden.py`, desde `loop.py:_golden_check` | Cada 5 capítulos | — | Alarma en la traza: el Jurado ha derivado |
+| Formal de la historia | `check.formal` | `verification/formal/`, con `run_lean` | Antes de cada congelación, retcon y enmienda; y en la puerta de CI sobre dos fixtures | S1 | Reparación; en una enmienda, se rechaza sin crear versión |
+| Formal del sistema | TLA+ con TLC | `orchestration/model/` | En CI, al cambiar el modelo | — | CI en rojo |
+| Desarrollo | Hook de capítulo | `.claude/hooks/chapter_gate.py` | `PostToolUse` de Claude Code sobre un fichero de capítulo | S1 bloquea | Código de salida 2 y los defectos al agente |
+| Desarrollo | Hook de política | `.claude/hooks/policy.py` | `PreToolUse` de Claude Code | — | Deniega con el motivo y lo registra |
+| Visual | Recorrido de lectura | `frontend/visual/` y el MCP de navegador | Al cambiar el frontend y antes de entregar | — | Registro fechado: fallo de datos al backend, de presentación al frontend |
+
+La puerta de CI contrasta las filas `check.*` de esta tabla con los `kind` del código (`specs/srs-backend-v4.md` RF-268): una tabla que describe validadores que no existen es peor que ninguna.
 
 ### 9.2 Jurado
 
 Tres instancias con las mismas rúbricas y semillas distintas: la semilla fija el orden de las dimensiones y el ángulo de lectura, que es lo que hace que las tres no sean la misma llamada tres veces (CAL-11). Reglas:
 
 - Toda puntuación cita el fragmento que la justifica, y la cita **se comprueba** con `check.evidence`. Sin cita, o con una cita que no aparece en el texto, se descarta y el descarte se anota contra esa instancia.
-- Contexto mínimo, el de §4.9: el capítulo entero, las rúbricas y las fichas de voz de los POV. Nunca la especificación ni el paquete del Escritor.
+- Contexto mínimo, el de §4.9: el capítulo entero, las rúbricas, las fichas de voz de los POV y el encargo del destinatario como dato. Nunca la especificación ni el paquete del Escritor.
 - Dispersión alta entre instancias invalida el veredicto y fuerza una verificación adicional en lugar de promediar. Promediar jueces que no se ponen de acuerdo produce un número sin significado.
+- Toda puntuación lleva justificación además de la cita, y las dos llegan a la traza.
+
+**Qué criterio de la rúbrica de la entrega mide cada dimensión.** Las rúbricas van en su versión 2 (`specs/srs-backend-v4.md` RF-257), con nueve dimensiones:
+
+| Criterio | Dimensión | CAL-01 | Nota |
+|---|---|---|---|
+| Continuidad | `continuity` | 1 | La de lectura. La factual es del Continuista, con defectos anclados que valen más que una nota |
+| Tono | `tone` | 5 | Frente al tono pedido en el brief (POE-04) |
+| Arco | `arc` | 3 | EST-06 y PER-06 |
+| Coherencia de personajes | `voice` | 2 | Voz y decisiones |
+| Ritmo | `pacing` | 4 | Es también la curva realizada de la puerta de acto (§9.3) |
+| Personalización natural | `personalization` | 10 | En su parte de juicio; la presencia la exigen los elementos obligatorios |
+| — | `style_guide`, `subtext`, `theme` | 5, 8, 9 | Las de antes, que calibra el conjunto dorado |
 
 ### 9.3 Puertas
 
 | Puerta | Condición de paso |
 |---|---|
 | Escena generada | Cero defectos S1 deterministas |
-| Capítulo verificado | Cero S1, máximo 2 S2, continuidad y voz sobre umbral. Las respuestas erróneas del examen de comprensión (`verification.md` §5.12) entran aquí como S2, sin umbral propio |
-| Capítulo cerrado | Puertas anteriores más huella estilística dentro de tolerancia y delta canónico integrado |
+| Capítulo verificado | Cero S1, máximo 2 S2, continuidad y voz sobre umbral. Las respuestas erróneas del examen de comprensión (`verification.md` §5.12) y la longitud escrita fuera de EST-07 entran aquí como S2, sin umbral propio |
+| Capítulo cerrado | Puertas anteriores más huella estilística dentro de tolerancia, ninguna palabra prohibida en el capítulo entero, cronología demostrada sobre el canon más el delta, y delta canónico integrado |
 | Cierre de acto | Deuda narrativa dentro del margen planificado; curva de tensión conforme. Ver abajo |
-| Cierre de obra | Deuda narrativa cero; todos los arcos resueltos; longitud en rango |
+| Cierre de obra | Deuda narrativa cero, elementos obligatorios incluidos; todos los arcos resueltos; longitud en rango |
 
 #### La puerta de cierre de acto
 
@@ -1483,6 +1558,8 @@ sequenceDiagram
 
 Reglas duras: el delta se propone y se valida, nunca se aplica en bruto; todo hecho guarda procedencia (MET-09) y capítulo de origen; todo arbitraje deja registro con la regla aplicada; la congelación es la única operación que cambia el canon.
 
+**Dos comprobaciones más antes de toda congelación, retcon o enmienda**, porque miran lo que va a entrar y no lo que ya está: `check.forbidden` sobre el texto entero y la verificación formal de la cronología sobre el canon más el delta (`verification.md` §4.4). Van aquí y no al final de la obra porque el canon congelado gana: un fallo descubierto después de congelar no tiene a quién volver. Un fallo es un S1 con su cita que vuelve al Reparador; en una enmienda, la rechaza con el motivo y la versión no cambia.
+
 ---
 
 ## 11. Observabilidad
@@ -1492,6 +1569,33 @@ Por cada fragmento se guarda: versión del paquete de contexto, ocupación real 
 En un sistema sin supervisión externa, la observabilidad no es un extra: es el único mecanismo para detectar que algo se ha estado degradando durante diez capítulos.
 
 **Dos destinos, una sola fuente.** La traza local JSONL de cada novela (RI-16) es la fuente de verdad: se escribe siempre, sin red, y se copia con la tirada. **Langfuse es su espejo**: una sesión por novela, que agrupa la entrevista, la tirada y las solicitudes de cambio; un span por agente y por llamada a herramienta; tokens, coste y latencia por llamada; los resultados de cada verificador, del Jurado y de la verificación formal como scores; y los prompts de cada agente versionados, para que un resultado diga qué versión lo produjo. El espejo observa y no gobierna: un fallo al exportar se registra en la traza local y la tirada sigue, y todo lo que muestra Langfuse se puede reconstruir desde el JSONL.
+
+Cómo se hace, en `specs/srs-backend-v4.md` §4.3 y §4.11. Lo que hay que retener: **una traza por generación** —cada invocación de la tirada, cada solicitud de cambio y cada entrevista—, con `session_id` igual a la novela; **un conductor en vivo y otro por lote** con la misma correspondencia; **coste** es el equivalente de API que da el CLI, o nulo, nunca calculado aquí; **latencia** es la medida en `dispatch`; **los prompts** se publican desde el repositorio con su `prompt_version` como etiqueta y la tirada nunca los lee de Langfuse.
+
+Cada registro de la traza lleva el hash del anterior, así que **la traza es también el audit log**: se puede borrar una línea, pero `verify_chain` lo detecta, y RI-27 dice dónde. Las decisiones del motor de políticas —arbitraje, propuesta de retcon, coincidencia del guardarraíl y resultado de la verificación formal— llevan decisión, regla e instante.
+
+**Roles.** Los nombres de rol que usa la traza exportada no son agentes nuevos: son etiquetas que agrupan los de §6.
+
+| Rol | Agentes y llamadas |
+|---|---|
+| `interviewer` | `brief.extract` y `amend.interpret`: el entrevistador de la rúbrica |
+| `planner` | Arquitecto, Planificador |
+| `writer` | Escritor, Especialista deportivo |
+| `editor` | Continuista, Jurado, Reparador, Estilista, lector del examen |
+| `canon` | Archivero, Árbitro |
+| `supervisor` | Supervisor |
+
+**Scores.** Cada verificador llega a la traza o al span que evaluó:
+
+| Score | Tipo | Sobre qué |
+|---|---|---|
+| `check.<kind>` | Booleano | Intento de escena |
+| `gate.scene`, `gate.chapter` | Booleano, con S1 y S2 como numéricos | Escena y capítulo |
+| `jury.<dimensión>` | Numérico de 1 a 5, con la dispersión y la justificación como comentario | Capítulo |
+| `quiz.wrong` | Numérico | Capítulo |
+| `outline.check`, `act.gate`, `work.close` | Booleano | Tirada o acto |
+| `formal.lean` | Booleano, con el teorema que falló como comentario | Capítulo, retcon o enmienda |
+| `guardrail.forbidden` | Booleano, con el nivel y el término como hash | Intento de escena y capítulo |
 
 | Métrica | Señal de alarma |
 |---|---|
@@ -1535,7 +1639,7 @@ En un sistema sin supervisión externa, la observabilidad no es un extra: es el 
 6. Punto a partir del cual conviene reescribir un capítulo en vez de repararlo.
 7. ~~Con qué modelo de embedding se puebla el índice de prosa.~~ **Cerrada: `intfloat/multilingual-e5-large`** (§4.8). Cambiarlo más adelante es reindexar, no rediseñar, porque el esquema guarda modelo y dimensión.
 8. ~~Qué modelo de Claude usa cada rol.~~ **Cerrada: los once agentes de modelo corren sobre Claude Haiku 4.5, a través del CLI de Claude Code** (§4.8). El puerto sigue permitiendo modelos distintos por agente si midiendo con `verification.md` §5.8 se viera que alguno lo necesita; hoy no se usa esa posibilidad. Consecuencias ya recogidas: ventana de 200.000 en vez de 1.000.000, mínimo cacheable de 4.096 y un factor de contador por modelo.
-9. ~~Cómo evalúa el Jurado un capítulo en el techo de EST-07, que no cabía en los 9.000 tokens que §4.2 le daba.~~ **Cerrada: sube el presupuesto por instancia a 11.500** con el capítulo entero en 8.000 (§4.2, §4.9). Por mitades rompe la dimensión de ritmo; acotar la escaleta encoge EST-07 por una limitación del evaluador.
+9. ~~Cómo evalúa el Jurado un capítulo en el techo de EST-07, que no cabía en los 9.000 tokens que §4.2 le daba.~~ **Cerrada: sube el presupuesto por instancia a 11.500** con el capítulo entero en 8.000 (§4.2, §4.9); las rúbricas versión 2 y el bloque del encargo lo llevan hoy a 13.200 (`specs/srs-backend-v4.md` RNF-57). Por mitades rompe la dimensión de ritmo; acotar la escaleta encoge EST-07 por una limitación del evaluador.
 10. Constante de la fusión recíproca de rangos (§4.4). Se usa 60 por venir del trabajo original; ajustarla exige medir con el conjunto dorado, que llega en el paso 9.
 
 ---
@@ -1556,6 +1660,6 @@ En un sistema sin supervisión externa, la observabilidad no es un extra: es el 
 
 **Las rutas HTTP no son un paso.** Cada paso añade las suyas dentro de su funcionalidad y las monta en `orchestration/` (§2.3). Concentrarlas en un paso propio dejaría los diez anteriores sin forma de ejercitarse y convertiría la API en la capa técnica que §2.3 evita.
 
-El orden recorre **funcionalidades de §2.3**, no capas técnicas: los pasos 1, 5 y 7 llenan `canon/`, el 2 `planning/`, el 3 `context/` y el 8 lo afina, el 4 `generation/` y la mitad determinista de `verification/`, el 6 cierra `canon/`, el 9 completa `verification/`, el 10 `supervision/` y el 11 el frontend entero. Los pasos se agrupan en versiones del backend, cada una con su SRS en `specs/` (`AGENTS.md` §3.3); la versión 1 son los pasos 1 a 6 y está en `specs/srs-backend-v1.md`. Es la consecuencia práctica de organizar por funcionalidad: cada paso entrega una carpeta que funciona, no un estrato horizontal que todavía no hace nada.
+El orden recorre **funcionalidades de §2.3**, no capas técnicas: los pasos 1, 5 y 7 llenan `canon/`, el 2 `planning/`, el 3 `context/` y el 8 lo afina, el 4 `generation/` y la mitad determinista de `verification/`, el 6 cierra `canon/`, el 9 completa `verification/`, el 10 `supervision/` y el 11 el frontend entero. Los pasos se agrupan en versiones del backend, cada una con su SRS en `specs/` (`AGENTS.md` §3.3); la versión 1 son los pasos 1 a 6 y está en `specs/srs-backend-v1.md`. La versión 4, `specs/srs-backend-v4.md`, no añade paso: endurece los pasos 4, 5, 9 y 11 con la verificación formal de la cronología, el guardarraíl bloqueante, el espejo de observabilidad y la evaluación del sistema. Es la consecuencia práctica de organizar por funcionalidad: cada paso entrega una carpeta que funciona, no un estrato horizontal que todavía no hace nada.
 
 Los pasos 1 a 6 producen una novela coherente sin intervención. Del 7 al 10 se gana escala y calidad, no viabilidad. El paso 11 está fuera del camino crítico por definición (§2.1): la entrevista y la lectura funcionan desde el paso 6, y las vistas de métricas solo tienen sentido cuando el paso 10 ya las produce.

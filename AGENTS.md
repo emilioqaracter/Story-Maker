@@ -36,7 +36,7 @@ La idea central del dominio: **una novela larga no es un texto largo, es un esta
 | Ontología del dominio | ✅ Completa |
 | Modelos y diagramas | ✅ Completos |
 | Arquitectura, agentes y skills | ✅ Especificados |
-| SRS del backend (`specs/`) | ✅ Versión 1 (`srs-backend-v1.md`, pasos 1 a 6) y versión 2 (`srs-backend-v2.md`, pasos 7 a 10 y retcon), y versión 3 (`srs-backend-v3.md`, T33 a T36): entrevista, versiones, fichas y solicitudes de cambio que el frontend exige |
+| SRS del backend (`specs/`) | ✅ Versión 1 (`srs-backend-v1.md`, pasos 1 a 6) y versión 2 (`srs-backend-v2.md`, pasos 7 a 10 y retcon), y versión 3 (`srs-backend-v3.md`, T33 a T36): entrevista, versiones, fichas y solicitudes de cambio que el frontend exige. Versión 4 (`srs-backend-v4.md`, T37 a T52): Lean sobre la cronología, guardarraíl bloqueante, espejo en Langfuse, hecho × capítulo, hooks de Claude Code, Jurado con las dimensiones del encargo, TLA+ del flujo completo y evaluación del sistema; especificada, por construir |
 | SRS del frontend (`specs/`) | ✅ Versión 1 (`srs-frontend-v1.md`, paso 11): entrevista del brief, lectura por versiones, ficha de personajes y lugares, enmiendas al brief desde la lectura. Las rutas nuevas que exige las realiza `srs-backend-v3.md`. Su plan de implementación es `frontend/PLAN.md`, T26 a T32 |
 | Estrategia de verificación | ✅ Completa |
 | Implementación del backend | 🟡 Versiones 1 y 2 construidas, cableadas y en verde (T0 a T24); faltan las dos tiradas reales: la de T16, que produce `golden/v1-seed/`, y la de T24, que se compara con ella (`backend/PLAN.md` §1.7) |
@@ -62,6 +62,9 @@ Es un **monorepo**: backend y frontend viven en la misma raíz, junto a la espec
 │   ├── domain-knowledge.md   ← modelos visuales de esa ontología
 │   ├── architecture.md       ← cómo se construye el sistema
 │   └── verification.md       ← cómo se verifica el código y la salida de los agentes
+├── .mcp.json                 ← MCP de navegador de la validación visual
+├── .claude/settings.json     ← hooks de Claude Code del trabajo de desarrollo
+├── .claude/hooks/            ← sus guiones: validación de capítulo y política, con audit log en .claude/audit/
 ├── .claude/skills/           ← reglas de este repositorio, ejecutables
 │   ├── grill-me/             ← proceso: interrogatorio previo, §6.1
 │   ├── verification-sheet/   ← proceso: produce verification.md

@@ -261,7 +261,7 @@ Las filas van agrupadas por tema, no por número: los cinco términos de límite
 
 | # | Dimensión | Verificable por |
 |---|---|---|
-| 1 | Continuidad factual y temporal | Determinista + canon |
+| 1 | Continuidad factual y temporal | Determinista + canon; juez LLM solo para la continuidad de lectura |
 | 2 | Consistencia de caracterización y voz | Mixto |
 | 3 | Integridad estructural y causalidad | Mixto |
 | 4 | Tensión, ritmo y densidad | Juez LLM |
@@ -270,7 +270,7 @@ Las filas van agrupadas por tema, no por número: los cinco términos de límite
 | 7 | No redundancia y frescura de imagen | Determinista (n-gramas, POE-13) |
 | 8 | Calidad de diálogo y subtexto | Juez LLM |
 | 9 | Resonancia temática | Jurado de jueces LLM · CAL-11 |
-| 10 | Cumplimiento del brief y restricciones | Determinista |
+| 10 | Cumplimiento del brief y restricciones | Determinista; juez LLM para la personalización natural |
 
 ---
 
