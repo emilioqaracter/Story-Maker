@@ -16,7 +16,11 @@ contraste corre en la puerta, en cada cambio, y falla si encuentra:
 - una seccion de `architecture.md` sin fila en la matriz de cobertura del plan;
 - un paquete de `backend/` o una carpeta de `frontend/` que el reparto fisico no declara;
 - un requisito del frontend en un tramo del plan distinto del que le da su SRS;
-- un numero de tramo definido dos veces.
+- un numero de tramo definido dos veces;
+- un `kind` `check.*` del codigo sin fila en la tabla de validadores de
+  `architecture.md` §9.1, una fila que nombra un `check.*` que no existe, una
+  fila sin punto de ejecucion, o una tabla por brief (`evals/brief_table.py`)
+  sin columna fija para un verificador de escena de esa tabla (RF-268).
 
 No comprueba que lo escrito sea verdad. Comprueba que los tres documentos
 hablan de las mismas cosas con los mismos nombres, que es la condicion para
@@ -394,6 +398,136 @@ def check_layout(report: Report, arch: str) -> None:
             )
 
 
+#: `kind="check.x"` en una llamada o `KIND = "check.x"` como constante: las dos
+#: formas en que el codigo da nombre al defecto de un verificador determinista.
+KIND_RE = re.compile(r"""\b(?:kind|KIND)\s*=\s*["'](check\.[a-z_]+)["']""")
+CHECK_NAME_RE = re.compile(r"`(check\.[a-z_]+)`")
+#: Carpetas de backend/ que no son codigo del sistema: tiradas, copias y cachés.
+_NOT_CODE = {"runs-golden", "golden", "__pycache__", "node_modules"}
+#: Los puntos de ejecucion de §9.1 que la tabla por brief cubre con una columna fija.
+_SCENE_POINTS = ("Puerta de escena", "Escena de encuentro")
+_NO_POINT = {"", "—", "-"}
+
+
+def code_check_kinds(backend: Path = BACKEND) -> dict[str, str]:
+    """`kind` `check.*` que el codigo asigna -> primer fichero que lo hace, relativo a `backend`."""
+    out: dict[str, str] = {}
+    for path in sorted(backend.rglob("*.py")):
+        rel = path.relative_to(backend)
+        if path.name.startswith("test_") or path.name == "coherence.py":
+            continue
+        if any(p in _NOT_CODE or p.startswith(".") for p in rel.parts[:-1]):
+            continue
+        for kind in KIND_RE.findall(read(path)):
+            out.setdefault(kind, rel.as_posix())
+    return out
+
+
+def code_check_modules(backend: Path = BACKEND) -> dict[str, str]:
+    """Modulos de `verification/checks/` que se declaran validador -> su fichero.
+
+    Un verificador que no marca defectos con `kind` propio, como `check.evidence`,
+    que descarta citas, existe como modulo: `checks/<x>.py` cuyo docstring abre
+    con `` `check.<x>` ``. Un modulo que agrupa varios, como `deterministic.py`,
+    no se declara: sus validadores ya salen por su `kind`.
+    """
+    out: dict[str, str] = {}
+    for path in sorted((backend / "verification" / "checks").glob("*.py")):
+        if path.name.startswith("test_"):
+            continue
+        name = f"check.{path.stem}"
+        if read(path).lstrip().startswith(f'"""`{name}`'):
+            out[name] = path.relative_to(backend).as_posix()
+    return out
+
+
+def validator_rows(arch: str) -> list[tuple[list[str], str]]:
+    """Filas de la tabla de §9.1 que nombran un `check.*`: (nombres, punto de ejecucion)."""
+    rows: list[tuple[list[str], str]] = []
+    col_name = col_point = None
+    for line in section(arch, "9.1").splitlines():
+        if not line.startswith("|"):
+            continue
+        cells = [c.strip() for c in line.split("|")]
+        if "Validador" in cells and "Punto de ejecución" in cells:
+            col_name, col_point = cells.index("Validador"), cells.index("Punto de ejecución")
+            continue
+        if col_name is None or col_point is None or len(cells) <= max(col_name, col_point):
+            continue
+        names = CHECK_NAME_RE.findall(cells[col_name])
+        if names:
+            rows.append((names, cells[col_point]))
+    return rows
+
+
+def _tuple_names(text: str, name: str) -> set[str]:
+    """Los `check.*` literales de la tupla `name = (...)` de un modulo."""
+    m = re.search(rf"^{name}\s*=\s*\((.*?)\)", text, flags=re.M | re.S)
+    return set(re.findall(r"""["'](check\.[a-z_]+)["']""", m.group(1))) if m else set()
+
+
+def check_validators(report: Report, arch: str, backend: Path = BACKEND) -> None:
+    """RF-268. La tabla de validadores de `architecture.md` §9.1 frente al codigo.
+
+    Todo `kind` `check.*` del codigo, y todo modulo de `verification/checks/` que
+    se declara validador, tiene fila; todo `check.*` de una fila existe como una
+    de las dos cosas; toda fila dice donde corre. Y la tabla por brief (`evals/brief_table.py`, RF-269) tiene una
+    columna fija por cada verificador que la tabla pone en la puerta de escena o
+    en la escena de encuentro, ni una mas ni una menos: sin ella, un verificador
+    nuevo solo sale cuando marca y nadie puede leer que paso.
+    """
+    rows = validator_rows(arch)
+    if not rows:
+        report.error(
+            "architecture.md §9.1: no hay tabla de validadores con columnas "
+            "Validador y Punto de ejecución, o ninguna fila nombra un check.*"
+        )
+        return
+    in_table = {n for names, _ in rows for n in names}
+    kinds = code_check_kinds(backend)
+    modules = code_check_modules(backend)
+
+    for kind, where in sorted(kinds.items()):
+        if kind not in in_table:
+            report.error(
+                f"backend/{where} define el kind {kind} y architecture.md §9.1 no tiene fila para el"
+            )
+    for name, where in sorted(modules.items()):
+        if name not in in_table and name not in kinds:
+            report.error(
+                f"backend/{where} se declara validador {name} y architecture.md §9.1 "
+                "no tiene fila para el"
+            )
+    for names, point in rows:
+        for n in names:
+            if n not in kinds and n not in modules:
+                report.error(
+                    f"architecture.md §9.1: la fila de {n} nombra un validador que el codigo "
+                    "no define como kind ni como modulo de verification/checks/"
+                )
+        if point in _NO_POINT:
+            report.error(
+                f"architecture.md §9.1: la fila de {', '.join(names)} no tiene punto de ejecucion"
+            )
+
+    brief_table = backend / "evals" / "brief_table.py"
+    if not brief_table.exists():
+        return
+    text = read(brief_table)
+    columns = _tuple_names(text, "SCENE_CHECKS") | _tuple_names(text, "MATCH_CHECKS")
+    at_scene = {n for names, point in rows if point.startswith(_SCENE_POINTS) for n in names}
+    for n in sorted(columns - at_scene):
+        report.error(
+            f"evals/brief_table.py tiene columna fija para {n}, que architecture.md §9.1 no "
+            "pone en la puerta de escena ni en la escena de encuentro"
+        )
+    for n in sorted(at_scene - columns):
+        report.error(
+            f"evals/brief_table.py no tiene columna fija para {n}, que architecture.md §9.1 "
+            "pone en la puerta de escena o en la escena de encuentro"
+        )
+
+
 def main() -> int:
     report = Report()
     arch, verif, agents, defs = (
@@ -408,6 +542,7 @@ def main() -> int:
         check_plan(report, arch, verif, agents, defined, assigned, decisions, FRONTEND_PLAN)
     check_frontend_plan(report)
     check_layout(report, arch)
+    check_validators(report, arch)
 
     for n in report.notes:
         print(f"  nota: {n}")
