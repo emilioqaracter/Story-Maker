@@ -3,10 +3,12 @@
 RF-66, RF-101, RF-104, RNF-03. Es lo que la ruta de arranque ejecuta en su
 hilo, y lo que una linea de ordenes puede llamar directamente.
 
-Antes de la primera llamada pasan dos comprobaciones de arranque, y las dos
-son fallo cerrado: el modelo de embeddings carga y su dimension cuadra con la
-del indice (RF-101), y el factor del contador se calibra contra una llamada
-real (RF-104). Sin ellas no se admite ninguna llamada.
+Antes de la primera llamada pasan tres comprobaciones de arranque, y las tres
+son fallo cerrado: `lake` esta y compila los tipos y los invariantes de Lean
+(`specs/srs-backend-v4.md` RF-255), el modelo de embeddings carga y su
+dimension cuadra con la del indice (RF-101), y el factor del contador se
+calibra contra una llamada real (RF-104). Sin ellas no se admite ninguna
+llamada.
 
 Cada invocacion --una tirada o la aplicacion de enmiendas fuera de ella-- se
 engancha al espejo de Langfuse si hay claves, o deja `export.disabled` si no, y
@@ -33,6 +35,7 @@ from commons.tracing.trace import Trace
 from orchestration.admission import Admission
 from orchestration.engine import Composer, specs_provider
 from orchestration.loop import RunReport, run
+from verification.formal import check as formal
 
 
 def chapters_for(brief: Brief) -> int:
@@ -69,6 +72,25 @@ def real_counter(port: ClaudeCli, sample: str, model_id: str) -> int:
 Invocation = Literal["run", "amend"]
 
 
+class LeanUnavailableError(RuntimeError):
+    """RF-255, D-88. Sin `lake`, o sin `Types` e `Invariants`, la tirada no empieza."""
+
+
+def check_lean() -> None:
+    """RF-255. Lo primero del arranque: la puerta formal (RF-254) tiene que poder correr.
+
+    Sin ella cada congelacion fallaria cerrada y la tirada gastaria su escalera
+    entera en un fallo que ningun reintento arregla. Mejor no empezar, con el
+    motivo en RI-03, igual que un modelo de embeddings que no carga.
+    """
+    resultado = formal.check_toolchain()
+    if not resultado.passed:
+        raise LeanUnavailableError(
+            f"la verificacion formal no puede correr: {resultado.reason}. "
+            "Instala elan con su lake y vuelve a lanzar; la tirada no empieza sin ella (RF-255)"
+        )
+
+
 def compose_engine(
     path: Path, trace: Trace, *, model: str = "haiku", invocation: Invocation = "run"
 ) -> tuple[Composer, Brief]:
@@ -78,6 +100,7 @@ def compose_engine(
     invocacion: es lo que separa una generacion de la siguiente en el espejo
     (RF-234).
     """
+    check_lean()
     brief = load_brief(path)
     port = ClaudeCli(model=model)
 

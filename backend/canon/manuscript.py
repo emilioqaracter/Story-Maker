@@ -16,11 +16,13 @@ from __future__ import annotations
 import json
 import sqlite3
 from collections.abc import Mapping, Sequence
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from canon.arbiter import refreeze
 from canon.arbiter.retcon import RetconPlan
+from canon.brief import store_forbidden
 from canon.events import log
 from canon.events.types import Event
 from canon.projections import rebuild
@@ -235,8 +237,17 @@ def manifest(
 # --------------------------------------------------------- solicitudes de cambio
 
 
+#: RI-67, RD-49. Un hecho de una entidad, o un termino que no debe aparecer.
+RequestKind = Literal["fact", "forbid"]
+
+
 class Interpretation(BaseModel):
-    """Lo que el sistema entendio: exactamente una entidad y un atributo (RI-52)."""
+    """Lo que el sistema entendio (RI-52, RI-67).
+
+    Un `fact` es exactamente una entidad y un atributo. Un `forbid` es un termino
+    que no debe aparecer en la novela (RF-256): entidad, atributo y valores van
+    vacios, y el termino en `term`.
+    """
 
     model_config = ConfigDict(frozen=True)
 
@@ -244,6 +255,8 @@ class Interpretation(BaseModel):
     attribute: str
     previous_value: str
     new_value: str
+    kind: RequestKind = Field(default="fact", description="`fact` o `forbid` (RI-67)")
+    term: str | None = Field(default=None, description="Nulo salvo en `forbid`")
 
 
 class ChangeRequest(BaseModel):
@@ -264,16 +277,22 @@ class ChangeRequest(BaseModel):
 
 
 def _request(r: sqlite3.Row) -> ChangeRequest:
-    interp = (
-        Interpretation(
+    # RD-49. Leer no migra: un fichero sin las columnas se lee como `fact`.
+    columnas = r.keys()
+    kind = r["kind"] if "kind" in columnas else "fact"
+    term = r["term"] if "term" in columnas else None
+    interp: Interpretation | None = None
+    if kind == "forbid" and term:
+        interp = Interpretation(
+            entity_id="", attribute="", previous_value="", new_value="", kind="forbid", term=term
+        )
+    elif r["entity_id"] is not None:
+        interp = Interpretation(
             entity_id=r["entity_id"],
             attribute=r["attribute"],
             previous_value=r["previous_value"] or "",
             new_value=r["new_value"] or "",
         )
-        if r["entity_id"] is not None
-        else None
-    )
     return ChangeRequest(
         request_id=r["id"],
         text=r["text"],
@@ -311,17 +330,21 @@ def insert_request(
 ) -> int:
     """RF-222. `queued` si hay interpretacion; `rejected` con motivo si no."""
     status = "queued" if interpretation is not None else "rejected"
+    hecho = interpretation if interpretation is not None and interpretation.kind == "fact" else None
     cur = con.execute(
         "INSERT INTO change_request (text, anchor, status, entity_id, attribute, previous_value, "
-        "new_value, reason, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?, datetime('now'), datetime('now'))",
+        "new_value, kind, term, reason, created_at, updated_at) "
+        "VALUES (?,?,?,?,?,?,?,?,?,?, datetime('now'), datetime('now'))",
         (
             text,
             json.dumps(dict(anchor), ensure_ascii=False),
             status,
-            interpretation.entity_id if interpretation else None,
-            interpretation.attribute if interpretation else None,
-            interpretation.previous_value if interpretation else None,
-            interpretation.new_value if interpretation else None,
+            hecho.entity_id if hecho else None,
+            hecho.attribute if hecho else None,
+            hecho.previous_value if hecho else None,
+            hecho.new_value if hecho else None,
+            interpretation.kind if interpretation else "fact",
+            interpretation.term if interpretation else None,
             reason,
         ),
     )
@@ -362,17 +385,7 @@ def commit_amendment(
     procedencia `brief`, crea la version y marca la solicitud aplicada. Devuelve
     la version nueva.
     """
-    nueva = current_version(con) + 1
-    for sid, texto in old_texts.items():
-        con.execute(
-            "INSERT INTO scene_text_history (scene_id, until_version, text) VALUES (?, ?, ?)",
-            (sid, nueva - 1, texto),
-        )
-    capitulos_de = {
-        r["id"]: r["chapter"] for r in con.execute("SELECT id, chapter FROM prose_scene")
-    }
-    congelados = _frozen_chapters(con)
-    ultimo = congelados[-1] if congelados else 0
+    nueva, capitulos_de, ultimo = _keep_old_texts(con, old_texts)
     if prepared.scenes:
         refreeze.commit(
             con,
@@ -390,6 +403,72 @@ def commit_amendment(
         rebuild.rebuild(con)
         # RF-241. El valor nuevo puede estar ya en la prosa.
         usage.refresh(con, scenes=(), before=antes)
+    return _publish(con, request_id, nueva, prepared, capitulos_de, ultimo)
+
+
+def _keep_old_texts(
+    con: sqlite3.Connection, old_texts: Mapping[str, str]
+) -> tuple[int, dict[str, int], int]:
+    """RD-34. El texto que las escenas tenian, hasta la version que deja de ser vigente.
+
+    Devuelve la version nueva, el capitulo de cada escena y el ultimo congelado.
+    """
+    nueva = current_version(con) + 1
+    for sid, texto in old_texts.items():
+        con.execute(
+            "INSERT INTO scene_text_history (scene_id, until_version, text) VALUES (?, ?, ?)",
+            (sid, nueva - 1, texto),
+        )
+    capitulos_de = {
+        str(r["id"]): int(r["chapter"]) for r in con.execute("SELECT id, chapter FROM prose_scene")
+    }
+    congelados = _frozen_chapters(con)
+    return nueva, capitulos_de, congelados[-1] if congelados else 0
+
+
+def commit_forbid(
+    con: sqlite3.Connection,
+    *,
+    request_id: int,
+    term: str,
+    prepared: refreeze.PreparedRefreeze,
+    old_texts: Mapping[str, str],
+    chapter_summaries: Mapping[int, str],
+) -> tuple[int, str]:
+    """RF-256, D-91. La prohibicion de una solicitud, todo junto o nada.
+
+    El termino entra con nivel `novela` --o se queda en el mas fuerte, si ya
+    estaba en otro--, las escenas que lo contenian se recongelan con su texto
+    anterior guardado y se publica la version siguiente. No hay evento: una
+    prohibicion no cambia ningun hecho del mundo, cambia lo que se puede
+    escribir. Devuelve la version nueva y el nivel en que quedo el termino.
+    """
+    nueva, capitulos_de, ultimo = _keep_old_texts(con, old_texts)
+    nivel = store_forbidden(con, term, level="novela", chapter=ultimo)
+    if nivel is None:
+        raise ValueError("una prohibida en blanco no prohibe nada")
+    if prepared.scenes:
+        refreeze.commit(
+            con,
+            prepared,
+            retcon=None,
+            event=None,
+            chapter_summaries=chapter_summaries,
+            rule="prohibicion del brief: el brief gana sobre el canon derivado (PRO-10)",
+            chapter_origin=max(1, ultimo),
+        )
+    return _publish(con, request_id, nueva, prepared, capitulos_de, ultimo), nivel
+
+
+def _publish(
+    con: sqlite3.Connection,
+    request_id: int,
+    nueva: int,
+    prepared: refreeze.PreparedRefreeze,
+    capitulos_de: Mapping[str, int],
+    ultimo: int,
+) -> int:
+    """RF-203. La version nueva y la solicitud aplicada, con los capitulos que cambian."""
     cambiados = sorted(
         {capitulos_de[s.scene_id] for s in prepared.scenes if s.scene_id in capitulos_de}
     )

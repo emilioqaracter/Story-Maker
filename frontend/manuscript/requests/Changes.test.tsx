@@ -18,4 +18,13 @@ describe("solicitudes de cambio (RF-189, RF-191)", () => {
     expect(screen.getByText(/No se aplicará: La petición es ambigua/)).toBeTruthy();
     expect(container.querySelectorAll("button, form, input, textarea")).toHaveLength(0);
   });
+
+  it("una prohibicion se lee con su termino, sin entidad ni atributo (RI-67)", async () => {
+    const double = new RequestsDouble();
+    double.create({ text: "que no aparezcan nubes", anchor: { kind: "fact", entity_id: "rex", attribute: "nombre" } });
+    const { server } = await import("../../commons/testing/server");
+    server.use(...novelHandlers(undefined, double));
+    renderAt(manuscriptRoutes, `/novels/${NOVEL}/changes`);
+    expect(await screen.findByText(/que no aparezca «nubes» en la novela/)).toBeTruthy();
+  });
 });
