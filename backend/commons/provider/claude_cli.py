@@ -103,8 +103,7 @@ def engine_env(environ: Mapping[str, str] | None = None) -> dict[str, str]:
     limpio = {
         k: v
         for k, v in fuente.items()
-        if not k.upper().startswith(_STRIPPED_ENV_PREFIXES)
-        and k.upper() not in _THINKING_OFF
+        if not k.upper().startswith(_STRIPPED_ENV_PREFIXES) and k.upper() not in _THINKING_OFF
     }
     return {**limpio, **_THINKING_OFF}
 

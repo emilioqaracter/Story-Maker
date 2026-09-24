@@ -55,3 +55,24 @@ def test_en_breve_lo_periodico_corre_en_el_cinco_y_el_diez() -> None:
 
 def test_breve_no_mueve_los_limites_de_escena_del_esquema() -> None:
     assert SCENE_WORDS_BOUNDS == (400, 1_500)
+
+
+def test_corta_son_cinco_capitulos_de_una_escena_y_permisiva() -> None:
+    """D-139. `breve` con cinco capitulos."""
+    from commons.types.length import CORTA
+
+    assert of("corta") is CORTA
+    assert CORTA.chapters == 5 and CORTA.scenes_per_chapter == 1
+    assert CORTA.chapter_words == CORTA.scene_words == BREVE.chapter_words
+    assert CORTA.work_words == (5_000, 7_500)
+    assert CORTA.lenient and CORTA.jury_threshold == 2 and CORTA.golden_cases == 1
+
+
+def test_el_brief_corta_planifica_cinco_y_lo_periodico_cae_al_cierre() -> None:
+    from commons.types.length import CORTA
+
+    brief = Brief.model_validate(
+        {**_brief().model_dump(), "length_profile": "corta", "target_words": 6_250}
+    )
+    assert chapters_for(brief) == 5
+    assert [c for c in range(1, 6) if CORTA.periodic_due(c, last_chapter=5, every=5)] == [5]

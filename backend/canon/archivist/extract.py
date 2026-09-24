@@ -28,7 +28,7 @@ import sqlite3
 from collections.abc import Sequence
 from typing import Self
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from canon.events import log
 from canon.events.types import ElementDeclared, Event, Payload
@@ -102,9 +102,45 @@ def _entities_of(payload: Payload) -> tuple[str, ...]:
     return (entity,) if entity else ()
 
 
-def parse(raw: str) -> DeltaProposal:
-    """Valida la salida cruda del modelo. Lanza `ValidationError` si no encaja."""
+def parse(raw: str, *, tolerant: bool = False) -> DeltaProposal:
+    """Valida la salida cruda del modelo. Lanza `ValidationError` si no encaja.
+
+    D-141. `tolerant` descarta los hechos y menciones mal formados en vez de
+    rechazar el delta entero.
+    """
+    if tolerant:
+        t = TolerantDeltaProposal.model_validate_json(raw)
+        return DeltaProposal(events=t.events, elements=t.elements)
     return DeltaProposal.model_validate_json(raw)
+
+
+class TolerantDeltaProposal(DeltaProposal):
+    """D-141. El delta en modo permisivo: un hecho que no encaja con su esquema
+    se descarta y el resto vale. Un solo hecho mal formado no tira lo demas."""
+
+    @model_validator(mode="before")
+    @classmethod
+    def _drop_malformed(cls, data: object) -> object:
+        if not isinstance(data, dict):
+            return data
+        limpio = dict(data)
+        modelos: tuple[tuple[str, type[BaseModel]], ...] = (
+            ("events", ProposedEvent),
+            ("elements", ElementMention),
+        )
+        for clave, modelo in modelos:
+            items = limpio.get(clave)
+            if not isinstance(items, list):
+                continue
+            validos = []
+            for item in items:
+                try:
+                    modelo.model_validate(item)
+                except ValidationError:
+                    continue
+                validos.append(item)
+            limpio[clave] = validos
+        return limpio
 
 
 def to_events(

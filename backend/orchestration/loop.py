@@ -1484,7 +1484,29 @@ def _extract_and_validate(
                 reason=rechazo.defect.rule[:200],
             )
         capitulo.rejected_facts.extend(r.defect for r in validacion.rejections)
-        return proposal, validacion.model_copy(update={"rejections": ()})
+        # D-140. Sin los rechazados, lo aceptado vuelve a la puerta 1: un hecho
+        # sobre una entidad cuya creacion se rechazo queda sobre una entidad
+        # desconocida, y D-130 lo descarta en vez de romper la clave ajena.
+        with connection.reader(path) as con:
+            revalidada = entries.validate_delta(
+                con, validacion.accepted, chapter_text=SEPARATOR.join(capitulo.texts)
+            )
+        for descarte in revalidada.dropped:
+            trace.emit(
+                "process.defect",
+                agent="archivero",
+                chapter=capitulo.number,
+                fact=str(descarte.event.payload.type),
+                entity=descarte.entity,
+                reason=descarte.defect.rule,
+            )
+        return proposal, validacion.model_copy(
+            update={
+                "accepted": revalidada.accepted,
+                "rejections": (),
+                "dropped": (*validacion.dropped, *revalidada.dropped),
+            }
+        )
     # RF-151. Antes de dar la razon al congelado, el Arbitro puede proponer un
     # retcon; la regla dura decide. Lo que no se retconea sigue siendo un S1.
     restantes = [
@@ -1728,7 +1750,28 @@ def _freeze(
             profile=load_brief(path).profile(),
         )
         lugares = _place_ids(con, [s.spec.identity.place for s in capitulo.scenes])
+        existentes = {r["id"] for r in con.execute("SELECT id FROM entity")}
     proscritos = proscription.repeated_ngrams(capitulo.texts, frozen_texts=congelado)
+    # D-140. La presencia apunta a `entity`: lo que el elenco nombre y ni el
+    # canon ni el delta crean se queda fuera del indice, con su registro, en vez
+    # de tumbar la congelacion entera con la clave ajena.
+    creadas = {
+        str(getattr(e.payload, "entity_id", ""))
+        for e in validacion.accepted
+        if str(e.payload.type) == "entity.created"
+    }
+    conocidas = existentes | creadas
+    for s in capitulo.scenes:
+        ajenas = [c for c in s.spec.content.cast if c not in conocidas]
+        if ajenas:
+            trace.emit(
+                "process.defect",
+                agent="planificador",
+                chapter=capitulo.number,
+                scene=s.spec.identity.ordinal,
+                entities=_json_list(ajenas),
+                reason="elenco con entidades que no existen en el canon: fuera del indice",
+            )
 
     escenas = [
         SceneToFreeze(
@@ -1741,7 +1784,7 @@ def _freeze(
             function=str(s.spec.function.function),
             text=s.text,
             summary=resumen,
-            present=s.spec.content.cast,
+            present=tuple(c for c in s.spec.content.cast if c in conocidas),
         )
         for s, resumen in zip(capitulo.scenes, resumenes, strict=True)
     ]

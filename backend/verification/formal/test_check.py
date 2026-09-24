@@ -97,7 +97,7 @@ def test_lo_pendiente_que_no_se_puede_proyectar_es_fallo(clean: Path, project: P
 # ------------------------------------------------------------ con un lake doble
 
 _FAKE = textwrap.dedent(
-    '''
+    """
     import pathlib, sys
     args = sys.argv[1:]
     if args[0] == "build":
@@ -111,7 +111,7 @@ _FAKE = textwrap.dedent(
         sys.exit(1)
     print("I4\\t" + SRC_A + "\\t" + SRC_B)
     print("I1\\tno debe salir: su teorema no fallo")
-    '''
+    """
 )
 
 
@@ -174,7 +174,9 @@ def test_el_informe_se_lee_por_invariante_con_sus_origenes() -> None:
     out = f"I3\t{a}\r\nruido\nI2\t{b}\t{a}\n"
     found = parse_report(out.replace("a|b\tc", "a|b\\tc"))
     assert [v.invariant for v in found] == ["I3", "I2"]
-    assert found[0].sources == (Origin(table="attribute", key=("rex", "collar", "2026-08-12T10:00")),)
+    assert found[0].sources == (
+        Origin(table="attribute", key=("rex", "collar", "2026-08-12T10:00")),
+    )
     assert found[1].sources[0].pending is True
     assert found[1].sources[0].key == ("c3e1", "a|b\tc")
     assert str(found[1].sources[0]) == b
@@ -220,7 +222,9 @@ def test_la_sembrada_falla_en_sus_cuatro_teoremas_y_con_sus_filas(seeded: Path) 
     assert result.passed is False
     assert set(result.failed_theorems) == set(fixtures.SEEDED)
     for theorem, expected in fixtures.SEEDED.items():
-        found = {tuple(str(s) for s in v.sources) for v in result.violations if v.theorem == theorem}
+        found = {
+            tuple(str(s) for s in v.sources) for v in result.violations if v.theorem == theorem
+        }
         assert found == set(expected), theorem
     assert not list((check.PROJECT / "Generated").glob("*.lean"))
 

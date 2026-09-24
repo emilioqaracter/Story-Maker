@@ -95,4 +95,3 @@ def test_con_perfil_prueba_el_resultado_del_ledger_es_obligatorio_y_literal() ->
     assert instruction(_spec(), _result(), NOMBRES) == instruction(
         _spec(), _result(), NOMBRES, profile=NOVELA
     )
-

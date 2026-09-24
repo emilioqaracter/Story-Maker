@@ -611,7 +611,9 @@ def test_un_hecho_sobre_una_entidad_desconocida_se_descarta_y_el_capitulo_congel
     assert descartes[0].fields["fact"] == "attribute.set"
     assert "ni el canon ni el delta" in str(descartes[0].fields["reason"])
     with connection.reader(novela) as con:
-        assert con.execute("SELECT count(*) AS n FROM entity WHERE id = 'cometa'").fetchone()["n"] == 0
+        assert (
+            con.execute("SELECT count(*) AS n FROM entity WHERE id = 'cometa'").fetchone()["n"] == 0
+        )
     frozen = traza.records("chapter.frozen")
     assert [r.fields["rejected_facts"] for r in frozen] == [1, 1]
 

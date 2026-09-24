@@ -134,9 +134,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 1
 
     clean_result = prove(clean, module="StoryMaker.Fixture", build=["build"], keep=True)
-    seeded_result = prove(
-        seeded, module=SEEDED_TARGET, build=["build", SEEDED_TARGET], keep=True
-    )
+    seeded_result = prove(seeded, module=SEEDED_TARGET, build=["build", SEEDED_TARGET], keep=True)
     if args.record:
         _record(clean_result, seeded_result)
 

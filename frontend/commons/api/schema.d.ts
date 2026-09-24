@@ -509,7 +509,7 @@ export interface components {
              */
             genre?: string;
             /**
-             * @description T53, D-132. Perfil de extension: novela; prueba, una obra minima; o breve, diez capitulos de 1.000 a 1.500 palabras
+             * @description T53, D-132, D-139. Perfil de extension: novela; prueba, una obra minima; breve, diez capitulos de 1.000 a 1.500 palabras; o corta, cinco
              * @default novela
              */
             length_profile?: components["schemas"]["LengthProfileName"];
@@ -1097,7 +1097,7 @@ export interface components {
          * LengthProfileName
          * @enum {string}
          */
-        LengthProfileName: "novela" | "prueba" | "breve";
+        LengthProfileName: "novela" | "prueba" | "breve" | "corta";
         /**
          * Manifest
          * @description RI-43. Portada e indice de una version.

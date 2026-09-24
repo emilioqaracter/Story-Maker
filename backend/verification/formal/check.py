@@ -80,8 +80,10 @@ class Origin(BaseModel):
         return cls(table=table, key=tuple(str(k) for k in json.loads("[" + key)), pending=pending)
 
     def __str__(self) -> str:
-        return (PENDING if self.pending else "") + self.table + json.dumps(
-            list(self.key), ensure_ascii=False
+        return (
+            (PENDING if self.pending else "")
+            + self.table
+            + json.dumps(list(self.key), ensure_ascii=False)
         )
 
 
@@ -114,9 +116,7 @@ class LeanResult(BaseModel):
             return ""
         if not self.violations:
             return f"{KIND}: {self.reason}"
-        parts = [
-            f"{v.theorem}: " + " y ".join(str(s) for s in v.sources) for v in self.violations
-        ]
+        parts = [f"{v.theorem}: " + " y ".join(str(s) for s in v.sources) for v in self.violations]
         return f"{KIND}: " + "; ".join(parts)
 
     def scenes(self) -> tuple[str, ...]:

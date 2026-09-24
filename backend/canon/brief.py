@@ -132,8 +132,8 @@ class Brief(BaseModel):
     length_profile: LengthProfileName = Field(
         default=LengthProfileName.NOVELA,
         description=(
-            "T53, D-132. Perfil de extension: novela; prueba, una obra minima; o breve, "
-            "diez capitulos de 1.000 a 1.500 palabras"
+            "T53, D-132, D-139. Perfil de extension: novela; prueba, una obra minima; "
+            "breve, diez capitulos de 1.000 a 1.500 palabras; o corta, cinco"
         ),
     )
     genre: str = ""

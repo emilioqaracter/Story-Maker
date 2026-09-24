@@ -339,8 +339,10 @@ def _mark_pending(merged: Chronicle, base: Chronicle) -> Chronicle:
         facts: tuple[T, ...], old: tuple[T, ...]
     ) -> tuple[T, ...]:
         before = set(old)
-        out = [f if f in before or f.src.startswith(PENDING) else replace(f, src=PENDING + f.src)
-               for f in facts]
+        out = [
+            f if f in before or f.src.startswith(PENDING) else replace(f, src=PENDING + f.src)
+            for f in facts
+        ]
         return tuple(sorted(out))
 
     return Chronicle(
@@ -476,8 +478,13 @@ def _births_and_ages(
         for start, value, _stop in open_rows or [max(rows)]:
             at = minutes(value)
             births.append(
-                Birth(src=src("attribute", ent, BIRTH_DATE, start), entity=ent,
-                      lo=at, hi=at, derived=False)
+                Birth(
+                    src=src("attribute", ent, BIRTH_DATE, start),
+                    entity=ent,
+                    lo=at,
+                    hi=at,
+                    derived=False,
+                )
             )
     for ent, (_start, age, _years) in first_age.items():
         if ent not in declared:
@@ -562,46 +569,70 @@ def render(chronicle: Chronicle, *, namespace: str = NAMESPACE, report: bool = F
     lines.append("")
 
     lines += _list(
-        "presences", "Presence",
+        "presences",
+        "Presence",
         "Un personaje presente en una escena de `chronology`: entidad, instante, desempate, lugar.",
-        [(f"⟨{n(p.entity)}, {p.time}, {p.seq}, {place(p)}, {lean_string(p.src)}⟩",
-          f"{p.stamp}#{p.seq}") for p in chronicle.presences],
+        [
+            (
+                f"⟨{n(p.entity)}, {p.time}, {p.seq}, {place(p)}, {lean_string(p.src)}⟩",
+                f"{p.stamp}#{p.seq}",
+            )
+            for p in chronicle.presences
+        ],
     )
     lines.append("")
     lines += _list(
-        "births", "Birth",
+        "births",
+        "Birth",
         "Nacimientos: declarados con `birth_date`, o derivados de `age` (MET-09).",
-        [(f"⟨{n(b.entity)}, {b.lo}, {b.hi}, {'true' if b.derived else 'false'}, "
-          f"{lean_string(b.src)}⟩", "derivado de la edad" if b.derived else "declarado")
-         for b in chronicle.births],
+        [
+            (
+                f"⟨{n(b.entity)}, {b.lo}, {b.hi}, {'true' if b.derived else 'false'}, "
+                f"{lean_string(b.src)}⟩",
+                "derivado de la edad" if b.derived else "declarado",
+            )
+            for b in chronicle.births
+        ],
     )
     lines.append("")
     lines += _list(
-        "ages", "Age",
+        "ages",
+        "Age",
         "Edades declaradas: el intervalo de nacimientos compatible con cada una.",
-        [(f"⟨{n(a.entity)}, {a.lo}, {a.hi}, {lean_string(a.src)}⟩", "edad")
-         for a in chronicle.ages],
+        [
+            (f"⟨{n(a.entity)}, {a.lo}, {a.hi}, {lean_string(a.src)}⟩", "edad")
+            for a in chronicle.ages
+        ],
     )
     lines.append("")
     lines += _list(
-        "existences", "Existence",
+        "existences",
+        "Existence",
         "Desde cuando existe cada entidad.",
-        [(f"⟨{n(e.entity)}, {e.created}, {lean_string(e.src)}⟩", "creada")
-         for e in chronicle.existences],
+        [
+            (f"⟨{n(e.entity)}, {e.created}, {lean_string(e.src)}⟩", "creada")
+            for e in chronicle.existences
+        ],
     )
     lines.append("")
     lines += _list(
-        "validities", "Validity",
+        "validities",
+        "Validity",
         "Vigencias de atributos, alias, relaciones y competencias (MET-07).",
-        [(f"⟨{n(v.entity)}, {v.start}, {_opt(v.stop)}, {lean_string(v.src)}⟩", "vigencia")
-         for v in chronicle.validities],
+        [
+            (f"⟨{n(v.entity)}, {v.start}, {_opt(v.stop)}, {lean_string(v.src)}⟩", "vigencia")
+            for v in chronicle.validities
+        ],
     )
     lines.append("")
     lines += _list(
-        "exclusions", "Exclusion",
+        "exclusions",
+        "Exclusion",
         "Vigencias de `excluded`: desde su inicio, la entidad no puede estar presente.",
-        [(f"⟨{n(x.entity)}, {x.start}, {_opt(x.stop)}, {lean_string(x.src)}⟩", "excluida")
-         for x in chronicle.exclusions],
+        [
+            (f"⟨{n(x.entity)}, {x.start}, {_opt(x.stop)}, {lean_string(x.src)}⟩", "excluida")
+            for x in chronicle.exclusions
+        ],
     )
     lines += [
         "",
@@ -614,8 +645,7 @@ def render(chronicle: Chronicle, *, namespace: str = NAMESPACE, report: bool = F
         lines += [f"end {namespace}", "", "def main : IO Unit := do"]
         for inv in THEOREMS:
             lines.append(
-                f"  for v in {inv}.violations {namespace}.chronicle do "
-                f'IO.println ("{inv}\\t" ++ v)'
+                f'  for v in {inv}.violations {namespace}.chronicle do IO.println ("{inv}\\t" ++ v)'
             )
         return "\n".join(lines) + "\n"
 
@@ -636,7 +666,7 @@ def render(chronicle: Chronicle, *, namespace: str = NAMESPACE, report: bool = F
 def theorem_lines(text: str) -> dict[int, str]:
     """Linea (desde 1) de cada teorema del fichero: donde Lean informa si falla."""
     found: dict[int, str] = {}
-    names = {f"theorem {t} " : t for t in THEOREMS.values()}
+    names = {f"theorem {t} ": t for t in THEOREMS.values()}
     for number, line in enumerate(text.splitlines(), start=1):
         for prefix, theorem in names.items():
             if line.startswith(prefix):
@@ -656,7 +686,9 @@ def write(path: Path, text: str) -> None:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Exporta la cronologia de una novela a Lean (RI-63)")
+    parser = argparse.ArgumentParser(
+        description="Exporta la cronologia de una novela a Lean (RI-63)"
+    )
     parser.add_argument("novel", type=Path, help="fichero SQLite de la novela")
     parser.add_argument("-o", "--output", type=Path, required=True, help="fichero .lean")
     args = parser.parse_args(argv)

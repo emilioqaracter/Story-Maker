@@ -394,3 +394,16 @@ def test_el_ejemplo_del_esquema_de_prueba_no_cambia() -> None:
     ]
     assert [s["function"] for s in ejemplo["scenes"]] == ["establecer", "culminar", "asimilar"]
     assert [a["resolution_scene"] for a in ejemplo["arcs"]] == ["c2e1", "c3e1"]
+
+
+def test_el_ejemplo_del_esquema_corta_pasa_su_propia_verificacion() -> None:
+    """D-139. Cinco capitulos de una escena: fechas validas y el doble arco separado."""
+    import json
+
+    from commons.types.length import CORTA
+    from planning.outline import prompts
+
+    texto = prompts.schema(CORTA)
+    assert "EXACTAMENTE 5 capitulos, con 1 escena" in texto
+    ejemplo = Outline.model_validate(json.loads(texto[texto.index("{") :]))
+    assert check(ejemplo, word_range=(5_625, 6_875), profile=CORTA) == []

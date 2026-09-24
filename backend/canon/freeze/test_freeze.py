@@ -81,9 +81,7 @@ def test_una_clave_ajena_rota_revierte_la_congelacion_entera(tmp_path: Path) -> 
     path = _novela(tmp_path)
     antes = _foto(path)
     delta = [_set("marcos", "sano", 1), _set("cometa", "rota", 2)]
-    preparado = prepare(
-        [_escena()], chapter=1, chapter_summary="c", embed=_Embed(), delta=delta
-    )
+    preparado = prepare([_escena()], chapter=1, chapter_summary="c", embed=_Embed(), delta=delta)
 
     with pytest.raises(sqlite3.IntegrityError), connection.canon_writer(path) as con:
         commit_chapter(con, preparado)

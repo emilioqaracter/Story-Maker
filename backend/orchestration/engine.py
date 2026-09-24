@@ -27,7 +27,7 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 
 from pydantic import BaseModel, JsonValue
 
@@ -281,6 +281,10 @@ def call_context(**fields: str | int | bool | float) -> Iterator[None]:
         yield
     finally:
         _CALL_CONTEXT.reset(token)
+
+
+#: D-141. El tipo de lo que devuelve un agente envuelto por `Composer._tolerant`.
+_T = TypeVar("_T")
 
 
 @dataclass
@@ -626,7 +630,8 @@ class Composer:
             parse=planner_prompts.plan_model(entries_, forbidden=proscritos),
             context={"chapter": chapter, "respec": bool(defects)},
         )
-        return planner_prompts.parse(r.raw, entries_, forbidden=proscritos)
+        # D-140. El elenco, filtrado a las entidades del canon.
+        return planner_prompts.parse(r.raw, entries_, forbidden=proscritos, known=ids)
 
     def respec(self, specs: Sequence[SceneSpec], defects: Sequence[Defect]) -> Sequence[SceneSpec]:
         if not specs or self.outline is None:
@@ -1157,6 +1162,7 @@ class Composer:
         self, specs: Sequence[SceneSpec], texts: Sequence[str], state_before: WorldState
     ) -> archivist.DeltaProposal:
         chapter = specs[0].identity.chapter
+        tolerante = self.brief.profile().lenient
         # RF-261. Los elementos del brief que el Archivero puede citar, del canon.
         with connection.reader(self.path) as con:
             encargo = [(e.id, e.kind, e.text) for e in freeze_elements.declared(con)]
@@ -1183,11 +1189,13 @@ class Composer:
                 specs, texts, state_before, chapter=chapter, elements=encargo
             ),
             schema=archivist_prompts.schema(),
-            parse=archivist.DeltaProposal,
+            # D-141. En modo permisivo un hecho mal formado se descarta, no tira
+            # el delta entero ni gasta los reintentos.
+            parse=archivist.TolerantDeltaProposal if tolerante else archivist.DeltaProposal,
             context={"chapter": chapter},
             at=specs[-1].identity.world_time,
         )
-        return archivist.parse(r.raw)
+        return archivist.parse(r.raw, tolerant=tolerante)
 
     # ----------------------------------------------------------------- Jurado
 
@@ -1223,6 +1231,21 @@ class Composer:
         base = int(hashlib.sha256(specs[0].identity.scene_id.encode()).hexdigest()[:6], 16)
 
         def una(indice: int, semilla: int) -> tuple[str, tuple[int, InstanceVerdict]]:
+            try:
+                return juez(indice, semilla)
+            except (OutputValidationError, ProviderError) as exc:
+                # D-141. En modo permisivo la instancia que no responde no puntua;
+                # las otras si.
+                if not perfil.lenient:
+                    raise
+                self.trace.emit(
+                    "process.defect",
+                    agent=f"juez-{indice}",
+                    reason=f"sin salida valida tras sus reintentos: {str(exc)[:200]}",
+                )
+                return f"juez-{indice}", (semilla, InstanceVerdict(scores=()))
+
+        def juez(indice: int, semilla: int) -> tuple[str, tuple[int, InstanceVerdict]]:
             r = self._call(
                 "juez",
                 prefix=jury_prompts.system(perfil),
@@ -1513,6 +1536,29 @@ class Composer:
 
     # ------------------------------------------------------------------ motor
 
+    def _tolerant(
+        self, agent: str, fn: Callable[..., _T], fallback: Callable[..., _T]
+    ) -> Callable[..., _T]:
+        """D-141. En modo permisivo, un agente que agota sus reintentos --salida
+        que no encaja o proveedor caido-- devuelve un valor seguro en vez de
+        tumbar la tirada, y lo deja en la traza. Solo para los agentes cuya
+        salida la tirada puede no tener; `novela` no cambia."""
+        if not self.brief.profile().lenient:
+            return fn
+
+        def envuelto(*args: object, **kwargs: object) -> _T:
+            try:
+                return fn(*args, **kwargs)
+            except (OutputValidationError, ProviderError) as exc:
+                self.trace.emit(
+                    "process.defect",
+                    agent=agent,
+                    reason=f"sin salida valida tras sus reintentos: {str(exc)[:200]}",
+                )
+                return fallback(*args, **kwargs)
+
+        return envuelto
+
     def engine(self) -> Engine:
         return Engine(
             plan_outline=self.plan_outline,
@@ -1523,17 +1569,27 @@ class Composer:
             narrate_match=self.narrate_match,
             verify_scene=self.verify_scene,
             verify_match=self.verify_match,
-            review_chapter=self.review_chapter,
-            answer_quiz=self.answer_quiz,
-            repair_scene=self.repair_scene,
+            review_chapter=self._tolerant(
+                "continuista", self.review_chapter, lambda *_a: Anchored(defects=(), discarded=())
+            ),
+            answer_quiz=self._tolerant(
+                "lector", self.answer_quiz, lambda _texto, preguntas: [""] * len(preguntas)
+            ),
+            repair_scene=self._tolerant(
+                "reparador", self.repair_scene, lambda _spec, texto, _defectos: texto
+            ),
             summarize_scene=self.summarize_scene,
             summarize_chapter=self.summarize_chapter,
             summarize_arc=self.summarize_arc,
             summarize_work=self.summarize_work,
-            extract_delta=self.extract_delta,
+            extract_delta=self._tolerant(
+                "archivero", self.extract_delta, lambda *_a: archivist.DeltaProposal()
+            ),
             embed=self.embedder,
             judge_chapter=self.judge_chapter,
-            polish_chapter=self.polish_chapter,
+            polish_chapter=self._tolerant(
+                "estilista", self.polish_chapter, lambda _specs, textos, _r: list(textos)
+            ),
             fingerprint=self.fingerprint,
             golden_check=self.golden_check,
             supervise=self.supervise,

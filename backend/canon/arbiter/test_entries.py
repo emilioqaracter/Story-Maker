@@ -147,9 +147,7 @@ def test_una_entidad_creada_antes_en_el_mismo_delta_vale(novela: Path) -> None:
     from canon.events.types import EntityCreated
 
     crea = _ev("2026-08-20", EntityCreated(entity_id="cometa", kind="object", name="la cometa"))
-    usa = _ev(
-        "2026-08-20", AttributeSet(entity_id="cometa", name="estado", value="rota"), seq=1
-    )
+    usa = _ev("2026-08-20", AttributeSet(entity_id="cometa", name="estado", value="rota"), seq=1)
     with connection.reader(novela) as con:
         resultado = validate_delta(con, [usa, crea])  # el orden de la lista no importa
     assert resultado.dropped == ()

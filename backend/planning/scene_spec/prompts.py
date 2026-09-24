@@ -15,7 +15,7 @@ encaja y consume un reintento.
 from __future__ import annotations
 
 import json
-from collections.abc import Sequence
+from collections.abc import Collection, Sequence
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -166,46 +166,65 @@ Devuelve SOLO el JSON."""
 
 
 def plan_model(
-    entries: Sequence[SceneEntry], *, forbidden: Sequence[str] = ()
+    entries: Sequence[SceneEntry],
+    *,
+    forbidden: Sequence[str] = (),
+    known: Collection[str] | None = None,
 ) -> type[ChapterPlan]:
     """D-134. El modelo que `dispatch` exige a la salida de esta llamada.
 
     Compone las especificaciones igual que `parse`, asi que una escena sin
     especificar o un POV fuera del elenco (EST-I1) son una salida que no encaja
     --un reintento con su motivo, RI-18-- y no un error que para la tirada.
+    D-140: con las `known`, el elenco se filtra al canon; no se rechaza.
     """
 
     class ChapterPlanFor(ChapterPlan):
         @model_validator(mode="after")
         def _compone(self) -> ChapterPlanFor:
-            _compose(self, entries, forbidden)
+            _compose(self, entries, forbidden, known)
             return self
 
     return ChapterPlanFor
 
 
 def parse(
-    raw: str, entries: Sequence[SceneEntry], *, forbidden: Sequence[str] = ()
+    raw: str,
+    entries: Sequence[SceneEntry],
+    *,
+    forbidden: Sequence[str] = (),
+    known: Collection[str] | None = None,
 ) -> list[SceneSpec]:
     """Valida la salida y la compone con la escaleta. EST-I1 se impone aqui (RF-29)."""
-    return _compose(ChapterPlan.model_validate_json(raw), entries, forbidden)
+    return _compose(ChapterPlan.model_validate_json(raw), entries, forbidden, known)
 
 
 def _compose(
-    plan: ChapterPlan, entries: Sequence[SceneEntry], forbidden: Sequence[str]
+    plan: ChapterPlan,
+    entries: Sequence[SceneEntry],
+    forbidden: Sequence[str],
+    known: Collection[str] | None = None,
 ) -> list[SceneSpec]:
     faltan = [e.id for e in entries if e.id not in plan.scenes]
     if faltan:
         raise ValueError(f"el Planificador no especifico las escenas {faltan}")
-
     out: list[SceneSpec] = []
     for entry in entries:
         body = plan.scenes[entry.id]
+        # D-140. El elenco son identificadores del estado del mundo (EST-I1): uno
+        # que el canon no tiene se quita, y el POV se queda siempre. Quitarlo y
+        # no rechazar la salida: un elenco con un nombre inventado no es una
+        # escena mala, y rechazarlo gastaria la tirada si el modelo insiste.
+        elenco = (
+            body.cast
+            if known is None
+            else tuple(c for c in body.cast if c in known or c == entry.pov) or (entry.pov,)
+        )
         out.append(
             from_entry(
                 entry,
                 place=body.place,
-                cast=body.cast,
+                cast=elenco,
                 beats=body.beats,
                 objective=body.objective,
                 obstacle=body.obstacle,

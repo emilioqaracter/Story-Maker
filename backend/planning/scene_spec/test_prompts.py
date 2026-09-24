@@ -107,7 +107,31 @@ def test_la_instruccion_dice_las_claves_exactas() -> None:
     from planning.scene_spec.prompts import instruction
 
     outline = Outline.model_validate(
-        {"arcs": [], "acts": [{"number": 1, "tension": [3]}], "scenes": [_entry().model_dump()], "setups": []}
+        {
+            "arcs": [],
+            "acts": [{"number": 1, "tension": [3]}],
+            "scenes": [_entry().model_dump()],
+            "setups": [],
+        }
     )
     texto = instruction([_entry()], outline, cards=[], debt=Debt(open_setups=(), planned=()))
     assert "exactamente estas claves: c1e1" in texto
+
+
+def test_el_elenco_se_filtra_a_las_entidades_del_canon_y_conserva_el_pov() -> None:
+    """D-140. Un identificador que el canon no tiene se quita del elenco; el POV
+    se queda siempre, y sin `known` nada cambia."""
+    raw = json.dumps({"scenes": {"c1e1": _body(cast=["marcos", "tripulacion", "tecnico"])}})
+
+    [spec] = parse(raw, [_entry()], known={"marcos", "tecnico"})
+    assert spec.content.cast == ("marcos", "tecnico")
+
+    [solo_pov] = parse(
+        json.dumps({"scenes": {"c1e1": _body(cast=["marcos", "tripulacion"])}}),
+        [_entry()],
+        known={"tecnico"},
+    )
+    assert solo_pov.content.cast == ("marcos",)
+
+    [sin_filtro] = parse(raw, [_entry()])
+    assert "tripulacion" in sin_filtro.content.cast

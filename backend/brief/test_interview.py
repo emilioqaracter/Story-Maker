@@ -285,5 +285,7 @@ def test_la_entrevista_elige_breve_en_su_rango_y_novela_fuera() -> None:
     assert profile_for(10_000) is LengthProfileName.BREVE
     assert profile_for(12_500) is LengthProfileName.BREVE
     assert profile_for(15_000) is LengthProfileName.BREVE
+    assert profile_for(6_250) is LengthProfileName.CORTA
     assert profile_for(9_999) is LengthProfileName.NOVELA
+    assert profile_for(4_999) is LengthProfileName.NOVELA
     assert profile_for(60_000) is LengthProfileName.NOVELA

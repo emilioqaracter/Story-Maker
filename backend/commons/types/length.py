@@ -37,7 +37,10 @@ un rango de una constante: lo lee del perfil del brief.
   Jurado aprueba con mediana 2, como en `prueba`, y ancla citas de 8 palabras,
   como `check.evidence`; el conjunto dorado juzga un caso por pasada.
 
-`breve` y `prueba` son ademas permisivos (D-136): el encargo mide que el ciclo
+- `corta`: `breve` con cinco capitulos (D-139), obra de 5.000 a 7.500. Lo
+  periodico cae en el 5, que es tambien el cierre.
+
+`breve`, `corta` y `prueba` son ademas permisivos (D-136): el encargo mide que el ciclo
 produzca una obra completa, asi que una obra con defectos declarados en la
 traza vale mas que ninguna. `novela` sigue estricta.
 """
@@ -52,6 +55,7 @@ class LengthProfileName(StrEnum):
     NOVELA = "novela"
     PRUEBA = "prueba"
     BREVE = "breve"
+    CORTA = "corta"
 
 
 @dataclass(frozen=True)
@@ -148,7 +152,22 @@ BREVE = LengthProfile(
     lenient=True,
 )
 
-PROFILES: dict[LengthProfileName, LengthProfile] = {p.name: p for p in (NOVELA, PRUEBA, BREVE)}
+CORTA = LengthProfile(
+    name=LengthProfileName.CORTA,
+    # D-139. `breve` con cinco capitulos: mismos rangos por capitulo y escena.
+    chapter_words=(1_000, 1_500),
+    scene_words=(1_000, 1_500),
+    work_words=(5_000, 7_500),
+    chapters=5,
+    scenes_per_chapter=1,
+    jury_threshold=2,
+    golden_cases=1,
+    lenient=True,
+)
+
+PROFILES: dict[LengthProfileName, LengthProfile] = {
+    p.name: p for p in (NOVELA, PRUEBA, BREVE, CORTA)
+}
 
 #: Los limites de escena de todos los perfiles juntos. Es lo que admite el
 #: esquema de una entrada de escaleta; el rango del perfil de la obra lo

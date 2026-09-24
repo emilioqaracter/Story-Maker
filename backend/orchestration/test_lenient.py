@@ -438,3 +438,46 @@ def test_una_escaleta_con_una_escena_duplicada_sigue_parando(permisivo: None, no
             chapters=2,
             specs_for=_specs,
         )
+
+
+# ------------------------------------------------------ elenco fuera del canon
+
+
+def test_un_elenco_con_una_entidad_inventada_no_tumba_la_congelacion(
+    novela: Path, tmp_path: Path
+) -> None:
+    """D-140. `prose_scene_character` apunta a `entity`: lo que el elenco nombre
+    sin existir se queda fuera del indice con su registro, y el capitulo congela.
+    Es lo que paro la tirada `corta` del 2026-09-24 con `FOREIGN KEY constraint
+    failed`. Vale tambien en el perfil estricto: es un choque, no una puerta."""
+    from planning.scene_spec.spec import from_entry
+
+    def specs(outline: Outline, numero: int) -> Sequence[SceneSpec]:
+        return [
+            from_entry(
+                e,
+                place="vestuario",
+                cast=("marcos", "tripulacion"),
+                beats=("entra", "descubre"),
+                objective="saber",
+                obstacle="nadie habla",
+                ends_with="sale sin saber",
+            )
+            for e in outline.chapters().get(numero, [])
+        ]
+
+    traza = Trace(tmp_path / "t.jsonl")
+    informe = run(
+        novela, _brief(), _engine(), novel_id="p", chapters=2, specs_for=specs, trace=traza
+    )
+
+    assert all(c.frozen for c in informe.chapters)
+    from canon.db import connection
+
+    with connection.reader(novela) as con:
+        presentes = {
+            r["entity_id"] for r in con.execute("SELECT entity_id FROM prose_scene_character")
+        }
+    assert presentes == {"marcos"}
+    avisos = [r for r in traza.records("process.defect") if r.fields.get("agent") == "planificador"]
+    assert avisos and all(r.fields["entities"] == ["tripulacion"] for r in avisos)

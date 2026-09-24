@@ -1358,7 +1358,7 @@ La segunda fila es la que hay que tener clara, porque la lectura contraria parec
 
 #### Modo permisivo (`specs/srs-backend-v4.md` D-136)
 
-Los perfiles de extensión `breve` y `prueba` (PRO-15) llevan `lenient`. Con él, agotar un presupuesto acepta o congela en vez de escalar o parar. La escena que agota sus 3 intentos se acepta con sus defectos y no vuelve al Planificador. Si tras los 3 pases de reparación siguen S1 deterministas, el capítulo se congela con su mejor intento, así que la escalera de capítulo y la replanificación por cuarentena no se alcanzan. Una replanificación de arco agotada conserva la escaleta vigente en vez de parar la tirada. Cada degradación deja su registro en la traza: `scene.forced`, `chapter.forced` y `replan.kept` (RF-284). Es una regla fija por perfil, así que nadie aprueba nada. El perfil `novela` no lleva `lenient` y sigue la escalera de arriba sin cambios.
+Los perfiles de extensión `breve`, `corta` y `prueba` (PRO-15) llevan `lenient`. Con él, agotar un presupuesto acepta o congela en vez de escalar o parar. La escena que agota sus 3 intentos se acepta con sus defectos y no vuelve al Planificador. Si tras los 3 pases de reparación siguen S1 deterministas, el capítulo se congela con su mejor intento, así que la escalera de capítulo y la replanificación por cuarentena no se alcanzan. Una replanificación de arco agotada conserva la escaleta vigente en vez de parar la tirada. Cada degradación deja su registro en la traza: `scene.forced`, `chapter.forced` y `replan.kept` (RF-284). Es una regla fija por perfil, así que nadie aprueba nada. El perfil `novela` no lleva `lenient` y sigue la escalera de arriba sin cambios.
 
 ### 7.4 Ejecución: el Orquestador como código
 
@@ -1491,7 +1491,7 @@ Cuatro tipos: programático, semántico, formal de la historia y formal del sist
 
 La puerta de CI contrasta las filas `check.*` de esta tabla con el código (`specs/srs-backend-v4.md` RF-268): una tabla que describe validadores que no existen es peor que ninguna. Un validador existe en el código de dos formas: como `kind` que el código asigna, `kind="check.x"` o `KIND = "check.x"`; o como módulo validador, un `verification/checks/<x>.py` cuyo docstring abre con `` `check.<x>` ``, que es como existe `check.evidence`, que descarta citas y no marca defectos con `kind` propio. Toda fila dice dónde corre, y la tabla por brief de `evals/brief_table.py` tiene una columna fija por cada validador que esta tabla pone en la puerta de escena o en la escena de encuentro.
 
-En los perfiles `breve` y `prueba` todos los validadores corren igual; lo que cambia es la columna «Si falla», según el modo permisivo de §7.3 y §9.3.
+En los perfiles `breve`, `corta` y `prueba` todos los validadores corren igual; lo que cambia es la columna «Si falla», según el modo permisivo de §7.3 y §9.3.
 
 ### 9.2 Jurado
 
@@ -1501,7 +1501,7 @@ Tres instancias con las mismas rúbricas y semillas distintas: la semilla fija e
 - Contexto mínimo, el de §4.9: el capítulo entero, las rúbricas, las fichas de voz de los POV y el encargo del destinatario como dato. Nunca la especificación ni el paquete del Escritor.
 - Dispersión alta entre instancias invalida el veredicto y fuerza una verificación adicional en lugar de promediar. Promediar jueces que no se ponen de acuerdo produce un número sin significado.
 - Toda puntuación lleva justificación además de la cita, y las dos llegan a la traza.
-- El umbral y el mínimo de palabras de la cita salen del perfil de extensión de la obra (PRO-15): mediana 3 y 8 palabras en `novela`, 2 y 5 en `prueba`, 2 y 8 en `breve`, con la misma regla de dispersión (`specs/srs-backend-v4.md` D-128, D-132).
+- El umbral y el mínimo de palabras de la cita salen del perfil de extensión de la obra (PRO-15): mediana 3 y 8 palabras en `novela`, 2 y 5 en `prueba`, 2 y 8 en `breve` y en `corta`, con la misma regla de dispersión (`specs/srs-backend-v4.md` D-128, D-132, D-139).
 
 **Qué criterio de la rúbrica de la entrega mide cada dimensión.** Las rúbricas van en su versión 2 (`specs/srs-backend-v4.md` RF-257), con nueve dimensiones:
 
@@ -1525,7 +1525,7 @@ Tres instancias con las mismas rúbricas y semillas distintas: la semilla fija e
 | Cierre de acto | Deuda narrativa dentro del margen planificado; curva de tensión conforme. Ver abajo |
 | Cierre de obra | Deuda narrativa cero, elementos obligatorios incluidos; todos los arcos resueltos; longitud en rango |
 
-**Modo permisivo (`specs/srs-backend-v4.md` D-136).** Con `lenient`, que llevan `breve` y `prueba`, las puertas se relajan así, y cada relajación queda en la traza (RF-284):
+**Modo permisivo (`specs/srs-backend-v4.md` D-136).** Con `lenient`, que llevan `breve`, `corta` y `prueba`, las puertas se relajan así, y cada relajación queda en la traza (RF-284):
 
 - **Capítulo verificado.** Solo bloquean los S1 de verificadores deterministas, los de `kind` `check.*`. Los S1 y S2 del Continuista, las respuestas erróneas del examen de comprensión y la longitud de capítulo quedan en `chapter.gate` sin bloquear, y el máximo de 2 S2 no se aplica.
 - **Jurado.** Puntúa las nueve dimensiones y su veredicto va a la traza y a Langfuse, pero no bloquea ni manda al Reparador. No hay segunda ronda por dispersión, y cada juez hace una sola llamada: las citas que no anclan se descartan como defecto de proceso. Los reintentos por salida que no encaja o por fallo del proveedor no cambian. Una cita recortada con puntos suspensivos ancla por su primer tramo literal y único, y una dimensión tiene nivel con una sola puntuación anclada, sin que la dispersión la invalide: la mediana de las que haya.
@@ -1581,7 +1581,7 @@ sequenceDiagram
   end
 ```
 
-Reglas duras: el delta se propone y se valida, nunca se aplica en bruto; un hecho sobre una entidad que ni el canon ni el delta crean antes se descarta con su motivo, como defecto del Archivero y no del capítulo (`specs/srs-backend-v4.md` D-130); todo hecho guarda procedencia (MET-09) y capítulo de origen; todo arbitraje deja registro con la regla aplicada; la congelación es la única operación que cambia el canon.
+Reglas duras: el delta se propone y se valida, nunca se aplica en bruto; un hecho sobre una entidad que ni el canon ni el delta crean antes se descarta con su motivo, como defecto del Archivero y no del capítulo (`specs/srs-backend-v4.md` D-130); un nombre del elenco de la escena que no es entidad del canon ni la crea el delta no entra en los presentes de la escena, porque el Planificador filtra el elenco al canon y la congelación deja fuera lo que quede, como defecto del Planificador (D-140); todo hecho guarda procedencia (MET-09) y capítulo de origen; todo arbitraje deja registro con la regla aplicada; la congelación es la única operación que cambia el canon.
 
 **Dos comprobaciones más antes de toda congelación, retcon o enmienda**, porque miran lo que va a entrar y no lo que ya está: `check.forbidden` sobre el texto entero y la verificación formal de la cronología sobre el canon más el delta (`verification.md` §4.4). Van aquí y no al final de la obra porque el canon congelado gana: un fallo descubierto después de congelar no tiene a quién volver. Un fallo es un S1 con su cita que vuelve al Reparador; en una enmienda, la rechaza con el motivo y la versión no cambia.
 
