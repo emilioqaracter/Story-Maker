@@ -122,7 +122,7 @@ Producen código que funciona en la demo y falla en el capítulo 20.
 | T37 | Hecho: `specs/srs-backend-v4.md` y su propagación |
 | T38 a T44 | Construidos, integrados en `v2-oneshot` y en verde. Queda una línea de código de T44: `violenta` y `macabra` en `canon/brief_rules.py:ADULT_TERMS`, con su prueba (D-99) |
 | T45 a T51, T53 | Construidos, integrados en `v2-oneshot` y en verde, con su sincronización inversa en `specs/srs-backend-v4.md` (D-107 a D-112) |
-| T52 | En curso: las cinco tiradas de evaluación, de una en una y sobre un commit etiquetado (RNF-58). Espera también a T16 para la lectura humana de una novela completa |
+| T52 | En curso: las cinco tiradas de evaluación, en paralelo y sobre un commit etiquetado (RNF-58) |
 
 ---
 
@@ -499,7 +499,7 @@ Los tramos de `specs/srs-backend-v4.md` §11 con los requisitos que entrega cada
 | T49 | 41 | RF-267, RI-69 | VER-05 | `.mcp.json`; `frontend/visual/tour.mjs`, `verdict.ts`, `verdict.test.ts`, `seed.py` y `results/`; `frontend/package.json` | 3 · S-V · 5.º |
 | T50 | 42 | RF-268 | VER-15 | `backend/coherence.py` y su prueba | 3 · quien integra, después de T39, T41, T43 y T46 |
 | T51 | 44, 45, 61 en su parte de código | RF-269 a RF-271, RD-48 | VER-10 | `evals/brief_table.py`, `human_template.py`, `human_vs_jury.py` y sus pruebas; esquema de `evals/human/` | 3 o 4 · con dobles, sin tirada |
-| T52 | 44, 45, 50, 61, 62 | RF-272, RNF-58 | VER-10, VER-16 | `evals/results/briefs.md`, `human-vs-jury.md`, `tuning-01.md` y `traces/`; `evals/formal/CASOS.md` y `test_case.py`; `evals/human/<novela>.json`; enlace desde §1.4 | 4 · en secuencia, cuando T16 termine |
+| T52 | 44, 45, 50, 61, 62 | RF-272, RNF-58 | VER-10, VER-16 | `evals/results/briefs.md`, `tuning-01.md` y `traces/`; `evals/formal/CASOS.md` y `test_case.py`; enlace desde §1.4 | 4 · las cinco tiradas en paralelo |
 | T53 | — | RF-274, RD-50 | VER-05, VER-08 | `commons/types/length.py`, los perfiles; `canon/brief.py`, `length_profile` y el rango de obra por perfil; `planning/outline/types.py`, que reexporta los perfiles en vez de `CHAPTER_WORDS`, `check.py` y `prompts.py`; `orchestration/compose.py`, el número de capítulos, `engine.py`, el rango de escena del Escritor y de `check.format`, y `loop.py`, `check_chapter_length` en `_approve_chapter`; `verification/checks/deterministic.py`; `verification/jury/verdict.py` y `prompts.py`, el umbral y el mínimo de cita del perfil, y `generation/sports/narrate.py`, el resultado obligatorio del Especialista (D-128); `evals/brief_table.py`, el umbral registrado en `jury`; `backend/evals/briefs/01` a `05` con `prueba`, y sus pruebas; `backend/openapi.json` y el cliente regenerado en `frontend/commons/api/` | 3 · S-MINI · después de S-FIX y S-S |
 
 ---
@@ -602,7 +602,7 @@ Hecho. Autoriza lo que construyen las olas 2 y 3 y deja escritas en su §9 las r
 
 | Requisitos | RF-272, RNF-58 |
 |---|---|
-| **Puerta** | `evals/results/briefs.md`, `human-vs-jury.md`, `tuning-01.md` y `evals/formal/CASOS.md` existen, versionados, y se regeneran con un comando desde ficheros versionados |
+| **Puerta** | `evals/results/briefs.md`, `tuning-01.md` y `evals/formal/CASOS.md` existen, versionados, y se regeneran con un comando desde ficheros versionados |
 
 ### T53 · Perfil de extensión `prueba`
 

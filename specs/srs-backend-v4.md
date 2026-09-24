@@ -281,7 +281,7 @@ Todos con personas y lugares inventados, perfil de extensión `prueba` (PRO-15) 
 
 | RF | Requisito | Fuente | Verificación |
 |---|---|---|---|
-| RF-272 | Una tirada por cada brief de RF-250, de una en una y sobre un commit etiquetado; la tabla de RF-269 generada desde ellas; en la del brief temporal, qué verificador cazó la trampa; un caso que Lean detecta y los demás no —real, o por mutación declarada como tal— en `evals/formal/CASOS.md` con su prueba reproducible; la lectura humana de una novela completa y su comparación (RF-271); y una iteración de tuning con versión de prompt nueva, uno o dos briefs repetidos y la comparación antes y después en `evals/results/tuning-01.md` (D-95) | `verification.md` §5.2, §5.8 | VER-10, VER-16 |
+| RF-272 | Una tirada por cada brief de RF-250, las cinco en paralelo y sobre un commit etiquetado; la tabla de RF-269 generada desde ellas; en la del brief temporal, qué verificador cazó la trampa; un caso que Lean detecta y los demás no —real, o por mutación declarada como tal— en `evals/formal/CASOS.md` con su prueba reproducible; y una iteración de tuning con versión de prompt nueva, uno o dos briefs repetidos y la comparación antes y después en `evals/results/tuning-01.md` (D-95) | `verification.md` §5.2, §5.8 | VER-10, VER-16 |
 
 ### 4.16 `canon/`, `planning/`, `generation/`, `verification/` y `orchestration/` · perfil de extensión (T53)
 
@@ -337,7 +337,7 @@ Cuatro tramos suben el esquema —T41, T42, T46 y T47—, más el arreglo de la 
 | RNF-55 | `lake build` tiene un tope de 600 segundos, el mismo que una llamada al proveedor (`timeout_s` del CLI); agotarlo es fallo (propuesta) | `architecture.md` §4.8 | VER-12, VER-05 |
 | RNF-56 | Los hooks fallan cerrados: si no pueden importar el backend o ejecutar un validador, el de capítulo sale con 2 y el de política deniega. Nunca corren dentro de una tirada, y los `claude -p` del motor no los cargan (RI-62) | `AGENTS.md` §5.3 | VER-05 |
 | RNF-57 | El Jurado pasa de 11.500 a 13.200 tokens de entrada por instancia: las cuatro dimensiones nuevas a 300 cada una, que es el coste por dimensión del bloque de rúbrica de hoy (1.500 entre 5), y 500 del bloque del encargo, el mismo del borrador de `brief.extract` (D-80), que ya contiene al destinatario entero. Tres instancias suman 39.600 y caben en el techo concurrente (D-94) | `architecture.md` §4.2, §4.9; CTX-20 | VER-12, VER-06 |
-| RNF-58 | Las tiradas de evaluación no corren en `gate.py` ni en CI: van de una en una, sobre un commit etiquetado y nunca junto a otra tirada real. Ningún brief del conjunto lleva datos de personas reales | `verification.md` §5.2 | VER-15 |
+| RNF-58 | Las tiradas de evaluación no corren en `gate.py` ni en CI: van en paralelo entre sí —cada una con su SQLite, su traza y su `novel-id`, sin estado compartido—, sobre un commit etiquetado y nunca junto a otra tirada real. Ningún brief del conjunto lleva datos de personas reales | `verification.md` §5.2 | VER-15 |
 
 ---
 
@@ -489,7 +489,7 @@ El interrogatorio de `AGENTS.md` §6.1 se hizo con la respuesta recomendada en c
 | **T49** | Validación visual | `.mcp.json`, `frontend/visual/` | RF-267, RI-69 | El recorrido falla cuando la portada no tiene dedicatoria y deja su registro |
 | **T50** | Tabla de validadores en la puerta | Contraste de `architecture.md` §9.1 con el código | RF-268 | Borrar una fila de la tabla hace fallar `coherence.py` |
 | **T51** | Herramientas de evaluación | Tabla por brief, plantilla humana, comparación con el Jurado | RF-269 a RF-271, RD-48 | Las tres se regeneran idénticas desde ficheros de prueba |
-| **T52** | Tiradas de evaluación | Cinco tiradas, caso de Lean, lectura humana y tuning | RF-272, RNF-58 | `briefs.md`, `human-vs-jury.md`, `tuning-01.md` y `CASOS.md` existen y se regeneran con un comando |
+| **T52** | Tiradas de evaluación | Cinco tiradas, caso de Lean y tuning | RF-272, RNF-58 | `briefs.md`, `tuning-01.md` y `CASOS.md` existen y se regeneran con un comando |
 | **T53** | Perfil de extensión `prueba` | `length_profile` en el brief y rangos del perfil en todos sus consumidores; los cinco briefs con `prueba` | RF-274, RD-50 | Una tirada con dobles de cada brief de evaluación cierra con 3 capítulos de 1 escena y entre 1.200 y 1.800 palabras; un brief `novela` sin perfil se comporta igual que hoy |
 
 ### 11.1 Qué significa que la versión 4 está terminada

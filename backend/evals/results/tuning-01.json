@@ -1,0 +1,350 @@
+{
+ "reference": {
+  "words": 907,
+  "chapters": 1,
+  "closed": false,
+  "defects_per_1000": 13.230429988974642,
+  "s1_per_1000": 12.127894156560089,
+  "repair_rate": 1.0,
+  "quarantines": 1,
+  "discarded_citations": 2,
+  "packet_tokens_mean": 1471.0,
+  "block_tokens_mean": {
+   "ancla": 752.0,
+   "fichas": 156.0,
+   "estado": 222.0,
+   "conocimiento": 17.0,
+   "resumenes": 0.0,
+   "especificacion": 324.0
+  },
+  "dimensions": {
+   "arc": 3.0,
+   "continuity": 4.0,
+   "pacing": 4.0,
+   "style_guide": 4.0,
+   "subtext": 3.0,
+   "theme": 3.0,
+   "voice": 3.0
+  },
+  "calls": 54,
+  "estimate_short": 0,
+  "prompt_versions": {
+   "archivero": [
+    "b5cfecd3fef9"
+   ],
+   "arquitecto": [
+    "4466609c77c5"
+   ],
+   "continuista": [
+    "9c50294cc3c5"
+   ],
+   "escritor": [
+    "dbda0b47f468"
+   ],
+   "especialista": [
+    "e74fc875b5f6"
+   ],
+   "estilista": [
+    "f18b2d1a4646"
+   ],
+   "juez": [
+    "7fe707a80eb1"
+   ],
+   "lector": [
+    "cdada6a08b9d"
+   ],
+   "planificador": [
+    "31545ca9b935"
+   ],
+   "reparador": [
+    "773c89a3d9a2"
+   ],
+   "supervisor": [
+    "d33c4f018c28"
+   ]
+  },
+  "by_prompt": {
+   "archivero": {
+    "b5cfecd3fef9": {
+     "calls": 4,
+     "failed": 1,
+     "output_tokens_mean": 5768.5,
+     "duration_ms_mean": 52847.75,
+     "cost_usd": 0.208293
+    }
+   },
+   "arquitecto": {
+    "4466609c77c5": {
+     "calls": 8,
+     "failed": 2,
+     "output_tokens_mean": 6359.25,
+     "duration_ms_mean": 56497.875,
+     "cost_usd": 0.430472
+    }
+   },
+   "continuista": {
+    "9c50294cc3c5": {
+     "calls": 5,
+     "failed": 0,
+     "output_tokens_mean": 5516.2,
+     "duration_ms_mean": 55618.8,
+     "cost_usd": 0.391835
+    }
+   },
+   "escritor": {
+    "dbda0b47f468": {
+     "calls": 2,
+     "failed": 0,
+     "output_tokens_mean": 1279.5,
+     "duration_ms_mean": 20555.0,
+     "cost_usd": 0.055439
+    }
+   },
+   "especialista": {
+    "e74fc875b5f6": {
+     "calls": 5,
+     "failed": 0,
+     "output_tokens_mean": 2692.6,
+     "duration_ms_mean": 28340.8,
+     "cost_usd": 0.176554
+    }
+   },
+   "estilista": {
+    "f18b2d1a4646": {
+     "calls": 1,
+     "failed": 0,
+     "output_tokens_mean": 2852.0,
+     "duration_ms_mean": 20343.0,
+     "cost_usd": 0.03688
+    }
+   },
+   "juez": {
+    "7fe707a80eb1": {
+     "calls": 19,
+     "failed": 0,
+     "output_tokens_mean": 6285.315789473684,
+     "duration_ms_mean": 58682.31578947369,
+     "cost_usd": 1.09589
+    }
+   },
+   "lector": {
+    "cdada6a08b9d": {
+     "calls": 4,
+     "failed": 0,
+     "output_tokens_mean": 844.25,
+     "duration_ms_mean": 11429.75,
+     "cost_usd": 0.106662
+    }
+   },
+   "planificador": {
+    "31545ca9b935": {
+     "calls": 3,
+     "failed": 0,
+     "output_tokens_mean": 5994.0,
+     "duration_ms_mean": 58844.0,
+     "cost_usd": 0.159395
+    }
+   },
+   "reparador": {
+    "773c89a3d9a2": {
+     "calls": 2,
+     "failed": 0,
+     "output_tokens_mean": 1913.0,
+     "duration_ms_mean": 20360.0,
+     "cost_usd": 0.06714
+    }
+   },
+   "supervisor": {
+    "d33c4f018c28": {
+     "calls": 1,
+     "failed": 0,
+     "output_tokens_mean": 4463.0,
+     "duration_ms_mean": 35359.0,
+     "cost_usd": 0.044615
+    }
+   }
+  }
+ },
+ "candidate": {
+  "words": 1423,
+  "chapters": 3,
+  "closed": null,
+  "defects_per_1000": 4.2164441321152495,
+  "s1_per_1000": 4.2164441321152495,
+  "repair_rate": 0.3333333333333333,
+  "quarantines": 0,
+  "discarded_citations": 5,
+  "packet_tokens_mean": 2700.0,
+  "block_tokens_mean": {
+   "ancla": 752.0,
+   "fichas": 117.0,
+   "estado": 225.0,
+   "conocimiento": 25.333333333333332,
+   "resumenes": 297.3333333333333,
+   "especificacion": 448.0,
+   "prosa-previa": 1017.0,
+   "fragmento-place": 599.0,
+   "fragmento-promise": 184.0,
+   "promesas": 57.0,
+   "proscripcion": 38.0,
+   "muestra-de-voz": 611.0
+  },
+  "dimensions": {
+   "arc": 4.0,
+   "continuity": 3.3333333333333335,
+   "pacing": 3.6666666666666665,
+   "style_guide": 3.3333333333333335,
+   "subtext": 3.0,
+   "theme": 3.0,
+   "voice": 3.6666666666666665
+  },
+  "calls": 127,
+  "estimate_short": 0,
+  "prompt_versions": {
+   "archivero": [
+    "b5cfecd3fef9"
+   ],
+   "arquitecto": [
+    "dac47a65d9f1"
+   ],
+   "continuista": [
+    "9c50294cc3c5"
+   ],
+   "escritor": [
+    "dbda0b47f468"
+   ],
+   "especialista": [
+    "41fcc6dfbad0"
+   ],
+   "estilista": [
+    "f18b2d1a4646"
+   ],
+   "juez": [
+    "742b19fab78d"
+   ],
+   "lector": [
+    "cdada6a08b9d"
+   ],
+   "planificador": [
+    "31545ca9b935"
+   ],
+   "reparador": [
+    "773c89a3d9a2"
+   ],
+   "supervisor": [
+    "d33c4f018c28"
+   ]
+  },
+  "by_prompt": {
+   "archivero": {
+    "b5cfecd3fef9": {
+     "calls": 13,
+     "failed": 1,
+     "output_tokens_mean": 2696.153846153846,
+     "duration_ms_mean": 23957.76923076923,
+     "cost_usd": 0.475495
+    }
+   },
+   "arquitecto": {
+    "dac47a65d9f1": {
+     "calls": 3,
+     "failed": 0,
+     "output_tokens_mean": 4990.666666666667,
+     "duration_ms_mean": 42604.666666666664,
+     "cost_usd": 0.153541
+    }
+   },
+   "continuista": {
+    "9c50294cc3c5": {
+     "calls": 7,
+     "failed": 0,
+     "output_tokens_mean": 9359.142857142857,
+     "duration_ms_mean": 94861.71428571429,
+     "cost_usd": 0.65526
+    }
+   },
+   "escritor": {
+    "dbda0b47f468": {
+     "calls": 3,
+     "failed": 0,
+     "output_tokens_mean": 1429.6666666666667,
+     "duration_ms_mean": 19504.666666666668,
+     "cost_usd": 0.100472
+    }
+   },
+   "especialista": {
+    "41fcc6dfbad0": {
+     "calls": 5,
+     "failed": 0,
+     "output_tokens_mean": 1768.0,
+     "duration_ms_mean": 23137.4,
+     "cost_usd": 0.159789
+    }
+   },
+   "estilista": {
+    "f18b2d1a4646": {
+     "calls": 3,
+     "failed": 0,
+     "output_tokens_mean": 5912.0,
+     "duration_ms_mean": 48838.666666666664,
+     "cost_usd": 0.163605
+    }
+   },
+   "juez": {
+    "742b19fab78d": {
+     "calls": 81,
+     "failed": 1,
+     "output_tokens_mean": 5813.567901234568,
+     "duration_ms_mean": 54376.59259259259,
+     "cost_usd": 4.395848
+    }
+   },
+   "lector": {
+    "cdada6a08b9d": {
+     "calls": 4,
+     "failed": 0,
+     "output_tokens_mean": 1740.5,
+     "duration_ms_mean": 16832.25,
+     "cost_usd": 0.108699
+    }
+   },
+   "planificador": {
+    "31545ca9b935": {
+     "calls": 4,
+     "failed": 0,
+     "output_tokens_mean": 4828.25,
+     "duration_ms_mean": 37687.25,
+     "cost_usd": 0.190793
+    }
+   },
+   "reparador": {
+    "773c89a3d9a2": {
+     "calls": 1,
+     "failed": 0,
+     "output_tokens_mean": 1939.0,
+     "duration_ms_mean": 21953.0,
+     "cost_usd": 0.033258
+    }
+   },
+   "supervisor": {
+    "d33c4f018c28": {
+     "calls": 3,
+     "failed": 0,
+     "output_tokens_mean": 1894.3333333333333,
+     "duration_ms_mean": 21198.0,
+     "cost_usd": 0.100484
+    }
+   }
+  }
+ },
+ "worse": [
+  "dimension:continuity",
+  "dimension:pacing",
+  "dimension:style_guide"
+ ],
+ "changed_prompts": [
+  "arquitecto",
+  "especialista",
+  "juez"
+ ]
+}
