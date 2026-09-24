@@ -3,6 +3,7 @@ import { settle } from "../commons/api/errors";
 import { usePolled } from "../commons/api/poll";
 import { describeRun, inProgress, useRunState, type RunState } from "../commons/api/run-state";
 import { Failed } from "../commons/shell/Failed";
+import { Empty, Loading } from "../commons/ui/State";
 
 /** Cuantos registros de la traza se muestran: los ultimos. Es tamano de pantalla, no umbral. */
 export const TRACE_ROWS = 50;
@@ -26,13 +27,13 @@ export function Status({ novel }: { novel: string }) {
     () => running,
   );
 
-  if (run.state === "loading") return <p className="loading">Cargando el estado…</p>;
+  if (run.state === "loading") return <Loading>Cargando el estado…</Loading>;
   if (run.state === "failed") return <Failed failure={run.failure} reload={run.reload} />;
 
   return (
     <section className="status">
       <h2>Estado de la tirada</h2>
-      <p className="run-line">{describeRun(run.data)}</p>
+      <p className={run.data.running ? "run-line running" : "run-line"}>{describeRun(run.data)}</p>
       <RunFacts state={run.data} />
       <h3>Últimos registros de la traza</h3>
       {trace.state === "ok" ? (
@@ -40,7 +41,7 @@ export function Status({ novel }: { novel: string }) {
       ) : trace.state === "failed" ? (
         <p className="hint">La traza no se pudo leer.</p>
       ) : (
-        <p className="loading">Cargando la traza…</p>
+        <Loading>Cargando la traza…</Loading>
       )}
     </section>
   );
@@ -50,21 +51,33 @@ function RunFacts({ state }: { state: RunState }) {
   const cierre = state.closed === true ? "Cerrada" : state.closed === false ? "Sin cerrar" : "Pendiente";
   return (
     <dl className="facts">
-      <dt>En marcha</dt>
-      <dd>{state.running ? "Sí" : "No"}</dd>
-      <dt>Capítulo en curso</dt>
-      <dd>{state.chapter_in_progress ?? "—"}</dd>
-      <dt>Última escena cerrada</dt>
-      <dd>{state.last_closed_scene ?? "—"}</dd>
-      <dt>Capítulos congelados</dt>
-      <dd>{state.frozen_chapters}</dd>
-      <dt>Cuarentenas</dt>
-      <dd>{state.quarantines}</dd>
-      <dt>Condición de cierre</dt>
-      <dd>
-        {cierre}
-        {state.reason ? ` · ${state.reason}` : ""}
-      </dd>
+      <div>
+        <dt>En marcha</dt>
+        <dd>{state.running ? "Sí" : "No"}</dd>
+      </div>
+      <div>
+        <dt>Capítulo en curso</dt>
+        <dd>{state.chapter_in_progress ?? "—"}</dd>
+      </div>
+      <div>
+        <dt>Última escena cerrada</dt>
+        <dd>{state.last_closed_scene ?? "—"}</dd>
+      </div>
+      <div>
+        <dt>Capítulos congelados</dt>
+        <dd>{state.frozen_chapters}</dd>
+      </div>
+      <div>
+        <dt>Cuarentenas</dt>
+        <dd>{state.quarantines}</dd>
+      </div>
+      <div>
+        <dt>Condición de cierre</dt>
+        <dd>
+          {cierre}
+          {state.reason ? ` · ${state.reason}` : ""}
+        </dd>
+      </div>
     </dl>
   );
 }
@@ -78,7 +91,7 @@ export function fieldsText(record: TraceRecord): string {
 }
 
 function TraceTable({ records }: { records: readonly TraceRecord[] }) {
-  if (records.length === 0) return <p>La traza está vacía.</p>;
+  if (records.length === 0) return <Empty>La traza está vacía.</Empty>;
   return (
     <div className="table-scroll">
       <table className="trace">

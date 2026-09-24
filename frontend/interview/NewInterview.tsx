@@ -5,6 +5,7 @@ import { api } from "../commons/api/client";
 import { settle, type Failure } from "../commons/api/errors";
 import { Failed } from "../commons/shell/Failed";
 import { rememberInterview } from "../commons/storage/local";
+import { Loading } from "../commons/ui/State";
 
 /**
  * `/new` (RF-167): crea una entrevista con RI-38 y lleva a su direccion. La
@@ -32,5 +33,5 @@ export function NewInterview() {
   }, [navigate, attempt]);
 
   if (failure) return <Failed failure={failure} reload={() => (setFailure(null), setAttempt((n) => n + 1))} />;
-  return <p className="loading">Preparando la entrevista…</p>;
+  return <Loading>Preparando la entrevista…</Loading>;
 }

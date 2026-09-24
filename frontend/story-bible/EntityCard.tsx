@@ -8,6 +8,7 @@ import { useResource } from "../commons/api/resource";
 import { currentVersion, useVersions } from "../commons/api/versions";
 import { RequestForm } from "../commons/change-request/RequestForm";
 import { Failed } from "../commons/shell/Failed";
+import { Empty, Loading } from "../commons/ui/State";
 
 type EntityFile = Schemas["EntityFile"];
 
@@ -36,14 +37,14 @@ export function EntityCard() {
   const versions = useVersions(novel);
   const [asking, setAsking] = useState<string | null>(null);
 
-  if (file.state === "loading") return <p className="loading">Cargando la ficha…</p>;
+  if (file.state === "loading") return <Loading>Cargando la ficha…</Loading>;
   if (file.state === "failed") return <Failed failure={file.failure} reload={file.reload} />;
 
   const f = file.data;
   const vigente = versions.state === "ok" ? currentVersion(versions.data.versions) : 1;
   return (
     <article className="entity-card">
-      <p>
+      <p className="back">
         <Link to={`/novels/${novel}/bible`}>← Personajes y lugares</Link>
       </p>
       <h1>{f.entity.name}</h1>
@@ -81,7 +82,7 @@ export function EntityCard() {
 
       <h2>Relaciones</h2>
       {f.relations.length === 0 ? (
-        <p>Ninguna vigente.</p>
+        <Empty>Ninguna vigente.</Empty>
       ) : (
         <ul>
           {f.relations.map((r) => (
@@ -100,7 +101,7 @@ export function EntityCard() {
 
       <h2>Dónde aparece</h2>
       {f.appearances.length === 0 ? (
-        <p>En ninguna escena congelada todavía.</p>
+        <Empty>En ninguna escena congelada todavía.</Empty>
       ) : (
         <ul>
           {f.appearances.map((a) => (

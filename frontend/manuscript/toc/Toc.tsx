@@ -2,6 +2,7 @@ import { Link } from "react-router";
 
 import type { RunState } from "../../commons/api/run-state";
 import { describeRun, inProgress } from "../../commons/api/run-state";
+import { Empty } from "../../commons/ui/State";
 import type { ChapterEntry } from "../data";
 
 /**
@@ -25,7 +26,7 @@ export function Toc({
     <section className="toc">
       <h2>Índice</h2>
       {chapters.length === 0 ? (
-        <p>Todavía no hay ningún capítulo congelado.</p>
+        <Empty>Todavía no hay ningún capítulo congelado.</Empty>
       ) : (
         <ol>
           {chapters.map((c) => (
@@ -40,7 +41,7 @@ export function Toc({
           ))}
         </ol>
       )}
-      {run !== undefined && inProgress(run) && <p className="run-line">{describeRun(run)}</p>}
+      {run !== undefined && inProgress(run) && <p className={run.running ? "run-line running" : "run-line"}>{describeRun(run)}</p>}
     </section>
   );
 }

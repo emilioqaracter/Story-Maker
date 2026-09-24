@@ -6,6 +6,7 @@ import { settle, type Failure } from "../commons/api/errors";
 import { Failed } from "../commons/shell/Failed";
 import { rememberInterview, rememberNovel } from "../commons/storage/local";
 import { Prose } from "../commons/text/Prose";
+import { Loading } from "../commons/ui/State";
 import { fieldId, PANEL, shown, type FieldName } from "./panel";
 
 type Turn = Schemas["TurnIn"];
@@ -60,7 +61,7 @@ export function Interview() {
   );
 
   if (failure) return <Failed failure={failure} reload={() => (setFailure(null), setAttempt((n) => n + 1))} />;
-  if (state === null) return <p className="loading">Cargando la entrevista…</p>;
+  if (state === null) return <Loading>Cargando la entrevista…</Loading>;
 
   return (
     <section className="interview">

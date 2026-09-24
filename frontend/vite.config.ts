@@ -23,5 +23,8 @@ export default defineConfig({
     include: ["**/*.test.{ts,tsx}"],
     exclude: ["node_modules/**", "dist/**"],
     restoreMocks: true,
+    // Las pruebas del sistema visual leen los tokens como texto (commons/ui/contrast.test.ts). Sin esto,
+    // vitest vacia todo CSS, tambien el que se importa con `?raw`, y la prueba no veria ningun token.
+    css: { include: [/commons\/(brand|shell)\/[\w-]+\.css/] },
   },
 });

@@ -6,6 +6,7 @@ import { settle } from "../api/errors";
 import { usePolled } from "../api/poll";
 import { describeRun } from "../api/run-state";
 import { visitedInterviews, visitedNovels } from "../storage/local";
+import { Empty, Loading } from "../ui/State";
 
 /**
  * Portada de la aplicacion (RF-166): las novelas de RI-37 con su estado y sus
@@ -29,24 +30,26 @@ export function Home() {
   };
 
   return (
-    <section>
-      <h1>Novelas</h1>
-      <p>
-        <Link to="/new" className="primary-link">
-          Encargar una novela nueva
-        </Link>
-      </p>
+    <section className="home">
+      <header className="home-header">
+        <h1>Novelas</h1>
+        <p>
+          <Link to="/new" className="button-primary">
+            Encargar una novela nueva
+          </Link>
+        </p>
+      </header>
       {list.state === "ok" ? (
         list.data.novels.length === 0 ? (
-          <p>Todavía no hay ninguna novela.</p>
+          <Empty>Todavía no hay ninguna novela.</Empty>
         ) : (
           <ul className="novel-list">
             {list.data.novels.map((n) => (
               <li key={n.novel_id}>
                 <Link to={`/novels/${n.novel_id}`}>{n.title}</Link>
+                {/* En la tarjeta el titulo va en su linea: el separador inicial sobraria. */}
                 <span className="meta">
-                  {" "}
-                  · {n.versions === 1 ? "1 versión" : `${n.versions} versiones`} · {describeRun(n.state)}
+                  {n.versions === 1 ? "1 versión" : `${n.versions} versiones`} · {describeRun(n.state)}
                 </span>
               </li>
             ))}
@@ -55,7 +58,7 @@ export function Home() {
       ) : list.state === "failed" ? (
         <Visited />
       ) : (
-        <p className="loading">Cargando las novelas…</p>
+        <Loading>Cargando las novelas…</Loading>
       )}
       {interviews.length > 0 && (
         <>
@@ -86,7 +89,7 @@ function Visited() {
     <>
       <p className="hint">No se pudo leer la lista de novelas del backend (RI-37). Estas son las que has abierto en este navegador.</p>
       {novels.length === 0 ? (
-        <p>Todavía no has abierto ninguna.</p>
+        <Empty>Todavía no has abierto ninguna.</Empty>
       ) : (
         <ul className="novel-list">
           {novels.map((n) => (
