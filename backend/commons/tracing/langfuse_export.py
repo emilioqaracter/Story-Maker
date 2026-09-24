@@ -41,10 +41,14 @@ una persona real que el cliente prohibio. El literal queda en la traza local.
 
 **Que hay dentro de cada generacion** (RF-263 a RF-265, D-86):
 
-- un span por capitulo y otro por escena, con la escena colgada de su capitulo;
+- un span `chapter` por capitulo y otro `scene` por escena, con el numero en
+  los metadatos y la escena colgada de su capitulo (D-106);
 - una generation `<rol>.<agente>` por `call`, colgada del span de su escena o de
   su capitulo, con el prompt que uso por nombre y etiqueta (`prompt_version`);
-- una observacion `tool` por registro `tool`, hija de la generation que la pidio;
+- una observacion `retriever` o `tool` por registro `tool`, hermana de la
+  generation que la pidio bajo el mismo span (D-106);
+- una observacion `evaluator` por resultado de verificador y otra `guardrail`
+  por registro del guardarrail, con el veredicto como salida (D-106);
 - los scores de cada verificador, sobre la traza o el span que evaluo.
 
 **Claves.** `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY` y `LANGFUSE_BASE_URL`,
@@ -62,6 +66,7 @@ import importlib.util
 import json
 import os
 import queue
+import re
 import sqlite3
 import sys
 import threading
@@ -130,17 +135,22 @@ class LangfuseTrace(BaseModel):
     session_id: str
     timestamp: str | None = None
     metadata: Mapping[str, JsonValue] = Field(default_factory=dict)
+    input: Mapping[str, JsonValue] | None = None
     output: Mapping[str, JsonValue] | None = None
 
 
-ObservationType = Literal["generation", "event", "span", "tool"]
+ObservationType = Literal[
+    "generation", "event", "span", "tool", "retriever", "evaluator", "guardrail"
+]
 
 
 class LangfuseObservation(BaseModel):
-    """Una observacion dentro de una traza.
+    """Una observacion dentro de una traza, con el tipo mas especifico que le toca (D-106).
 
-    Una generation por `call`, una observacion `tool` por herramienta, un span
-    por capitulo y por escena, y un evento por lo demas (RF-263, RF-264).
+    Una generation por `call`; un `retriever` por herramienta de solo consulta y
+    un `tool` por las demas; un `evaluator` por resultado de verificador, un
+    `guardrail` por registro del guardarrail; un span por capitulo y por escena,
+    y un evento por lo demas (RF-263, RF-264).
     """
 
     model_config = ConfigDict(frozen=True)
@@ -153,6 +163,8 @@ class LangfuseObservation(BaseModel):
     end_time: str | None = None
     parent_observation_id: str | None = None
     metadata: Mapping[str, JsonValue] = Field(default_factory=dict)
+    input: JsonValue = None
+    output: JsonValue = None
     model: str | None = None
     usage_details: Mapping[str, int] | None = None
     cost_details: Mapping[str, float] | None = None
@@ -203,7 +215,9 @@ class _Span(BaseModel):
     key: str
     id: str
     trace_id: str
+    #: `chapter` o `scene`: el numero no va en el nombre, va en `meta` (D-106).
     name: str
+    meta: Mapping[str, JsonValue] = Field(default_factory=dict)
     parent: str | None
     start: str
     last: str
@@ -393,35 +407,70 @@ def _generation(trace_id: str, record: TraceRecord, parent: str | None) -> Langf
     )
 
 
+#: D-106. Herramientas de `orchestration/tools/server.py` que solo consultan y
+#: no cambian estado: en Langfuse son `retriever`. Una que no este aqui sale
+#: como `tool`, que es el tipo generico y nunca un tipo falso.
+RETRIEVER_TOOLS: frozenset[str] = frozenset({"canon.lookup"})
+
+#: Campos del registro `tool` que forman la salida de la observacion (RF-264).
+_TOOL_OUTPUT = ("tokens", "provenance", "refused", "error")
+
+
 def _tool(trace_id: str, record: TraceRecord, parent: str | None) -> LangfuseObservation:
-    """RF-264. Una llamada a herramienta, hija de la generation que la pidio."""
+    """RF-264, D-106. Una llamada a herramienta, hermana de la generation que la pidio.
+
+    Cuelga del span de su escena o su capitulo, como la generation: en Langfuse
+    una herramienta es un paso del agente, no algo que ocurra dentro de la
+    llamada al modelo. La generation que la pidio queda en `metadata.call`.
+    """
     f = record.fields
     duracion = _int(f.get("duration_ms")) or 0
     error = _str(f.get("error"))
-    call_id = _str(f.get("call"))
+    nombre = str(f.get("name") or "tool")
+    meta = _metadata(record)
+    salida = {k: meta[k] for k in _TOOL_OUTPUT if k in meta}
     return LangfuseObservation(
         id=_observation_id(trace_id, record),
         trace_id=trace_id,
-        type="tool",
-        name=str(f.get("name") or "tool"),
+        type="retriever" if nombre in RETRIEVER_TOOLS else "tool",
+        name=nombre,
         start_time=_minus_ms(record.at, duracion),
         end_time=_minus_ms(record.at, 0),
-        parent_observation_id=call_observation_id(trace_id, call_id) if call_id else parent,
-        metadata=_metadata(record),
+        parent_observation_id=parent,
+        metadata=meta,
+        input=meta.get("args"),
+        output=salida or None,
         level="ERROR" if error else ("WARNING" if f.get("refused") is True else "DEFAULT"),
         status_message=error,
     )
 
 
+#: Claves de `_metadata` que no son el veredicto, sino donde y cuando se dio.
+_BOOKKEEPING = frozenset({"seq", "record"})
+
+
 def _event(trace_id: str, record: TraceRecord, parent: str | None = None) -> LangfuseObservation:
+    """Un registro sin duracion. Si es de verificador o del guardarrail, lleva su tipo (D-106).
+
+    El veredicto va tambien como salida, que es lo que Langfuse ensena en la
+    tabla y lo que lee un evaluador; los metadatos conservan el registro entero.
+    """
+    meta = _metadata(record)
+    tipo: ObservationType = "event"
+    if record.kind.startswith(_GUARDRAIL_PREFIX):
+        tipo = "guardrail"
+    elif record.kind in SCORERS:
+        tipo = "evaluator"
     return LangfuseObservation(
         id=_observation_id(trace_id, record),
         trace_id=trace_id,
-        type="event",
+        type=tipo,
         name=record.kind,
         start_time=record.at,
+        end_time=record.at if tipo != "event" else None,
         parent_observation_id=parent,
-        metadata=_metadata(record),
+        metadata=meta,
+        output={k: v for k, v in meta.items() if k not in _BOOKKEEPING} if tipo != "event" else None,
     )
 
 
@@ -460,13 +509,24 @@ def _span_object(span: _Span, end: str | None = None) -> LangfuseObservation:
         start_time=span.start,
         end_time=end,
         parent_observation_id=span.parent,
+        metadata=span.meta,
     )
 
 
 def _touch(
-    state: MapState, trace_id: str, key: str, parent: str | None, start: str, at: str
+    state: MapState,
+    trace_id: str,
+    key: str,
+    parent: str | None,
+    start: str,
+    at: str,
+    meta: Mapping[str, JsonValue],
 ) -> tuple[MapState, list[LangfuseObject], str]:
-    """Que el span `key` exista: lo abre la primera vez, y si esta abierto lo alarga."""
+    """Que el span `key` exista: lo abre la primera vez, y si esta abierto lo alarga.
+
+    El identificador sale de `key`, que lleva el numero; el nombre es la parte
+    fija (D-106). Reexportar una tirada antigua renombra el span, no lo duplica.
+    """
     sid = _span_id(trace_id, key)
     if key in state.closed:
         return state, [], sid
@@ -475,7 +535,16 @@ def _touch(
             spans = list(state.spans)
             spans[i] = span.model_copy(update={"last": at})
             return state.model_copy(update={"spans": tuple(spans)}), [], sid
-    span = _Span(key=key, id=sid, trace_id=trace_id, name=key, parent=parent, start=start, last=at)
+    span = _Span(
+        key=key,
+        id=sid,
+        trace_id=trace_id,
+        name=key.split(".", 1)[0],
+        meta=meta,
+        parent=parent,
+        start=start,
+        last=at,
+    )
     return state.model_copy(update={"spans": (*state.spans, span)}), [_span_object(span)], sid
 
 
@@ -486,10 +555,18 @@ def _enter(
     capitulo, escena = _scope(record.fields)
     if capitulo is None:
         return state, [], None
-    state, objetos, padre = _touch(state, trace_id, _chapter_key(capitulo), None, start, record.at)
+    state, objetos, padre = _touch(
+        state, trace_id, _chapter_key(capitulo), None, start, record.at, {"chapter": capitulo}
+    )
     if escena is not None:
         state, mas, padre = _touch(
-            state, trace_id, _scene_key(capitulo, escena), padre, start, record.at
+            state,
+            trace_id,
+            _scene_key(capitulo, escena),
+            padre,
+            start,
+            record.at,
+            {"chapter": capitulo, "scene": escena},
         )
         objetos += mas
     return state, objetos, padre
@@ -795,13 +872,15 @@ def _change_request(
     meta: dict[str, JsonValue] = {"source": state.source, "type": "change_request", "request": rid}
     objetos: list[LangfuseObject] = []
     if record.kind == "amend.request":
+        pedido = {k: v for k, v in _metadata(record).items() if k not in _BOOKKEEPING}
         objetos.append(
             LangfuseTrace(
                 id=tid,
-                name=f"change_request.{rid}",
+                name="change_request",
                 session_id=state.session_id,
                 timestamp=record.at,
                 metadata=meta,
+                input=pedido,
             )
         )
     elif record.kind in ("amend.applied", "amend.rejected"):
@@ -813,7 +892,7 @@ def _change_request(
         objetos.append(
             LangfuseTrace(
                 id=tid,
-                name=f"change_request.{rid}",
+                name="change_request",
                 session_id=state.session_id,
                 metadata=meta,
                 output=salida,
@@ -837,6 +916,7 @@ def _opening(state: MapState, record: TraceRecord) -> tuple[_Open, LangfuseTrace
             session_id=state.session_id,
             timestamp=record.at if record.kind == "interview.created" else None,
             metadata={"source": state.source, "type": "interview"},
+            input={"interview": state.source},
         )
     invocacion = record.fields.get("invocation") if record.kind == "calibration" else None
     gtype: GenerationType = "amend" if invocacion == "amend" else "run"
@@ -852,6 +932,17 @@ def _opening(state: MapState, record: TraceRecord) -> tuple[_Open, LangfuseTrace
             "type": gtype,
             "first_seq": record.seq,
             "first_at": record.at,
+        },
+        # D-106. Lo que identifica la invocacion de un vistazo; la salida la
+        # ponen `work.close` y `work.cost` al cerrarla.
+        input={
+            "novel": state.session_id,
+            "invocation": gtype,
+            **(
+                {"model": record.fields["model"]}
+                if record.kind == "calibration" and isinstance(record.fields.get("model"), str)
+                else {}
+            ),
         },
     )
     return abierta, traza
@@ -907,11 +998,10 @@ def step(state: MapState, record: TraceRecord) -> tuple[MapState, tuple[Langfuse
         objetos.append(traza)
 
     tid = abierta.trace_id
-    padre: str | None = None
-    if record.kind != "tool":
-        # La herramienta cuelga de su generation, que llega despues y abre el span.
-        state, spans, padre = _enter(state, tid, record, _start_of(record))
-        objetos += spans
+    # La herramienta llega antes que su generation y abre el span si hace falta:
+    # las dos cuelgan de el como hermanas (D-106).
+    state, spans, padre = _enter(state, tid, record, _start_of(record))
+    objetos += spans
     objetos.append(_observation(tid, record, padre))
     objetos += scores_of(tid, record)
 
@@ -1020,16 +1110,30 @@ class LangfuseClient(Protocol):
     def send(self, objects: Sequence[LangfuseObject]) -> None: ...
 
 
+#: D-106. Variable estandar del SDK de Langfuse para el entorno. Opcional: sin
+#: ella, Langfuse usa `default`. No es una clave y no condiciona el espejo.
+ENV_ENVIRONMENT = "LANGFUSE_TRACING_ENVIRONMENT"
+
+#: La regla de Langfuse para un nombre de entorno: minusculas, cifras, `-` y
+#: `_`, hasta 40 caracteres y sin empezar por `langfuse`. Uno que no la cumple
+#: haria rechazar el lote entero, asi que se ignora.
+_ENVIRONMENT = re.compile(r"^(?!langfuse)[a-z0-9_-]{1,40}$")
+
+
 @dataclass(frozen=True)
 class LangfuseConfig:
-    """Las tres variables de RI-60. `repr` no ensena ningun valor."""
+    """Las tres variables de RI-60 y el entorno opcional. `repr` no ensena ningun valor."""
 
     public_key: str
     secret_key: str
     base_url: str
+    environment: str | None = None
 
     def __repr__(self) -> str:
-        return "LangfuseConfig(public_key=***, secret_key=***, base_url=***)"
+        return (
+            "LangfuseConfig(public_key=***, secret_key=***, base_url=***, "
+            f"environment={self.environment!r})"
+        )
 
     @property
     def secrets(self) -> tuple[str, ...]:
@@ -1046,10 +1150,12 @@ def config_from_env(env: Mapping[str, str] | None = None) -> LangfuseConfig | No
     fuente = os.environ if env is None else env
     if missing_keys(fuente):
         return None
+    entorno = fuente.get(ENV_ENVIRONMENT) or None
     return LangfuseConfig(
         public_key=fuente["LANGFUSE_PUBLIC_KEY"],
         secret_key=fuente["LANGFUSE_SECRET_KEY"],
         base_url=fuente["LANGFUSE_BASE_URL"],
+        environment=entorno if entorno and _ENVIRONMENT.match(entorno) else None,
     )
 
 
@@ -1088,10 +1194,11 @@ class SdkClient:
             base_url=config.base_url,
             tracing_enabled=False,
         )
+        self._environment = config.environment
         self._versions: dict[tuple[str, str], int | None] = {}
 
     def send(self, objects: Sequence[LangfuseObject]) -> None:
-        eventos = [self._event(o, self._prompt_version(o)) for o in objects]
+        eventos = [self._event(o, self._prompt_version(o), self._environment) for o in objects]
         lote: list[Any] = []
         tam = 0
         for evento in eventos:
@@ -1117,7 +1224,9 @@ class SdkClient:
         return self._versions[clave]
 
     @staticmethod
-    def _event(obj: LangfuseObject, prompt_version: int | None = None) -> Any:
+    def _event(
+        obj: LangfuseObject, prompt_version: int | None = None, environment: str | None = None
+    ) -> Any:
         from langfuse import api
 
         ahora = datetime.now(UTC).isoformat(timespec="milliseconds")
@@ -1132,7 +1241,9 @@ class SdkClient:
                     name=obj.name,
                     session_id=obj.session_id,
                     metadata=dict(obj.metadata),
+                    input=dict(obj.input) if obj.input is not None else None,
                     output=dict(obj.output) if obj.output is not None else None,
+                    environment=environment,
                 ),
             )
         if isinstance(obj, LangfuseScore):
@@ -1148,6 +1259,7 @@ class SdkClient:
                     data_type=cast(Any, obj.data_type),
                     comment=obj.comment,
                     metadata=dict(obj.metadata),
+                    environment=environment,
                 ),
             )
         if obj.type == "generation":
@@ -1173,6 +1285,7 @@ class SdkClient:
                     status_message=obj.status_message,
                     prompt_name=obj.prompt_name if prompt_version is not None else None,
                     prompt_version=prompt_version,
+                    environment=environment,
                 ),
             )
         if obj.type == "span":
@@ -1187,36 +1300,42 @@ class SdkClient:
                     end_time=_iso(obj.end_time) if obj.end_time else None,
                     parent_observation_id=obj.parent_observation_id,
                     metadata=dict(obj.metadata),
+                    environment=environment,
                 ),
             )
-        if obj.type == "tool":
-            return api.IngestionEvent_ObservationCreate(
+        if obj.type == "event":
+            return api.IngestionEvent_EventCreate(
                 id=sobre,
                 timestamp=ahora,
-                body=api.ObservationBody(
+                body=api.CreateEventBody(
                     id=obj.id,
                     trace_id=obj.trace_id,
-                    type=cast(Any, api.ObservationType.TOOL),
                     name=obj.name,
                     start_time=_iso(obj.start_time),
-                    end_time=_iso(obj.end_time) if obj.end_time else None,
                     parent_observation_id=obj.parent_observation_id,
                     metadata=dict(obj.metadata),
                     level=cast(Any, obj.level),
-                    status_message=obj.status_message,
+                    environment=environment,
                 ),
             )
-        return api.IngestionEvent_EventCreate(
+        # tool, retriever, evaluator y guardrail: la observacion generica con su tipo.
+        return api.IngestionEvent_ObservationCreate(
             id=sobre,
             timestamp=ahora,
-            body=api.CreateEventBody(
+            body=api.ObservationBody(
                 id=obj.id,
                 trace_id=obj.trace_id,
+                type=cast(Any, api.ObservationType(obj.type.upper())),
                 name=obj.name,
                 start_time=_iso(obj.start_time),
+                end_time=_iso(obj.end_time) if obj.end_time else None,
                 parent_observation_id=obj.parent_observation_id,
                 metadata=dict(obj.metadata),
+                input=obj.input,
+                output=obj.output,
                 level=cast(Any, obj.level),
+                status_message=obj.status_message,
+                environment=environment,
             ),
         )
 

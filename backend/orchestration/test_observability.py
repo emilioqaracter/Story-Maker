@@ -176,7 +176,7 @@ def test_entrevista_tirada_y_solicitud_comparten_sesion(
     cliente, _traza = novela
     trazas = cliente.of(lf.LangfuseTrace)
     nombres = {t.name for t in trazas}
-    assert {"interview", "run", "change_request.1"} <= nombres
+    assert {"interview", "run", "change_request"} <= nombres
     assert {t.session_id for t in trazas} == {NOVELA}
     # La entrevista fue primero con su propia sesion, y paso a la de la novela al crearla.
     entrevista = [
@@ -201,22 +201,30 @@ def test_cada_agente_sale_con_su_rol(novela: tuple[LangfuseDouble, Trace]) -> No
     por_traza = {t.id: t.name for t in cliente.of(lf.LangfuseTrace)}
     trazas_de = {g.name: por_traza[g.trace_id] for g in generaciones}
     assert trazas_de["interviewer.brief.extract"] == "interview"
-    assert trazas_de["interviewer.amend.interpret"] == "change_request.1"
+    assert trazas_de["interviewer.amend.interpret"] == "change_request"
     escritor = observation(generaciones, "writer.escritor")
     assert escritor.parent_observation_id is not None
     assert {"chapter", "scene", "attempt", "prompt_version"} <= set(escritor.metadata)
 
 
-def test_cada_herramienta_es_hija_de_su_generation(novela: tuple[LangfuseDouble, Trace]) -> None:
-    """RF-264: una observacion `tool` por registro `tool`, colgada de quien la pidio."""
+def test_cada_herramienta_es_hermana_de_su_generation(
+    novela: tuple[LangfuseDouble, Trace],
+) -> None:
+    """RF-264, D-106: una observacion por registro `tool`, junto a la generation que la pidio."""
     cliente, traza = novela
     observaciones = cliente.of(lf.LangfuseObservation)
-    herramientas = [o for o in observaciones if o.type == "tool"]
+    herramientas = [o for o in observaciones if o.type in ("tool", "retriever")]
     assert herramientas and len(herramientas) == len(traza.records("tool"))
-    generaciones = {(o.trace_id, o.id): o for o in observaciones if o.type == "generation"}
+    generaciones = [o for o in observaciones if o.type == "generation"]
+    por_call = {
+        lf.call_observation_id(g.trace_id, str(g.metadata["call_id"])): g
+        for g in generaciones
+        if g.metadata.get("call_id")
+    }
     for h in herramientas:
-        padre = generaciones[(h.trace_id, h.parent_observation_id)]
-        assert h.metadata["agent"] == padre.metadata["agent"]
+        pidio = por_call[lf.call_observation_id(h.trace_id, str(h.metadata["call"]))]
+        assert h.metadata["agent"] == pidio.metadata["agent"]
+        assert h.parent_observation_id == pidio.parent_observation_id
 
 
 def test_cada_verificador_de_la_traza_tiene_su_score(novela: tuple[LangfuseDouble, Trace]) -> None:
