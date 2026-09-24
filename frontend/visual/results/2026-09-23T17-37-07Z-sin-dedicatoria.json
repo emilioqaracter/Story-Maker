@@ -1,0 +1,105 @@
+{
+  "fecha": "2026-09-23T17:37:07.644Z",
+  "caso": "sin-dedicatoria",
+  "novela": "novela-sin-dedicatoria",
+  "commit": "ae20f6d",
+  "resultado": "falla",
+  "vuelve_a": [
+    "backend"
+  ],
+  "fallos": [
+    {
+      "id": "portada.dedicatoria",
+      "what": "La portada muestra la dedicatoria",
+      "ok": false,
+      "role": "backend",
+      "detail": "el manifiesto de RI-43 llega sin dedicatoria: el brief de la novela no la guarda"
+    }
+  ],
+  "comprobaciones": [
+    {
+      "id": "portada.titulo",
+      "what": "La portada muestra el título de la novela",
+      "ok": true,
+      "role": null,
+      "detail": ""
+    },
+    {
+      "id": "portada.dedicatoria",
+      "what": "La portada muestra la dedicatoria",
+      "ok": false,
+      "role": "backend",
+      "detail": "el manifiesto de RI-43 llega sin dedicatoria: el brief de la novela no la guarda"
+    },
+    {
+      "id": "portada.destinatario",
+      "what": "La portada dice para quién es la novela",
+      "ok": true,
+      "role": null,
+      "detail": ""
+    },
+    {
+      "id": "indice",
+      "what": "El índice tiene un enlace por capítulo congelado",
+      "ok": true,
+      "role": null,
+      "detail": ""
+    },
+    {
+      "id": "capitulo.1",
+      "what": "El capítulo 1 se lee con sus escenas",
+      "ok": true,
+      "role": null,
+      "detail": ""
+    },
+    {
+      "id": "capitulo.2",
+      "what": "El capítulo 2 se lee con sus escenas",
+      "ok": true,
+      "role": null,
+      "detail": ""
+    },
+    {
+      "id": "capitulo.3",
+      "what": "El capítulo 3 se lee con sus escenas",
+      "ok": true,
+      "role": null,
+      "detail": ""
+    },
+    {
+      "id": "navegacion",
+      "what": "Se pasa de un capítulo al siguiente con la navegación",
+      "ok": true,
+      "role": null,
+      "detail": ""
+    },
+    {
+      "id": "ficha.personaje",
+      "what": "La ficha del personaje enlaza los capítulos donde aparece",
+      "ok": true,
+      "role": null,
+      "detail": ""
+    },
+    {
+      "id": "ficha.lugar",
+      "what": "El lugar está en la pestaña Lugares",
+      "ok": true,
+      "role": null,
+      "detail": ""
+    },
+    {
+      "id": "consola",
+      "what": "La página no registra errores",
+      "ok": true,
+      "role": null,
+      "detail": ""
+    }
+  ],
+  "evidencia": [
+    "visual/results/2026-09-23T17-37-07Z-sin-dedicatoria/portada.png",
+    "visual/results/2026-09-23T17-37-07Z-sin-dedicatoria/capitulo-1.png",
+    "visual/results/2026-09-23T17-37-07Z-sin-dedicatoria/ficha-lugares.png",
+    "visual/results/2026-09-23T17-37-07Z-sin-dedicatoria/ficha-personaje.png"
+  ],
+  "nota": "Un fallo del backend es un defecto de datos: la versión no se publica hasta que la API sirva lo que falta. Un fallo del frontend es una prueba en rojo de la presentación. No reabre ningún capítulo: el frontend observa, no corrige (AGENTS.md §3.1)."
+}
