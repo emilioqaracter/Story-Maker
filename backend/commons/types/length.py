@@ -16,13 +16,16 @@ un rango de una constante: lo lee del perfil del brief.
 - `prueba`: una obra minima para probar el ciclo entero sin el coste de una
   novela. De 1.200 a 1.800 palabras, exactamente tres capitulos de una escena, y
   cada escena de 400 a 600 palabras, unas 500 por capitulo: lo minimo para que
-  las citas del Jurado, de 8 a 25 palabras literales y unicas, anclen en todas
+  las citas del Jurado, de 5 a 25 palabras literales y unicas, anclen en todas
   sus dimensiones (D-113). Cae dentro de EST-08; el capitulo, por debajo de
   EST-07. Tres actos de un capitulo, asi que la puerta de acto corre tras cada
   capitulo. Los resumenes de escena y de
   capitulo miden como mucho la mitad de lo que resumen, y lo que en una novela
   corre cada cinco capitulos --conjunto dorado, resumen de obra-- corre una vez
-  al cierre, para que la tirada de prueba tambien lo ejercite.
+  al cierre, para que la tirada de prueba tambien lo ejercite. Y el Jurado es
+  mas facil de pasar (D-115): aprueba con mediana 2 en vez de 3, y ancla citas
+  de 5 palabras en vez de 8. Solo el Jurado: `check.evidence` del Continuista
+  sigue en 8, y los verificadores deterministas no cambian.
 """
 
 from __future__ import annotations
@@ -60,6 +63,13 @@ class LengthProfile:
     #: Lo que corre cada cinco capitulos (RF-117, RF-134) corre, en cambio, una
     #: vez al congelar el ultimo capitulo de la obra.
     periodic_at_close: bool = False
+    #: D-39, D-115. Nivel minimo de la mediana del Jurado, sobre cinco, para que
+    #: una dimension apruebe. `novela`: el de CAL-09, 3.
+    jury_threshold: int = 3
+    #: D-115. Palabras minimas de una cita del Jurado para que ancle. `novela`:
+    #: las de `check.evidence`, 8 (`verification.md` §5.11). El maximo, 25, es
+    #: el mismo en todos los perfiles y vive en el prompt del juez.
+    quote_min_words: int = 8
 
     def typical_chapter(self) -> int:
         """El punto medio del rango de capitulo: lo que mide un capitulo tipico."""
@@ -96,6 +106,8 @@ PRUEBA = LengthProfile(
     chapters_per_act=1,
     summary_ratio=0.5,
     periodic_at_close=True,
+    jury_threshold=2,
+    quote_min_words=5,
 )
 
 PROFILES: dict[LengthProfileName, LengthProfile] = {p.name: p for p in (NOVELA, PRUEBA)}

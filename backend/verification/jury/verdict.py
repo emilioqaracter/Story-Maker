@@ -16,6 +16,10 @@ Tres reglas, y las tres impiden que un numero sin significado decida:
 3. **El resultante es la mediana** y el umbral es 3 (RF-131). La mediana y no la
    media, porque con tres valores la media la arrastra el disidente.
 
+El umbral y el minimo de palabras de la cita salen del perfil de extension de la
+obra (D-115): `novela` los de siempre, 3 y 8; `prueba`, 2 y 5. La regla de
+dispersion es la misma en los dos.
+
 Una dimension con menos de tres puntuaciones ancladas es invalida igual que una
 dispersa: no se puede medir la dispersion de lo que no hay, y una comprobacion
 que no puede ejecutarse cuenta como fallida (`AGENTS.md` §5.3).
@@ -28,6 +32,7 @@ from collections.abc import Callable, Mapping, Sequence
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from commons.types.length import NOVELA, LengthProfile
 from commons.types.primitives import Defect, Evidence, Severity
 from commons.types.rubrics import Dimension
 from verification.checks import evidence
@@ -37,7 +42,8 @@ from verification.jury.prompts import InstanceVerdict
 INSTANCES = 3
 #: D-39. Rango que invalida y umbral de aceptacion, sobre una escala de cinco.
 INVALID_SPREAD = 2
-THRESHOLD = 3
+#: El del perfil `novela`; cada veredicto lleva el de su perfil (D-115).
+THRESHOLD = NOVELA.jury_threshold
 
 #: CAL-06. Una dimension bajo umbral danana el arco o la caracterizacion (S2) o
 #: el estilo y el ritmo (S3). D-94: `continuity`, `arc` y `personalization` S2,
@@ -76,10 +82,12 @@ class DimensionVerdict(BaseModel):
     spread: int = Field(ge=0)
     valid: bool
     level: int | None = Field(default=None, description="Mediana, solo si es valido")
+    #: D-115. El umbral del perfil de la obra con que se juzgo.
+    threshold: int = Field(default=THRESHOLD, ge=1, le=5)
 
     @property
     def passed(self) -> bool:
-        return self.valid and self.level is not None and self.level >= THRESHOLD
+        return self.valid and self.level is not None and self.level >= self.threshold
 
 
 class JuryVerdict(BaseModel):
@@ -92,6 +100,8 @@ class JuryVerdict(BaseModel):
         default_factory=tuple, description="(instancia, cita) que no anclo: defecto de proceso"
     )
     rounds: int = Field(default=1, ge=1)
+    #: D-115. El umbral del perfil de la obra; el mismo en cada dimension.
+    threshold: int = Field(default=THRESHOLD, ge=1, le=5)
 
     @property
     def passed(self) -> bool:
@@ -113,7 +123,7 @@ class JuryVerdict(BaseModel):
             elif not d.valid:
                 motivo = f"dispersion {d.spread} entre instancias tras repetir"
             else:
-                motivo = f"nivel {d.level} de 5, por debajo de {THRESHOLD}"
+                motivo = f"nivel {d.level} de 5, por debajo de {d.threshold}"
             out.append(
                 Defect(
                     kind=f"jury.{d.dimension.value}",
@@ -125,7 +135,9 @@ class JuryVerdict(BaseModel):
         return out
 
 
-def _locate(scene: str, quote: str, scene_texts: Mapping[str, str]) -> tuple[str, Evidence] | None:
+def _locate(
+    scene: str, quote: str, scene_texts: Mapping[str, str], *, min_words: int
+) -> tuple[str, Evidence] | None:
     """Donde ancla la cita: en la escena que nombra, o en la unica que la contiene.
 
     La escena que nombra el juez es una pista, no la prueba: la prueba es la
@@ -137,31 +149,34 @@ def _locate(scene: str, quote: str, scene_texts: Mapping[str, str]) -> tuple[str
     rondas y era la unica dimension que les pasaba.
     """
     texto = scene_texts.get(scene, "")
-    ev = evidence.anchor(texto, quote) if texto else None
+    ev = evidence.anchor(texto, quote, min_words=min_words) if texto else None
     if ev is not None:
         return scene, ev
     halladas = [
         (sid, e)
         for sid, t in scene_texts.items()
-        if sid != scene and (e := evidence.anchor(t, quote)) is not None
+        if sid != scene and (e := evidence.anchor(t, quote, min_words=min_words)) is not None
     ]
     return halladas[0] if len(halladas) == 1 else None
 
 
-def unanchored(verdict: InstanceVerdict, scene_texts: Mapping[str, str]) -> list[str]:
+def unanchored(
+    verdict: InstanceVerdict, scene_texts: Mapping[str, str], *, profile: LengthProfile = NOVELA
+) -> list[str]:
     """D-71. Por cada puntuacion cuya cita no anclaria, el motivo, dicho al juez.
 
     Es lo que convierte el descarte en algo corregible: el juez sabe que cita
     fallo y por que, y le cuesta cero copiarla bien. El motivo es el mismo que
     aplicaria `anchor`, asi que corregirlo es anclar.
     """
+    minimo = profile.quote_min_words
     out: list[str] = []
     for s in verdict.scores:
-        if _locate(s.scene, s.quote, scene_texts) is not None:
+        if _locate(s.scene, s.quote, scene_texts, min_words=minimo) is not None:
             continue
         palabras = len(evidence.normalize(s.quote).split())
-        if palabras < evidence.MIN_QUOTE_WORDS:
-            motivo = f"tiene {palabras} palabras y el minimo es {evidence.MIN_QUOTE_WORDS}"
+        if palabras < minimo:
+            motivo = f"tiene {palabras} palabras y el minimo es {minimo}"
         elif "..." in s.quote or "\u2026" in s.quote:
             motivo = "recorta con puntos suspensivos: la cita tiene que ser un tramo seguido"
         elif any(evidence.occurrences(t, s.quote) > 1 for t in scene_texts.values()):
@@ -175,14 +190,17 @@ def unanchored(verdict: InstanceVerdict, scene_texts: Mapping[str, str]) -> list
 def anchor(
     verdicts: Mapping[str, tuple[int, InstanceVerdict]],
     scene_texts: Mapping[str, str],
+    *,
+    profile: LengthProfile = NOVELA,
 ) -> tuple[list[AnchoredScore], list[tuple[str, str]]]:
-    """RF-129. Cada puntuacion se ancla en una escena del capitulo, o se descarta."""
+    """RF-129. Cada puntuacion se ancla en una escena del capitulo, o se descarta,
+    con el minimo de palabras de cita del perfil de la obra (D-115)."""
     validas: list[AnchoredScore] = []
     descartes: list[tuple[str, str]] = []
     for instancia, (semilla, veredicto) in sorted(verdicts.items()):
         vistas: set[Dimension] = set()
         for s in veredicto.scores:
-            sitio = _locate(s.scene, s.quote, scene_texts)
+            sitio = _locate(s.scene, s.quote, scene_texts, min_words=profile.quote_min_words)
             if sitio is None or s.dimension in vistas:
                 descartes.append((instancia, s.quote))
                 continue
@@ -202,9 +220,13 @@ def anchor(
 
 
 def judge(
-    scores: Sequence[AnchoredScore], *, dimensions: Sequence[Dimension] = tuple(Dimension)
+    scores: Sequence[AnchoredScore],
+    *,
+    dimensions: Sequence[Dimension] = tuple(Dimension),
+    threshold: int = THRESHOLD,
 ) -> list[DimensionVerdict]:
-    """RF-130, RF-131. Dispersion, validez y mediana por dimension."""
+    """RF-130, RF-131. Dispersion, validez y mediana por dimension, con el umbral
+    del perfil de la obra (D-115)."""
     out: list[DimensionVerdict] = []
     for d in dimensions:
         propias = tuple(s for s in scores if s.dimension is d)
@@ -218,6 +240,7 @@ def judge(
                 spread=rango,
                 valid=valido,
                 level=int(statistics.median(niveles)) if valido else None,
+                threshold=threshold,
             )
         )
     return out
@@ -232,6 +255,7 @@ def adjudicate(
     *,
     seeds: Sequence[int],
     dimensions: Sequence[Dimension] = tuple(Dimension),
+    profile: LengthProfile = NOVELA,
 ) -> JuryVerdict:
     """El Jurado entero, con su segunda ronda (RF-130).
 
@@ -242,15 +266,21 @@ def adjudicate(
 
     `dimensions` son las del conjunto de rubricas que leyeron los jueces: un
     fichero de la version 1 se juzga en cinco, uno de la 2 en nueve (RF-257).
+
+    `profile` es el perfil de extension de la obra: fija el umbral y el minimo
+    de palabras de la cita (D-115).
     """
-    validas, descartes = anchor(run(seeds), scene_texts)
-    dims = judge(validas, dimensions=dimensions)
+    umbral = profile.jury_threshold
+    validas, descartes = anchor(run(seeds), scene_texts, profile=profile)
+    dims = judge(validas, dimensions=dimensions, threshold=umbral)
     invalidas = [d.dimension for d in dims if not d.valid]
     if not invalidas:
-        return JuryVerdict(dimensions=tuple(dims), discarded=tuple(descartes))
+        return JuryVerdict(dimensions=tuple(dims), discarded=tuple(descartes), threshold=umbral)
 
     otras = [s + 1_000 for s in seeds]
-    validas2, descartes2 = anchor(run(otras), scene_texts)
-    repetidas = {d.dimension: d for d in judge(validas2, dimensions=invalidas)}
+    validas2, descartes2 = anchor(run(otras), scene_texts, profile=profile)
+    repetidas = {d.dimension: d for d in judge(validas2, dimensions=invalidas, threshold=umbral)}
     final = tuple(repetidas.get(d.dimension, d) for d in dims)
-    return JuryVerdict(dimensions=final, discarded=tuple(descartes + descartes2), rounds=2)
+    return JuryVerdict(
+        dimensions=final, discarded=tuple(descartes + descartes2), rounds=2, threshold=umbral
+    )

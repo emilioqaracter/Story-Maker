@@ -812,7 +812,9 @@ class Composer:
             "especialista",
             prefix=packet.cacheable_prefix,
             packet=packet.body(),
-            instruction=narrate_prompts.instruction(spec, result, nombres, previous),
+            instruction=narrate_prompts.instruction(
+                spec, result, nombres, previous, profile=self.brief.profile()
+            ),
             schema="",
             parse=None,
             context={"chapter": spec.identity.chapter, "scene": spec.identity.ordinal},
@@ -1205,12 +1207,15 @@ class Composer:
             povs = sorted({s.identity.pov for s in specs})
             voz = recipes.cards_text(read.query(con, povs, at=specs[0].identity.world_time))
         textos = {s.identity.scene_id: t for s, t in zip(specs, texts, strict=True)}
+        # D-115. El umbral, el minimo de palabras de la cita y la regla de la
+        # cita del prompt salen del perfil de extension de la obra.
+        perfil = self.brief.profile()
         base = int(hashlib.sha256(specs[0].identity.scene_id.encode()).hexdigest()[:6], 16)
 
         def una(indice: int, semilla: int) -> tuple[str, tuple[int, InstanceVerdict]]:
             r = self._call(
                 "juez",
-                prefix=jury_prompts.SYSTEM,
+                prefix=jury_prompts.system(perfil),
                 packet="",
                 instruction=jury_prompts.instruction(
                     specs,
@@ -1223,7 +1228,7 @@ class Composer:
                 schema=jury_prompts.schema(),
                 parse=InstanceVerdict,
                 context={"chapter": specs[0].identity.chapter, "instance": indice, "seed": semilla},
-                validate=lambda raw: unanchored(jury_prompts.parse(raw), textos),
+                validate=lambda raw: unanchored(jury_prompts.parse(raw), textos, profile=perfil),
             )
             return f"juez-{indice}", (semilla, jury_prompts.parse(r.raw))
 
@@ -1232,7 +1237,11 @@ class Composer:
                 return dict(pool.map(lambda par: una(*par), enumerate(seeds, 1)))
 
         return adjudicate(
-            run, textos, seeds=[base + i for i in range(INSTANCES)], dimensions=rubricas.dimensions
+            run,
+            textos,
+            seeds=[base + i for i in range(INSTANCES)],
+            dimensions=rubricas.dimensions,
+            profile=perfil,
         )
 
     def _not_applicable(self) -> tuple[Dimension, ...]:
