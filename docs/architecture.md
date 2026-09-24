@@ -139,7 +139,8 @@ frontend/
 ├── tension-curve/   · curva de tensión de la obra
 ├── narrative-debt/  · setups abiertos sin payoff
 ├── run-health/      · métricas de §11
-└── visual/          · validación visual repetible de portada, índice y ficha; no es una vista y ninguna ruta la monta
+├── visual/          · validación visual repetible de portada, índice y ficha; no es una vista y ninguna ruta la monta
+└── art/             · guion de desarrollo que genera las ilustraciones deportivas con Google AI Studio; no es una vista y nadie lo importa
 ```
 
 La raíz de composición del frontend son `main.tsx` y `routes.tsx`, en la raíz de `frontend/`: montan las direcciones que exporta cada funcionalidad y sirven la aplicación bajo `/app/`. Son el equivalente de `orchestration/`: conocen a todas las funcionalidades y ninguna las conoce. No pueden vivir en `commons/`, porque todas importan de él.
@@ -516,6 +517,8 @@ Esto no cambia que el Orquestador y el Documentalista sean código (§6): Claude
 **Un puerto, dos operaciones.** Ningún agente importa el SDK de un proveedor. `commons/` expone un puerto con `complete`, que recibe instrucción, paquete de contexto y esquema de salida, y `embed`, que recibe texto y devuelve vector. El motivo es que §12 ya prevé modelos distintos por rol y `verification.md` §5.8 trata cambiar de modelo como un despliegue: con el puerto, cambiar de modelo es cambiar una configuración y no tocar once agentes.
 
 **Claude es el único proveedor de modelo.** La prosa es donde se juega la calidad de la obra, así que va a Claude sin intermediario. Los embeddings, en cambio, **no salen de la máquina**: los calcula un modelo local servido por `fastembed`. **Langfuse no es un proveedor del ciclo sino un espejo de lo que el ciclo ya traza**: recibe una copia, nunca decide nada, y que no responda no para ni degrada una tirada (§11).
+
+**Google AI Studio no es un servicio del sistema, sino una herramienta de desarrollo.** Las ilustraciones deportivas del frontend las genera una vez `frontend/art/generate.mjs`, que quien desarrolla ejecuta a mano con su propia clave, y se versionan como material de marca en `frontend/commons/brand/art/`. Ni el backend ni el navegador hablan con Google: una tirada, una lectura y la puerta corren igual sin clave (`specs/srs-frontend-v2.md` RNF-59, D-115). Una portada propia por novela, generada al cerrarla, sí metería un proveedor en el sistema, y por eso queda como decisión abierta de esa spec.
 
 #### El CLI de Claude Code como proveedor
 
@@ -1677,7 +1680,7 @@ La API de ingestión solo admite generation, span y event, así que `retriever`,
 8. Afinado de la recuperación: tamaño de fragmento, constante de fusión y reparto de cupos, medidos contra el conjunto dorado en vez de estimados.
 9. Jurado, conjunto dorado y Estilista.
 10. Supervisor, replanificación y métricas de salud.
-11. Frontend: entrevista del brief, lectura por versiones con ficha de personajes y lugares, enmiendas al brief desde la lectura, y visualización. Su SRS es `specs/srs-frontend-v1.md`; las rutas que exige del backend son la versión 3 del backend.
+11. Frontend: entrevista del brief, lectura por versiones con ficha de personajes y lugares, enmiendas al brief desde la lectura, y visualización. Su SRS es `specs/srs-frontend-v1.md`; las rutas que exige del backend son la versión 3 del backend. La versión 2 del frontend, `specs/srs-frontend-v2.md`, añade ilustraciones, elevación, el libro en 3D al cerrar la obra y el grafo en 3D, sin ninguna ruta nueva.
 
 **Las rutas HTTP no son un paso.** Cada paso añade las suyas dentro de su funcionalidad y las monta en `orchestration/` (§2.3). Concentrarlas en un paso propio dejaría los diez anteriores sin forma de ejercitarse y convertiría la API en la capa técnica que §2.3 evita.
 

@@ -42,7 +42,8 @@ DOCS = ROOT / "docs"
 SPECS = sorted((ROOT / "specs").glob("srs-*-v*.md"))
 PLAN = ROOT / "backend" / "PLAN.md"
 FRONTEND_PLAN = ROOT / "frontend" / "PLAN.md"
-FRONTEND_SPEC = ROOT / "specs" / "srs-frontend-v1.md"
+#: Las specs del frontend, todas: cada version da sus tramos y el plan los tiene todos.
+FRONTEND_SPECS = sorted((ROOT / "specs").glob("srs-frontend-v*.md"))
 AGENTS = ROOT / "AGENTS.md"
 BACKEND = ROOT / "backend"
 FRONTEND = ROOT / "frontend"
@@ -335,9 +336,13 @@ def check_frontend_plan(report: Report) -> None:
         return
     plan = read(FRONTEND_PLAN)
     spec_tramos = {
-        t: ids for t, ids in tramo_assignments(section(read(FRONTEND_SPEC), "11")).items() if ids
+        t: ids
+        for spec_path in FRONTEND_SPECS
+        for t, ids in tramo_assignments(section(read(spec_path), "11")).items()
+        if ids
     }
-    body = plan.split("\n## 7.", 1)[0]
+    # Todo el plan salvo su §7, la cobertura: los bloques de tramos pueden ir antes o despues de ella
+    body = re.sub(r"\n## 7\..*?(?=\n## |\Z)", "\n", plan, flags=re.S)
     plan_tramos = {t: ids for t, ids in tramo_assignments(body).items() if t.startswith("T")}
     for t in sorted(set(spec_tramos) - set(plan_tramos)):
         report.error(f"frontend/PLAN.md: el SRS define {t} con requisitos y el plan no lo tiene")

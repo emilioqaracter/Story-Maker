@@ -6,6 +6,8 @@ import { settle } from "../api/errors";
 import { usePolled } from "../api/poll";
 import { describeRun } from "../api/run-state";
 import { visitedInterviews, visitedNovels } from "../storage/local";
+import { Band } from "../ui/Band";
+import { CoverArt } from "../ui/CoverArt";
 import { Empty, Loading } from "../ui/State";
 
 /**
@@ -31,21 +33,22 @@ export function Home() {
 
   return (
     <section className="home">
-      <header className="home-header">
-        <h1>Novelas</h1>
+      <Band art="hero-estadio" eyebrow="Épica deportiva" title="Novelas">
+        <p className="band-lede">Novelas largas que el sistema planifica, escribe, verifica y cierra solo, a partir de un encargo.</p>
         <p>
           <Link to="/new" className="button-primary">
             Encargar una novela nueva
           </Link>
         </p>
-      </header>
+      </Band>
       {list.state === "ok" ? (
         list.data.novels.length === 0 ? (
           <Empty>Todavía no hay ninguna novela.</Empty>
         ) : (
           <ul className="novel-list">
             {list.data.novels.map((n) => (
-              <li key={n.novel_id}>
+              <li key={n.novel_id} className="novel-card">
+                <CoverArt novel={n.novel_id} title={n.title} />
                 <Link to={`/novels/${n.novel_id}`}>{n.title}</Link>
                 {/* En la tarjeta el titulo va en su linea: el separador inicial sobraria. */}
                 <span className="meta">

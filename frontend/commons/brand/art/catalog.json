@@ -1,0 +1,59 @@
+{
+  "style": "Editorial illustration for the cover of a literary sports novel. Painterly and cinematic, with dramatic rim lighting, fine film grain and deep shadows. Restrained palette of deep navy blue (#1E2D3D), slate grey (#4A5763) and off-white, with a single warm orange (#F4631E) light accent. Strictly no text, no letters, no numbers, no jersey numbers, no logos, no brand marks, no flags, no watermark. No recognizable real people: figures in silhouette, from behind or with faces in shadow.",
+  "images": [
+    {
+      "id": "hero-estadio",
+      "use": "Banda de la portada de la aplicacion",
+      "aspect": "21:9",
+      "prompt": "An empty football stadium at blue hour, floodlights just switched on, mist over the pitch, a lone ball on the centre spot, seen from high in the stands. Wide panoramic composition with calm negative space on the left third."
+    },
+    {
+      "id": "entrevista-banquillo",
+      "use": "Banda de la entrevista",
+      "aspect": "21:9",
+      "prompt": "A quiet locker room before a match: a wooden bench, a folded towel, a pair of worn boots and an open notebook with a pencil, warm light from a doorway. Wide composition with calm negative space on the left third."
+    },
+    {
+      "id": "estado-pista",
+      "use": "Banda del estado de la tirada",
+      "aspect": "21:9",
+      "prompt": "An athletics track at dawn seen low from the finish line, white lane lines converging into fog, starting blocks in the distance, long shadows. Wide composition with calm negative space on the left third."
+    },
+    {
+      "id": "portada-futbol",
+      "use": "Portada de novela",
+      "aspect": "2:3",
+      "prompt": "A lone footballer seen from behind walking out of a stadium tunnel into blinding floodlights, the crowd a blur of light. Vertical book cover composition, darker empty band in the lower third."
+    },
+    {
+      "id": "portada-baloncesto",
+      "use": "Portada de novela",
+      "aspect": "2:3",
+      "prompt": "A basketball suspended above a hoop in an empty gym, single shaft of light from high windows, dust in the air, polished wooden floor reflecting the light. Vertical book cover composition, darker empty band in the lower third."
+    },
+    {
+      "id": "portada-atletismo",
+      "use": "Portada de novela",
+      "aspect": "2:3",
+      "prompt": "A runner in silhouette crossing a finish line at sunset, arms opening, motion blur, stadium lights flaring. Vertical book cover composition, darker empty band in the lower third."
+    },
+    {
+      "id": "portada-ciclismo",
+      "use": "Portada de novela",
+      "aspect": "2:3",
+      "prompt": "A cyclist in silhouette climbing a steep mountain pass among switchbacks and clouds, low sun behind the ridge. Vertical book cover composition, darker empty band in the lower third."
+    },
+    {
+      "id": "portada-tenis",
+      "use": "Portada de novela",
+      "aspect": "2:3",
+      "prompt": "A tennis ball at the moment of impact on the line of a clay court, chalk dust exploding, the net and an empty stand out of focus behind. Vertical book cover composition, darker empty band in the lower third."
+    },
+    {
+      "id": "portada-remo",
+      "use": "Portada de novela",
+      "aspect": "2:3",
+      "prompt": "A rowing boat with a crew in silhouette cutting through a still river at first light, mist on the water, ripples trailing behind. Vertical book cover composition, darker empty band in the lower third."
+    }
+  ]
+}

@@ -81,3 +81,22 @@ describe("portada e indice (RF-177, RF-178, RF-182 a RF-184)", () => {
     expect(await screen.findByRole("heading", { name: "El verano de Rex" })).toBeTruthy();
   });
 });
+
+describe("el libro en 3D (srs-frontend-v2 RF-281)", () => {
+  it("con la obra cerrada, la portada abre con el libro: una sola imagen con su nombre y sin controles", async () => {
+    server.use(...novelHandlers());
+    renderAt(manuscriptRoutes, `/novels/${NOVEL}`);
+    const book = await screen.findByRole("img", { name: "Portada de El verano de Rex" });
+    expect(book.querySelector("[aria-hidden='true']")).toBeTruthy();
+    expect(book.querySelectorAll("a, button, input, [tabindex]")).toHaveLength(0);
+    expect(book.textContent).toContain("Para Lucía");
+    expect(book.querySelector(".book-spine")?.textContent).toBe("El verano de Rex");
+  });
+
+  it("con la obra sin cerrar, no hay libro", async () => {
+    server.use(...novelHandlers(RUN_WRITING));
+    renderAt(manuscriptRoutes, `/novels/${NOVEL}`);
+    await screen.findByRole("heading", { name: "El verano de Rex" });
+    expect(screen.queryByRole("img", { name: /^Portada de/ })).toBeNull();
+  });
+});

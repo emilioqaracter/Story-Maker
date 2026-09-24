@@ -6,6 +6,7 @@ import { settle, type Failure } from "../commons/api/errors";
 import { Failed } from "../commons/shell/Failed";
 import { rememberInterview, rememberNovel } from "../commons/storage/local";
 import { Prose } from "../commons/text/Prose";
+import { Band } from "../commons/ui/Band";
 import { Loading } from "../commons/ui/State";
 import { fieldId, PANEL, shown, type FieldName } from "./panel";
 
@@ -64,9 +65,12 @@ export function Interview() {
   if (state === null) return <Loading>Cargando la entrevista…</Loading>;
 
   return (
-    <section className="interview">
+    <>
+      <Band art="entrevista-banquillo" eyebrow="Entrevista" title="El encargo">
+        <p className="band-lede">Cuéntanos para quién es la novela. Cuando el brief esté completo, el sistema la escribe solo.</p>
+      </Band>
+      <section className="interview">
       <div className="conversation">
-        <h1>El encargo</h1>
         <Conversation state={state} />
         <Answer key={state.question?.field ?? "fin"} state={state} sending={sending} send={send} />
         <FreeText sending={sending} send={send} />
@@ -76,7 +80,8 @@ export function Interview() {
         <BriefPanel state={state} sending={sending} send={send} />
         <Create state={state} />
       </aside>
-    </section>
+      </section>
+    </>
   );
 }
 

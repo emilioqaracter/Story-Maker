@@ -65,6 +65,13 @@ const TEXT: [string, string][] = [
   ["--sheet-muted", "--sheet-bg"],
   ["--sheet-ink", "--sheet-paper"],
   ["--sheet-muted", "--sheet-paper"],
+  // srs-frontend-v2 RF-279, RF-280: tarjetas, baldosas y el texto de la banda sobre su velo.
+  ["--heading", "--card-bg"],
+  ["--text", "--card-bg"],
+  ["--muted", "--card-bg"],
+  ["--heading", "--tile-bg"],
+  ["--muted", "--tile-bg"],
+  ["--band-text", "--band-scrim"],
 ];
 
 /** Bordes de control, foco y formas de estado: 3:1 (WCAG 1.4.11 y 2.4.7). */
@@ -81,6 +88,9 @@ const GRAPHIC: [string, string][] = [
   ["--accent", "--header-bg"],
   // El circulo lleno de «aplicada» va sobre el fondo de su tarjeta.
   ["--ok", "--bg"],
+  // El trazo del rotulo de la banda, y el anillo del nodo del grafo al apuntarlo.
+  ["--accent", "--band-scrim"],
+  ["--accent", "--card-bg"],
 ];
 
 describe("tokens del sistema visual (BRAND.md §1)", () => {
@@ -96,6 +106,11 @@ describe("tokens del sistema visual (BRAND.md §1)", () => {
   it("la cabecera es azul de titulares en los dos temas: el logo es negativo y en claro desaparece", () => {
     expect(hex(light, "--header-bg")).toBe("#1e2d3d");
     expect(hex(dark, "--header-bg")).toBe("#1e2d3d");
+  });
+
+  it("el escenario del libro es blanco corporativo en los dos temas (srs-frontend-v2 RF-281)", () => {
+    expect(hex(light, "--stage")).toBe("#ffffff");
+    expect(hex(dark, "--stage")).toBe("#ffffff");
   });
 
   it("la hoja del capitulo es papel y tinta en los dos temas", () => {

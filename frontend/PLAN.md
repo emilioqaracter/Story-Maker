@@ -1,11 +1,11 @@
 # Plan de implementación · frontend
 
-> Compañero de [`specs/srs-frontend-v1.md`](../specs/srs-frontend-v1.md), que dice **qué** hay que construir. Este documento dice **de dónde se parte, en qué orden se sigue y con qué ficheros**.
+> Compañero de [`specs/srs-frontend-v1.md`](../specs/srs-frontend-v1.md) y de [`specs/srs-frontend-v2.md`](../specs/srs-frontend-v2.md), que dicen **qué** hay que construir. Este documento dice **de dónde se parte, en qué orden se sigue y con qué ficheros**.
 > No es un SRS y no añade requisitos: todo lo que aparece aquí tiene su `RF`, `RD`, `RI` o `RNF` en la spec, o su sección en `architecture.md`. Si algo no lo tiene, es un error de este documento.
 
 Ciclo: 3
 
-El plan tiene dos bloques, y los separa una sola condición: **si la ruta que el tramo consume ya existe**. El **bloque 1** son T26 a T28, que se construyen contra el backend de hoy. El **bloque 2** son T29 a T32, que consumen las rutas de la spec §3.2 y no empezaron hasta que `srs-backend-v3.md` las entregó en el esquema OpenAPI versionado. Construirlos antes habría obligado a inventar el esquema en el frontend, que es justo lo que VER-08 existe para impedir (spec §11).
+El plan tiene dos bloques, y los separa una sola condición: **si la ruta que el tramo consume ya existe**. El **bloque 1** son T26 a T28, que se construyen contra el backend de hoy. El **bloque 2** son T29 a T32, que consumen las rutas de la spec §3.2 y no empezaron hasta que `srs-backend-v3.md` las entregó en el esquema OpenAPI versionado. Construirlos antes habría obligado a inventar el esquema en el frontend, que es justo lo que VER-08 existe para impedir (spec §11). El **bloque 3**, §8, es la versión 2: T55 a T58, sin rutas nuevas.
 
 ---
 
@@ -33,6 +33,8 @@ Medido el 2026-09-23 sobre la rama `v2-oneshot`:
 | T26 a T28 | Con pruebas y en verde, §2 | Nada |
 | T29 a T31 | Con pruebas y en verde, §3 | Nada |
 | T32 | El recorrido con modelo real sobre una copia de la tirada real, §3 | La tirada entera de una novela encargada desde la entrevista, que hace T16 del backend |
+| T54 · la spec v2 | Escrita, en su ciclo 1 | Nada |
+| T55 a T58 | Con pruebas y en verde, §8 | Las ilustraciones del catálogo, que genera `node art/generate.mjs` con la clave de quien desarrolla |
 
 ### 1.3 Rutas del backend que consume
 
@@ -207,8 +209,8 @@ narrative-debt/
 entity-graph/
 ├── Graph.tsx                 · RI-06 en el instante del último capítulo congelado; SVG a mano con relaciones tipadas y vigencia; cada nodo enlaza a su ficha (RF-196, D-57)
 ├── Graph.test.tsx
-├── layout.ts                 · posición de los nodos, determinista y pura
-└── layout.test.ts
+├── layout3d.ts               · posición de los nodos, determinista y pura; en 3D desde T58, §8
+└── layout3d.test.ts
 tension-curve/                · declarada en `architecture.md` §2.3 y vacía: sin ruta hasta el Jurado (D-54)
 ```
 
@@ -361,12 +363,12 @@ Una sección que no pide nada al frontend consta igual, con el motivo. Lo que no
 | §1 Principios | El canon es la fuente de verdad: el frontend no lo guarda. Toda decisión tiene dueño: la solicitud la resuelve el backend | T26, T27, T31 | RD-29, RD-28, RI-51, RI-52 | Cubierto |
 | §2.1 Reparto físico y observador de solo lectura | Solo encargos escriben; el sistema termina con el frontend apagado | T27, T28, T31, T32 | RNF-38, RF-199, RF-191, RNF-39 | Cubierto; RNF-39 se comprueba en T32 |
 | §2.2 Frontera entre las dos mitades | El OpenAPI como único contrato; manuscrito congelado sin borradores; ficha y proyecciones derivadas; brief y enmiendas como encargos | T26 a T31 | RF-162, RD-31, RNF-45, RF-178, RF-196, RF-176 | Cubierto. La librería de dibujo sigue abierta (D-57) |
-| §2.3 Paquete por funcionalidad | Las carpetas de `frontend/`, las tres reglas en `eslint`, el cliente único en `commons/` | T26; cada funcionalidad en su tramo | RF-165, RNF-44 | Cubierto. `tension-curve/` declarada y vacía; la raíz de composición del frontend, declarada (D-68) |
+| §2.3 Paquete por funcionalidad | Las carpetas de `frontend/`, las tres reglas en `eslint`, el cliente único en `commons/` | T26; cada funcionalidad en su tramo; `art/` en T55 | RF-165, RNF-44, RNF-59 | Cubierto. `tension-curve/` declarada y vacía; la raíz de composición del frontend, declarada (D-68); `art/`, guion de desarrollo que nadie importa |
 | §3.1 Cinco almacenes | Solo sus proyecciones: ficha, grafo, deuda | T28, T30 | RF-193, RF-196, RF-197 | Cubierto en lectura; el grafo lee las relaciones vigentes de RI-06 |
 | §3.2 Memoria de trabajo | Un borrador no sale del backend | T27 | RF-178 | Cubierto |
 | §3.3 Escritura del índice | Nada: la recongelación la hace el backend v3 | — | — | Fuera del frontend |
 | §4.1 a §4.7 Techos, presupuestos, recuperación, resúmenes, deriva y aislamiento | Nada: el frontend no ensambla paquetes ni llama a modelos. Las filas de `brief.extract` y `amend.interpret` en §4.2 las añadió `srs-backend-v3.md` (D-80) | — | — | Fuera del frontend |
-| §4.8 Proveedores externos | El frontend no habla con ningún proveedor | T26 | RI-56, RNF-41 | Cubierto |
+| §4.8 Proveedores externos | El frontend no habla con ningún proveedor; Google AI Studio solo en el guion de desarrollo de `art/` (D-115) | T26, T55 | RI-56, RNF-41, RNF-59 | Cubierto |
 | §4.9 a §4.10 Recetas y contexto en el ciclo | Nada | — | — | Fuera del frontend |
 | §5 Skills y herramientas | Nada: el frontend no invoca skills | — | — | Fuera del frontend |
 | §6 Agentes | Nada: la entrevista no es un agente (D-49) | — | — | Fuera del frontend |
@@ -460,3 +462,84 @@ El método es el principal de la spec §7.1; la fuente, la de la fila del requis
 | RNF-45 | Regenerar el cliente sin diferencias | T26 | VER-08, VER-15 | `architecture.md` §2.2 |
 | RNF-46 | Dobles del mismo OpenAPI | T26 | VER-05 | `verification.md` §4.5 |
 | RNF-47 | Proyección como funciones puras | T26 | VER-06 | `verification.md` §4.6 |
+| RF-275 | Catálogo cerrado de ilustraciones | T55 | VER-05 | `BRAND.md` §2 |
+| RF-276 | Guion de generación con Google AI Studio | T55 | VER-05 | D-115, D-120 |
+| RF-277 | Resolución en la construcción, con degradado si falta | T55 | VER-05 | Spec v2 §2.3 |
+| RF-278 | Portada por novela, pura | T55 | VER-06 | D-116 |
+| RF-279 | Cuatro niveles de elevación, contraste AA en la banda | T56 | VER-05 | D-119 |
+| RF-280 | Bandas con ilustración y portadas en miniatura | T56 | VER-05 | Spec v2 §2.3 |
+| RF-281 | El libro en 3D con la obra cerrada | T57 | VER-05 | D-117 |
+| RF-282 | Grafo en 3D con giro por arrastre y teclado | T58 | VER-05 | D-118 |
+| RF-283 | Posición 3D y proyección puras | T58 | VER-06 | RNF-47 |
+| RNF-59 | Ni la aplicación ni el backend llaman a Google | T55 | VER-02 | `architecture.md` §4.8 |
+| RNF-60 | La clave nunca entra en el repositorio | T55 | VER-05 | `AGENTS.md` §5.3 |
+| RNF-61 | Sin movimiento con `prefers-reduced-motion` | T58 | VER-05 | `BRAND.md` §4 |
+
+---
+
+## 8. Bloque 3 · versión 2 del frontend
+
+Lo pide `specs/srs-frontend-v2.md`: ilustraciones deportivas, elevación, el libro en 3D y el grafo en 3D. **No consume ninguna ruta nueva**, así que no depende del backend: se construye y se prueba contra los dobles de siempre. T54 es la spec.
+
+### T55 · Ilustraciones
+
+```
+commons/brand/art/catalog.json  · el catálogo cerrado: identificador, uso, aspecto y descripción, más el estilo común (RF-275)
+commons/brand/art/*.jpg         · las ilustraciones generadas, versionadas como material de marca (D-115)
+commons/brand/art.ts            · resolución en la construcción con `import.meta.glob`, y `coverFor` por FNV-1a (RF-277, RF-278)
+commons/brand/art.test.ts       · catálogo cerrado y portada estable por novela, con fast-check
+art/generate.mjs                · el guion de desarrollo: Gemini por interacciones y `generateContent` de respaldo (RF-276, D-120)
+art/lib.ts                      · sus partes puras: clave, cuerpos, extracción de la imagen, qué falta
+art/lib.test.ts                 · sin clave y sin red: la clave no sale en ningún texto ni en ningún cuerpo (RNF-60)
+art/.gitignore                  · el fichero de la clave, fuera del repositorio
+```
+
+| Requisitos | RF-275 a RF-278, RNF-59, RNF-60 |
+|---|---|
+| **Puerta** | Sin ninguna imagen, `node gate.mjs` en verde y todas las vistas se pintan; con clave, `node art/generate.mjs` escribe el catálogo y el sitio lo recoge sin tocar código |
+
+**La clave es de quien desarrolla.** Se guarda en `art/.env.local` o en `GEMINI_API_KEY`, y el guion la lee sin imprimirla. Ni el backend ni el navegador la ven: por eso RI-56 y RNF-41 siguen intactos y `architecture.md` §4.8 lo dice.
+
+### T56 · Sistema visual
+
+```
+commons/shell/style.css     · `--elev-1` a `--elev-4` en los dos temas; cabecera fija con sombra; tarjetas, paneles, banda y portada en plano (RF-279)
+commons/ui/Band.tsx         · la banda: ilustración decorativa bajo el velo azul, rótulo con el único trazo naranja (RF-280)
+commons/ui/CoverArt.tsx     · la portada en plano, que usan la miniatura y el libro
+commons/ui/Band.test.tsx    · banda sin ilustración, portada sin nombre propio, tarjeta con un solo enlace
+commons/ui/contrast.test.ts · los pares nuevos: texto de la banda sobre su velo, tarjetas y baldosas, en los dos temas
+commons/shell/Home.tsx      · banda y portadas en miniatura
+interview/Interview.tsx     · banda de la entrevista
+routes.tsx                  · banda del estado
+```
+
+| Requisitos | RF-279, RF-280 |
+|---|---|
+| **Puerta** | Contraste AA en los dos temas con los pares nuevos, y ninguna banda en la lectura de un capítulo |
+
+### T57 · El libro
+
+```
+manuscript/cover/Book.tsx       · el libro en CSS 3D sobre blanco, con ángulo fijo y un solo nombre accesible (RF-281, D-117)
+manuscript/cover/Cover.tsx      · lo monta arriba solo con `closed` verdadero
+manuscript/cover/Cover.test.tsx · aparece con la obra cerrada, sin ningún control, y no aparece sin ella
+```
+
+| Requisitos | RF-281 |
+|---|---|
+| **Puerta** | Con `closed` verdadero la portada abre con el libro; con la tirada en marcha, no |
+
+### T58 · El grafo en 3D
+
+```
+entity-graph/layout3d.ts      · espiral de Fibonacci y relajación de fuerzas deterministas, giro y proyección (RF-283, D-118)
+entity-graph/layout3d.test.ts · determinista en cualquier orden, dentro de la esfera unidad, el giro conserva distancias
+entity-graph/Graph.tsx        · esferas con degradado, orden por profundidad, giro con arrastre y flechas, giro lento solo si se acepta movimiento (RF-282, RNF-61)
+entity-graph/Graph.test.tsx   · las pruebas de RF-196 intactas, más teclado, sin controles y movimiento reducido
+```
+
+`layout.ts`, el círculo de la versión 1, se retira: lo sustituye `layout3d.ts`, que cumple lo mismo que él —pura y determinista— en tres dimensiones.
+
+| Requisitos | RF-282, RF-283, RNF-61 |
+|---|---|
+| **Puerta** | Las pruebas del grafo de la versión 1 siguen en verde sin cambiarlas, y las propiedades de RF-283 pasan |

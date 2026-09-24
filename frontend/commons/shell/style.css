@@ -71,9 +71,30 @@
   --space-7: 3rem;
   --space-8: 4rem;
 
-  --radius: 6px;
-  --radius-lg: 10px;
+  --radius: 8px;
+  --radius-lg: 14px;
   --shadow: 0 1px 2px rgb(19 28 38 / 0.06), 0 4px 16px rgb(19 28 38 / 0.06);
+
+  /*
+    Elevacion (srs-frontend-v2 RF-279, D-119): cuatro sombras teñidas del azul de
+    titulares, que es el que ya tiñe el claro. No es un color nuevo.
+  */
+  --elev-1: 0 1px 2px rgb(30 45 61 / 0.06), 0 1px 4px rgb(30 45 61 / 0.08);
+  --elev-2: 0 2px 4px rgb(30 45 61 / 0.06), 0 8px 20px rgb(30 45 61 / 0.1);
+  --elev-3: 0 4px 10px rgb(30 45 61 / 0.08), 0 18px 40px rgb(30 45 61 / 0.16);
+  --elev-4: 0 12px 24px rgb(30 45 61 / 0.14), 0 36px 72px rgb(30 45 61 / 0.24);
+  /* Tarjetas y paneles, y las baldosas que van dentro. */
+  --card-bg: var(--marca-fondo);
+  --tile-bg: var(--marca-gris-tarjeta);
+  /* La banda con ilustracion (RF-280): texto blanco sobre el velo azul, en los dos temas. */
+  --band-scrim: var(--marca-azul-titulares);
+  --band-text: var(--marca-fondo);
+  /* El escenario del libro (RF-281): blanco corporativo, tambien en oscuro. */
+  --stage: var(--marca-fondo);
+  /* Los tonos de las esferas del grafo (RF-282): del azul al gris, nunca naranja. */
+  --sphere-person: var(--marca-azul-titulares);
+  --sphere-place: var(--marca-gris-cuerpo);
+  --sphere-other: var(--color-texto-suave);
   /* Alto minimo de lo que se pulsa: 44 px. */
   --target: 2.75rem;
   /* La medida de la lectura: unos 65 caracteres por linea. */
@@ -110,6 +131,15 @@
     --primary-text: var(--color-superficie);
     --header-bg: var(--color-superficie);
     --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 16px rgb(0 0 0 / 0.25);
+    --elev-1: 0 1px 2px rgb(0 0 0 / 0.3), 0 1px 4px rgb(0 0 0 / 0.25);
+    --elev-2: 0 2px 4px rgb(0 0 0 / 0.3), 0 8px 20px rgb(0 0 0 / 0.3);
+    --elev-3: 0 4px 10px rgb(0 0 0 / 0.35), 0 18px 40px rgb(0 0 0 / 0.4);
+    --elev-4: 0 12px 24px rgb(0 0 0 / 0.4), 0 36px 72px rgb(0 0 0 / 0.5);
+    --card-bg: var(--color-superficie);
+    --tile-bg: var(--color-fondo);
+    --sphere-person: var(--color-texto);
+    --sphere-place: var(--color-texto-suave);
+    --sphere-other: var(--color-borde);
   }
 }
 
@@ -1142,9 +1172,9 @@ thead th {
   stroke-width: 1.5;
 }
 
+/* El relleno de cada esfera es su degradado, que va en el atributo: aqui no se le pone `fill`. */
 .graph-svg circle {
-  fill: var(--heading);
-  stroke: var(--bg);
+  stroke: transparent;
   stroke-width: 3;
 }
 
@@ -1369,6 +1399,567 @@ section.missing ul {
 
 .create .hint {
   margin-top: var(--space-2);
+}
+
+/* ------------------------------------------ elevacion y superficies (RF-279) */
+
+body {
+  background:
+    radial-gradient(70rem 36rem at 100% -8rem, color-mix(in srgb, var(--heading) 6%, transparent), transparent 70%),
+    var(--bg);
+}
+
+.shell-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--header-bg) 90%, white), var(--header-bg) 70%);
+  box-shadow: var(--elev-2);
+}
+
+.shell-main:has(.home) {
+  max-width: 68rem;
+}
+
+.status,
+.debt,
+.graph,
+.brief-panel,
+.request-row {
+  background: var(--card-bg);
+  border-color: var(--line);
+  box-shadow: var(--elev-1);
+}
+
+.facts > div {
+  background: var(--tile-bg);
+  border-color: transparent;
+}
+
+.status .table-scroll,
+.graph table {
+  background: var(--card-bg);
+}
+
+.sheet {
+  box-shadow: var(--elev-2);
+}
+
+.selection-bar {
+  box-shadow: var(--elev-3);
+}
+
+.message.interviewer {
+  box-shadow: var(--elev-1);
+}
+
+button[type="submit"],
+.create button,
+.button-primary {
+  box-shadow: var(--elev-1);
+  transition:
+    background-color var(--fast) var(--ease),
+    box-shadow var(--fast) var(--ease),
+    transform var(--fast) var(--ease);
+}
+
+button[type="submit"]:hover:not(:disabled),
+.create button:hover:not(:disabled),
+.button-primary:hover {
+  box-shadow: var(--elev-2);
+  transform: translateY(-1px);
+}
+
+.toc li {
+  transition: background-color var(--fast) var(--ease);
+}
+
+.toc li:hover {
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
+}
+
+/* La lista de novelas: una tarjeta por novela con su portada, que sube al pasar por encima. */
+.novel-list {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 12.5rem), 1fr));
+  gap: var(--space-5);
+}
+
+.novel-list li {
+  position: relative;
+  background: var(--card-bg);
+  box-shadow: var(--elev-1);
+  transition:
+    transform var(--fast) var(--ease),
+    box-shadow var(--fast) var(--ease);
+}
+
+.novel-list li:hover,
+.novel-list li:focus-within {
+  transform: translateY(-3px);
+  box-shadow: var(--elev-3);
+}
+
+.novel-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-3) var(--space-4);
+}
+
+.novel-list li.novel-card {
+  padding: var(--space-3) var(--space-3) var(--space-4);
+}
+
+.novel-card .cover-art {
+  aspect-ratio: 2 / 3;
+  border-radius: var(--radius);
+  box-shadow: var(--elev-2);
+  margin-bottom: var(--space-2);
+}
+
+/* Toda la tarjeta lleva a la novela; el enlace sigue siendo uno, el del titulo. */
+.novel-card > a::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-lg);
+}
+
+/* ------------------------------------------------------ banda (RF-280) */
+
+.band {
+  --heading: var(--band-text);
+  --text: var(--band-text);
+  --muted: var(--band-text);
+  --link: var(--band-text);
+  --focus: var(--band-text);
+  --primary-bg: var(--band-text);
+  --primary-text: var(--band-scrim);
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  min-height: clamp(13rem, 26vw, 19rem);
+  margin: 0 0 var(--space-6);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(120deg, var(--band-scrim) 35%, var(--marca-gris-cuerpo));
+  color: var(--band-text);
+  box-shadow: var(--elev-3);
+}
+
+.band-art {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* El velo: azul entero bajo el texto, que asi cumple el contraste AA sea cual sea la ilustracion. */
+.band::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(90deg, var(--band-scrim) 0%, var(--band-scrim) 28%, color-mix(in srgb, var(--band-scrim) 70%, transparent) 55%, transparent 85%),
+    linear-gradient(0deg, color-mix(in srgb, var(--band-scrim) 55%, transparent), transparent 60%);
+}
+
+.band-body {
+  max-width: 34rem;
+  padding: clamp(var(--space-5), 4vw, var(--space-7));
+}
+
+.band h1 {
+  font-family: var(--font-libro);
+  font-size: var(--text-2xl);
+  letter-spacing: -0.015em;
+  margin: 0 0 var(--space-2);
+}
+
+.band-eyebrow {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* El unico naranja de la banda: un trazo corto delante del rotulo. */
+.band-eyebrow::before {
+  content: "";
+  display: inline-block;
+  width: 1.5rem;
+  height: 2px;
+  margin-right: var(--space-2);
+  vertical-align: middle;
+  background: var(--accent);
+}
+
+.band-lede {
+  font-size: var(--text-md);
+  max-width: 30rem;
+}
+
+.band > .band-body > :last-child {
+  margin-bottom: 0;
+}
+
+@media (max-width: 40rem) {
+  .band::before {
+    background: linear-gradient(0deg, var(--band-scrim) 0%, var(--band-scrim) 45%, color-mix(in srgb, var(--band-scrim) 55%, transparent) 80%, transparent);
+  }
+}
+
+/* ---------------------------------------------- portada en plano (RF-278) */
+
+.cover-art {
+  position: relative;
+  overflow: hidden;
+  container-type: inline-size;
+  background: linear-gradient(160deg, var(--marca-gris-cuerpo), var(--band-scrim) 70%);
+  color: var(--band-text);
+}
+
+.cover-art img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cover-art::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 42%, color-mix(in srgb, var(--band-scrim) 85%, transparent) 74%, var(--band-scrim));
+}
+
+.cover-art-text {
+  position: absolute;
+  inset: auto 0 0;
+  z-index: 1;
+  padding: 0 9cqi 10cqi;
+}
+
+.cover-art-title {
+  margin: 0;
+  font-family: var(--font-libro);
+  font-size: 11cqi;
+  font-weight: 700;
+  line-height: 1.05;
+  color: var(--band-text);
+  text-wrap: balance;
+}
+
+.cover-art-for {
+  margin: 3cqi 0 0;
+  font-size: 4.4cqi;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--band-text);
+}
+
+/* ------------------------------------------------------ el libro (RF-281) */
+
+.book-stage {
+  --book-w: min(15rem, 56vw);
+  --book-h: calc(var(--book-w) * 1.5);
+  --book-d: calc(var(--book-w) * 0.19);
+  display: grid;
+  place-items: center;
+  margin: 0 0 var(--space-6);
+  padding: var(--space-7) var(--space-4) calc(var(--space-8) + var(--space-3));
+  border-radius: var(--radius-lg);
+  background: radial-gradient(ellipse 60% 30% at 50% 88%, var(--marca-gris-tarjeta), var(--stage) 70%);
+  background-color: var(--stage);
+  box-shadow: var(--elev-2);
+  perspective: 1100px;
+}
+
+.book-scene {
+  position: relative;
+  width: var(--book-w);
+  height: var(--book-h);
+  transform-style: preserve-3d;
+}
+
+/* Angulo fijo: tres cuartos, con el lomo a la vista y un poco desde arriba. */
+.book {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transform: rotateX(-7deg) rotateY(40deg);
+  animation: libro-entra 400ms var(--ease) both;
+}
+
+/* Solo el giro: animar la opacidad aplanaria el 3D, que exige que ningun antecesor del libro sea translucido. */
+@keyframes libro-entra {
+  from {
+    transform: rotateX(-7deg) rotateY(22deg) translateY(10px);
+  }
+  to {
+    transform: rotateX(-7deg) rotateY(40deg);
+  }
+}
+
+.book-face {
+  position: absolute;
+  backface-visibility: hidden;
+}
+
+.book-front {
+  inset: 0;
+  overflow: hidden;
+  border-radius: 2px 6px 6px 2px;
+  transform: translateZ(calc(var(--book-d) / 2));
+}
+
+.book-front .cover-art {
+  position: absolute;
+  inset: 0;
+}
+
+/* La bisagra de la tapa dura y un brillo de luz rasante. */
+.book-front::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgb(0 0 0 / 0.3) 0, rgb(255 255 255 / 0.2) 2.2%, rgb(0 0 0 / 0.14) 4.2%, transparent 7%),
+    linear-gradient(115deg, rgb(255 255 255 / 0.18), transparent 38%);
+}
+
+.book-back {
+  inset: 0;
+  border-radius: 6px 2px 2px 6px;
+  background: var(--band-scrim);
+  transform: rotateY(180deg) translateZ(calc(var(--book-d) / 2));
+}
+
+.book-spine {
+  top: 0;
+  left: calc(50% - var(--book-d) / 2);
+  width: var(--book-d);
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--band-scrim) 75%, black),
+    var(--band-scrim) 35%,
+    color-mix(in srgb, var(--band-scrim) 82%, white) 55%,
+    var(--band-scrim) 75%,
+    color-mix(in srgb, var(--band-scrim) 75%, black)
+  );
+  transform: rotateY(-90deg) translateZ(calc(var(--book-w) / 2));
+}
+
+.book-spine span {
+  max-height: 86%;
+  overflow: hidden;
+  writing-mode: vertical-rl;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-family: var(--font-libro);
+  font-size: calc(var(--book-d) * 0.4);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--band-text);
+}
+
+.book-pages,
+.book-top,
+.book-bottom {
+  background: repeating-linear-gradient(
+    90deg,
+    var(--color-papel) 0 2px,
+    color-mix(in srgb, var(--color-papel) 82%, var(--color-tinta-suave)) 2px 3px
+  );
+}
+
+.book-pages {
+  top: 1.5%;
+  left: calc(50% - var(--book-d) / 2);
+  width: calc(var(--book-d) - 4px);
+  height: 97%;
+  transform: rotateY(90deg) translateZ(calc(var(--book-w) / 2 - 3px));
+}
+
+.book-top,
+.book-bottom {
+  left: 0;
+  top: calc(50% - var(--book-d) / 2);
+  width: calc(100% - 3px);
+  height: calc(var(--book-d) - 4px);
+  background-image: repeating-linear-gradient(
+    0deg,
+    var(--color-papel) 0 2px,
+    color-mix(in srgb, var(--color-papel) 82%, var(--color-tinta-suave)) 2px 3px
+  );
+}
+
+.book-top {
+  transform: rotateX(90deg) translateZ(calc(var(--book-h) / 2 - 2px));
+}
+
+.book-bottom {
+  transform: rotateX(-90deg) translateZ(calc(var(--book-h) / 2 - 2px));
+}
+
+/* La sombra en el suelo, desplazada hacia donde no llega la luz. */
+.book-floor {
+  position: absolute;
+  left: -8%;
+  right: -34%;
+  bottom: -10%;
+  height: 16%;
+  background: radial-gradient(ellipse at 42% 50%, rgb(30 45 61 / 0.42), rgb(30 45 61 / 0.12) 45%, transparent 70%);
+  filter: blur(8px);
+  transform: translateZ(calc(var(--book-d) * -1));
+}
+
+/* -------------------------------------------------- grafo en 3D (RF-282) */
+
+.graph-stage {
+  position: relative;
+  margin: var(--space-4) 0;
+  padding: var(--space-3) var(--space-3) var(--space-2);
+  border-radius: var(--radius-lg);
+  background: radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--heading) 7%, var(--card-bg)), var(--card-bg) 72%);
+  box-shadow:
+    inset 0 0 0 1px var(--line),
+    var(--elev-1);
+}
+
+.graph-stage:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.graph-3d {
+  max-width: 38rem;
+  margin: 0 auto;
+  background: transparent;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.graph-3d:active {
+  cursor: grabbing;
+}
+
+.graph-3d line {
+  stroke: var(--muted);
+  stroke-linecap: round;
+}
+
+.graph-3d text {
+  paint-order: stroke;
+  stroke: var(--card-bg);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+
+.graph-3d .graph-ring {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1;
+  stroke-dasharray: 2 5;
+  opacity: 0.35;
+}
+
+.graph-3d .node-shadow {
+  fill: var(--heading);
+  opacity: 0.14;
+}
+
+.graph-3d .node:hover circle,
+.graph-3d .node:focus-visible circle {
+  stroke: var(--accent);
+}
+
+.floor-in {
+  stop-color: var(--heading);
+  stop-opacity: 0.16;
+}
+
+.floor-out {
+  stop-color: var(--heading);
+  stop-opacity: 0;
+}
+
+.sphere-person {
+  --tone: var(--sphere-person);
+}
+
+.sphere-place {
+  --tone: var(--sphere-place);
+}
+
+.sphere-other {
+  --tone: var(--sphere-other);
+}
+
+.sphere-hi {
+  stop-color: color-mix(in srgb, var(--tone) 30%, white);
+}
+
+.sphere-mid {
+  stop-color: var(--tone);
+}
+
+.sphere-lo {
+  stop-color: color-mix(in srgb, var(--tone) 60%, black);
+}
+
+.graph-help {
+  margin: 0 0 var(--space-2);
+  text-align: center;
+}
+
+.graph-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2) var(--space-5);
+  margin: 0 0 var(--space-2);
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+.graph-legend li::before {
+  content: "";
+  display: inline-block;
+  width: 0.8rem;
+  height: 0.8rem;
+  margin-right: var(--space-2);
+  vertical-align: -1px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--tone) 30%, white), var(--tone) 45%, color-mix(in srgb, var(--tone) 60%, black));
+}
+
+.legend-person {
+  --tone: var(--sphere-person);
+}
+
+.legend-place {
+  --tone: var(--sphere-place);
+}
+
+.legend-other {
+  --tone: var(--sphere-other);
 }
 
 /* --------------------------------------------------------------- movimiento */
