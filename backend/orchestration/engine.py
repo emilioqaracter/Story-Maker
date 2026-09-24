@@ -60,7 +60,7 @@ from commons.types.primitives import (
     Severity,
     WorldTime,
 )
-from commons.types.rubrics import RubricSet
+from commons.types.rubrics import Dimension, RubricSet
 from commons.types.scene import (
     DramaticFunction,
     ExpectedOutput,
@@ -1196,7 +1196,10 @@ class Composer:
         Nada del Escritor. Las dimensiones son las del conjunto de rubricas del
         fichero: nueve en la version 2 (RF-257, RF-258).
         """
-        rubricas = self._rubrics()
+        # D-114. Lo que no tiene encargo contra el que juzgarse no se juzga: sin
+        # destinatario ni elementos obligatorios no hay personalizacion, y sin tono
+        # pedido no hay tono. Puntuarlas daria siempre el nivel minimo y bloquearia.
+        rubricas = self._rubrics().without(*self._not_applicable())
         encargo = self._commission()
         with connection.reader(self.path) as con:
             povs = sorted({s.identity.pov for s in specs})
@@ -1231,6 +1234,16 @@ class Composer:
         return adjudicate(
             run, textos, seeds=[base + i for i in range(INSTANCES)], dimensions=rubricas.dimensions
         )
+
+    def _not_applicable(self) -> tuple[Dimension, ...]:
+        """D-114. Las dimensiones del Jurado sin encargo que juzgar en este brief."""
+        fuera: list[Dimension] = []
+        obligatorios = [e for e in brief_elements(self.brief) if e.mandatory]
+        if not self.brief.recipient_name() and not obligatorios:
+            fuera.append(Dimension.PERSONALIZATION)
+        if not self.brief.tone:
+            fuera.append(Dimension.TONE)
+        return tuple(fuera)
 
     def _commission(self) -> str:
         """RF-258. El encargo del Jurado: destinatario, rasgos y recuerdos

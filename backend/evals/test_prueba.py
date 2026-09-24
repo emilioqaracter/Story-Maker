@@ -308,9 +308,16 @@ def test_la_tirada_de_prueba_cierra_con_tres_capitulos_de_una_escena(
 
     # T47 con escenas de unas 500 palabras. El Jurado puntua las nueve dimensiones, cada
     # puntuacion con su justificacion en la traza (RF-257, RF-259).
+    # Sin destinatario ni elementos obligatorios, `personalization` no aplica, y
+    # sin tono pedido tampoco `tone` (D-114): no hay encargo contra el que juzgar.
     nueve = {d.value for d in DEFAULT_RUBRICS.dimensions}
+    esperadas = set(nueve)
+    if not brief.recipient_name() and not puerto.elementos:
+        esperadas.discard("personalization")
+    if not brief.tone:
+        esperadas.discard("tone")
     for r in traza.records("jury"):
-        assert set(r.fields["levels"]) == nueve  # type: ignore[arg-type]
+        assert set(r.fields["levels"]) == esperadas  # type: ignore[arg-type]
         assert all(s["justification"] for s in r.fields["scores"])  # type: ignore[index, union-attr, call-overload]
     # Cada elemento obligatorio tiene uso anclado en SQLite, y por eso cierra (RF-261).
     with connection.reader(path) as con:
@@ -384,3 +391,24 @@ def test_con_perfil_novela_los_resumenes_y_lo_periodico_no_cambian() -> None:
     assert "entre 60 y 65 palabras" in instruction(Level.SCENE, ["x"], max_words=65)
     assert [c for c in range(1, 11) if NOVELA.periodic_due(c, last_chapter=10, every=5)] == [5, 10]
     assert [c for c in range(1, 4) if PRUEBA.periodic_due(c, last_chapter=3, every=5)] == [3]
+
+
+def test_sin_destinatario_el_jurado_no_juzga_la_personalizacion(tmp_path: Path) -> None:
+    """D-114. La tirada real eval-01 (brief sin destinatario) suspendia siempre por
+    `personalization` 1 con todo lo demas en 3 o 4: no habia encargo que juzgar."""
+    brief = _load(NOMBRES[0])
+    assert not brief.recipient_name()
+    c, _, traza, path = _composer(brief, tmp_path)
+    run(
+        path,
+        brief,
+        c.engine(),
+        novel_id="p",
+        chapters=chapters_for(brief),
+        specs_for=specs_provider(c),
+        trace=traza,
+    )
+    jurados = traza.records("jury")
+    assert jurados
+    for r in jurados:
+        assert "personalization" not in r.fields["levels"]  # type: ignore[operator]

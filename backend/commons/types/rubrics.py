@@ -62,6 +62,13 @@ class RubricSet(BaseModel):
         """Las dimensiones de este conjunto, en su orden. Son las que se juzgan."""
         return tuple(r.dimension for r in self.rubrics)
 
+    def without(self, *dimensions: Dimension) -> RubricSet:
+        """El mismo conjunto sin las dimensiones dadas (D-114: las que no aplican)."""
+        fuera = set(dimensions)
+        return RubricSet(
+            version=self.version, rubrics=tuple(r for r in self.rubrics if r.dimension not in fuera)
+        )
+
 
 DEFAULT_RUBRICS = RubricSet(
     version=2,
