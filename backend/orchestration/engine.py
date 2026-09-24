@@ -555,7 +555,12 @@ class Composer:
             prefix=packet.cacheable_prefix,
             packet=packet.body(),
             instruction=replan.instruction(
-                outline, act=act, from_chapter=from_chapter, unpaid_setups=unpaid, reasons=reasons
+                outline,
+                act=act,
+                from_chapter=from_chapter,
+                unpaid_setups=unpaid,
+                reasons=reasons,
+                profile=self.brief.profile(),
             ),
             schema=replan.schema(self.brief.profile()),
             parse=replan.ReplannedTract,
