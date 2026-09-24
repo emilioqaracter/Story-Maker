@@ -113,3 +113,34 @@ def test_tocar_un_capitulo_congelado_se_rechaza() -> None:
     tramo = parse(_tract())
     with pytest.raises(ValueError, match="fuera del tramo"):
         apply(_outline(), tramo, act=2, from_chapter=3)
+
+
+def test_con_perfil_prueba_la_instruccion_fija_la_forma_y_el_presupuesto() -> None:
+    """D-116. La tirada real eval-01 aborto porque la replanificacion del acto 2
+    devolvia capitulos y una obra fuera del perfil `prueba`: la instruccion no le
+    decia al Arquitecto la forma obligatoria. Ahora la dice, con el presupuesto."""
+    from commons.types.length import PRUEBA
+    from planning.replan.arc import instruction
+
+    outline = _outline()
+    texto = instruction(
+        outline, act=2, from_chapter=2, unpaid_setups=[], reasons=["x"], profile=PRUEBA
+    )
+    low, high = PRUEBA.scene_words
+    assert "FORMA OBLIGATORIA" in texto
+    assert f"entre {low} y {high}" in texto
+    assert f"{PRUEBA.scenes_per_chapter} escena" in texto
+    assert "palabras en total" in texto
+
+
+def test_con_perfil_novela_la_instruccion_no_cambia() -> None:
+    from commons.types.length import NOVELA
+    from planning.replan.arc import instruction
+
+    outline = _outline()
+    base = instruction(outline, act=2, from_chapter=2, unpaid_setups=[], reasons=["x"])
+    con = instruction(
+        outline, act=2, from_chapter=2, unpaid_setups=[], reasons=["x"], profile=NOVELA
+    )
+    assert base == con
+    assert "FORMA OBLIGATORIA" not in con

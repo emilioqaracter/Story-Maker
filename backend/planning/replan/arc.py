@@ -104,8 +104,15 @@ def instruction(
     from_chapter: int,
     unpaid_setups: Sequence[str],
     reasons: Sequence[str],
+    profile: LengthProfile = NOVELA,
 ) -> str:
-    """El tramo a reemplazar y lo que tiene que conseguir."""
+    """El tramo a reemplazar y lo que tiene que conseguir.
+
+    D-116. Si el perfil fija la forma de la obra (`prueba`), la instruccion la
+    dice: cuantas escenas por capitulo, su rango de palabras y cuanto puede sumar
+    el tramo para que la obra entera quepa en su rango. Sin esto el Arquitecto
+    devolvia tramos fuera del perfil y `outline.check` los rechazaba hasta abortar.
+    """
     tramo = [s for s in outline.scenes if s.act == act and s.chapter >= from_chapter]
     actual = (
         "\n".join(
@@ -133,6 +140,7 @@ def instruction(
     )
     motivos = "\n".join(f"  - {r}" for r in reasons) or "  - la puerta de cierre de acto fallo"
     capitulos = sorted({s.chapter for s in tramo})
+    forma = _shape(outline, tramo, capitulos, profile)
 
     return f"""Replanifica el acto {act} desde el capitulo {from_chapter}.
 
@@ -147,8 +155,33 @@ PROMESAS QUE ESTE TRAMO TIENE QUE COBRAR:
 
 ARCOS QUE SE RESUELVEN EN ESTE TRAMO Y SIGUEN TENIENDO QUE RESOLVERSE:
 {arcos}
-
+{forma}
 Devuelve SOLO el JSON."""
+
+
+def _shape(
+    outline: Outline, tramo: Sequence[SceneEntry], capitulos: Sequence[int], profile: LengthProfile
+) -> str:
+    """D-116. La forma que el perfil impone al tramo, o nada si no la fija."""
+    if profile.chapters is None or profile.scenes_per_chapter is None:
+        return ""
+    low, high = profile.scene_words
+    ids = {s.id for s in tramo}
+    fuera = sum(s.target_words for s in outline.scenes if s.id not in ids)
+    lineas = [
+        "",
+        "FORMA OBLIGATORIA DEL PERFIL (si no se cumple, el tramo se rechaza):",
+        f"  - exactamente los capitulos {list(capitulos)}, ni uno mas ni uno menos",
+        f"  - {profile.scenes_per_chapter} escena por capitulo",
+        f"  - cada escena con target_words entre {low} y {high}",
+    ]
+    if profile.work_words is not None:
+        w_low, w_high = profile.work_words
+        lineas.append(
+            f"  - el tramo suma entre {max(0, w_low - fuera)} y {max(0, w_high - fuera)} "
+            f"palabras en total (el resto de la obra ya suma {fuera})"
+        )
+    return "\n".join(lineas) + "\n"
 
 
 def parse(raw: str) -> ReplannedTract:
