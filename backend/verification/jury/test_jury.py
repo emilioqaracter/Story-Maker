@@ -345,11 +345,11 @@ def test_el_motivo_de_una_cita_que_no_ancla_se_le_dice_al_juez() -> None:
     assert "minimo" in motivos[0] and "puntos suspensivos" in motivos[1]
 
 
-# ------------------------------------------------- perfil de extension, D-115
+# ------------------------------------------------- perfil de extension, D-128
 
 
 def test_con_perfil_prueba_una_mediana_de_2_aprueba_y_con_novela_no() -> None:
-    """D-115. El umbral sale del perfil: 2 en `prueba`, 3 en `novela`."""
+    """D-128. El umbral sale del perfil: 2 en `prueba`, 3 en `novela`."""
     from commons.types.length import NOVELA, PRUEBA
 
     def run(_seeds: Sequence[int]) -> dict[str, tuple[int, InstanceVerdict]]:
@@ -364,7 +364,7 @@ def test_con_perfil_prueba_una_mediana_de_2_aprueba_y_con_novela_no() -> None:
 
 
 def test_con_perfil_prueba_la_dispersion_sigue_invalidando() -> None:
-    """D-115. Solo baja el umbral: rango 2 sigue sin promediarse."""
+    """D-128. Solo baja el umbral: rango 2 sigue sin promediarse."""
     from commons.types.length import PRUEBA
 
     def run(_seeds: Sequence[int]) -> dict[str, tuple[int, InstanceVerdict]]:
@@ -376,7 +376,7 @@ def test_con_perfil_prueba_la_dispersion_sigue_invalidando() -> None:
 
 
 def test_con_perfil_prueba_una_cita_de_cinco_palabras_ancla_y_con_novela_no() -> None:
-    """D-115. El minimo de la cita del Jurado sale del perfil: 5 y 8."""
+    """D-128. El minimo de la cita del Jurado sale del perfil: 5 y 8."""
     from commons.types.length import NOVELA, PRUEBA
     from verification.jury.verdict import unanchored
 
@@ -394,7 +394,7 @@ def test_con_perfil_prueba_una_cita_de_cinco_palabras_ancla_y_con_novela_no() ->
 
 
 def test_el_minimo_de_check_evidence_no_cambia_con_el_perfil() -> None:
-    """D-115. Solo el Jurado baja a 5: `check.evidence` del Continuista sigue en 8."""
+    """D-128. Solo el Jurado baja a 5: `check.evidence` del Continuista sigue en 8."""
     from commons.types.length import NOVELA, PRUEBA
     from verification.checks import evidence
 
@@ -405,7 +405,7 @@ def test_el_minimo_de_check_evidence_no_cambia_con_el_perfil() -> None:
 
 
 def test_el_prompt_del_juez_dice_el_minimo_de_su_perfil() -> None:
-    """D-115. `prueba` pide de 5 a 25 palabras de una sola frase; `novela`, lo de siempre."""
+    """D-128. `prueba` pide de 5 a 25 palabras de una sola frase; `novela`, lo de siempre."""
     from commons.types.length import NOVELA, PRUEBA
 
     prueba = prompts.system(PRUEBA)

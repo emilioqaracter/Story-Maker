@@ -10,7 +10,7 @@ verificador `check.ledger` contrasta despues que la prosa cuente exactamente
 eso: mismo marcador, mismos goleadores, mismo orden.
 
 En el perfil de extension `prueba` la instruccion lleva ademas el resultado
-obligatorio dicho como lo comprueba `check.ledger` (D-115): el marcador en
+obligatorio dicho como lo comprueba `check.ledger` (D-128): el marcador en
 cifras, local primero, como unica pareja de cifras de la prosa; cada goleador
 con su nombre completo y su minuto; y la ultima frase con el marcador. En
 `novela` la instruccion no cambia.
@@ -72,7 +72,7 @@ def chronology(result: MatchResult, names: Mapping[str, str]) -> str:
 
 
 def ledger_rules(result: MatchResult, names: Mapping[str, str]) -> str:
-    """D-115. El resultado obligatorio, dicho como lo comprueba `check.ledger`.
+    """D-128. El resultado obligatorio, dicho como lo comprueba `check.ledger`.
 
     `check_ledger` marca S1 toda pareja de cifras separadas por guion o por «a»
     que no sea el marcador final, en el orden local-visitante; `check_milestones`,

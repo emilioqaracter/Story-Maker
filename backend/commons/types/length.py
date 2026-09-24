@@ -23,7 +23,7 @@ un rango de una constante: lo lee del perfil del brief.
   capitulo miden como mucho la mitad de lo que resumen, y lo que en una novela
   corre cada cinco capitulos --conjunto dorado, resumen de obra-- corre una vez
   al cierre, para que la tirada de prueba tambien lo ejercite. Y el Jurado es
-  mas facil de pasar (D-115): aprueba con mediana 2 en vez de 3, y ancla citas
+  mas facil de pasar (D-128): aprueba con mediana 2 en vez de 3, y ancla citas
   de 5 palabras en vez de 8. Solo el Jurado: `check.evidence` del Continuista
   sigue en 8, y los verificadores deterministas no cambian.
 """
@@ -63,10 +63,10 @@ class LengthProfile:
     #: Lo que corre cada cinco capitulos (RF-117, RF-134) corre, en cambio, una
     #: vez al congelar el ultimo capitulo de la obra.
     periodic_at_close: bool = False
-    #: D-39, D-115. Nivel minimo de la mediana del Jurado, sobre cinco, para que
+    #: D-39, D-128. Nivel minimo de la mediana del Jurado, sobre cinco, para que
     #: una dimension apruebe. `novela`: el de CAL-09, 3.
     jury_threshold: int = 3
-    #: D-115. Palabras minimas de una cita del Jurado para que ancle. `novela`:
+    #: D-128. Palabras minimas de una cita del Jurado para que ancle. `novela`:
     #: las de `check.evidence`, 8 (`verification.md` §5.11). El maximo, 25, es
     #: el mismo en todos los perfiles y vive en el prompt del juez.
     quote_min_words: int = 8

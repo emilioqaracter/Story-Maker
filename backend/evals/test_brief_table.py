@@ -219,7 +219,7 @@ def test_desde_la_traza_del_bucle_con_dobles(tmp_path: Path) -> None:
 
 
 def test_la_columna_del_jurado_usa_el_umbral_registrado_con_el_veredicto() -> None:
-    """D-115. En `prueba` un 2 aprueba; una traza sin umbral lleva el de `novela`."""
+    """D-128. En `prueba` un 2 aprueba; una traza sin umbral lleva el de `novela`."""
     from pydantic import JsonValue
 
     from commons.tracing.trace import TraceRecord

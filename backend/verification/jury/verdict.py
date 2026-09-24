@@ -17,7 +17,7 @@ Tres reglas, y las tres impiden que un numero sin significado decida:
    media, porque con tres valores la media la arrastra el disidente.
 
 El umbral y el minimo de palabras de la cita salen del perfil de extension de la
-obra (D-115): `novela` los de siempre, 3 y 8; `prueba`, 2 y 5. La regla de
+obra (D-128): `novela` los de siempre, 3 y 8; `prueba`, 2 y 5. La regla de
 dispersion es la misma en los dos.
 
 Una dimension con menos de tres puntuaciones ancladas es invalida igual que una
@@ -42,7 +42,7 @@ from verification.jury.prompts import InstanceVerdict
 INSTANCES = 3
 #: D-39. Rango que invalida y umbral de aceptacion, sobre una escala de cinco.
 INVALID_SPREAD = 2
-#: El del perfil `novela`; cada veredicto lleva el de su perfil (D-115).
+#: El del perfil `novela`; cada veredicto lleva el de su perfil (D-128).
 THRESHOLD = NOVELA.jury_threshold
 
 #: CAL-06. Una dimension bajo umbral danana el arco o la caracterizacion (S2) o
@@ -82,7 +82,7 @@ class DimensionVerdict(BaseModel):
     spread: int = Field(ge=0)
     valid: bool
     level: int | None = Field(default=None, description="Mediana, solo si es valido")
-    #: D-115. El umbral del perfil de la obra con que se juzgo.
+    #: D-128. El umbral del perfil de la obra con que se juzgo.
     threshold: int = Field(default=THRESHOLD, ge=1, le=5)
 
     @property
@@ -100,7 +100,7 @@ class JuryVerdict(BaseModel):
         default_factory=tuple, description="(instancia, cita) que no anclo: defecto de proceso"
     )
     rounds: int = Field(default=1, ge=1)
-    #: D-115. El umbral del perfil de la obra; el mismo en cada dimension.
+    #: D-128. El umbral del perfil de la obra; el mismo en cada dimension.
     threshold: int = Field(default=THRESHOLD, ge=1, le=5)
 
     @property
@@ -194,7 +194,7 @@ def anchor(
     profile: LengthProfile = NOVELA,
 ) -> tuple[list[AnchoredScore], list[tuple[str, str]]]:
     """RF-129. Cada puntuacion se ancla en una escena del capitulo, o se descarta,
-    con el minimo de palabras de cita del perfil de la obra (D-115)."""
+    con el minimo de palabras de cita del perfil de la obra (D-128)."""
     validas: list[AnchoredScore] = []
     descartes: list[tuple[str, str]] = []
     for instancia, (semilla, veredicto) in sorted(verdicts.items()):
@@ -226,7 +226,7 @@ def judge(
     threshold: int = THRESHOLD,
 ) -> list[DimensionVerdict]:
     """RF-130, RF-131. Dispersion, validez y mediana por dimension, con el umbral
-    del perfil de la obra (D-115)."""
+    del perfil de la obra (D-128)."""
     out: list[DimensionVerdict] = []
     for d in dimensions:
         propias = tuple(s for s in scores if s.dimension is d)
@@ -268,7 +268,7 @@ def adjudicate(
     fichero de la version 1 se juzga en cinco, uno de la 2 en nueve (RF-257).
 
     `profile` es el perfil de extension de la obra: fija el umbral y el minimo
-    de palabras de la cita (D-115).
+    de palabras de la cita (D-128).
     """
     umbral = profile.jury_threshold
     validas, descartes = anchor(run(seeds), scene_texts, profile=profile)

@@ -1212,7 +1212,7 @@ class Composer:
             povs = sorted({s.identity.pov for s in specs})
             voz = recipes.cards_text(read.query(con, povs, at=specs[0].identity.world_time))
         textos = {s.identity.scene_id: t for s, t in zip(specs, texts, strict=True)}
-        # D-115. El umbral, el minimo de palabras de la cita y la regla de la
+        # D-128. El umbral, el minimo de palabras de la cita y la regla de la
         # cita del prompt salen del perfil de extension de la obra.
         perfil = self.brief.profile()
         base = int(hashlib.sha256(specs[0].identity.scene_id.encode()).hexdigest()[:6], 16)

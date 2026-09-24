@@ -64,7 +64,7 @@ class _PruebaPort(ScriptedPort):
         self.resumenes: list[str] = []
         #: RF-260. Los elementos obligatorios, cada uno con su frase en la prosa.
         self.elementos = [e for e in elements(brief) if e.mandatory]
-        #: D-115. Las instrucciones de sistema del juez, para comprobar su perfil.
+        #: D-128. Las instrucciones de sistema del juez, para comprobar su perfil.
         self.jueces: list[str] = []
 
     def _frase(self, i: int) -> str:
@@ -323,10 +323,10 @@ def test_la_tirada_de_prueba_cierra_con_tres_capitulos_de_una_escena(
         esperadas.discard("tone")
     for r in traza.records("jury"):
         assert set(r.fields["levels"]) == esperadas  # type: ignore[arg-type]
-        # D-115. El Jurado de `prueba` aprueba con mediana 2.
+        # D-128. El Jurado de `prueba` aprueba con mediana 2.
         assert r.fields["threshold"] == PRUEBA.jury_threshold == 2
         assert all(s["justification"] for s in r.fields["scores"])  # type: ignore[index, union-attr, call-overload]
-    # D-115. Y sus jueces piden citas de 5 a 25 palabras de una sola frase.
+    # D-128. Y sus jueces piden citas de 5 a 25 palabras de una sola frase.
     assert puerto.jueces and all("de 5 a 25 palabras" in p for p in puerto.jueces)
     # Cada elemento obligatorio tiene uso anclado en SQLite, y por eso cierra (RF-261).
     with connection.reader(path) as con:
@@ -379,7 +379,7 @@ def test_la_tolerancia_no_desborda_el_rango_de_obra_del_perfil() -> None:
 
 def test_una_cita_minima_del_jurado_cabe_en_una_escena_de_prueba() -> None:
     """Las citas de `check.evidence` (8 a 25 palabras) no se escalan: una de 8
-    ancla en 400. Las del Jurado de `prueba` bajan a 5 (D-115)."""
+    ancla en 400. Las del Jurado de `prueba` bajan a 5 (D-128)."""
     from verification.checks.evidence import MIN_QUOTE_WORDS, anchor
 
     port = _PruebaPort(_load("01-semilla.json"))
@@ -425,7 +425,7 @@ def test_sin_destinatario_el_jurado_no_juzga_la_personalizacion(tmp_path: Path) 
 
 
 def test_una_prosa_que_cumple_el_resultado_obligatorio_pasa_check_ledger() -> None:
-    """D-115. Lo que pide el prompt es exactamente lo que `check.ledger` exige:
+    """D-128. Lo que pide el prompt es exactamente lo que `check.ledger` exige:
     un marcador parcial en cifras es S1, uno dicho con palabras no."""
     from generation.sports.narrate import scorers
     from generation.sports.test_narrate import NOMBRES, _result

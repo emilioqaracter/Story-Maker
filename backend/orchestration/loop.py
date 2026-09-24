@@ -851,7 +851,7 @@ def _approve_chapter(
                 chapter=capitulo.number,
                 passed=jurado.passed,
                 rounds=jurado.rounds,
-                # D-115. El umbral del perfil de la obra: sin el, la tabla por
+                # D-128. El umbral del perfil de la obra: sin el, la tabla por
                 # brief no sabe si un 2 suspendio.
                 threshold=jurado.threshold,
                 levels={d.dimension.value: d.level for d in jurado.dimensions},

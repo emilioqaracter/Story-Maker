@@ -1496,7 +1496,7 @@ Tres instancias con las mismas rúbricas y semillas distintas: la semilla fija e
 - Contexto mínimo, el de §4.9: el capítulo entero, las rúbricas, las fichas de voz de los POV y el encargo del destinatario como dato. Nunca la especificación ni el paquete del Escritor.
 - Dispersión alta entre instancias invalida el veredicto y fuerza una verificación adicional en lugar de promediar. Promediar jueces que no se ponen de acuerdo produce un número sin significado.
 - Toda puntuación lleva justificación además de la cita, y las dos llegan a la traza.
-- El umbral y el mínimo de palabras de la cita salen del perfil de extensión de la obra (PRO-15): mediana 3 y 8 palabras en `novela`, 2 y 5 en `prueba`, con la misma regla de dispersión (`specs/srs-backend-v4.md` D-115).
+- El umbral y el mínimo de palabras de la cita salen del perfil de extensión de la obra (PRO-15): mediana 3 y 8 palabras en `novela`, 2 y 5 en `prueba`, con la misma regla de dispersión (`specs/srs-backend-v4.md` D-128).
 
 **Qué criterio de la rúbrica de la entrega mide cada dimensión.** Las rúbricas van en su versión 2 (`specs/srs-backend-v4.md` RF-257), con nueve dimensiones:
 
@@ -1659,7 +1659,7 @@ La API de ingestión solo admite generation, span y event, así que `retriever`,
 1. Tamaño óptimo del bloque de prosa literal (4.500 tokens actuales) frente a su coste por escena.
 2. ~~Si el Continuista debe operar por capítulo o por par de capítulos al crecer la obra.~~ **Cerrada: por capítulo.** Los resúmenes de arco de §4.5 son lo que lo mantiene dentro; `specs/srs-backend-v2.md` RNF-29 lo mide y la reabre si no cabe.
 3. ~~Número de instancias de jurado: tres es el mínimo para medir dispersión, pero triplica coste.~~ **Cerrada: tres.** Es el mínimo que mide dispersión y el coste se paga una vez por capítulo, no por escena.
-4. ~~Umbral de dispersión que invalida un veredicto.~~ **Cerrada: rango ≥ 2 niveles sobre una rúbrica de cinco**, con la mediana como nivel resultante y umbral de aceptación en 3 (`specs/srs-backend-v2.md` D-39); en el perfil de extensión `prueba`, en 2 (`specs/srs-backend-v4.md` D-115).
+4. ~~Umbral de dispersión que invalida un veredicto.~~ **Cerrada: rango ≥ 2 niveles sobre una rúbrica de cinco**, con la mediana como nivel resultante y umbral de aceptación en 3 (`specs/srs-backend-v2.md` D-39); en el perfil de extensión `prueba`, en 2 (`specs/srs-backend-v4.md` D-128).
 5. Si `match.simulate` debe modelar el encuentro minuto a minuto o solo sus hitos.
 6. Punto a partir del cual conviene reescribir un capítulo en vez de repararlo.
 7. ~~Con qué modelo de embedding se puebla el índice de prosa.~~ **Cerrada: `intfloat/multilingual-e5-large`** (§4.8). Cambiarlo más adelante es reindexar, no rediseñar, porque el esquema guarda modelo y dimensión.
