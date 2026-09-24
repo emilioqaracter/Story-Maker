@@ -1,8 +1,9 @@
 /**
  * Las ilustraciones deportivas del catalogo (`specs/srs-frontend-v2.md` RF-275 a RF-278).
  *
- * Las genera en desarrollo `art/generate.mjs` y viven en `commons/brand/art/`
- * como JPEG (o PNG, si el modelo lo devuelve asi) versionados: la aplicacion no llama a nadie para tenerlas (RNF-59).
+ * Las crea quien desarrolla por su cuenta, con las descripciones de
+ * `art/catalog.json`, y las deja en `commons/brand/art/<id>.jpg`, `.png` o
+ * `.webp`, versionadas: la aplicacion no llama a nadie para tenerlas (RNF-59, D-115).
  * Se resuelven en la construccion; una que todavia no exista devuelve
  * `undefined` y quien la pinta pone el degradado de la marca (RF-277).
  */
@@ -10,17 +11,17 @@ import catalog from "./art/catalog.json";
 
 export type ArtId = (typeof catalog.images)[number]["id"];
 
-/** Las relaciones de aspecto que admite el modelo de imagen (D-120). */
+/** Las relaciones de aspecto que admite el catalogo. */
 export const ASPECTS = ["1:1", "3:2", "2:3", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9"] as const;
 
 export const CATALOG: readonly { id: string; use: string; aspect: string; prompt: string }[] = catalog.images;
 export const STYLE: string = catalog.style;
 
-const files = import.meta.glob<string>("./art/*.{jpg,png}", { eager: true, query: "?url", import: "default" });
+const files = import.meta.glob<string>("./art/*.{jpg,png,webp}", { eager: true, query: "?url", import: "default" });
 
 /** Direccion de la ilustracion en el sitio construido, o `undefined` si no se ha generado. */
 export function illustration(id: ArtId): string | undefined {
-  return files[`./art/${id}.jpg`] ?? files[`./art/${id}.png`];
+  return files[`./art/${id}.jpg`] ?? files[`./art/${id}.png`] ?? files[`./art/${id}.webp`];
 }
 
 /** Las portadas de novela del catalogo, en su orden. */

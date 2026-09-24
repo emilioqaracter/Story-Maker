@@ -139,8 +139,7 @@ frontend/
 ├── tension-curve/   · curva de tensión de la obra
 ├── narrative-debt/  · setups abiertos sin payoff
 ├── run-health/      · métricas de §11
-├── visual/          · validación visual repetible de portada, índice y ficha; no es una vista y ninguna ruta la monta
-└── art/             · guion de desarrollo que genera las ilustraciones deportivas con Google AI Studio; no es una vista y nadie lo importa
+└── visual/          · validación visual repetible de portada, índice y ficha; no es una vista y ninguna ruta la monta
 ```
 
 La raíz de composición del frontend son `main.tsx` y `routes.tsx`, en la raíz de `frontend/`: montan las direcciones que exporta cada funcionalidad y sirven la aplicación bajo `/app/`. Son el equivalente de `orchestration/`: conocen a todas las funcionalidades y ninguna las conoce. No pueden vivir en `commons/`, porque todas importan de él.
@@ -518,7 +517,7 @@ Esto no cambia que el Orquestador y el Documentalista sean código (§6): Claude
 
 **Claude es el único proveedor de modelo.** La prosa es donde se juega la calidad de la obra, así que va a Claude sin intermediario. Los embeddings, en cambio, **no salen de la máquina**: los calcula un modelo local servido por `fastembed`. **Langfuse no es un proveedor del ciclo sino un espejo de lo que el ciclo ya traza**: recibe una copia, nunca decide nada, y que no responda no para ni degrada una tirada (§11).
 
-**Google AI Studio no es un servicio del sistema, sino una herramienta de desarrollo.** Las ilustraciones deportivas del frontend las genera una vez `frontend/art/generate.mjs`, que quien desarrolla ejecuta a mano con su propia clave, y se versionan como material de marca en `frontend/commons/brand/art/`. Ni el backend ni el navegador hablan con Google: una tirada, una lectura y la puerta corren igual sin clave (`specs/srs-frontend-v2.md` RNF-59, D-115). Una portada propia por novela, generada al cerrarla, sí metería un proveedor en el sistema, y por eso queda como decisión abierta de esa spec.
+**Las ilustraciones del frontend no las genera el sistema.** Son material de marca, como el logo: las crea quien desarrolla y viven en `frontend/commons/brand/art/`. Ni el backend ni el navegador llaman a ningún servicio de imagen (`specs/srs-frontend-v2.md` RNF-59, D-115).
 
 #### El CLI de Claude Code como proveedor
 

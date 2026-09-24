@@ -16,7 +16,7 @@ La versión 1 hace que la novela se pueda encargar y leer. Esta versión hace qu
 
 | Entra en la versión 2 | Sale de la versión 2 |
 |---|---|
-| Un catálogo cerrado de ilustraciones deportivas, generadas **en desarrollo** con Google AI Studio y versionadas como material de marca | Generar una ilustración por novela en tiempo de ejecución: exigiría un proveedor nuevo dentro del sistema (§10) |
+| Un catálogo cerrado de ilustraciones deportivas que quien desarrolla crea por su cuenta y deja en `commons/brand/art/`, versionadas como material de marca | Generar ilustraciones desde el sistema, en desarrollo o en ejecución: ni el backend ni el frontend llaman a ningún servicio de imagen |
 | Sistema visual con cuatro niveles de elevación, cabecera con sombra, tarjetas, bandas con ilustración en la portada de la aplicación, la entrevista y el estado | Tipografías descargadas: la única red del navegador es el backend (`srs-frontend-v1.md` RI-56) |
 | Con la obra cerrada, el libro en 3D sobre fondo blanco en la portada de la novela, con la ilustración, el título y el destinatario | Girar, abrir u hojear el libro: el libro se mira, no se navega |
 | Grafo de entidades en 3D, dibujado en SVG a mano, que se gira arrastrando o con el teclado | Una librería de dibujo 3D: la decisión de `architecture.md` §2.2 sigue abierta y D-57 sigue en pie |
@@ -29,7 +29,7 @@ Todo el vocabulario es el de `definitions.md` y el de `srs-frontend-v1.md` §1.3
 
 | Documento | Qué aporta a este SRS |
 |---|---|
-| `docs/architecture.md` | §2.2 la frontera y la librería de dibujo abierta; §2.3 el reparto de `frontend/`, al que se añade `art/`; §4.8 los proveedores externos, donde se declara Google AI Studio como herramienta de desarrollo |
+| `docs/architecture.md` | §2.2 la frontera y la librería de dibujo abierta; §2.3 el reparto de `frontend/`; §4.8 los proveedores externos, que esta versión no amplía |
 | `specs/srs-frontend-v1.md` | RF-177 la portada, RF-196 el grafo, RF-199 vistas de estado sin controles, RI-56 la red del navegador, RNF-41 la lista cerrada de dependencias, RNF-47 funciones puras |
 | `commons/brand/BRAND.md` | Paleta, reglas de color, logo, tipografía y movimiento, que este documento respeta |
 | `AGENTS.md` | §1 los servicios externos, §5.3 las restricciones, §5.4 idioma |
@@ -46,20 +46,17 @@ Las de `srs-frontend-v1.md` §1.5. La numeración continúa donde terminó la ú
 
 ```mermaid
 graph LR
-  DEV["Quien desarrolla"] -->|clave propia, en desarrollo| GEN["art/generate.mjs"]
-  GEN -->|una vez| G["Google AI Studio"]
-  GEN -->|JPEG versionados| ART["commons/brand/art/"]
+  DEV["Quien desarrolla"] -->|crea las imágenes por su cuenta| ART["commons/brand/art/"]
   ART --> FE["Frontend · React"]
   API["API HTTP · OpenAPI"] -->|manifiesto y estado| FE
 ```
 
-Google AI Studio **no es un servicio del sistema**. Lo llama un guion que quien desarrolla ejecuta a mano, con su propia clave, para producir material de marca, igual que el logo lo produjo la empresa. Ni el backend ni el navegador hablan con Google: una tirada, una lectura y una prueba corren igual sin clave y sin red hacia Google.
+**Las ilustraciones son material de marca, como el logo**: las crea quien desarrolla con la herramienta que quiera, a partir de las descripciones del catálogo, y las deja en `commons/brand/art/` con el nombre de su identificador. El sistema no genera ninguna: ni el backend ni el navegador llaman a un servicio de imagen, y una tirada, una lectura y una prueba corren igual sin ellas.
 
 ### 2.2 Funciones
 
 | Carpeta | Qué cambia en la versión 2 |
 |---|---|
-| `art/` | Nueva. El guion que genera el catálogo, fuera de la aplicación, como `visual/` |
 | `commons/` | Catálogo de ilustraciones, la banda, los tokens de elevación y la elección de portada por novela |
 | `manuscript/` | El libro en 3D en la portada de la novela con la obra cerrada |
 | `entity-graph/` | El grafo en 3D |
@@ -78,7 +75,7 @@ Rigen las de `srs-frontend-v1.md` §2.5 y las reglas de `BRAND.md`. De ellas sal
 
 No hay rutas nuevas ni cambios de contrato. Se consumen RI-03 (el campo `closed` del estado de la tirada), RI-43 (título y destinatario del manifiesto) y RI-06 (el estado del mundo del grafo), tal como están.
 
-La única interfaz nueva es la del guion de desarrollo con Google AI Studio, que queda fuera de la aplicación (RNF-59): la API de interacciones de Gemini, con la clave en la cabecera `x-goog-api-key` y, si esa ruta no responde, la de `generateContent` del mismo modelo (D-120).
+No hay ninguna interfaz nueva hacia fuera: las ilustraciones son ficheros del repositorio (RNF-59).
 
 ---
 
@@ -88,8 +85,7 @@ La única interfaz nueva es la del guion de desarrollo con Google AI Studio, que
 
 | RF | Requisito | Fuente | Verificación |
 |---|---|---|---|
-| RF-275 | El catálogo de ilustraciones es cerrado y vive en `commons/brand/art/catalog.json`: cada entrada tiene identificador, uso, relación de aspecto de las que admite el modelo y la descripción que se le pide. Toda descripción prohíbe texto, letras, números, logos y personas reconocibles | `BRAND.md` §2; D-115 | VER-05 |
-| RF-276 | `art/generate.mjs` genera las ilustraciones del catálogo que falten, o todas con `--force`, y las escribe en `commons/brand/art/` como JPEG. Lee la clave de `art/.env.local` o de la variable `GEMINI_API_KEY`, la manda solo en la cabecera y nunca la escribe en la salida, en un fichero ni en la URL | D-115, D-120 | VER-05 |
+| RF-275 | El catálogo de ilustraciones es cerrado y vive en `commons/brand/art/catalog.json`: cada entrada tiene identificador, uso, relación de aspecto y la descripción con la que se crea la imagen. Cada imagen se guarda como `commons/brand/art/<identificador>.jpg`, `.png` o `.webp`. Toda descripción prohíbe texto, letras, números, logos y personas reconocibles | `BRAND.md` §2; D-115 | VER-05 |
 | RF-277 | La aplicación resuelve las ilustraciones en la construcción desde `commons/brand/art.ts`. Una ilustración que falta se sustituye por un degradado de la marca, y la vista pinta lo mismo en todo lo demás | §2.3 | VER-05 |
 | RF-278 | La portada de cada novela usa una de las portadas del catálogo, elegida por una función pura del identificador de la novela: la misma novela tiene siempre la misma portada | `srs-frontend-v1.md` RNF-47; D-116 | VER-06 |
 
@@ -125,8 +121,7 @@ No hay requisitos de datos nuevos. El navegador sigue guardando solo lo de `srs-
 
 | RNF | Requisito | Fuente | Verificación |
 |---|---|---|---|
-| RNF-59 | Ni la aplicación ni el backend llaman a Google. El generador es un guion de desarrollo en `art/`, que nadie importa y ninguna ruta monta, y la aplicación sigue sin más red que la del backend ni más dependencias que las de RNF-41 | `srs-frontend-v1.md` RI-56, RNF-41; `architecture.md` §4.8 | VER-02 |
-| RNF-60 | La clave de Google AI Studio nunca entra en el repositorio: `art/.env.local` está en `.gitignore` y el guion no la imprime | `AGENTS.md` §5.3 | VER-05 |
+| RNF-59 | Ni la aplicación ni el backend llaman a ningún servicio de imagen: las ilustraciones son ficheros del repositorio, y la aplicación sigue sin más red que la del backend ni más dependencias que las de RNF-41 | `srs-frontend-v1.md` RI-56, RNF-41; `architecture.md` §4.8 | VER-02 |
 | RNF-61 | Con `prefers-reduced-motion` no hay movimiento: ni giro automático del grafo ni entrada del libro. Sin esa preferencia, el grafo gira despacio hasta la primera interacción, y nada dura más de 400 ms salvo ese giro | `BRAND.md` §4 | VER-05 |
 
 ---
@@ -138,12 +133,12 @@ No hay requisitos de datos nuevos. El navegador sigue guardando solo lo de `srs-
 | Método | Requisitos que cubre como método principal |
 |---|---|
 | VER-02 Static analysis | RNF-59 |
-| VER-05 Unit e integration | RF-275, RF-276, RF-277, RF-279, RF-280, RF-281, RF-282, RNF-60, RNF-61 |
+| VER-05 Unit e integration | RF-275, RF-277, RF-279, RF-280, RF-281, RF-282, RNF-61 |
 | VER-06 Property-based | RF-278, RF-283 |
 
 ### 7.2 Puerta
 
-La de `srs-frontend-v1.md` §7.2, sin cambios: `node gate.mjs` en verde. El guion de desarrollo no entra en la puerta, porque necesita clave y red; sus partes puras —catálogo, lectura de la clave, extracción de la imagen de la respuesta— sí, con pruebas que no llaman a nadie.
+La de `srs-frontend-v1.md` §7.2, sin cambios: `node gate.mjs` en verde, con o sin las imágenes del catálogo.
 
 ### 7.4 Riesgo aceptado propio de esta versión
 
@@ -158,7 +153,7 @@ La de `srs-frontend-v1.md` §7.2, sin cambios: `node gate.mjs` en verde. El guio
 
 | Qué | Motivo |
 |---|---|
-| Portada generada para cada novela al cerrarla | Pondría un proveedor de imagen dentro del sistema, con su clave, su fallo y su traza, para algo que no cambia el canon. Decisión abierta (§10) |
+| Portada generada para cada novela | Pondría un proveedor de imagen dentro del sistema, con su clave, su fallo y su traza, para algo que no cambia el canon |
 | Deporte de la novela en el brief | El brief no tiene campo de deporte (`genre` y `rulebook` son texto libre). Elegir la portada por deporte exige ese campo en el backend |
 | Librería 3D | D-57 y `architecture.md` §2.2 |
 
@@ -168,12 +163,11 @@ La de `srs-frontend-v1.md` §7.2, sin cambios: `node gate.mjs` en verde. El guio
 
 | D | Decisión | Elección | Por qué |
 |---|---|---|---|
-| D-115 | De dónde salen las ilustraciones | De un guion de desarrollo, `art/generate.mjs`, con Google AI Studio y la clave de quien lo ejecuta. Se versionan en `commons/brand/art/` como JPEG | Así Claude sigue siendo el único proveedor de modelo del sistema (`architecture.md` §4.8) y el navegador sigue sin red externa (RI-56). Una ilustración es material de marca, como el logo: se produce una vez, no en cada tirada |
+| D-115 | De dónde salen las ilustraciones | Las crea quien desarrolla por su cuenta, con las descripciones del catálogo, y las deja en `commons/brand/art/`. El sistema no genera ninguna | Así Claude sigue siendo el único proveedor de modelo del sistema (`architecture.md` §4.8), el navegador sigue sin red externa (RI-56) y no hay clave de imagen que custodiar. Una ilustración es material de marca, como el logo: se produce una vez, no en cada tirada |
 | D-116 | Qué portada lleva cada novela | Una de las seis portadas del catálogo, por un resumen FNV-1a del identificador de la novela | El brief no dice el deporte, y elegir por palabras del título falla en silencio. Un resumen es puro, estable y no pide nada al backend |
 | D-117 | Cuándo y dónde aparece el libro | En la portada de la novela, arriba, solo con `closed` verdadero. CSS 3D con ángulo fijo sobre blanco corporativo, `#FFFFFF`, en los dos temas | Es lo que se pidió: la obra terminada se entrega como libro. CSS 3D no añade dependencias. Fijo porque se pidió no navegable |
 | D-118 | Cómo se dibuja el grafo en 3D | SVG a mano con proyección en perspectiva y esferas con degradado radial. Posición por relajación de fuerzas determinista desde una espiral de Fibonacci | Cumple D-57 y RNF-41 sin tocar la lista de dependencias. Se prueba en jsdom, que no tiene WebGL, y es pura, así que VER-06 aplica |
 | D-119 | Elevación | Cuatro sombras, `--elev-1` a `--elev-4`, derivadas del azul de titulares en claro y del negro en oscuro | La marca no tiene sombras. Salen del mismo color que ya tiñe el claro, sin un color nuevo |
-| D-120 | Modelo y ruta de Google | **Propuesta**: `gemini-3.1-flash-image` por la API de interacciones, con `generateContent` de respaldo. `GEMINI_IMAGE_MODEL` lo cambia | Es el modelo general de imagen que la documentación de Gemini recomienda hoy. El respaldo cubre una cuenta que aún no tenga la API nueva |
 
 ---
 
@@ -194,7 +188,7 @@ Continúa la numeración de tramos: el último es T53. El detalle de ficheros es
 | # | Tramo | Qué entrega | Requisitos | Puerta para seguir |
 |---|---|---|---|---|
 | **T54** | `specs/srs-frontend-v2.md` | Este documento | — | `backend/coherence.py` en verde |
-| **T55** | Ilustraciones | Catálogo, guion de generación, resolución en la aplicación, portada por novela | RF-275 a RF-278, RNF-59, RNF-60 | Sin imágenes la puerta pasa; con clave, el guion genera el catálogo |
+| **T55** | Ilustraciones | Catálogo, resolución en la aplicación, portada por novela | RF-275, RF-277, RF-278, RNF-59 | Sin imágenes la puerta pasa; con las imágenes en su carpeta, el sitio las recoge sin tocar código |
 | **T56** | Sistema visual | Elevación, cabecera, tarjetas, bandas y portadas en miniatura | RF-279, RF-280 | Contraste AA en los dos temas, con el velo de la banda incluido |
 | **T57** | El libro | El libro en 3D con la obra cerrada | RF-281 | Aparece con `closed` verdadero y no aparece sin él |
 | **T58** | El grafo en 3D | Proyección, sombreado, giro con arrastre y teclado | RF-282, RF-283, RNF-61 | Las pruebas del grafo de la versión 1 siguen en verde y las propiedades de RF-283 pasan |

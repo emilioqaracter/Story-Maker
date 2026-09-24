@@ -4,19 +4,19 @@
     {
       "id": "hero-estadio",
       "use": "Banda de la portada de la aplicacion",
-      "aspect": "21:9",
-      "prompt": "An empty football stadium at blue hour, floodlights just switched on, mist over the pitch, a lone ball on the centre spot, seen from high in the stands. Wide panoramic composition with calm negative space on the left third."
+      "aspect": "3:2",
+      "prompt": "An empty football stadium at blue hour, floodlights just switched on, mist over the pitch, a lone ball on the centre spot, seen from high in the stands. Wide landscape composition with calm negative space on the left third."
     },
     {
       "id": "entrevista-banquillo",
       "use": "Banda de la entrevista",
-      "aspect": "21:9",
+      "aspect": "3:2",
       "prompt": "A quiet locker room before a match: a wooden bench, a folded towel, a pair of worn boots and an open notebook with a pencil, warm light from a doorway. Wide composition with calm negative space on the left third."
     },
     {
       "id": "estado-pista",
       "use": "Banda del estado de la tirada",
-      "aspect": "21:9",
+      "aspect": "3:2",
       "prompt": "An athletics track at dawn seen low from the finish line, white lane lines converging into fog, starting blocks in the distance, long shadows. Wide composition with calm negative space on the left third."
     },
     {

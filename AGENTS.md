@@ -21,7 +21,7 @@ Dos restricciones fijan todo el diseño:
 | **Backend** — `backend/` | **Python + FastAPI** |
 | **Frontend** — `frontend/` | **React** |
 | **Persistencia** | **SQLite en local**, un fichero por novela |
-| **Servicios externos** | **Claude**, único proveedor de modelo, y **Langfuse**, espejo de la traza local (`docs/architecture.md` §4.8 y §11). **Google AI Studio** solo en desarrollo, para generar las ilustraciones del frontend; el sistema no lo llama |
+| **Servicios externos** | **Claude**, único proveedor de modelo, y **Langfuse**, espejo de la traza local (`docs/architecture.md` §4.8 y §11) |
 | **Verificación formal** | **Lean 4** sobre la cronología del canon y **TLA+** sobre el flujo (`docs/verification.md` §4.4 y §5.10) |
 | **Intervención humana en la novela** | Ninguna (§5.3.1) |
 
@@ -37,10 +37,10 @@ La idea central del dominio: **una novela larga no es un texto largo, es un esta
 | Modelos y diagramas | ✅ Completos |
 | Arquitectura, agentes y skills | ✅ Especificados |
 | SRS del backend (`specs/`) | ✅ Versión 1 (`srs-backend-v1.md`, pasos 1 a 6) y versión 2 (`srs-backend-v2.md`, pasos 7 a 10 y retcon), y versión 3 (`srs-backend-v3.md`, T33 a T36): entrevista, versiones, fichas y solicitudes de cambio que el frontend exige. Versión 4 (`srs-backend-v4.md`, T37 a T53): Lean sobre la cronología, guardarraíl bloqueante, espejo en Langfuse, hecho × capítulo, hooks de Claude Code, Jurado con las dimensiones del encargo, TLA+ del flujo completo, evaluación del sistema y perfil de extensión `prueba`; construida salvo las tiradas de evaluación de T52 |
-| SRS del frontend (`specs/`) | ✅ Versión 1 (`srs-frontend-v1.md`, paso 11): entrevista del brief, lectura por versiones, ficha de personajes y lugares, enmiendas al brief desde la lectura. Las rutas nuevas que exige las realiza `srs-backend-v3.md`. Su plan de implementación es `frontend/PLAN.md`, T26 a T32. Versión 2 (`srs-frontend-v2.md`, T54 a T58): ilustraciones deportivas generadas en desarrollo, elevación, libro en 3D al cerrar la obra y grafo en 3D, sin rutas nuevas |
+| SRS del frontend (`specs/`) | ✅ Versión 1 (`srs-frontend-v1.md`, paso 11): entrevista del brief, lectura por versiones, ficha de personajes y lugares, enmiendas al brief desde la lectura. Las rutas nuevas que exige las realiza `srs-backend-v3.md`. Su plan de implementación es `frontend/PLAN.md`, T26 a T32. Versión 2 (`srs-frontend-v2.md`, T54 a T58): ilustraciones deportivas de marca, elevación, libro en 3D al cerrar la obra y grafo en 3D, sin rutas nuevas |
 | Estrategia de verificación | ✅ Completa |
 | Implementación del backend | 🟡 Versiones 1 y 2 construidas, cableadas y en verde (T0 a T24). De la versión 4, T37 a T51 y T53 construidos, integrados y en verde (`python gate.py`, con Lean; TLC en CI al cambiar el modelo): TLA+ del flujo, verificadores endurecidos, Langfuse como espejo, guardarraíl, hecho × escena y cronología, Lean antes de congelar, brief, hooks de Claude Code y audit log, Jurado de nueve dimensiones con elementos obligatorios, validación visual, tabla de validadores en la puerta, herramientas de evaluación y perfil `prueba`. T52, las tiradas de evaluación, en curso. Faltan también las dos tiradas reales: la de T16, que produce `golden/v1-seed/`, y la de T24, que se compara con ella (`backend/PLAN.md` §1.7) |
-| Implementación del frontend | ✅ T26 a T31 construidos y en verde (`node gate.mjs`): entrevista, lectura por versiones con marcas de cambio, ficha de personajes y lugares, solicitudes de cambio, estado, deuda y grafo. T32 con modelo real sobre una copia de la tirada real; la tirada entera de una novela encargada desde la entrevista depende de T16 (`frontend/PLAN.md`). Versión 2, T55 a T58, construida; el catálogo de ilustraciones se genera con `node art/generate.mjs` y la clave de quien desarrolla |
+| Implementación del frontend | ✅ T26 a T31 construidos y en verde (`node gate.mjs`): entrevista, lectura por versiones con marcas de cambio, ficha de personajes y lugares, solicitudes de cambio, estado, deuda y grafo. T32 con modelo real sobre una copia de la tirada real; la tirada entera de una novela encargada desde la entrevista depende de T16 (`frontend/PLAN.md`). Versión 2, T55 a T58, construida; las ilustraciones del catálogo las pone quien desarrolla en `frontend/commons/brand/art/` |
 | Implementación del backend v3 | ✅ T34 a T36 construidos y en verde (`python gate.py`): `brief/`, versiones, fichas, lista de novelas y solicitudes aplicadas por el Orquestador |
 | Agentes de modelo | ✅ Los trece con prompt o código y cableados en el motor real |
 | Capa de memoria | ✅ Cinco almacenes en SQLite, memoria de trabajo, delta canónico validado al congelar y traza local por tirada |
@@ -83,7 +83,7 @@ Es un **monorepo**: backend y frontend viven en la misma raíz, junto a la espec
 | Carpeta | Stack | Responsabilidad |
 |---|---|---|
 | `backend/` | Python + FastAPI | Orquestador, agentes, skills, capa de memoria y canon. Todo lo especificado en `docs/architecture.md` |
-| `frontend/` | React | Entrevista del brief, lectura del manuscrito por versiones con ficha de personajes y lugares, enmiendas al brief desde la lectura, y visualización del estado del mundo, del grafo canónico y de la curva de tensión. `frontend/visual/` es la validación visual repetible y `frontend/art/` el generador de ilustraciones de desarrollo; ninguno de los dos es una vista |
+| `frontend/` | React | Entrevista del brief, lectura del manuscrito por versiones con ficha de personajes y lugares, enmiendas al brief desde la lectura, y visualización del estado del mundo, del grafo canónico y de la curva de tensión. `frontend/visual/` es la validación visual repetible, que no es una vista |
 
 **Las dos se organizan por funcionalidad, no por capa técnica.** Cada funcionalidad es una carpeta con todo lo suyo dentro y lo compartido vive en `commons/`; en el frontend, además, **no se usa Feature-Sliced Design**. El reparto concreto, con las tres reglas que impiden que degenere, está en `docs/architecture.md` §2.3.
 
