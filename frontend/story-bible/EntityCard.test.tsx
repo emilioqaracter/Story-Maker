@@ -6,7 +6,7 @@ import { NOVEL, novelHandlers, requestHandler, RequestsDouble } from "../commons
 import { renderAt } from "../commons/testing/render";
 import { server } from "../commons/testing/server";
 import { storyBibleRoutes } from "./routes";
-import { visibleTabs } from "./EntityList";
+import { tabAfterKey, visibleTabs } from "./EntityList";
 
 describe("ficha de personajes y lugares (RF-192 a RF-195)", () => {
   it("lista personajes y lugares con sus capitulos enlazados a la version vigente", async () => {
@@ -55,5 +55,32 @@ describe("ficha de personajes y lugares (RF-192 a RF-195)", () => {
   it("las pestanas de instituciones y objetos solo salen si los hay", () => {
     expect(visibleTabs([{ kind: "person" }]).map((t) => t.kind)).toEqual(["person", "place"]);
     expect(visibleTabs([{ kind: "institution" }]).map((t) => t.kind)).toEqual(["person", "place", "institution"]);
+  });
+
+  it("las flechas, Inicio y Fin mueven entre pestanas dando la vuelta; otra tecla no", () => {
+    expect(tabAfterKey("ArrowRight", 0, 3)).toBe(1);
+    expect(tabAfterKey("ArrowRight", 2, 3)).toBe(0);
+    expect(tabAfterKey("ArrowLeft", 0, 3)).toBe(2);
+    expect(tabAfterKey("Home", 2, 3)).toBe(0);
+    expect(tabAfterKey("End", 0, 3)).toBe(2);
+    expect(tabAfterKey("a", 0, 3)).toBeNull();
+    expect(tabAfterKey("ArrowRight", 0, 0)).toBeNull();
+  });
+
+  it("las pestanas se recorren con el teclado: una sola parada de tabulador y el foco sigue a la seleccionada", async () => {
+    server.use(...novelHandlers());
+    renderAt(storyBibleRoutes, `/novels/${NOVEL}/bible`);
+    const personajes = await screen.findByRole("tab", { name: "Personajes" });
+    expect(personajes.getAttribute("tabindex")).toBe("0");
+    expect(screen.getByRole("tab", { name: "Lugares" }).getAttribute("tabindex")).toBe("-1");
+    personajes.focus();
+    fireEvent.keyDown(personajes, { key: "ArrowRight" });
+    const lugares = screen.getByRole("tab", { name: "Lugares" });
+    expect(lugares.getAttribute("aria-selected")).toBe("true");
+    expect(document.activeElement).toBe(lugares);
+    expect(screen.getByRole("tabpanel").getAttribute("aria-labelledby")).toBe(lugares.id);
+    expect(screen.getByRole("link", { name: "El parque" })).toBeTruthy();
+    fireEvent.keyDown(lugares, { key: "End" });
+    expect(screen.getByRole("tab", { name: "Objetos" }).getAttribute("aria-selected")).toBe("true");
   });
 });

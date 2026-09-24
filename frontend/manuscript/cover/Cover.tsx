@@ -6,6 +6,7 @@ import { currentVersion, useVersions } from "../../commons/api/versions";
 import { Failed } from "../../commons/shell/Failed";
 import { NotFound } from "../../commons/shell/NotFound";
 import { readingPosition, rememberNovel } from "../../commons/storage/local";
+import { Loading } from "../../commons/ui/State";
 import { parseVersion, useManifest } from "../data";
 import { Toc } from "../toc/Toc";
 import { changedChapters } from "../versions/marks";
@@ -39,7 +40,7 @@ function CoverView({ novel, asked }: { novel: string; asked: number | null }) {
   if (versions.state === "failed") return <Failed failure={versions.failure} reload={versions.reload} />;
   if (manifest.state === "failed") return <Failed failure={manifest.failure} reload={manifest.reload} />;
   if (run.state === "loading" || versions.state === "loading" || manifest.state !== "ok" || version === null) {
-    return <p className="loading">Cargando la novela…</p>;
+    return <Loading>Cargando la novela…</Loading>;
   }
 
   const m = manifest.data;
@@ -64,12 +65,19 @@ function CoverView({ novel, asked }: { novel: string; asked: number | null }) {
         )}
         <VersionPicker novel={novel} versions={versions.data.versions} reading={version} />
         {position !== undefined && (
-          <p>
-            <Link to={`/novels/${novel}/v/${version}/chapters/${position.chapter}`}>Seguir leyendo: capítulo {position.chapter}</Link>
+          <p className="continue">
+            <Link to={`/novels/${novel}/v/${version}/chapters/${position.chapter}`} className="button-primary">
+              Seguir leyendo: capítulo {position.chapter}
+            </Link>
           </p>
         )}
         <p className="cover-links">
-          <Link to={`/novels/${novel}/bible`}>Personajes y lugares</Link> · <Link to={`/novels/${novel}/changes`}>Solicitudes de cambio</Link>
+          <Link to={`/novels/${novel}/bible`} className="button-link">
+            Personajes y lugares
+          </Link>
+          <Link to={`/novels/${novel}/changes`} className="button-link">
+            Solicitudes de cambio
+          </Link>
         </p>
       </header>
       <Toc novel={novel} version={version} chapters={m.chapters} run={run.data} />
