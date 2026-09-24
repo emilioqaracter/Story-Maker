@@ -77,13 +77,57 @@ _BASH_CANON = re.compile(
     r"(?:backend[/\\]+)?(?:runs-[^/\\\s'\"]+|golden)[/\\][^\s'\"]*\.sqlite(?:-wal|-shm|-journal)?",
     re.I,
 )
-#: Lo que en un comando escribe o destruye. Leer un canon con `sqlite3 -readonly`
-#: o copiarlo fuera no casa: solo lo que puede cambiarlo.
-_BASH_WRITES = re.compile(
-    r"(>|\b(cp|mv|rm|del|tee|dd|truncate|touch|shred|sed\s+-i|Remove-Item|Set-Content|"
-    r"Add-Content|Out-File|Copy-Item|Move-Item|Clear-Content)\b|\bsqlite3\b(?!\s+-readonly))",
-    re.I,
+#: Lo que en un comando puede cambiar el canon, tramo a tramo. Solo cuenta si la
+#: escritura **va al canon**: leerlo (con `sqlite3 -readonly`, con un guion que lo
+#: abre, copiandolo fuera o con `2>&1` en la misma linea) no casa.
+_BASH_SEGMENTS = re.compile(r"&&|\|\||[;|\n]")
+#: Redireccion a fichero; `2>&1` y `>&` no escriben en ningun fichero.
+_BASH_REDIRECT = re.compile(r"\d?>>?(?!&)\s*([^\s&|;<>'\"]+)")
+_DESTROY = frozenset(
+    {
+        "rm",
+        "del",
+        "erase",
+        "truncate",
+        "touch",
+        "shred",
+        "tee",
+        "dd",
+        "remove-item",
+        "clear-content",
+        "set-content",
+        "add-content",
+        "out-file",
+    }
 )
+_COPY = frozenset({"cp", "copy", "copy-item"})
+_MOVE = frozenset({"mv", "move", "move-item", "ren", "rename-item"})
+
+
+def _canon_write_in(comando: str) -> str | None:
+    """La ruta de canon que el comando escribe, o `None` si solo lo lee."""
+    for tramo in _BASH_SEGMENTS.split(comando):
+        for m in _BASH_REDIRECT.finditer(tramo):
+            destino = m.group(1)
+            if _BASH_CANON.search(destino):
+                return destino
+        palabras = [p.strip("'\"") for p in tramo.split()]
+        if not palabras:
+            continue
+        orden = palabras[0].lower()
+        argumentos = [p for p in palabras[1:] if not p.startswith("-")]
+        canon = [a for a in argumentos if _BASH_CANON.search(a)]
+        if not canon:
+            continue
+        if orden in _DESTROY or orden in _MOVE:
+            return canon[0]
+        if orden in _COPY and argumentos and _BASH_CANON.search(argumentos[-1]):
+            return argumentos[-1]
+        if orden == "sed" and any(p.startswith("-i") for p in palabras[1:]):
+            return canon[0]
+        if orden == "sqlite3" and "-readonly" not in palabras[1:]:
+            return canon[0]
+    return None
 
 
 @dataclass(frozen=True)
@@ -167,9 +211,9 @@ def decide(payload: dict[str, Any], *, terms: tuple[Any, ...] | None = None) -> 
         if is_canon_sqlite(ruta):
             return Decision("deny", R_CANON, "el canon solo lo escribe la congelacion", ruta)
     if comando:
-        m = _BASH_CANON.search(comando)
-        if m and _BASH_WRITES.search(comando):
-            return Decision("deny", R_CANON, "el canon solo lo escribe la congelacion", m.group(0))
+        escrito = _canon_write_in(comando)
+        if escrito is not None:
+            return Decision("deny", R_CANON, "el canon solo lo escribe la congelacion", escrito)
 
     # 2. Los secretos no se leen.
     if tool == "Read":

@@ -124,6 +124,10 @@ def test_escribir_el_canon_de_una_tirada_se_deniega(tmp_path: Path, ruta: str) -
         'sqlite3 backend/runs-real/n.sqlite "DELETE FROM event"',
         "cp otra.sqlite backend/golden/v1-seed/n.sqlite",
         "echo x > backend/runs-a/n.sqlite",
+        "rm backend/runs-evals/eval-01.sqlite",
+        "mv backend/runs-evals/eval-01.sqlite /tmp/x.sqlite",
+        "sed -i s/a/b/ backend/runs-x/n.sqlite",
+        "cd backend && echo x >> runs-evals/eval-01.sqlite",
     ],
 )
 def test_comandos_que_leen_secretos_o_escriben_canon_se_deniegan(
@@ -139,6 +143,12 @@ def test_comandos_que_leen_secretos_o_escriben_canon_se_deniegan(
         "python -m venv .venv",
         'sqlite3 -readonly backend/runs-real/n.sqlite "SELECT count(*) FROM event"',
         'node -e "console.log(process.env.HOME)"',
+        # Solo leen el canon: una redireccion de descriptor o una escritura que
+        # va a otro fichero no lo tocan (falso positivo visto en la ola 4).
+        "python -m evals.human_template template --novel runs-evals/eval-01.sqlite"
+        " --id eval-01 --out evals/human/eval-01.json 2>&1 | tail -3",
+        "python tools/status.py runs-evals/eval-01.sqlite > resumen.txt",
+        "cp backend/runs-evals/eval-01.sqlite /tmp/eval-01-lectura.sqlite",
     ],
 )
 def test_lo_demas_no_se_deniega_y_tambien_se_registra(tmp_path: Path, comando: str) -> None:
