@@ -187,6 +187,11 @@ def create_request(
         entity=interpretacion.entity_id if interpretacion else None,
         attribute=interpretacion.attribute if interpretacion else None,
     )
+    # RF-262. La llamada de `amend.interpret`, despues de la solicitud y con su
+    # numero: es lo que la cuelga de la traza de la solicitud en los dos
+    # conductores del espejo, aunque se hiciera antes de que el numero existiera.
+    for campos in getattr(interpreter, "calls", ()):
+        trace.emit("call", request=rid, **campos)
     return solicitud
 
 

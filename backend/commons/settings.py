@@ -22,6 +22,14 @@ from pathlib import Path
 NOVEL_ID_PATTERN = r"^[a-z0-9][a-z0-9-]{2,63}$"
 NOVEL_ID = re.compile(NOVEL_ID_PATTERN)
 
+#: El identificador de una entrevista (`brief/store.py`): 12 hexadecimales.
+INTERVIEW_ID_PATTERN = r"^[a-f0-9]{12}$"
+INTERVIEW_ID = re.compile(INTERVIEW_ID_PATTERN)
+
+#: RD-46. Las trazas de las entrevistas, junto al almacen `_interviews.sqlite`.
+#: El guion bajo no es un identificador de novela valido: nunca choca con una.
+INTERVIEWS_DIR = "_interviews"
+
 
 class InvalidNovelIdError(ValueError):
     """El identificador no sirve como nombre de fichero de forma segura."""
@@ -58,3 +66,14 @@ class Settings:
         estado y lo que paso, que es lo que hace reproducible una tirada.
         """
         return self.novel_path(novel_id).with_suffix(".trace.jsonl")
+
+    def interview_trace_path(self, interview_id: str) -> Path:
+        """RD-46. La traza de una entrevista: `_interviews/<iid>.trace.jsonl`.
+
+        Valida el identificador por lo mismo que `novel_path`: el de una
+        entrevista tambien llega del cliente --en `origin_interview` del brief--
+        y acaba siendo un nombre de fichero.
+        """
+        if not INTERVIEW_ID.match(interview_id):
+            raise InvalidNovelIdError(f"identificador de entrevista invalido: {interview_id!r}")
+        return self.runs_dir / INTERVIEWS_DIR / f"{interview_id}.trace.jsonl"

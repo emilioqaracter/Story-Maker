@@ -10,16 +10,19 @@ nombre, y es justo lo que la organizacion por funcionalidad evita.
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response, status
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse
 
 from brief.extract import Extractor, model_extractor
 from brief.routes import get_extractor
 from brief.routes import router as brief_router
+from canon.routes import get_settings as canon_settings
 from canon.routes import router as canon_router
-from commons.tracing.langfuse_export import install_live_export
+from commons.tracing.langfuse_export import install_live_export, link_interviews
 from orchestration.routes import router as orchestration_router
 from planning.routes import router as planning_router
 from supervision.routes import router as supervision_router
@@ -47,8 +50,34 @@ def create_app() -> FastAPI:
     # las rutas o las tiradas queda observada. Sin claves no engancha nada y el
     # sistema es el mismo (RI-60).
     install_live_export()
+    _link_interviews_on_create(app)
     _mount_frontend(app, FRONTEND_DIST)
     return app
+
+
+def _link_interviews_on_create(app: FastAPI) -> None:
+    """RF-262. Al crear una novela con `origin_interview`, su entrevista pasa a su sesion.
+
+    Se engancha aqui y no en `canon/`, que no sabe nada del espejo: la raiz de
+    composicion es la unica que conoce a los dos. Solo actua tras un RI-01 que
+    creo la novela, y sin espejo instalado no hace nada.
+    """
+
+    @app.middleware("http")
+    async def link(
+        request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
+        response = await call_next(request)
+        novel_id = request.query_params.get("novel_id")
+        if (
+            request.method == "POST"
+            and request.url.path == "/novels"
+            and response.status_code == status.HTTP_201_CREATED
+            and novel_id
+        ):
+            settings = app.dependency_overrides.get(canon_settings, canon_settings)()
+            await run_in_threadpool(link_interviews, novel_id, settings.runs_dir)
+        return response
 
 
 def _extractor() -> Extractor:

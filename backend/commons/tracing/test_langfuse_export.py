@@ -7,6 +7,7 @@ habla con Langfuse: el cliente es un doble y las claves son de mentira.
 from __future__ import annotations
 
 import json
+import re
 import threading
 import time
 from collections.abc import Iterator, Sequence
@@ -100,15 +101,19 @@ def _observations(objs: Sequence[LangfuseObject]) -> list[LangfuseObservation]:
     return [o for o in objs if isinstance(o, LangfuseObservation)]
 
 
+def _generations(objs: Sequence[LangfuseObject]) -> list[LangfuseObservation]:
+    return [o for o in _observations(objs) if o.type == "generation"]
+
+
 # ------------------------------------------------------------ correspondencia
 
 
 def test_una_llamada_es_una_generation_con_modelo_uso_coste_e_inicio_y_fin() -> None:
     """RF-235: los cuatro campos de uso, el coste del CLI y la latencia de `dispatch`."""
     objs = to_langfuse([_call(0)], source="n.trace.jsonl", session_id="n")
-    (gen,) = _observations(objs)
+    (gen,) = _generations(objs)
     assert gen.type == "generation"
-    assert gen.name == "escritor"
+    assert gen.name == "writer.escritor"
     assert gen.model == "claude-haiku-4-5"
     assert gen.usage_details == {
         "input": 100,
@@ -122,20 +127,20 @@ def test_una_llamada_es_una_generation_con_modelo_uso_coste_e_inicio_y_fin() -> 
 
 
 def test_sin_coste_declarado_el_coste_es_nulo_y_no_inventado() -> None:
-    (gen,) = _observations(to_langfuse([_call(0, cost_usd=None)], source="n", session_id="n"))
+    (gen,) = _generations(to_langfuse([_call(0, cost_usd=None)], source="n", session_id="n"))
     assert gen.cost_details is None
 
 
 def test_una_traza_anterior_al_desglose_da_la_suma_como_entrada() -> None:
     """Las tiradas ya hechas, como T16, solo traen `real_input`: se exportan igual."""
     viejo = _rec(0, "call", agent="juez", real_input=4_000, output_tokens=300)
-    (gen,) = _observations(to_langfuse([viejo], source="n", session_id="n"))
+    (gen,) = _generations(to_langfuse([viejo], source="n", session_id="n"))
     assert gen.usage_details == {"input": 4_000, "output": 300}
     assert gen.start_time == gen.end_time
 
 
 def test_una_llamada_fallida_va_como_error_con_su_motivo() -> None:
-    (gen,) = _observations(
+    (gen,) = _generations(
         to_langfuse([_call(0, ok=False, error="no encaja")], source="n", session_id="n")
     )
     assert gen.level == "ERROR"
@@ -381,11 +386,11 @@ def test_el_lote_junta_la_entrevista_y_la_novela_en_una_sesion(tmp_path: Path) -
     """RI-61, RF-234: la entrevista de origen se exporta con el `session_id` de la novela."""
     _escribe(tmp_path / "mi-novela.trace.jsonl", _novela())
     _escribe(
-        tmp_path / "_interviews" / "e1.trace.jsonl",
+        tmp_path / "_interviews" / "0123456789ab.trace.jsonl",
         [_rec(0, "call", agent="brief.extract", real_input=10, output_tokens=5)],
     )
     cliente = FakeClient()
-    n = export_novel("mi-novela", tmp_path, cliente, interviews=["e1"])
+    n = export_novel("mi-novela", tmp_path, cliente, interviews=["0123456789ab"])
     assert n == len(cliente.sent)
     nombres = {t.name for t in _traces(cliente.sent)}
     assert nombres == {"interview", "run", "amend", "change_request.1"}
@@ -393,7 +398,7 @@ def test_el_lote_junta_la_entrevista_y_la_novela_en_una_sesion(tmp_path: Path) -
 
     # Reexportar actualiza y no duplica.
     antes = dict(cliente.store)
-    export_novel("mi-novela", tmp_path, cliente, interviews=["e1"])
+    export_novel("mi-novela", tmp_path, cliente, interviews=["0123456789ab"])
     assert cliente.store == antes
 
 
@@ -446,7 +451,263 @@ def test_el_adaptador_construye_eventos_validos_del_sdk_sin_red() -> None:
     objs = to_langfuse(_novela(), source="n.trace.jsonl", session_id="n")
     eventos = [lf.SdkClient._event(o) for o in objs]
     tipos = {e.type for e in eventos}
-    assert tipos == {"trace-create", "generation-create", "event-create"}
+    assert tipos == {
+        "trace-create",
+        "generation-create",
+        "event-create",
+        "span-create",
+        "score-create",
+    }
     gen = next(e for e in eventos if e.type == "generation-create")
     assert gen.body.usage_details["cache_read_input_tokens"] == 5_000
     assert gen.body.cost_details == {"total": 0.0123}
+
+
+# ------------------------------------------------------------ T48: roles y spans
+
+
+def test_cada_llamada_es_una_generation_con_su_rol() -> None:
+    """RF-263: `<rol>.<agente>`, con la tabla de roles de `architecture.md` §11."""
+    registros = [
+        _call(0, agent="arquitecto"),
+        _call(1, agent="escritor"),
+        _call(2, agent="juez"),
+        _call(3, agent="archivero"),
+        _call(4, agent="supervisor"),
+    ]
+    nombres = [g.name for g in _generations(to_langfuse(registros, source="n", session_id="n"))]
+    assert nombres == [
+        "planner.arquitecto",
+        "writer.escritor",
+        "editor.juez",
+        "canon.archivero",
+        "supervisor.supervisor",
+    ]
+
+
+def test_un_agente_sin_rol_hace_fallar_la_exportacion() -> None:
+    """RF-263: no inventa un nombre."""
+    with pytest.raises(lf.UnknownAgentError):
+        to_langfuse([_call(0, agent="agente-nuevo")], source="n", session_id="n")
+
+
+def test_la_generation_cuelga_de_su_escena_y_la_escena_de_su_capitulo() -> None:
+    """RF-263: spans de capitulo y de escena; el capitulo congelado cierra los suyos."""
+    registros = [
+        _rec(0, "calibration", invocation="run"),
+        _call(1, scene=2, prompt_version="abc123abc123", attempt=1),
+        _rec(2, "chapter.frozen", at="2026-09-23T10:05:00+00:00", chapter=1),
+        _rec(3, "summary", at="2026-09-23T10:06:00+00:00", chapter=1),
+    ]
+    objs = to_langfuse(registros, source="n.trace.jsonl", session_id="n")
+    spans = [o for o in _observations(objs) if o.type == "span"]
+    capitulo = next(s for s in spans if s.name == "chapter.1")
+    escena = next(s for s in spans if s.name == "scene.1.2")
+    assert escena.parent_observation_id == capitulo.id
+    (gen,) = _generations(objs)
+    assert gen.parent_observation_id == escena.id
+    assert gen.metadata["attempt"] == 1 and gen.metadata["chapter"] == 1
+    # RF-266: el prompt que uso, por nombre y etiqueta.
+    assert (gen.prompt_name, gen.prompt_label) == ("escritor", "abc123abc123")
+    # El capitulo congelado cierra su span y el de sus escenas, y no se reabre.
+    cierres = [s for s in spans if s.end_time == "2026-09-23T10:05:00+00:00"]
+    assert {s.name for s in cierres} == {"chapter.1", "scene.1.2"}
+    assert sum(1 for s in spans if s.name == "chapter.1") == 2
+    resumen = next(o for o in _observations(objs) if o.name == "summary")
+    assert resumen.parent_observation_id == capitulo.id
+
+
+def test_cada_herramienta_es_hija_de_su_generation() -> None:
+    """RF-264: el `tool` se escribe antes que su `call`; el `call_id` los une."""
+    registros = [
+        _rec(0, "calibration", invocation="run"),
+        _rec(
+            1,
+            "tool",
+            call="c0ffee00c0ffee00",
+            agent="escritor",
+            chapter=1,
+            name="canon.lookup",
+            tokens=40,
+            refused=False,
+            duration_ms=5,
+        ),
+        _rec(2, "tool", call="c0ffee00c0ffee00", name="context.budget", refused=True),
+        _call(3, call_id="c0ffee00c0ffee00"),
+    ]
+    objs = to_langfuse(registros, source="n.trace.jsonl", session_id="n")
+    (gen,) = _generations(objs)
+    herramientas = [o for o in _observations(objs) if o.type == "tool"]
+    assert [h.name for h in herramientas] == ["canon.lookup", "context.budget"]
+    assert {h.parent_observation_id for h in herramientas} == {gen.id}
+    assert {h.trace_id for h in herramientas} == {gen.trace_id}
+    assert herramientas[1].level == "WARNING"
+
+
+def test_la_llamada_de_amend_interpret_cuelga_de_su_solicitud() -> None:
+    """RF-262: el `call` lleva el numero de solicitud y va a la traza de esa solicitud."""
+    registros = [
+        _rec(0, "amend.request", request=3, status="queued"),
+        _call(1, agent="amend.interpret", request=3),
+    ]
+    objs = to_langfuse(registros, source="n.trace.jsonl", session_id="n")
+    (traza,) = _traces(objs)
+    (gen,) = _generations(objs)
+    assert traza.name == "change_request.3"
+    assert gen.trace_id == traza.id and gen.name == "interviewer.amend.interpret"
+
+
+def test_la_entrevista_es_una_sola_traza_aunque_la_escriban_varias_rutas(tmp_path: Path) -> None:
+    """RF-262, D-85: cada turno abre su `Trace`; en vivo y por lote dan la misma traza."""
+    cliente = FakeClient()
+    live = _live(cliente)
+    ruta = tmp_path / "_interviews" / "0123456789ab.trace.jsonl"
+    Trace(ruta).emit("interview.created")
+    turno = Trace(ruta)
+    turno.emit("call", agent="brief.extract", real_input=10, output_tokens=5)
+    turno.emit("interview.turn", free_text=True)
+    assert live.drain(5)
+    en_vivo = {t.id for t in _traces(cliente.sent)}
+    lote = {t.id for t in _traces(lf.interview_objects("mi-novela", tmp_path, ["0123456789ab"]))}
+    assert len(en_vivo) == 1 and en_vivo == lote
+    assert [g.name for g in _generations(cliente.sent)] == ["interviewer.brief.extract"]
+
+
+def test_un_identificador_de_entrevista_que_no_lo_es_no_se_convierte_en_ruta(
+    tmp_path: Path,
+) -> None:
+    """RD-46: `origin_interview` llega del cliente en el brief."""
+    from commons.settings import InvalidNovelIdError, Settings
+
+    with pytest.raises(InvalidNovelIdError):
+        Settings(runs_dir=tmp_path).interview_trace_path("../mi-novela")
+
+
+# ---------------------------------------------------------------- T48: scores
+
+#: Un registro de cada verificador, como los escribe el motor.
+_VERIFICADORES: dict[str, TraceRecord] = {
+    "scene.checks": _rec(
+        1,
+        "scene.checks",
+        chapter=1,
+        scene=1,
+        ran=["check.format", "check.timeline"],
+        failed=["check.timeline"],
+    ),
+    "scene.attempt": _rec(
+        2,
+        "scene.attempt",
+        chapter=1,
+        scene=1,
+        attempt=1,
+        passed=False,
+        defects=["check.timeline:S1", "check.format:S2"],
+    ),
+    "chapter.gate": _rec(3, "chapter.gate", chapter=1, passed=True, s1=0, s2=1, defects=[]),
+    "jury": _rec(
+        4,
+        "jury",
+        chapter=1,
+        passed=True,
+        levels={"voz": 4, "ritmo": 3},
+        spreads={"voz": 0.5, "ritmo": 1.0},
+    ),
+    "quiz": _rec(5, "quiz", chapter=1, questions=4, wrong=1),
+    "outline.check": _rec(6, "outline.check", passed=True, defects=[]),
+    "act.gate": _rec(7, "act.gate", act=1, passed=False),
+    "work.close": _rec(8, "work.close", closed=True, reason="", words=10),
+    "formal.lean": _rec(
+        9, "formal.lean", chapter=1, passed=False, theorem="pov_en_elenco", rule="EST-I1"
+    ),
+    "guardrail.match": _rec(
+        10,
+        "guardrail.match",
+        chapter=1,
+        scene=1,
+        attempt=1,
+        term="Venancio",
+        level="cliente",
+        decision="reintentar",
+        stage="escena",
+    ),
+}
+
+#: Los scores que da cada uno: los nombres de la tabla de `architecture.md` §11.
+_ESPERADOS: dict[str, set[str]] = {
+    "scene.checks": {"check.format", "check.timeline"},
+    "scene.attempt": {"gate.scene", "gate.scene.s1", "gate.scene.s2", "guardrail.forbidden"},
+    "chapter.gate": {"gate.chapter", "gate.chapter.s1", "gate.chapter.s2", "guardrail.forbidden"},
+    "jury": {"jury.voz", "jury.ritmo"},
+    "quiz": {"quiz.wrong"},
+    "outline.check": {"outline.check"},
+    "act.gate": {"act.gate"},
+    "work.close": {"work.close"},
+    "formal.lean": {"formal.lean"},
+    "guardrail.match": {"guardrail.forbidden"},
+}
+
+
+def _scores(objs: Sequence[LangfuseObject]) -> list[lf.LangfuseScore]:
+    return [o for o in objs if isinstance(o, lf.LangfuseScore)]
+
+
+def test_cada_verificador_tiene_su_score() -> None:
+    """RF-265: con los nombres y tipos de la tabla de scores de `architecture.md` §11."""
+    assert set(_VERIFICADORES) == set(lf.SCORERS) == set(_ESPERADOS)
+    for kind, registro in _VERIFICADORES.items():
+        objs = to_langfuse(
+            [_rec(0, "calibration", invocation="run"), registro], source="n", session_id="n"
+        )
+        assert {s.name for s in _scores(objs)} == _ESPERADOS[kind], kind
+
+
+def test_los_scores_van_al_span_que_evaluaron_con_su_tipo() -> None:
+    registros = [_rec(0, "calibration", invocation="run"), *_VERIFICADORES.values()]
+    objs = to_langfuse(registros, source="n", session_id="n")
+    spans = {o.name: o.id for o in _observations(objs) if o.type == "span"}
+    por_nombre = {s.name: s for s in _scores(objs)}
+    assert por_nombre["check.timeline"].value == 0.0
+    assert por_nombre["check.format"].value == 1.0
+    assert por_nombre["check.format"].observation_id == spans["scene.1.1"]
+    assert por_nombre["gate.scene"].data_type == "BOOLEAN"
+    assert por_nombre["gate.scene.s1"].data_type == "NUMERIC"
+    assert por_nombre["gate.scene.s1"].value == 1.0
+    assert por_nombre["gate.chapter"].observation_id == spans["chapter.1"]
+    assert por_nombre["jury.voz"].value == 4.0
+    assert por_nombre["jury.voz"].comment == "dispersion=0.5"
+    assert por_nombre["quiz.wrong"].value == 1.0
+    assert por_nombre["formal.lean"].comment == "pov_en_elenco"
+    # La tirada y el acto no tienen span: el score va a la traza.
+    for nombre in ("outline.check", "act.gate", "work.close"):
+        assert por_nombre[nombre].observation_id is None
+    assert por_nombre["act.gate"].comment == "acto 1"
+    # Reexportar no duplica: los identificadores de los scores son deterministas.
+    assert _scores(objs) == _scores(to_langfuse(registros, source="n", session_id="n"))
+
+
+_EMIT = re.compile(r"\.emit\(\s*\"([a-z_.]+)\"", re.S)
+
+
+def _emitted_kinds() -> set[str]:
+    raiz = Path(__file__).resolve().parents[2]
+    kinds: set[str] = set()
+    for fichero in raiz.rglob("*.py"):
+        if fichero.name.startswith("test_") or ".venv" in fichero.parts:
+            continue
+        kinds |= set(_EMIT.findall(fichero.read_text(encoding="utf-8")))
+    return kinds
+
+
+def test_todo_registro_de_la_traza_esta_clasificado() -> None:
+    """RF-265: un registro de verificador sin score definido hace fallar la prueba.
+
+    Cada tipo que el codigo escribe tiene que estar en `SCORERS`, con su score, o
+    en `UNSCORED`, dicho a proposito. Un verificador nuevo que no se clasifica no
+    llega a Langfuse sin que nadie se entere.
+    """
+    kinds = _emitted_kinds()
+    assert {"call", "tool", "scene.attempt", "guardrail.match", "scene.checks"} <= kinds
+    sin_clasificar = kinds - set(lf.SCORERS) - lf.UNSCORED
+    assert not sin_clasificar, f"tipos de registro sin clasificar: {sorted(sin_clasificar)}"
+    assert not (set(lf.SCORERS) & lf.UNSCORED)

@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import time
+import uuid
 from collections.abc import Mapping, Sequence
 
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, ValidationError
@@ -102,6 +103,16 @@ def dispatch(
     if tools and server is None:
         raise ValueError(f"{agent!r} declara herramientas y no se le paso quien las sirve")
 
+    # RF-264. El identificador de esta llamada: el registro `call` lo lleva, y
+    # cada registro `tool` que sirva el servidor durante ella lo nombra. Es como
+    # la herramienta encuentra en Langfuse la generation de la que es hija,
+    # aunque el `call` se escriba despues. Sale del JSONL, asi que los dos
+    # conductores del espejo dan el mismo.
+    call_id = uuid.uuid4().hex[:16]
+    bind = getattr(server, "bind_call", None)
+    if callable(bind):
+        bind(call_id)
+
     # RF-235. Reloj monotono alrededor de la llamada entera, bucle de
     # herramientas incluido: es la latencia que ve el ciclo, no la del proveedor.
     inicio = time.monotonic()
@@ -152,6 +163,7 @@ def dispatch(
         trace.emit(
             "call",
             agent=agent,
+            call_id=call_id,
             estimated_input=estimated_input,
             real_input=real,
             harness_tokens=harness,

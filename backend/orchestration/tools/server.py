@@ -12,18 +12,28 @@ resultado que habria cabido, y el agente pide uno mas corto.
 
 **Ninguna herramienta escribe.** La congelacion sigue siendo la unica operacion
 que toca el canon.
+
+**Cada llamada queda trazada** (RF-264, RD-46): servida o rechazada, un registro
+`tool` con su nombre, un resumen de sus argumentos, los tokens del resultado,
+su procedencia, si se nego, el error y lo que tardo, y el agente, capitulo y
+escena de la llamada que la hizo. Lleva el `call_id` de esa llamada, que es como
+en Langfuse sale hija de su generation. El resumen no copia los argumentos: los
+identificadores que pide un agente son de la novela.
 """
 
 from __future__ import annotations
 
+import json
 import sqlite3
-from collections.abc import Sequence
+import time
+from collections.abc import Mapping, Sequence
 from typing import Any, Literal, assert_never
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, ValidationError
 
 from canon.skills import read
 from commons.provider.port import ToolCall, ToolResult
+from commons.tracing.trace import Trace
 from commons.types.primitives import BlockProvenance, WorldTime
 
 
@@ -89,6 +99,27 @@ def _parse[A: BaseModel](model: type[A], call: ToolCall) -> A:
         ) from exc
 
 
+def _summary(arguments: str) -> dict[str, JsonValue]:
+    """RF-264. Que se pidio, sin copiar lo pedido: claves, tamanos y el tipo de consulta."""
+    try:
+        crudo = json.loads(arguments)
+    except ValueError:
+        return {"malformed": True, "chars": len(arguments)}
+    if not isinstance(crudo, dict):
+        return {"malformed": True, "chars": len(arguments)}
+    out: dict[str, JsonValue] = {}
+    for k, v in sorted(crudo.items()):
+        if k == "kind" and isinstance(v, str):
+            out[k] = v[:40]
+        elif isinstance(v, list):
+            out[k] = len(v)
+        elif isinstance(v, bool):
+            out[k] = v
+        else:
+            out[k] = type(v).__name__
+    return out
+
+
 class ToolNotAllowedError(RuntimeError):
     """El agente invoco algo fuera de su lista cerrada (RF-91).
 
@@ -131,6 +162,8 @@ class ToolServer:
         at: WorldTime,
         estimate: object,
         model_id: str,
+        trace: Trace | None = None,
+        context: Mapping[str, JsonValue] | None = None,
     ) -> None:
         self._con = con
         self._budget = budget
@@ -138,6 +171,14 @@ class ToolServer:
         self._at = at
         self._estimate = estimate
         self._model_id = model_id
+        self._trace = trace
+        #: Agente, capitulo, escena e intento de la llamada que sirve (RF-264).
+        self._context = dict(context or {})
+        self._call_id: str | None = None
+
+    def bind_call(self, call_id: str) -> None:
+        """`dispatch` dice a que llamada pertenecen las herramientas que se sirvan ahora."""
+        self._call_id = call_id
 
     def input_schemas(self) -> dict[str, dict[str, Any]]:
         """RF-230. El esquema de entrada de cada herramienta de la lista, el mismo que valida.
@@ -148,6 +189,35 @@ class ToolServer:
         return {k: v for k, v in INPUT_SCHEMAS.items() if k in self._allowed}
 
     def serve(self, call: ToolCall) -> ToolResult:
+        """Sirve una herramienta y deja su registro `tool`, tambien si se rechaza (RF-264)."""
+        inicio = time.monotonic()
+        try:
+            resultado = self._serve(call)
+        except Exception as exc:
+            self._record(call, inicio, None, error=f"{type(exc).__name__}: {exc}"[:300])
+            raise
+        self._record(call, inicio, resultado)
+        return resultado
+
+    def _record(
+        self, call: ToolCall, inicio: float, result: ToolResult | None, *, error: str | None = None
+    ) -> None:
+        if self._trace is None:
+            return
+        self._trace.emit(
+            "tool",
+            **self._context,
+            call=self._call_id,
+            name=call.name,
+            args=_summary(call.arguments),
+            tokens=result.tokens if result else 0,
+            provenance=str(result.provenance.value) if result else None,
+            refused=bool(result.refused) if result else True,
+            error=error,
+            duration_ms=max(0, round((time.monotonic() - inicio) * 1000)),
+        )
+
+    def _serve(self, call: ToolCall) -> ToolResult:
         if call.name not in self._allowed:
             raise ToolNotAllowedError(
                 f"{call.name!r} no esta en la lista de este agente: {sorted(self._allowed)}"
