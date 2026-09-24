@@ -23,6 +23,7 @@ el orden.
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -45,7 +46,7 @@ from canon.skills import read
 from canon.skills.read import WorldState
 from canon.summaries import levels
 from commons.tracing.trace import Trace
-from commons.types.primitives import Defect, Evidence
+from commons.types.primitives import Defect, Evidence, WorldTime
 from commons.types.scene import SceneSpec
 from generation.sports.simulate import MatchResult
 from generation.writer import drafts
@@ -79,6 +80,9 @@ from verification.checks import evidence as check_evidence
 from verification.checks import forbidden
 from verification.checks.deterministic import check_chapter_length
 from verification.continuity.review import Anchored, scene_of, scene_offsets
+from verification.formal import check as formal
+from verification.formal.check import LeanResult
+from verification.formal.generate import Pending
 from verification.gates import chapter_gate, scene_gate
 from verification.jury.verdict import JuryVerdict
 from verification.quiz import build as quiz_build
@@ -186,6 +190,8 @@ RetconRewrite = Callable[
     [str, str, retcon_rules.RetconPlan], tuple[refreeze.RefrozenScene, Sequence[Defect]]
 ]
 Supervise = Callable[[int, int, Outline, Sequence[freeze_rows.MetricRow]], HealthVerdict]
+#: RF-254, D-88. Lean sobre el canon del fichero mas lo que va a entrar.
+FormalCheck = Callable[[Path, Pending], LeanResult]
 
 
 @dataclass(frozen=True)
@@ -222,6 +228,10 @@ class Engine:
     supervise: Supervise
     propose_retcon: ProposeRetcon
     retcon_rewrite: RetconRewrite
+    #: RF-254, D-88. Antes de cada congelacion, retcon y enmienda. Por defecto,
+    #: el `run_lean` de verdad: un motor que no dice como comprobar la
+    #: cronologia la comprueba con Lean, nunca la da por buena (fallo cerrado).
+    formal_check: FormalCheck = formal.run_lean
 
 
 def run(
@@ -881,6 +891,10 @@ def _approve_chapter(
                     # es un S1 que vuelve a reparacion, nunca una congelacion.
                     defectos = _forbidden_before_freeze(path, capitulo, trace)
                     if not defectos:
+                        # RF-254, D-88. Lean sobre el canon mas el capitulo y su
+                        # delta: un fallo es un S1 que vuelve al Reparador.
+                        defectos = _formal_before_freeze(path, capitulo, validacion, engine, trace)
+                    if not defectos:
                         return (proposal, validacion), presupuesto, []
                 else:
                     defectos = [r.defect for r in validacion.rejections]
@@ -914,6 +928,162 @@ def _forbidden_before_freeze(path: Path, capitulo: ChapterResult, trace: Trace) 
             stage="congelacion",
         )
     return defectos
+
+
+@dataclass(frozen=True)
+class _PendingScene:
+    """Una escena por congelar con lo que Lean necesita de ella (`SceneFacts`)."""
+
+    id: str
+    world_time: WorldTime
+    place_entity: str | None
+    pov_entity: str
+    present: tuple[str, ...]
+
+
+def _formal_before_freeze(
+    path: Path,
+    capitulo: ChapterResult,
+    validacion: entries.DeltaValidation,
+    engine: Engine,
+    trace: Trace,
+) -> list[Defect]:
+    """RF-254, D-88. La cronologia del canon mas este capitulo y su delta, en Lean.
+
+    Lo que entra es lo mismo que `_freeze` escribiria: cada escena con su
+    instante, su lugar como entidad y sus presentes, y los eventos aceptados. Un
+    fallo es un S1 `check.formal` cuya regla nombra el teorema y las filas de
+    origen, con la cita en la escena implicada, y vuelve al Reparador por la
+    escalera; nunca se congela encima.
+    """
+    with connection.reader(path) as con:
+        lugares = _place_ids(con, [s.spec.identity.place for s in capitulo.scenes])
+    pendiente = Pending(
+        scenes=[
+            _PendingScene(
+                id=s.spec.identity.scene_id,
+                world_time=s.spec.identity.world_time,
+                place_entity=lugares.get(s.spec.identity.place),
+                pov_entity=s.spec.identity.pov,
+                present=tuple(s.spec.content.cast),
+            )
+            for s in capitulo.scenes
+        ],
+        events=validacion.accepted,
+    )
+    resultado = engine.formal_check(path, pendiente)
+    if resultado.passed:
+        emit_formal(
+            trace, resultado, stage="congelacion", decision="congelar", chapter=capitulo.number
+        )
+        return []
+    defecto = resultado.to_defect(_formal_evidence(path, capitulo, resultado))
+    offsets = scene_offsets(capitulo.texts, SEPARATOR)
+    escena = capitulo.scenes[_scene_index_for(defecto, capitulo, offsets)]
+    emit_formal(
+        trace,
+        resultado,
+        stage="congelacion",
+        decision="reparar",
+        chapter=capitulo.number,
+        scene=escena.spec.identity.ordinal,
+    )
+    return [defecto]
+
+
+def emit_formal(
+    trace: Trace,
+    resultado: LeanResult,
+    *,
+    stage: str,
+    decision: str,
+    chapter: int | None = None,
+    scene: int | None = None,
+    request: int | None = None,
+) -> None:
+    """RF-254. Un registro `formal.lean` por resultado, con lo que puntua el espejo.
+
+    `passed`, `theorem`, `rule`, `chapter` y `request` son lo que lee su score
+    (RF-265); `decision` y `rule` van declarados (RF-253).
+    """
+    campos: dict[str, JsonValue] = {
+        "stage": stage,
+        "passed": resultado.passed,
+        "theorem": resultado.failed_theorems[0] if resultado.failed_theorems else "",
+        "theorems": _json_list(resultado.failed_theorems),
+        "rule": resultado.rule or "cronologia demostrada: I1 a I4",
+        "decision": decision,
+        "reason": resultado.reason,
+        "sources": _json_list([str(o) for v in resultado.violations for o in v.sources][:20]),
+        "elapsed_s": resultado.elapsed_s,
+    }
+    if chapter is not None:
+        campos["chapter"] = chapter
+    if scene is not None:
+        campos["scene"] = scene
+    if request is not None:
+        campos["request"] = request
+    trace.emit("formal.lean", **campos)
+
+
+#: Una frase: hasta su punto, o hasta el final del parrafo.
+_SENTENCE = re.compile(r"[^.!?…\n]+(?:[.!?…]+|$)", re.MULTILINE)
+
+
+def _name_pattern(path: Path, entities: Sequence[str]) -> re.Pattern[str] | None:
+    """Las formas con que la prosa nombra a unas entidades: nombre, alias y sus palabras.
+
+    Como D-83: la prosa dice «Marcos» aunque el canon diga «Marcos Vela».
+    """
+    formas: list[str] = []
+    with connection.reader(path) as con:
+        for ent in entities:
+            fila = con.execute("SELECT name FROM entity WHERE id = ?", (ent,)).fetchone()
+            nombres = [str(fila["name"])] if fila is not None and fila["name"] else []
+            nombres += [
+                str(r["alias"])
+                for r in con.execute("SELECT alias FROM entity_alias WHERE entity_id = ?", (ent,))
+            ]
+            for n in nombres:
+                formas += [n, *(w for w in re.findall(r"\w+", n) if len(w) >= 3)]
+    if not formas:
+        return None
+    alternativas = "|".join(re.escape(f) for f in sorted(set(formas), key=len, reverse=True))
+    return re.compile(rf"(?<!\w)(?:{alternativas})(?!\w)", re.IGNORECASE)
+
+
+def _formal_evidence(path: Path, capitulo: ChapterResult, resultado: LeanResult) -> Evidence:
+    """RF-254. La cita del S1 `check.formal`, con su posicion en el capitulo unido.
+
+    Es la primera frase de la escena implicada que nombra a la entidad, o la
+    primera de la escena si no la nombra. La escena implicada es la primera del
+    capitulo entre las filas de origen; si ninguna lo es --el hecho que falla es
+    un evento del delta--, la primera del capitulo que nombra a la entidad.
+
+    Sin filas de origen --un hecho que no se exporta, `lake` que no corre-- no
+    hay escena de la que citar: la evidencia es la fila que no se exporta, que
+    va en el motivo. Es fallo cerrado, y el motivo es lo unico localizable.
+    """
+    if not resultado.violations:
+        return Evidence(quote=resultado.reason or formal.KIND, offset=0)
+    offsets = scene_offsets(capitulo.texts, SEPARATOR)
+    ids = [s.spec.identity.scene_id for s in capitulo.scenes]
+    nombra = _name_pattern(path, resultado.entities())
+    implicadas = [ids.index(s) for s in resultado.scenes() if s in ids]
+    if not implicadas and nombra is not None:
+        implicadas = [i for i, s in enumerate(capitulo.scenes) if nombra.search(s.text)]
+    idx = implicadas[0] if implicadas else 0
+    texto = capitulo.scenes[idx].text
+    frases = [m for m in _SENTENCE.finditer(texto) if m.group(0).strip()]
+    elegida = next(
+        (m for m in frases if nombra is not None and nombra.search(m.group(0))),
+        frases[0] if frases else None,
+    )
+    if elegida is None:
+        return Evidence(quote=resultado.rule, offset=offsets[idx])
+    bruto = elegida.group(0)
+    inicio = elegida.start() + len(bruto) - len(bruto.lstrip())
+    return Evidence(quote=bruto.strip(), offset=offsets[idx] + inicio)
 
 
 def _polish(path: Path, capitulo: ChapterResult, engine: Engine, trace: Trace) -> None:
@@ -1289,6 +1459,30 @@ def _try_retcon(
         passages=list(plan.scenes),
     )
     if not propuesta.propose or not plan.admissible:
+        return False
+
+    # RF-254, D-88. El retcon recongela: antes, Lean sobre el canon con el evento
+    # que terminaria la vigencia del hecho anterior. Si no se demuestra, gana el
+    # congelado y el rechazo sigue siendo el S1 que vuelve al Reparador. Va antes
+    # de reescribir porque la reescritura no cambia ni instantes ni presentes.
+    with connection.reader(path) as con:
+        previsto = retcon_rules.event_for(con, plan, chapter=capitulo.number)
+    lean = engine.formal_check(path, Pending(events=(previsto,)))
+    emit_formal(
+        trace,
+        lean,
+        stage="retcon",
+        decision="aplicar-retcon" if lean.passed else "gana-el-congelado",
+        chapter=capitulo.number,
+    )
+    if not lean.passed:
+        trace.emit(
+            "retcon.aborted",
+            chapter=capitulo.number,
+            fact=plan.fact_key,
+            formal=True,
+            reason=lean.rule[:300],
+        )
         return False
 
     from canon.prose_index.reindex import scene_texts

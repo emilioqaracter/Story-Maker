@@ -97,16 +97,24 @@ def test_la_escena_de_cobro_congelada_sin_uso_no_cobra_el_elemento() -> None:
     o = _con_setups(_elemento())
     todas = frozenset(s.id for s in o.scenes)
     [st] = [s for s in status(o, todas) if s.id == "element.memory-1"]
-    assert st.state is SetupState.PLANTED and st.element == "memory-1"
+    assert st.state is SetupState.PLANTED
     assert not debt(o, todas).is_clear
-    [pagado] = [s for s in status(o, todas, used_elements=frozenset({"memory-1"})) if s.element]
+    [pagado] = [
+        s
+        for s in status(o, todas, used_elements=frozenset({"memory-1"}))
+        if s.id.startswith("element.")
+    ]
     assert pagado.state is SetupState.PAID
     assert debt(o, todas, used_elements=frozenset({"memory-1"})).is_clear
 
 
 def test_un_elemento_usado_antes_de_su_escena_ya_esta_cobrado() -> None:
     o = _con_setups(_elemento())
-    [st] = [s for s in status(o, frozenset(), used_elements=frozenset({"memory-1"})) if s.element]
+    [st] = [
+        s
+        for s in status(o, frozenset(), used_elements=frozenset({"memory-1"}))
+        if s.id.startswith("element.")
+    ]
     assert st.state is SetupState.PAID
 
 

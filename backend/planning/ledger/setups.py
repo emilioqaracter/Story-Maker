@@ -57,9 +57,6 @@ class SetupStatus(BaseModel):
     description: str
     planted_chapter: int | None = None
     payoff_chapter: int | None = None
-    element: str | None = Field(
-        default=None, description="El elemento del brief que planifica, si es de procedencia brief"
-    )
 
 
 class Debt(BaseModel):
@@ -124,7 +121,6 @@ def status(
                 description=setup.description,
                 planted_chapter=plant.chapter if plant else None,
                 payoff_chapter=pay.chapter if pay else None,
-                element=elemento,
             )
         )
     return out

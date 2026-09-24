@@ -1293,7 +1293,7 @@
         "type": "object"
       },
       "Interpretation": {
-        "description": "Lo que el sistema entendio: exactamente una entidad y un atributo (RI-52).",
+        "description": "Lo que el sistema entendio (RI-52, RI-67).\n\nUn `fact` es exactamente una entidad y un atributo. Un `forbid` es un termino\nque no debe aparecer en la novela (RF-256): entidad, atributo y valores van\nvacios, y el termino en `term`.",
         "properties": {
           "attribute": {
             "title": "Attribute",
@@ -1303,6 +1303,16 @@
             "title": "Entity Id",
             "type": "string"
           },
+          "kind": {
+            "default": "fact",
+            "description": "`fact` o `forbid` (RI-67)",
+            "enum": [
+              "fact",
+              "forbid"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
           "new_value": {
             "title": "New Value",
             "type": "string"
@@ -1310,6 +1320,18 @@
           "previous_value": {
             "title": "Previous Value",
             "type": "string"
+          },
+          "term": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Nulo salvo en `forbid`",
+            "title": "Term"
           }
         },
         "required": [

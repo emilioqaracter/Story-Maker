@@ -76,13 +76,19 @@ def commit(
     con: sqlite3.Connection,
     prepared: PreparedRefreeze,
     *,
-    retcon: RetconPlan,
-    event: Event,
+    retcon: RetconPlan | None,
+    event: Event | None,
     chapter_summaries: Mapping[int, str],
     rule: str,
     chapter_origin: int,
 ) -> None:
-    """Todo junto o nada. Quien llama abre la transaccion con `canon_writer`."""
+    """Todo junto o nada. Quien llama abre la transaccion con `canon_writer`.
+
+    Sin `event` no hay hecho que termine: solo se reemplaza la prosa. Es la
+    prohibicion de una solicitud de cambio (`specs/srs-backend-v4.md` RF-256),
+    que cambia lo que se puede escribir y no el mundo, y por eso tampoco deja
+    fila de retcon.
+    """
     ids = [s.scene_id for s in prepared.scenes]
     marks = ",".join("?" * len(ids))
     antes = usage.vigente(con)
@@ -135,6 +141,9 @@ def commit(
     # muestra modelica deja de elegir esas escenas hasta que se vuelvan a juzgar.
     con.execute(f"DELETE FROM scene_verdict WHERE scene_id IN ({marks})", ids)  # nosec B608
 
+    if event is None or retcon is None:
+        usage.refresh(con, scenes=ids, before=antes)
+        return
     [event_id] = log.append(con, [event])
     rebuild.rebuild(con)
     con.execute(

@@ -75,6 +75,18 @@ def _add_run_state_resume(con: sqlite3.Connection) -> None:
         )
 
 
+def _add_change_request_kind(con: sqlite3.Connection) -> None:
+    """RD-49. `change_request` gana `kind` y `term`; una solicitud anterior es `fact`."""
+    tiene = _columns(con, "change_request")
+    if "kind" not in tiene:
+        con.execute(
+            "ALTER TABLE change_request ADD COLUMN kind TEXT NOT NULL DEFAULT 'fact' "
+            "CHECK (kind IN ('fact', 'forbid'))"
+        )
+    if "term" not in tiene:
+        con.execute("ALTER TABLE change_request ADD COLUMN term TEXT")
+
+
 MIGRATIONS: dict[int, tuple[Step, ...]] = {
     2: (
         # RD-23. Ninguna version de resumen se sobrescribe: `summary` guarda la
@@ -321,8 +333,12 @@ MIGRATIONS: dict[int, tuple[Step, ...]] = {
     # una tirada a medias de un fichero anterior reanuda con la cuenta a cero y
     # replanifica una vez, como hacia hasta ahora.
     6: (_add_run_state_resume,),
-    # `specs/srs-backend-v4.md` T47. La 7 es de T46 (orden de integracion,
-    # `backend/PLAN.md` §8); esta no depende de ella. Elementos del brief y su uso.
+    # `specs/srs-backend-v4.md` RD-49, T46: la solicitud de cambio que prohibe un
+    # termino (RF-256). Solo anade: lo anterior migra como `fact` por el valor por
+    # defecto, y `term` queda nulo.
+    7: (_add_change_request_kind,),
+    # `specs/srs-backend-v4.md` T47, tras la 7 de T46 (orden de integracion,
+    # `backend/PLAN.md` §8). Elementos del brief y su uso.
     8: (
         # RD-47. Proyeccion de `element.declared`: se vacia y se reconstruye con
         # el resto del canon estructurado (`canon/projections/rebuild.py`).

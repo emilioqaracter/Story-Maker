@@ -327,6 +327,38 @@ def prove(
             path.unlink(missing_ok=True)
 
 
+#: RF-255. Lo que se compila al arrancar una tirada: sin ellos no hay
+#: invariantes contra los que demostrar nada.
+TOOLCHAIN_MODULES = ("StoryMaker.Types", "StoryMaker.Invariants")
+
+
+def check_toolchain(
+    *,
+    project: Path = PROJECT,
+    lake: Sequence[str] | None = None,
+    timeout_s: float = LAKE_TIMEOUT_S,
+) -> LeanResult:
+    """RF-255, D-88. `lake` esta y compila `Types` e `Invariants`, o el motivo.
+
+    Es la comprobacion de arranque: igual que un modelo de embeddings que no
+    carga, un fallo aqui es determinista y no se reintenta.
+    """
+    start = time.monotonic()
+    built = _lake(["build", *TOOLCHAIN_MODULES], lake=lake, project=project, timeout_s=timeout_s)
+    elapsed = round(time.monotonic() - start, 3)
+    tail = built.output[-_OUTPUT_TAIL:]
+    if built.returncode is None:
+        return LeanResult(passed=False, reason=built.reason, output=tail, elapsed_s=elapsed)
+    if built.returncode != 0:
+        return LeanResult(
+            passed=False,
+            reason="Types e Invariants no compilan con lake build",
+            output=tail,
+            elapsed_s=elapsed,
+        )
+    return LeanResult(passed=True, reason="", output=tail, elapsed_s=elapsed)
+
+
 def run_lean(
     novel: Path,
     pending: Pending | None = None,

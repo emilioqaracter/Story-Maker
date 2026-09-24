@@ -14,7 +14,10 @@ Tres momentos:
    nombran el hecho con el Reparador y el hecho nuevo delante, se reverifican, y
    se recongelan junto con el evento de procedencia `brief` en una sola
    transaccion. Un defecto cuya evidencia es el valor nuevo es la enmienda misma
-   y no cuenta (D-78); cualquier otro S1 la rechaza y no toca nada.
+   y no cuenta (D-78); cualquier otro S1 la rechaza y no toca nada. Antes de
+   recongelar pasa Lean (`specs/srs-backend-v4.md` RF-254): una enmienda que
+   rompe un invariante de la cronologia se rechaza sin crear version. Una
+   prohibicion («que no aparezca X», RF-256) sigue el mismo camino sin evento.
 3. **Leer** (RI-48, RI-49): el estado lo cambia solo el backend (RI-51).
 """
 
@@ -38,7 +41,10 @@ from canon.prose_index import usage
 from canon.prose_index.reindex import scene_texts
 from commons.tracing.trace import Trace
 from commons.types.primitives import Provenance, Severity, WorldTime
-from orchestration.loop import Engine
+from orchestration.engine import call_context
+from orchestration.loop import Engine, emit_formal
+from verification.checks import forbidden
+from verification.formal.generate import Pending
 
 
 class FragmentAnchor(BaseModel):
@@ -162,7 +168,9 @@ def create_request(
         descripcion, candidatas = anchor_context(path, anchor)
         if interpreter is None:
             raise RejectedError("No hay modelo con el que interpretar la petición en este momento.")
-        resultado = validate(interpreter(text, descripcion, candidatas), candidatas)
+        with connection.reader(path) as con:
+            prohibidas = [t.term for t in forbidden.read_terms(con)]
+        resultado = validate(interpreter(text, descripcion, candidatas), candidatas, prohibidas)
         if isinstance(resultado, str):
             motivo = resultado
         else:
@@ -184,8 +192,11 @@ def create_request(
         request=rid,
         status=solicitud.status,
         reason=motivo,
-        entity=interpretacion.entity_id if interpretacion else None,
-        attribute=interpretacion.attribute if interpretacion else None,
+        request_kind=interpretacion.kind if interpretacion else None,
+        entity=interpretacion.entity_id or None if interpretacion else None,
+        attribute=interpretacion.attribute or None if interpretacion else None,
+        # RNF-54: el exportador pasa `term` a hash; el literal queda en local.
+        term=interpretacion.term if interpretacion else None,
     )
     # RF-262. La llamada de `amend.interpret`, despues de la solicitud y con su
     # numero: es lo que la cuelga de la traza de la solicitud en los dos
@@ -214,6 +225,19 @@ def old_forms(interp: manuscript.Interpretation) -> list[str]:
         if len(w) >= 3 and w.lower() not in nuevas
     ]
     return list(dict.fromkeys([interp.previous_value, *palabras]))
+
+
+def new_forms(interp: manuscript.Interpretation) -> list[str]:
+    """RF-225, D-78. Las formas del valor nuevo que la reverificacion puede citar. Pura.
+
+    Un atributo tiene una sola forma. Un nombre, el completo y cada palabra suya
+    de tres letras o mas, la misma forma que D-83 usa para el anterior:
+    `check.lexicon` cita la palabra suelta, «Ruiz» de «Mateo Ruiz».
+    """
+    if interp.attribute != NAME:
+        return [interp.new_value]
+    palabras = [w for w in re.findall(r"\w+", interp.new_value) if len(w) >= 3]
+    return list(dict.fromkeys([interp.new_value, *palabras]))
 
 
 def _names(forms: str | Sequence[str]) -> re.Pattern[str]:
@@ -305,25 +329,75 @@ def _event(path: Path, interp: manuscript.Interpretation) -> tuple[Event, str]:
     return evento, since
 
 
-def counts(defect_quote: str, new_value: str, before: str = "") -> bool:
-    """D-78, D-84. Si un defecto de la reescritura cuenta contra la enmienda. Pura.
+def counts(defect_quote: str, new_value: str | Sequence[str], before: str = "") -> bool:
+    """RF-225, D-78, D-84. Si un defecto de la reescritura cuenta contra la enmienda. Pura.
 
-    No cuenta el que cita el valor nuevo: es la enmienda misma (D-78). Tampoco el
-    que cita algo que ya estaba tal cual en la escena antes de reescribirla: es
-    previo, y la enmienda no lo abrio (RF-54 de la version 1). Cuenta el resto.
+    No cuenta el que cita el valor nuevo, o una de sus formas (`new_forms`): es
+    la enmienda misma (D-78). La forma se busca como palabra completa: «Ruiz»
+    exime a la cita «Ruiz», no a «Ruizales». Tampoco cuenta el que cita algo que
+    ya estaba tal cual en la escena antes de reescribirla: es previo, y la
+    enmienda no lo abrio (RF-54 de la version 1). Cuenta el resto.
     """
     quote = defect_quote.strip()
-    if new_value.lower() in quote.lower():
+    formas = [new_value] if isinstance(new_value, str) else list(new_value)
+    formas = [f for f in formas if f.strip()]
+    if formas and _names(formas).search(quote):
         return False
     return not (quote and quote in before)
 
 
 def _apply(path: Path, solicitud: manuscript.ChangeRequest, engine: Engine, trace: Trace) -> int:
+    """Una solicitud, de su interpretacion a la version nueva, o `RejectedError`.
+
+    D-100: toda llamada de modelo que hace cuelga de la traza de su solicitud,
+    porque lleva su numero en el contexto.
+    """
     interp = solicitud.interpretation
     if interp is None:
         raise RejectedError("La solicitud no tiene interpretación.")
+    with call_context(request=solicitud.request_id):
+        if interp.kind == "forbid":
+            return _apply_forbid(path, solicitud, interp, engine, trace)
+        return _apply_fact(path, solicitud, interp, engine, trace)
+
+
+def _formal_or_reject(
+    path: Path, request_id: int, pending: Pending, engine: Engine, trace: Trace
+) -> None:
+    """RF-254. Lean sobre el canon mas lo que la enmienda haria entrar.
+
+    Un fallo la rechaza con el motivo, el teorema y las filas de origen, y no se
+    crea la version. Va antes de reescribir: la reescritura no cambia instantes
+    ni presentes, y asi un invariante roto no gasta una llamada de modelo.
+    """
+    lean = engine.formal_check(path, pending)
+    emit_formal(
+        trace,
+        lean,
+        stage="enmienda",
+        decision="aplicar" if lean.passed else "rechazar",
+        request=request_id,
+    )
+    if not lean.passed:
+        raise RejectedError(
+            f"El cambio rompe la cronología de la novela y no se aplica: {lean.rule}"[:600]
+        )
+
+
+def _apply_fact(
+    path: Path,
+    solicitud: manuscript.ChangeRequest,
+    interp: manuscript.Interpretation,
+    engine: Engine,
+    trace: Trace,
+) -> int:
     escenas = affected_scenes(path, interp, trace)
     evento, since = _event(path, interp)
+    with connection.reader(path) as con:
+        previsto = evento.model_copy(
+            update={"world_time": WorldTime(stamp=since, seq=log.next_seq(con, since))}
+        )
+    _formal_or_reject(path, solicitud.request_id, Pending(events=(previsto,)), engine, trace)
     plan = RetconPlan(
         fact_key=f"{interp.entity_id}.{interp.attribute}",
         entity_id=interp.entity_id,
@@ -351,7 +425,7 @@ def _apply(path: Path, solicitud: manuscript.ChangeRequest, engine: Engine, trac
             d
             for d in defectos
             if d.severity == Severity.S1
-            and counts(d.evidence.quote, interp.new_value, textos.get(sid, ""))
+            and counts(d.evidence.quote, new_forms(interp), textos.get(sid, ""))
         ]
         if graves:
             raise RejectedError(
@@ -359,19 +433,7 @@ def _apply(path: Path, solicitud: manuscript.ChangeRequest, engine: Engine, trac
             )
         nuevas.append(escena)
 
-    afectados = sorted({capitulos[s] for s in escenas if s in capitulos})
-    reescritas = {e.scene_id: e.summary for e in nuevas}
-    resumenes: dict[int, str] = {}
-    with connection.reader(path) as con:
-        for c in afectados:
-            partes = [
-                reescritas.get(r["id"], r["summary"])
-                for r in con.execute(
-                    "SELECT id, summary FROM prose_scene WHERE chapter = ? ORDER BY scene_number",
-                    (c,),
-                )
-            ]
-            resumenes[c] = engine.summarize_chapter(partes)
+    resumenes = _chapter_summaries(path, nuevas, capitulos, engine)
     preparado = refreeze.prepare(nuevas, embed=engine.embed)
     with connection.canon_writer(path) as con:
         evento = evento.model_copy(
@@ -393,6 +455,135 @@ def _apply(path: Path, solicitud: manuscript.ChangeRequest, engine: Engine, trac
         fact=plan.fact_key,
         previous=interp.previous_value,
         new=interp.new_value,
+        refrozen=list(escenas),
+    )
+    return version
+
+
+def _chapter_summaries(
+    path: Path,
+    nuevas: Sequence[refreeze.RefrozenScene],
+    capitulos: dict[str, int],
+    engine: Engine,
+) -> dict[int, str]:
+    """El resumen de cada capitulo tocado, desde los de sus escenas (RF-90)."""
+    afectados = sorted({capitulos[e.scene_id] for e in nuevas if e.scene_id in capitulos})
+    reescritas = {e.scene_id: e.summary for e in nuevas}
+    resumenes: dict[int, str] = {}
+    with connection.reader(path) as con:
+        for c in afectados:
+            partes = [
+                reescritas.get(r["id"], r["summary"])
+                for r in con.execute(
+                    "SELECT id, summary FROM prose_scene WHERE chapter = ? ORDER BY scene_number",
+                    (c,),
+                )
+            ]
+            resumenes[c] = engine.summarize_chapter(partes)
+    return resumenes
+
+
+#: RF-256. Lo que el Reparador lee como valor nuevo de una prohibicion. No repite
+#: el termino, para que un reemplazo literal no lo vuelva a escribir.
+FORBID_VALUE = "nada: esa palabra esta prohibida en toda la novela; reescribe la frase sin ella"
+
+
+def forbidden_scenes(path: Path, term: str) -> list[str]:
+    """RF-256. Escenas congeladas cuyo texto vigente contiene el termino.
+
+    Con la coincidencia del guardarrail (RF-237): por palabra completa, sin
+    tildes ni mayusculas y con sus variantes simples.
+    """
+    patron = [forbidden.ForbiddenTerm(term=term, level="novela")]
+    with connection.reader(path) as con:
+        textos = scene_texts(con)
+        filas = con.execute("SELECT id FROM prose_scene ORDER BY chapter, scene_number").fetchall()
+    return [
+        r["id"] for r in filas if forbidden.check_forbidden(textos.get(r["id"], ""), terms=patron)
+    ]
+
+
+def _apply_forbid(
+    path: Path,
+    solicitud: manuscript.ChangeRequest,
+    interp: manuscript.Interpretation,
+    engine: Engine,
+    trace: Trace,
+) -> int:
+    """RF-256, D-91. «Que no aparezca X»: X al nivel `novela` y la version siguiente sin X.
+
+    Cada escena congelada que lo contiene se reescribe con el Reparador, se
+    reverifica con `check.forbidden` incluido --con X ya en la lista, que el
+    canon todavia no tiene-- y se recongela como una enmienda (RF-224), sin
+    evento: prohibir no cambia ningun hecho del mundo.
+    """
+    termino = interp.term or ""
+    if not termino.strip():
+        raise RejectedError("La solicitud no dice qué palabra no debe aparecer.")
+    # RF-254: no entra ningun hecho, pero se recongela; lo que ya hay se demuestra.
+    _formal_or_reject(path, solicitud.request_id, Pending(), engine, trace)
+    escenas = forbidden_scenes(path, termino)
+    with connection.reader(path) as con:
+        textos = scene_texts(con)
+        capitulos = {
+            r["id"]: r["chapter"] for r in con.execute("SELECT id, chapter FROM prose_scene")
+        }
+        guardarrail = [
+            *forbidden.read_terms(con),
+            forbidden.ForbiddenTerm(term=termino, level="novela"),
+        ]
+        # Una prohibicion rige desde la primera escena: no tiene instante propio.
+        desde = con.execute("SELECT min(world_time) AS t FROM prose_scene").fetchone()["t"]
+    plan = RetconPlan(
+        fact_key="prohibida",
+        entity_id="",
+        attribute="prohibida",
+        previous_value=termino,
+        new_value=FORBID_VALUE,
+        frozen_since=desde or "0001-01-01",
+        scenes=tuple(escenas),
+        paid=False,
+    )
+    nuevas: list[refreeze.RefrozenScene] = []
+    for sid in escenas:
+        escena, defectos = engine.retcon_rewrite(sid, textos.get(sid, ""), plan)
+        # La reverificacion de `retcon_rewrite` lee las prohibidas del canon, que
+        # aun no tiene X: `check.forbidden` corre aqui con X dentro.
+        if forbidden.check_forbidden(escena.text, terms=guardarrail):
+            raise RejectedError(f"No se consiguió quitar la palabra prohibida de la escena {sid}.")
+        graves = [
+            d
+            for d in defectos
+            if d.severity == Severity.S1 and counts(d.evidence.quote, (), textos.get(sid, ""))
+        ]
+        if graves:
+            raise RejectedError(
+                f"Al quitar la palabra, la escena {sid} contradice el canon o un invariante duro: "
+                f"{graves[0].rule}"
+            )
+        nuevas.append(escena)
+
+    resumenes = _chapter_summaries(path, nuevas, capitulos, engine)
+    preparado = refreeze.prepare(nuevas, embed=engine.embed)
+    with connection.canon_writer(path) as con:
+        version, nivel = manuscript.commit_forbid(
+            con,
+            request_id=solicitud.request_id,
+            term=termino,
+            prepared=preparado,
+            old_texts={s: textos.get(s, "") for s in escenas},
+            chapter_summaries=resumenes,
+        )
+    trace.emit(
+        "amend.applied",
+        request=solicitud.request_id,
+        version=version,
+        request_kind="forbid",
+        term=termino,
+        level=nivel,
+        # RF-239, D-91: el colapso de esta solicitud, si el termino ya estaba en
+        # un nivel mas fuerte cuando se aplico.
+        collapsed=[] if nivel == "novela" else [f"prohibida: novela -> {nivel}"],
         refrozen=list(escenas),
     )
     return version

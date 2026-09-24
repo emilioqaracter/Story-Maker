@@ -760,14 +760,6 @@ def test_una_enmienda_con_el_motor_real_rechaza_un_s1_ajeno(
     assert despues == antes and "Marcos Vela" in despues[0]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "bug: D-78 solo exime el defecto que contiene el valor nuevo entero. check.lexicon "
-        "cita una palabra suelta del nombre nuevo («Ruiz» de «Mateo Ruiz»), amend.counts la "
-        "cuenta y un renombrado a dos palabras con un Reparador perfecto se rechaza"
-    ),
-)
 def test_un_renombrado_a_nombre_de_dos_palabras_con_reparado_limpio_se_aplica(
     composer: tuple[Composer, ScriptedPort, Trace, Path],
 ) -> None:
@@ -780,6 +772,34 @@ def test_un_renombrado_a_nombre_de_dos_palabras_con_reparado_limpio_se_aplica(
     c.port = _RepairPort(_renombrado(texto, "Mateo Ruiz"))
 
     assert amend.apply_pending(path, c.engine(), traza) == [2]
+
+
+def test_las_llamadas_de_una_enmienda_cuelgan_de_su_solicitud(
+    composer: tuple[Composer, ScriptedPort, Trace, Path],
+) -> None:
+    """D-100, RF-234. Cada llamada de `amend._apply` lleva el numero de su solicitud.
+
+    Es lo que la cuelga de la traza de la solicitud en el espejo, y el resultado
+    de Lean de la enmienda tambien (RF-254).
+    """
+    from orchestration import amend
+
+    c, _puerto, traza, path = composer
+    texto = _congelar_capitulo(path)
+    _pedir_mateo(path, "Mateo")
+    c.port = _RepairPort(_renombrado(texto, "Mateo"))
+    antes = len(traza.records("call"))
+
+    assert amend.apply_pending(path, c.engine(), traza) == [2]
+
+    llamadas = traza.records("call")[antes:]
+    assert llamadas and all(r.fields.get("request") == 1 for r in llamadas), llamadas
+    [lean] = traza.records("formal.lean")
+    assert lean.fields["request"] == 1 and lean.fields["passed"] is True
+    # Fuera de la enmienda, el contexto no se arrastra.
+    c.port = ScriptedPort()
+    c.engine().summarize_chapter(["uno", "dos"])
+    assert "request" not in traza.records("call")[-1].fields
 
 
 # ----------------------------------------------------- candidatos a nombre

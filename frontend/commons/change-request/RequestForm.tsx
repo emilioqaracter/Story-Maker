@@ -86,11 +86,16 @@ export function Response({ novel, request }: { novel: string; request: ChangeReq
 
 export function RequestStatus({ novel, request }: { novel: string; request: ChangeRequest }) {
   const i = request.interpretation;
-  const interpretation = i ? (
+  // RI-67: una prohibicion no tiene entidad ni atributo, solo el termino.
+  const interpretation = !i ? null : i.kind === "forbid" ? (
+    <p>
+      Entendido: que no aparezca «{i.term}» en la novela
+    </p>
+  ) : (
     <p>
       Entendido: <strong>{i.entity_id}</strong> · {i.attribute}: «{i.previous_value}» → «{i.new_value}»
     </p>
-  ) : null;
+  );
   if (request.status === "rejected") {
     return (
       <div className="request-status rejected" role="status">
