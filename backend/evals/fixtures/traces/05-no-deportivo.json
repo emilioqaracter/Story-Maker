@@ -1,0 +1,132 @@
+{
+ "brief": "05-no-deportivo",
+ "commit": "5e6f7a8",
+ "source": "05-no-deportivo.trace.jsonl",
+ "records": [
+  {
+   "seq": 0,
+   "at": "2026-09-23T10:00:00+00:00",
+   "kind": "outline.check",
+   "fields": {
+    "defects": [],
+    "passed": true,
+    "messages": []
+   }
+  },
+  {
+   "seq": 1,
+   "at": "2026-09-23T10:00:01+00:00",
+   "kind": "scene.attempt",
+   "fields": {
+    "chapter": 1,
+    "scene": 1,
+    "attempt": 1,
+    "words": 900,
+    "defects": [
+     "check.novedad:S2"
+    ],
+    "passed": true,
+    "is_match": false
+   }
+  },
+  {
+   "seq": 2,
+   "at": "2026-09-23T10:00:02+00:00",
+   "kind": "scene.attempt",
+   "fields": {
+    "chapter": 1,
+    "scene": 2,
+    "attempt": 1,
+    "words": 900,
+    "defects": [],
+    "passed": true,
+    "is_match": false
+   }
+  },
+  {
+   "seq": 3,
+   "at": "2026-09-23T10:00:03+00:00",
+   "kind": "quiz",
+   "fields": {
+    "chapter": 1,
+    "questions": 0,
+    "wrong": 0
+   }
+  },
+  {
+   "seq": 4,
+   "at": "2026-09-23T10:00:04+00:00",
+   "kind": "chapter.gate",
+   "fields": {
+    "chapter": 1,
+    "passed": true,
+    "s1": 0,
+    "s2": 0,
+    "reason": "",
+    "defects": []
+   }
+  },
+  {
+   "seq": 5,
+   "at": "2026-09-23T10:00:05+00:00",
+   "kind": "jury",
+   "fields": {
+    "chapter": 1,
+    "passed": false,
+    "rounds": 1,
+    "levels": {
+     "voice": 4,
+     "style_guide": 4,
+     "pacing": null,
+     "subtext": 4,
+     "theme": 4
+    },
+    "spreads": {
+     "voice": 0,
+     "style_guide": 0,
+     "pacing": 0,
+     "subtext": 0,
+     "theme": 0
+    },
+    "discarded": 0,
+    "scores": []
+   }
+  },
+  {
+   "seq": 6,
+   "at": "2026-09-23T10:00:06+00:00",
+   "kind": "jury",
+   "fields": {
+    "chapter": 1,
+    "passed": true,
+    "rounds": 1,
+    "levels": {
+     "voice": 4,
+     "style_guide": 4,
+     "pacing": 4,
+     "subtext": 4,
+     "theme": 4
+    },
+    "spreads": {
+     "voice": 0,
+     "style_guide": 0,
+     "pacing": 0,
+     "subtext": 0,
+     "theme": 0
+    },
+    "discarded": 0,
+    "scores": []
+   }
+  },
+  {
+   "seq": 7,
+   "at": "2026-09-23T10:00:07+00:00",
+   "kind": "chapter.frozen",
+   "fields": {
+    "chapter": 1,
+    "scenes": 2,
+    "words": 1600
+   }
+  }
+ ]
+}

@@ -1,0 +1,116 @@
+{
+ "brief": "novela-prueba",
+ "commit": "1a2b3c4",
+ "source": "novela-prueba.trace.jsonl",
+ "records": [
+  {
+   "seq": 0,
+   "at": "2026-09-24T10:00:00+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "arquitecto",
+    "prompt_version": "a1b2c3d4e5f6",
+    "model": "doble",
+    "ok": true
+   }
+  },
+  {
+   "seq": 1,
+   "at": "2026-09-24T10:00:01+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "escritor",
+    "prompt_version": "0f1e2d3c4b5a",
+    "model": "doble",
+    "ok": true
+   }
+  },
+  {
+   "seq": 2,
+   "at": "2026-09-24T10:00:02+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "jurado",
+    "prompt_version": "99aa88bb77cc",
+    "model": "doble",
+    "ok": true
+   }
+  },
+  {
+   "seq": 3,
+   "at": "2026-09-24T10:00:03+00:00",
+   "kind": "jury",
+   "fields": {
+    "chapter": 1,
+    "passed": false,
+    "rounds": 1,
+    "levels": {
+     "voice": 2,
+     "style_guide": 4,
+     "pacing": 2,
+     "subtext": 4,
+     "theme": 4
+    },
+    "spreads": {
+     "voice": 0,
+     "style_guide": 0,
+     "pacing": 0,
+     "subtext": 0,
+     "theme": 0
+    },
+    "discarded": 0,
+    "scores": []
+   }
+  },
+  {
+   "seq": 4,
+   "at": "2026-09-24T10:00:04+00:00",
+   "kind": "jury",
+   "fields": {
+    "chapter": 1,
+    "passed": true,
+    "rounds": 1,
+    "levels": {
+     "voice": 3,
+     "style_guide": 4,
+     "pacing": 3,
+     "subtext": 4,
+     "theme": 4
+    },
+    "spreads": {
+     "voice": 0,
+     "style_guide": 0,
+     "pacing": 0,
+     "subtext": 0,
+     "theme": 0
+    },
+    "discarded": 0,
+    "scores": []
+   }
+  },
+  {
+   "seq": 5,
+   "at": "2026-09-24T10:00:05+00:00",
+   "kind": "jury",
+   "fields": {
+    "chapter": 2,
+    "passed": true,
+    "rounds": 1,
+    "levels": {
+     "voice": 4,
+     "style_guide": 4,
+     "pacing": 4,
+     "subtext": 5
+    },
+    "spreads": {
+     "voice": 0,
+     "style_guide": 0,
+     "pacing": 0,
+     "subtext": 0
+    },
+    "discarded": 0,
+    "scores": []
+   }
+  }
+ ]
+}
