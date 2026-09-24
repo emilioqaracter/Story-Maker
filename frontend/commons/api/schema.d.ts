@@ -392,7 +392,7 @@ export interface paths {
         };
         /**
          * Get Trace
-         * @description RI-27. Los registros de la traza, en orden de escritura.
+         * @description RI-27, RI-65. Los registros de la traza, en orden de escritura, y donde se rompe.
          */
         get: operations["get_trace_novels__novel_id__trace_get"];
         put?: never;
@@ -1374,6 +1374,11 @@ export interface components {
         };
         /** TracePage */
         TracePage: {
+            /**
+             * Chain Broken At
+             * @description Linea, desde 1, del primer registro cuya cadena de hashes no verifica; nulo si esta entera (RI-65, RF-253)
+             */
+            chain_broken_at?: number | null;
             /** Novel Id */
             novel_id: string;
             /** Records */
@@ -1398,6 +1403,12 @@ export interface components {
              * @description call, admission, retry, defect, arbitration, ...
              */
             kind: string;
+            /**
+             * Prev Hash
+             * @description sha256 del JSON canonico del registro anterior; vacio en el primero (RD-45)
+             * @default
+             */
+            prev_hash?: string;
             /**
              * Seq
              * @description Orden de escritura dentro de la tirada

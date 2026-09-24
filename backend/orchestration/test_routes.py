@@ -94,3 +94,24 @@ def test_una_novela_inexistente_da_error_explicito(
     assert c.get("/novels/no-existe").status_code == 404
     assert c.post("/novels/no-existe/run").status_code == 404
     assert c.get("/novels/no-existe/trace").status_code == 404
+
+
+def test_la_traza_dice_donde_se_rompe_la_cadena(
+    client: tuple[TestClient, _Runner, Path],
+) -> None:
+    """RI-65. `chain_broken_at` nulo con la cadena entera y la linea rota si no."""
+    c, _runner, tmp = client
+    path = Settings(runs_dir=tmp).trace_path("prueba-uno")
+    traza = Trace(path)
+    for i in range(3):
+        traza.emit("call", agent=f"a{i}")
+
+    entera = c.get("/novels/prueba-uno/trace").json()
+    assert entera["chain_broken_at"] is None
+    assert entera["records"][1]["prev_hash"]
+
+    lineas = [ln for ln in path.read_text(encoding="utf-8").splitlines() if ln.strip()]
+    path.write_text(lineas[0] + "\n" + lineas[2] + "\n", encoding="utf-8")
+    rota = c.get("/novels/prueba-uno/trace").json()
+    assert rota["chain_broken_at"] == 2
+    assert len(rota["records"]) == 2
