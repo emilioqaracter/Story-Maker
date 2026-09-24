@@ -470,7 +470,9 @@ def _event(trace_id: str, record: TraceRecord, parent: str | None = None) -> Lan
         end_time=record.at if tipo != "event" else None,
         parent_observation_id=parent,
         metadata=meta,
-        output={k: v for k, v in meta.items() if k not in _BOOKKEEPING} if tipo != "event" else None,
+        output={k: v for k, v in meta.items() if k not in _BOOKKEEPING}
+        if tipo != "event"
+        else None,
     )
 
 
@@ -1168,6 +1170,11 @@ def _iso(value: str) -> datetime:
     return datetime.fromisoformat(value)
 
 
+class IngestionRejectedError(RuntimeError):
+    """La ingestion acepto el lote pero rechazo eventos. El espejo lo deja como
+    `export.failed`, igual que un fallo de red: nada se pierde en silencio."""
+
+
 class SdkClient:
     """`LangfuseClient` sobre el SDK de Langfuse, por la API de ingestion.
 
@@ -1199,17 +1206,29 @@ class SdkClient:
 
     def send(self, objects: Sequence[LangfuseObject]) -> None:
         eventos = [self._event(o, self._prompt_version(o), self._environment) for o in objects]
-        lote: list[Any] = []
+        lotes: list[list[Any]] = [[]]
         tam = 0
         for evento in eventos:
             peso = len(evento.json().encode("utf-8"))
-            if lote and tam + peso > BATCH_BYTES:
-                self._client.api.ingestion.batch(batch=lote)
-                lote, tam = [], 0
-            lote.append(evento)
+            if lotes[-1] and tam + peso > BATCH_BYTES:
+                lotes.append([])
+                tam = 0
+            lotes[-1].append(evento)
             tam += peso
-        if lote:
-            self._client.api.ingestion.batch(batch=lote)
+        for lote in lotes:
+            if lote:
+                self._check(self._client.api.ingestion.batch(batch=lote), len(lote))
+
+    @staticmethod
+    def _check(respuesta: Any, enviados: int) -> None:
+        """La ingestion responde 207 con un error por evento rechazado: no se ignora."""
+        errores = list(getattr(respuesta, "errors", None) or [])
+        if errores:
+            primero = errores[0]
+            motivo = f"{getattr(primero, 'status', '?')} {getattr(primero, 'message', '')}".strip()
+            raise IngestionRejectedError(
+                f"{len(errores)} de {enviados} eventos rechazados: {motivo}"
+            )
 
     def _prompt_version(self, obj: LangfuseObject) -> int | None:
         if not isinstance(obj, LangfuseObservation) or not (obj.prompt_name and obj.prompt_label):
@@ -1318,19 +1337,21 @@ class SdkClient:
                     environment=environment,
                 ),
             )
-        # tool, retriever, evaluator y guardrail: la observacion generica con su tipo.
-        return api.IngestionEvent_ObservationCreate(
+        # tool, retriever, evaluator y guardrail. La API de ingestion solo admite
+        # GENERATION, SPAN y EVENT (un `observation-create` con otro tipo vuelve con
+        # 400), asi que viajan como SPAN con su tipo en los metadatos y sin perder
+        # input ni output. El tipo nativo llega con OTLP (decision abierta de v4 §10).
+        return api.IngestionEvent_SpanCreate(
             id=sobre,
             timestamp=ahora,
-            body=api.ObservationBody(
+            body=api.CreateSpanBody(
                 id=obj.id,
                 trace_id=obj.trace_id,
-                type=cast(Any, api.ObservationType(obj.type.upper())),
                 name=obj.name,
                 start_time=_iso(obj.start_time),
                 end_time=_iso(obj.end_time) if obj.end_time else None,
                 parent_observation_id=obj.parent_observation_id,
-                metadata=dict(obj.metadata),
+                metadata={**dict(obj.metadata), "observation_type": obj.type},
                 input=obj.input,
                 output=obj.output,
                 level=cast(Any, obj.level),

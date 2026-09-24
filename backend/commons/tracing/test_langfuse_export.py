@@ -505,17 +505,19 @@ def test_el_adaptador_construye_eventos_validos_del_sdk_sin_red() -> None:
         "event-create",
         "span-create",
         "score-create",
-        "observation-create",
-    }
+    }, "la ingestion rechaza observation-create: los tipos especificos van como span-create"
     gen = next(e for e in eventos if e.type == "generation-create")
     assert gen.body.usage_details["cache_read_input_tokens"] == 5_000
     assert gen.body.cost_details == {"total": 0.0123}
-    # D-106: el tipo especifico llega al SDK, con su entrada y su salida.
-    tipados = {str(e.body.type.value) for e in eventos if e.type == "observation-create"}
-    assert tipados == {"RETRIEVER", "EVALUATOR"}
-    busqueda = next(
-        e for e in eventos if e.type == "observation-create" and e.body.name == "canon.lookup"
-    )
+    # D-106: el tipo especifico viaja en los metadatos de un span-create, porque la
+    # ingestion rechaza observation-create; la entrada y la salida no se pierden.
+    tipados = {
+        e.body.metadata["observation_type"]
+        for e in eventos
+        if e.type == "span-create" and "observation_type" in (e.body.metadata or {})
+    }
+    assert tipados == {"retriever", "evaluator"}
+    busqueda = next(e for e in eventos if e.type == "span-create" and e.body.name == "canon.lookup")
     assert busqueda.body.input == "x" and busqueda.body.output == {"tokens": 4}
     assert {e.body.environment for e in eventos} == {"development"}
 
@@ -598,9 +600,7 @@ def test_cada_herramienta_es_hermana_de_su_generation() -> None:
             refused=False,
             duration_ms=5,
         ),
-        _rec(
-            2, "tool", call="c0ffee00c0ffee00", chapter=1, name="context.budget", refused=True
-        ),
+        _rec(2, "tool", call="c0ffee00c0ffee00", chapter=1, name="context.budget", refused=True),
         _call(3, call_id="c0ffee00c0ffee00"),
     ]
     objs = to_langfuse(registros, source="n.trace.jsonl", session_id="n")
@@ -811,3 +811,78 @@ def test_todo_registro_de_la_traza_esta_clasificado() -> None:
     sin_clasificar = kinds - set(lf.SCORERS) - lf.UNSCORED
     assert not sin_clasificar, f"tipos de registro sin clasificar: {sorted(sin_clasificar)}"
     assert not (set(lf.SCORERS) & lf.UNSCORED)
+
+
+# ------------------------------------------------ transporte de ingestion real
+
+
+def _tipados() -> list[lf.LangfuseObservation]:
+    objetos = to_langfuse(
+        [*_novela(), *_VERIFICADORES.values()], source="novela.trace.jsonl", session_id="novela"
+    )
+    return [
+        o
+        for o in objetos
+        if isinstance(o, lf.LangfuseObservation)
+        and o.type in ("tool", "retriever", "evaluator", "guardrail")
+    ]
+
+
+def test_la_ingestion_recibe_los_tipos_especificos_como_span_con_su_tipo() -> None:
+    """D-106. La API de ingestion solo admite GENERATION, SPAN y EVENT: los tipos
+    especificos viajan como SPAN con su tipo en `metadata.observation_type`,
+    y conservan input y output."""
+    tipados = _tipados()
+    assert {o.type for o in tipados} >= {"evaluator", "guardrail"}
+    for o in tipados:
+        evento = lf.SdkClient._event(o)
+        assert evento.type == "span-create"
+        assert evento.body.metadata["observation_type"] == o.type
+        assert evento.body.input == o.input
+        assert evento.body.output == o.output
+
+
+class _Rechazo:
+    status = 400
+    message = "Invalid request data"
+    error = "type"
+
+
+class _Respuesta:
+    def __init__(self, errores: int) -> None:
+        self.successes: list[object] = []
+        self.errors = [_Rechazo() for _ in range(errores)]
+
+
+class _Ingestion:
+    def __init__(self, errores: int) -> None:
+        self.errores = errores
+        self.lotes = 0
+
+    def batch(self, *, batch: list[object]) -> _Respuesta:
+        self.lotes += 1
+        return _Respuesta(self.errores)
+
+
+def _cliente(errores: int) -> tuple[lf.SdkClient, _Ingestion]:
+    ingestion = _Ingestion(errores)
+    cliente = lf.SdkClient.__new__(lf.SdkClient)
+    api = type("Api", (), {"ingestion": ingestion})()
+    cliente._client = type("Cliente", (), {"api": api})()
+    cliente._environment = None
+    cliente._versions = {}
+    return cliente, ingestion
+
+
+def test_un_rechazo_de_la_ingestion_no_se_pierde_en_silencio() -> None:
+    """Fallo cerrado: la ingestion responde 207 con errores por evento. Un evento
+    rechazado lanza `IngestionRejectedError`, que el espejo deja como `export.failed`."""
+    cliente, _ = _cliente(errores=2)
+    with pytest.raises(lf.IngestionRejectedError, match="2 de"):
+        cliente.send(_tipados()[:1])
+
+
+def test_sin_rechazos_el_envio_termina_sin_error() -> None:
+    cliente, ingestion = _cliente(errores=0)
+    cliente.send(_tipados()[:1])
+    assert ingestion.lotes == 1
