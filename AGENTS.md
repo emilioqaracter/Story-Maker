@@ -36,16 +36,16 @@ La idea central del dominio: **una novela larga no es un texto largo, es un esta
 | Ontología del dominio | ✅ Completa |
 | Modelos y diagramas | ✅ Completos |
 | Arquitectura, agentes y skills | ✅ Especificados |
-| SRS del backend (`specs/`) | ✅ Versión 1 (`srs-backend-v1.md`, pasos 1 a 6) y versión 2 (`srs-backend-v2.md`, pasos 7 a 10 y retcon), y versión 3 (`srs-backend-v3.md`, T33 a T36): entrevista, versiones, fichas y solicitudes de cambio que el frontend exige. Versión 4 (`srs-backend-v4.md`, T37 a T52): Lean sobre la cronología, guardarraíl bloqueante, espejo en Langfuse, hecho × capítulo, hooks de Claude Code, Jurado con las dimensiones del encargo, TLA+ del flujo completo y evaluación del sistema; especificada, por construir |
+| SRS del backend (`specs/`) | ✅ Versión 1 (`srs-backend-v1.md`, pasos 1 a 6) y versión 2 (`srs-backend-v2.md`, pasos 7 a 10 y retcon), y versión 3 (`srs-backend-v3.md`, T33 a T36): entrevista, versiones, fichas y solicitudes de cambio que el frontend exige. Versión 4 (`srs-backend-v4.md`, T37 a T53): Lean sobre la cronología, guardarraíl bloqueante, espejo en Langfuse, hecho × capítulo, hooks de Claude Code, Jurado con las dimensiones del encargo, TLA+ del flujo completo y evaluación del sistema; T37 a T44 construidos, T45 a T53 por construir |
 | SRS del frontend (`specs/`) | ✅ Versión 1 (`srs-frontend-v1.md`, paso 11): entrevista del brief, lectura por versiones, ficha de personajes y lugares, enmiendas al brief desde la lectura. Las rutas nuevas que exige las realiza `srs-backend-v3.md`. Su plan de implementación es `frontend/PLAN.md`, T26 a T32 |
 | Estrategia de verificación | ✅ Completa |
-| Implementación del backend | 🟡 Versiones 1 y 2 construidas, cableadas y en verde (T0 a T24); faltan las dos tiradas reales: la de T16, que produce `golden/v1-seed/`, y la de T24, que se compara con ella (`backend/PLAN.md` §1.7) |
+| Implementación del backend | 🟡 Versiones 1 y 2 construidas, cableadas y en verde (T0 a T24). De la versión 4, T37 a T44 construidos, integrados y en verde (`python gate.py`, con Lean; TLC en CI al cambiar el modelo): TLA+ del flujo, verificadores endurecidos, Langfuse base, guardarraíl, hecho × escena y cronología, Lean y brief. Faltan T45 a T53 y las dos tiradas reales: la de T16, que produce `golden/v1-seed/`, y la de T24, que se compara con ella (`backend/PLAN.md` §1.7) |
 | Implementación del frontend | ✅ T26 a T31 construidos y en verde (`node gate.mjs`): entrevista, lectura por versiones con marcas de cambio, ficha de personajes y lugares, solicitudes de cambio, estado, deuda y grafo. T32 con modelo real sobre una copia de la tirada real; la tirada entera de una novela encargada desde la entrevista depende de T16 (`frontend/PLAN.md`) |
 | Implementación del backend v3 | ✅ T34 a T36 construidos y en verde (`python gate.py`): `brief/`, versiones, fichas, lista de novelas y solicitudes aplicadas por el Orquestador |
 | Agentes de modelo | ✅ Los trece con prompt o código y cableados en el motor real |
 | Capa de memoria | ✅ Cinco almacenes en SQLite, memoria de trabajo, delta canónico validado al congelar y traza local por tirada |
 
-**El repositorio está cerrando el backend: el código está completo y faltan las tiradas reales que lo demuestran.** El plan de lo que falta, con su orden y sus puertas, es `backend/PLAN.md`. No crees agentes, skills ni código fuera de ese plan salvo que se pida de forma explícita.
+**El repositorio está cerrando el backend: las versiones 1 a 3 tienen el código completo, la 4 va por T44, y faltan sus tramos T45 a T53 y las tiradas reales que lo demuestran.** El plan de lo que falta, con su orden y sus puertas, es `backend/PLAN.md`. No crees agentes, skills ni código fuera de ese plan salvo que se pida de forma explícita.
 
 ---
 
@@ -217,7 +217,7 @@ Estas seis restricciones acotan **el sistema que se especifica**, no el trabajo 
 
 ### 5.5 Alcance: solo esta rama
 
-La única fuente de información válida es el estado actual de la rama de trabajo (`v2`): este fichero y los cuatro documentos de `docs/`.
+La única fuente de información válida es el estado actual de la rama de trabajo (`v2-oneshot`): este fichero y los cuatro documentos de `docs/`.
 
 - **No se consulta el historial de git**, ni ramas anteriores, ni commits previos, ni ficheros borrados.
 - **No se reintroduce** nada que existiera en una versión anterior por el hecho de haber existido. Si algo hace falta, se justifica desde cero contra los documentos de hoy.
