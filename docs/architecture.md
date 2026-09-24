@@ -139,7 +139,8 @@ frontend/
 ├── tension-curve/   · curva de tensión de la obra
 ├── narrative-debt/  · setups abiertos sin payoff
 ├── run-health/      · métricas de §11
-└── visual/          · validación visual repetible de portada, índice y ficha; no es una vista y ninguna ruta la monta
+├── visual/          · validación visual repetible de portada, índice y ficha; no es una vista y ninguna ruta la monta
+└── art/             · guion de desarrollo que genera las ilustraciones deportivas con Google AI Studio; no es una vista y nadie lo importa
 ```
 
 La raíz de composición del frontend son `main.tsx` y `routes.tsx`, en la raíz de `frontend/`: montan las direcciones que exporta cada funcionalidad y sirven la aplicación bajo `/app/`. Son el equivalente de `orchestration/`: conocen a todas las funcionalidades y ninguna las conoce. No pueden vivir en `commons/`, porque todas importan de él.
@@ -516,6 +517,8 @@ Esto no cambia que el Orquestador y el Documentalista sean código (§6): Claude
 **Un puerto, dos operaciones.** Ningún agente importa el SDK de un proveedor. `commons/` expone un puerto con `complete`, que recibe instrucción, paquete de contexto y esquema de salida, y `embed`, que recibe texto y devuelve vector. El motivo es que §12 ya prevé modelos distintos por rol y `verification.md` §5.8 trata cambiar de modelo como un despliegue: con el puerto, cambiar de modelo es cambiar una configuración y no tocar once agentes.
 
 **Claude es el único proveedor de modelo.** La prosa es donde se juega la calidad de la obra, así que va a Claude sin intermediario. Los embeddings, en cambio, **no salen de la máquina**: los calcula un modelo local servido por `fastembed`. **Langfuse no es un proveedor del ciclo sino un espejo de lo que el ciclo ya traza**: recibe una copia, nunca decide nada, y que no responda no para ni degrada una tirada (§11).
+
+**Google AI Studio no es un servicio del sistema, sino una herramienta de desarrollo.** Las ilustraciones deportivas del frontend las genera una vez `frontend/art/generate.mjs`, que quien desarrolla ejecuta a mano con su propia clave, y se versionan como material de marca en `frontend/commons/brand/art/`. Ni el backend ni el navegador hablan con Google: una tirada, una lectura y la puerta corren igual sin clave (`specs/srs-frontend-v2.md` RNF-59, D-115). Una portada propia por novela, generada al cerrarla, sí metería un proveedor en el sistema, y por eso queda como decisión abierta de esa spec.
 
 #### El CLI de Claude Code como proveedor
 
@@ -1493,7 +1496,7 @@ Tres instancias con las mismas rúbricas y semillas distintas: la semilla fija e
 - Contexto mínimo, el de §4.9: el capítulo entero, las rúbricas, las fichas de voz de los POV y el encargo del destinatario como dato. Nunca la especificación ni el paquete del Escritor.
 - Dispersión alta entre instancias invalida el veredicto y fuerza una verificación adicional en lugar de promediar. Promediar jueces que no se ponen de acuerdo produce un número sin significado.
 - Toda puntuación lleva justificación además de la cita, y las dos llegan a la traza.
-- El umbral y el mínimo de palabras de la cita salen del perfil de extensión de la obra (PRO-15): mediana 3 y 8 palabras en `novela`, 2 y 5 en `prueba`, con la misma regla de dispersión (`specs/srs-backend-v4.md` D-115).
+- El umbral y el mínimo de palabras de la cita salen del perfil de extensión de la obra (PRO-15): mediana 3 y 8 palabras en `novela`, 2 y 5 en `prueba`, con la misma regla de dispersión (`specs/srs-backend-v4.md` D-128).
 
 **Qué criterio de la rúbrica de la entrega mide cada dimensión.** Las rúbricas van en su versión 2 (`specs/srs-backend-v4.md` RF-257), con nueve dimensiones:
 
@@ -1563,7 +1566,7 @@ sequenceDiagram
   end
 ```
 
-Reglas duras: el delta se propone y se valida, nunca se aplica en bruto; todo hecho guarda procedencia (MET-09) y capítulo de origen; todo arbitraje deja registro con la regla aplicada; la congelación es la única operación que cambia el canon.
+Reglas duras: el delta se propone y se valida, nunca se aplica en bruto; un hecho sobre una entidad que ni el canon ni el delta crean antes se descarta con su motivo, como defecto del Archivero y no del capítulo (`specs/srs-backend-v4.md` D-130); todo hecho guarda procedencia (MET-09) y capítulo de origen; todo arbitraje deja registro con la regla aplicada; la congelación es la única operación que cambia el canon.
 
 **Dos comprobaciones más antes de toda congelación, retcon o enmienda**, porque miran lo que va a entrar y no lo que ya está: `check.forbidden` sobre el texto entero y la verificación formal de la cronología sobre el canon más el delta (`verification.md` §4.4). Van aquí y no al final de la obra porque el canon congelado gana: un fallo descubierto después de congelar no tiene a quién volver. Un fallo es un S1 con su cita que vuelve al Reparador; en una enmienda, la rechaza con el motivo y la versión no cambia.
 
@@ -1656,7 +1659,7 @@ La API de ingestión solo admite generation, span y event, así que `retriever`,
 1. Tamaño óptimo del bloque de prosa literal (4.500 tokens actuales) frente a su coste por escena.
 2. ~~Si el Continuista debe operar por capítulo o por par de capítulos al crecer la obra.~~ **Cerrada: por capítulo.** Los resúmenes de arco de §4.5 son lo que lo mantiene dentro; `specs/srs-backend-v2.md` RNF-29 lo mide y la reabre si no cabe.
 3. ~~Número de instancias de jurado: tres es el mínimo para medir dispersión, pero triplica coste.~~ **Cerrada: tres.** Es el mínimo que mide dispersión y el coste se paga una vez por capítulo, no por escena.
-4. ~~Umbral de dispersión que invalida un veredicto.~~ **Cerrada: rango ≥ 2 niveles sobre una rúbrica de cinco**, con la mediana como nivel resultante y umbral de aceptación en 3 (`specs/srs-backend-v2.md` D-39); en el perfil de extensión `prueba`, en 2 (`specs/srs-backend-v4.md` D-115).
+4. ~~Umbral de dispersión que invalida un veredicto.~~ **Cerrada: rango ≥ 2 niveles sobre una rúbrica de cinco**, con la mediana como nivel resultante y umbral de aceptación en 3 (`specs/srs-backend-v2.md` D-39); en el perfil de extensión `prueba`, en 2 (`specs/srs-backend-v4.md` D-128).
 5. Si `match.simulate` debe modelar el encuentro minuto a minuto o solo sus hitos.
 6. Punto a partir del cual conviene reescribir un capítulo en vez de repararlo.
 7. ~~Con qué modelo de embedding se puebla el índice de prosa.~~ **Cerrada: `intfloat/multilingual-e5-large`** (§4.8). Cambiarlo más adelante es reindexar, no rediseñar, porque el esquema guarda modelo y dimensión.
@@ -1678,7 +1681,7 @@ La API de ingestión solo admite generation, span y event, así que `retriever`,
 8. Afinado de la recuperación: tamaño de fragmento, constante de fusión y reparto de cupos, medidos contra el conjunto dorado en vez de estimados.
 9. Jurado, conjunto dorado y Estilista.
 10. Supervisor, replanificación y métricas de salud.
-11. Frontend: entrevista del brief, lectura por versiones con ficha de personajes y lugares, enmiendas al brief desde la lectura, y visualización. Su SRS es `specs/srs-frontend-v1.md`; las rutas que exige del backend son la versión 3 del backend.
+11. Frontend: entrevista del brief, lectura por versiones con ficha de personajes y lugares, enmiendas al brief desde la lectura, y visualización. Su SRS es `specs/srs-frontend-v1.md`; las rutas que exige del backend son la versión 3 del backend. La versión 2 del frontend, `specs/srs-frontend-v2.md`, añade ilustraciones, elevación, el libro en 3D al cerrar la obra y el grafo en 3D, sin ninguna ruta nueva.
 
 **Las rutas HTTP no son un paso.** Cada paso añade las suyas dentro de su funcionalidad y las monta en `orchestration/` (§2.3). Concentrarlas en un paso propio dejaría los diez anteriores sin forma de ejercitarse y convertiría la API en la capa técnica que §2.3 evita.
 

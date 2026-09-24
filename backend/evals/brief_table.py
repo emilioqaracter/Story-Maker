@@ -233,7 +233,7 @@ def _int(value: JsonValue | None) -> int:
 def _jury(dimension: Dimension) -> Column:
     """Una columna por dimension de las rubricas vigentes. Cuenta los veredictos
     en que la dimension quedo sin nivel o bajo el umbral (D-39), el del perfil
-    registrado con cada veredicto (D-115)."""
+    registrado con cada veredicto (D-128)."""
 
     def cell(records: Sequence[TraceRecord], _k: Sequence[str]) -> Cell:
         fallos = 0
@@ -243,7 +243,7 @@ def _jury(dimension: Dimension) -> Column:
             if not (isinstance(propios, dict) and dimension.value in propios):
                 continue
             aplica = True
-            # D-115. El umbral del perfil que se registro con el veredicto; una
+            # D-128. El umbral del perfil que se registro con el veredicto; una
             # traza anterior sin el lleva el de `novela`.
             umbral = r.fields.get("threshold")
             if not isinstance(umbral, int) or isinstance(umbral, bool):

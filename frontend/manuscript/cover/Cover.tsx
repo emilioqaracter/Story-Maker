@@ -11,13 +11,14 @@ import { parseVersion, useManifest } from "../data";
 import { Toc } from "../toc/Toc";
 import { changedChapters } from "../versions/marks";
 import { VersionPicker } from "../versions/VersionPicker";
+import { Book } from "./Book";
 
 /**
  * `/novels/{id}` y `/novels/{id}/v/{v}`: portada e indice (RF-177, RF-182 a RF-184).
  *
  * Sin `v`, la version vigente. Titulo, dedicatoria y destinatario salen del
  * manifiesto de RI-43; la version que se lee se dice siempre, y si no es la
- * vigente tambien.
+ * vigente tambien. Con la obra cerrada, abre con el libro en 3D (`srs-frontend-v2.md` RF-281).
  */
 export function Cover() {
   const params = useParams();
@@ -49,6 +50,7 @@ function CoverView({ novel, asked }: { novel: string; asked: number | null }) {
   const position = readingPosition(novel, version);
   return (
     <article className="cover">
+      {run.data.closed === true && <Book novel={novel} title={m.title} recipient={m.recipient_name || undefined} />}
       <header className="cover-header">
         <p className="version-line">
           Versión {version}

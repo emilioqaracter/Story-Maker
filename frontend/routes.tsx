@@ -3,6 +3,7 @@ import { useParams, type RouteObject } from "react-router";
 import { Home } from "./commons/shell/Home";
 import { Layout } from "./commons/shell/Layout";
 import { NotFound } from "./commons/shell/NotFound";
+import { Band } from "./commons/ui/Band";
 import { Graph } from "./entity-graph/Graph";
 import { interviewRoutes } from "./interview/routes";
 import { manuscriptRoutes } from "./manuscript/routes";
@@ -22,6 +23,7 @@ function StatusPage() {
   const { id = "" } = useParams();
   return (
     <>
+      <Band art="estado-pista" eyebrow="Estado" title="Cómo va la novela" />
       <Status novel={id} />
       <Debt novel={id} />
       <Graph novel={id} />

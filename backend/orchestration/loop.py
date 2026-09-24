@@ -125,7 +125,9 @@ class ChapterResult:
     scenes: list[SceneResult]
     frozen: bool = False
     #: RF-60. Hechos del delta que el canon congelado no admitio. Cada uno dejo
-    #: un defecto S1 con cita y paso por el bucle de reparacion.
+    #: un defecto S1 con cita y paso por el bucle de reparacion. D-130: tambien
+    #: los descartados por entidad desconocida del delta congelado, como S2 y
+    #: sin reparacion, porque la prosa no contradice nada.
     rejected_facts: list[Defect] = field(default_factory=list)
     events_applied: int = 0
     chapter_attempts: int = 1
@@ -851,7 +853,7 @@ def _approve_chapter(
                 chapter=capitulo.number,
                 passed=jurado.passed,
                 rounds=jurado.rounds,
-                # D-115. El umbral del perfil de la obra: sin el, la tabla por
+                # D-128. El umbral del perfil de la obra: sin el, la tabla por
                 # brief no sabe si un 2 suspendio.
                 threshold=jurado.threshold,
                 levels={d.dimension.value: d.level for d in jurado.dimensions},
@@ -1358,6 +1360,18 @@ def _extract_and_validate(
             chapter_text=SEPARATOR.join(capitulo.texts),
         )
 
+    # D-130. El hecho sobre una entidad que nadie crea es un defecto de proceso
+    # del Archivero: se descarta con su motivo y el resto del delta sigue.
+    for descarte in validacion.dropped:
+        trace.emit(
+            "process.defect",
+            agent="archivero",
+            chapter=capitulo.number,
+            fact=str(descarte.event.payload.type),
+            entity=descarte.entity,
+            quote=descarte.defect.evidence.quote[:80],
+            reason=descarte.defect.rule,
+        )
     for rechazo in validacion.rejections:
         trace.emit(
             "arbitration",
@@ -1630,6 +1644,7 @@ def _freeze(
     with connection.canon_writer(path) as con:
         commit_chapter(con, preparado)
     capitulo.events_applied = len(validacion.accepted)
+    capitulo.rejected_facts.extend(d.defect for d in validacion.dropped)
     trace.emit("proscription", chapter=capitulo.number, terms=len(proscritos))
 
 

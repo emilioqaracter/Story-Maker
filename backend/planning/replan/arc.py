@@ -108,7 +108,7 @@ def instruction(
 ) -> str:
     """El tramo a reemplazar y lo que tiene que conseguir.
 
-    D-116. Si el perfil fija la forma de la obra (`prueba`), la instruccion la
+    D-129. Si el perfil fija la forma de la obra (`prueba`), la instruccion la
     dice: cuantas escenas por capitulo, su rango de palabras y cuanto puede sumar
     el tramo para que la obra entera quepa en su rango. Sin esto el Arquitecto
     devolvia tramos fuera del perfil y `outline.check` los rechazaba hasta abortar.
@@ -162,7 +162,7 @@ Devuelve SOLO el JSON."""
 def _shape(
     outline: Outline, tramo: Sequence[SceneEntry], capitulos: Sequence[int], profile: LengthProfile
 ) -> str:
-    """D-116. La forma que el perfil impone al tramo, o nada si no la fija."""
+    """D-129. La forma que el perfil impone al tramo, o nada si no la fija."""
     if profile.chapters is None or profile.scenes_per_chapter is None:
         return ""
     low, high = profile.scene_words

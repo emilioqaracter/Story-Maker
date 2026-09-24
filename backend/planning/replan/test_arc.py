@@ -116,7 +116,7 @@ def test_tocar_un_capitulo_congelado_se_rechaza() -> None:
 
 
 def test_con_perfil_prueba_la_instruccion_fija_la_forma_y_el_presupuesto() -> None:
-    """D-116. La tirada real eval-01 aborto porque la replanificacion del acto 2
+    """D-129. La tirada real eval-01 aborto porque la replanificacion del acto 2
     devolvia capitulos y una obra fuera del perfil `prueba`: la instruccion no le
     decia al Arquitecto la forma obligatoria. Ahora la dice, con el presupuesto."""
     from commons.types.length import PRUEBA

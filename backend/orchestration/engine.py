@@ -1212,7 +1212,7 @@ class Composer:
             povs = sorted({s.identity.pov for s in specs})
             voz = recipes.cards_text(read.query(con, povs, at=specs[0].identity.world_time))
         textos = {s.identity.scene_id: t for s, t in zip(specs, texts, strict=True)}
-        # D-115. El umbral, el minimo de palabras de la cita y la regla de la
+        # D-128. El umbral, el minimo de palabras de la cita y la regla de la
         # cita del prompt salen del perfil de extension de la obra.
         perfil = self.brief.profile()
         base = int(hashlib.sha256(specs[0].identity.scene_id.encode()).hexdigest()[:6], 16)
@@ -1271,9 +1271,12 @@ class Composer:
         )
 
     def golden_check(self) -> float:
-        """RF-134. El Jurado contra los casos sembrados, sin saber que lo son."""
+        """RF-134. El Jurado contra los casos sembrados, sin saber que lo son.
+
+        Cuantos casos, lo dice el perfil de la obra (D-131).
+        """
         with connection.reader(self.path) as con:
-            casos = jury_golden.build(con, limit=5)
+            casos = jury_golden.build(con, limit=self.brief.profile().golden_cases)
             por_id = {
                 r["id"]: r
                 for r in con.execute(

@@ -81,7 +81,7 @@ def _spec() -> SceneSpec:
 
 
 def test_con_perfil_prueba_el_resultado_del_ledger_es_obligatorio_y_literal() -> None:
-    """D-115. La instruccion de `prueba` dice el marcador, los goleadores con su
+    """D-128. La instruccion de `prueba` dice el marcador, los goleadores con su
     minuto y que la ultima frase lleve el marcador; la de `novela` no cambia."""
     from commons.types.length import NOVELA, PRUEBA
     from generation.sports.narrate import instruction

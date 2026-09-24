@@ -79,7 +79,7 @@ def anchor(text: str, quote: str, *, min_words: int = MIN_QUOTE_WORDS) -> Eviden
     defecto de proceso de quien lo emitio, nunca como defecto del texto.
 
     `min_words` es el minimo de palabras. El Continuista usa siempre el de
-    `verification.md` §5.11; el Jurado, el de su perfil de extension (D-115).
+    `verification.md` §5.11; el Jurado, el de su perfil de extension (D-128).
     """
     q = normalize(quote)
     if len(q.split()) < min_words:

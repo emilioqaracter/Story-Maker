@@ -1,10 +1,10 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { NOVEL, novelHandlers, WORLD } from "../commons/testing/fixtures";
 import { onGet, server } from "../commons/testing/server";
-import { Graph, lastInstant } from "./Graph";
+import { Graph, kindGroup, lastInstant } from "./Graph";
 
 function draw() {
   return render(
@@ -56,5 +56,56 @@ describe("grafo de entidades (RF-196)", () => {
       ]),
     ).toEqual({ at: "2026-02-01", seq: 3 });
     expect(lastInstant([])).toBeNull();
+  });
+});
+
+describe("grafo en 3D (srs-frontend-v2 RF-282, RNF-61)", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function reducedMotion(reduce: boolean) {
+    vi.stubGlobal("matchMedia", (query: string) => ({ matches: reduce && query.includes("reduce"), media: query }));
+  }
+
+  it("las flechas del teclado giran la figura, y no hay ni un boton ni un formulario", async () => {
+    server.use(...novelHandlers());
+    const { container } = draw();
+    await screen.findByRole("img", { name: "Grafo de entidades" });
+    const line = () => container.querySelector("svg line")?.getAttribute("x1");
+    const before = line();
+    fireEvent.keyDown(container.querySelector(".graph-stage") as Element, { key: "ArrowRight" });
+    expect(line()).not.toBe(before);
+    expect(container.querySelectorAll("button, form, input")).toHaveLength(0);
+    expect(screen.getByText(/flechas del teclado/)).toBeTruthy();
+    expect(screen.getByRole("list", { name: "Leyenda" }).textContent).toBe("Personajes");
+  });
+
+  it("con movimiento reducido no gira solo", async () => {
+    reducedMotion(true);
+    const frame = vi.fn(() => 1);
+    vi.stubGlobal("requestAnimationFrame", frame);
+    server.use(...novelHandlers());
+    draw();
+    await screen.findByRole("img", { name: "Grafo de entidades" });
+    expect(frame).not.toHaveBeenCalled();
+  });
+
+  it("sin esa preferencia gira despacio hasta que se toca", async () => {
+    reducedMotion(false);
+    const frame = vi.fn(() => 1);
+    vi.stubGlobal("requestAnimationFrame", frame);
+    vi.stubGlobal("cancelAnimationFrame", vi.fn());
+    server.use(...novelHandlers());
+    draw();
+    await screen.findByRole("img", { name: "Grafo de entidades" });
+    expect(frame).toHaveBeenCalled();
+  });
+
+  it("agrupa los tipos libres del canon en personajes, lugares y otras", () => {
+    expect(kindGroup("person")).toBe("person");
+    expect(kindGroup("Character")).toBe("person");
+    expect(kindGroup("place")).toBe("place");
+    expect(kindGroup("institution")).toBe("other");
   });
 });

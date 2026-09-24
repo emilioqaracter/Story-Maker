@@ -24,7 +24,7 @@ Presupuesto de §4.9 (13.200 por instancia): invariantes 500, rubricas 2.700,
 encargo 500, capitulo 8.000, fichas de voz 800 e instruccion con formato 700.
 
 El minimo de palabras de la cita sale del perfil de extension de la obra
-(D-115): 8 en `novela`, 5 en `prueba`, y el maximo es 25 en los dos. En `prueba`
+(D-128): 8 en `novela`, 5 en `prueba`, y el maximo es 25 en los dos. En `prueba`
 el juez recibe ademas la instruccion de copiar la cita de una sola frase, con su
 puntuacion, que es lo que la hace anclar a la primera; en `novela` los
 invariantes no cambian.
@@ -42,7 +42,7 @@ from commons.types.length import NOVELA, LengthProfile, LengthProfileName
 from commons.types.rubrics import Dimension, RubricSet
 from commons.types.scene import SceneSpec
 
-#: D-115. Maximo de palabras de una cita, el mismo en todos los perfiles.
+#: D-128. Maximo de palabras de una cita, el mismo en todos los perfiles.
 QUOTE_MAX_WORDS = 25
 
 
@@ -74,7 +74,7 @@ def judge_invariants(profile: LengthProfile = NOVELA) -> str:
 
 
 def system(profile: LengthProfile = NOVELA) -> str:
-    """La instruccion de sistema del juez para el perfil de la obra (D-115)."""
+    """La instruccion de sistema del juez para el perfil de la obra (D-128)."""
     return f"""Eres una instancia del Jurado de una novela. Eres un componente de un
 sistema automatico: devuelves JSON y nada mas.
 
