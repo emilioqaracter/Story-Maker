@@ -1,13 +1,13 @@
 """El perfil de extension `prueba` (T53), de punta a punta con dobles. VER-05.
 
-Los cinco briefs de evaluacion piden una obra minima: de 300 a 500 palabras, tres
-capitulos de una escena, cada escena de 100 a 170 palabras. Aqui se corre la
+Los cinco briefs de evaluacion piden una obra minima: de 1.200 a 1.800 palabras,
+tres capitulos de una escena, cada escena de 400 a 600 palabras. Aqui se corre la
 tirada entera de cada uno con el motor real y un proveedor guionizado que
 responde con el reparto de ese brief: lo que se comprueba es que el perfil llega
 a todos los consumidores de rangos --escaleta, puerta de escena, puerta de
 capitulo y cierre de obra-- y que la obra cierra con la forma que el perfil fija.
 
-Con textos de un parrafo tambien tienen que funcionar el Jurado de nueve
+Con escenas de unas 500 palabras tambien tienen que funcionar el Jurado de nueve
 dimensiones y los elementos obligatorios del brief (T47): el proveedor integra
 cada rasgo y recuerdo obligatorio en la prosa, el Arquitecto los planifica como
 setups `element.<id>` y el Archivero cita su uso.
@@ -48,7 +48,7 @@ def _load(name: str) -> Brief:
 
 class _PruebaPort(ScriptedPort):
     """El proveedor guionizado de `test_engine`, con el reparto de un brief y
-    las escenas de un parrafo que pide el perfil `prueba`."""
+    las escenas de unas 500 palabras que pide el perfil `prueba`."""
 
     def __init__(self, brief: Brief) -> None:
         super().__init__()
@@ -74,16 +74,51 @@ class _PruebaPort(ScriptedPort):
         return (self.inicio + timedelta(days=2 + 7 * (capitulo - 1))).isoformat()
 
     def _prosa(self) -> str:
-        """Unas 110 palabras en tercera persona y pasado, mas el cierre unico."""
+        """Unas 500 palabras en tercera persona y pasado, con el cierre unico.
+
+        Seis parrafos sin fechas, sin primera persona fuera de dialogo y sin
+        formas de presente, para que ni `check.format` ni `check.timeline` tengan
+        nada que decir de la forma: lo que se prueba es el perfil.
+        """
         return (
             f"{self.nombre} entró en {self.lugar} cuando todavía era temprano y el aire "
             "estaba quieto. Nadie más había llegado. Caminó despacio, contó los pasos y "
             "se detuvo junto a la pared. Pensó en lo que había prometido la tarde anterior "
             "y en lo poco que faltaba. Sacó la libreta del bolsillo, leyó la lista dos "
             "veces y la guardó sin decir nada. Afuera sonaba el viento contra las "
-            f"ventanas. {self.nombre} respiró hondo, levantó la vista y decidió que ese "
-            "día no iba a esperar a nadie. Recogió sus cosas, cerró la puerta con cuidado "
-            "y salió con paso firme hacia la luz de la mañana."
+            "ventanas.\n\n"
+            "Durante un rato no hizo otra cosa que escuchar. El suelo crujía bajo sus "
+            "zapatos y una gota caía, lenta, desde algún rincón del techo. Recordó la voz "
+            "de su abuela cuando le explicaba que las cosas importantes se hacían sin "
+            "prisa, con las manos frías y la cabeza clara. Entonces le había parecido un "
+            "consejo para otros. Ahora lo entendía mejor. Apoyó la espalda en la pared, "
+            "cerró los ojos un momento y dejó que el silencio le ordenara las ideas, una "
+            "detrás de otra, como piedras en un camino.\n\n"
+            "Luego abrió otra vez la libreta. En la primera hoja estaban los nombres, "
+            "escritos con letra apretada, y en la segunda una lista de tareas que había "
+            "ido tachando durante la semana. Quedaban tres. La primera era sencilla y la "
+            "resolvió enseguida. La segunda le costó más, porque exigía hablar con alguien "
+            "a quien no había vuelto a ver desde el verano. La tercera la dejó para el "
+            "final, como siempre hacía con lo que más temía.\n\n"
+            "Se sentó en el banco del fondo y repasó en voz baja lo que diría. Probó "
+            "varias maneras de empezar y ninguna le pareció buena del todo. Una sonaba "
+            "demasiado seria; otra, demasiado ligera. Al final eligió la más corta, la que "
+            "cabía en una sola frase, porque sabía que con los nervios se le olvidarían las "
+            "largas. La repitió tres veces, despacio, hasta que dejó de sonarle extraña y "
+            "empezó a parecerle suya.\n\n"
+            "Oyó pasos en el pasillo y se quedó inmóvil. Los pasos se acercaron, dudaron "
+            "junto a la puerta y siguieron de largo. Soltó el aire que había retenido sin "
+            "darse cuenta. Miró sus manos, que temblaban un poco, y las frotó para "
+            "calentarlas. Pensó que el miedo tenía algo de útil: le obligaba a prestar "
+            "atención, a no dar nada por sabido, a mirar dos veces antes de moverse. Con "
+            "esa idea se levantó, sacudió el polvo de las rodillas y buscó con la vista la "
+            "salida más cercana.\n\n"
+            f"{self.nombre} respiró hondo, levantó la vista y decidió que ese día no iba a "
+            "esperar a nadie. Recogió sus cosas, cerró la puerta con cuidado y salió con "
+            "paso firme hacia la luz de la mañana. En la calle, el frío le mordió la cara "
+            "y el ruido de los primeros coches llenó el aire. Caminó sin mirar atrás, con "
+            "la libreta apretada contra el pecho y la tercera tarea todavía pendiente, "
+            "pero ya sin la duda que la había retenido toda la semana."
             + "".join(" " + self._frase(i) for i in range(len(self.elementos)))
         )
 
@@ -244,7 +279,8 @@ def test_la_tirada_de_prueba_cierra_con_tres_capitulos_de_una_escena(
     assert [ch.number for ch in informe.chapters] == [1, 2, 3]
     assert all(len(ch.scenes) == 1 for ch in informe.chapters)
     assert all(ch.frozen for ch in informe.chapters)
-    assert 300 <= informe.words <= 500, informe.words
+    low, high = PRUEBA.work_words or (0, 0)
+    assert low <= informe.words <= high, informe.words
     for ch in informe.chapters:
         assert PRUEBA.scene_words[0] <= ch.words <= PRUEBA.scene_words[1]
     # Las puertas de escena y de capitulo miden contra el rango del perfil: con
@@ -270,7 +306,7 @@ def test_la_tirada_de_prueba_cierra_con_tres_capitulos_de_una_escena(
     assert check(escaleta, word_range=brief.word_range(), profile=brief.profile()) == []
     assert "arquitecto" in puerto.calls and "juez" in puerto.calls
 
-    # T47 con textos de un parrafo. El Jurado puntua las nueve dimensiones, cada
+    # T47 con escenas de unas 500 palabras. El Jurado puntua las nueve dimensiones, cada
     # puntuacion con su justificacion en la traza (RF-257, RF-259).
     nueve = {d.value for d in DEFAULT_RUBRICS.dimensions}
     for r in traza.records("jury"):
@@ -307,10 +343,10 @@ def test_un_brief_prueba_con_extension_de_novela_se_rechaza_con_el_motivo() -> N
     crudo = json.loads((BRIEFS / "01-semilla.json").read_text(encoding="utf-8"))
     with pytest.raises(
         ValidationError,
-        match="el perfil de extension «prueba» admite una obra de 300 a 500 palabras "
-        "y el brief pide 900",
+        match="el perfil de extension «prueba» admite una obra de 1200 a 1800 palabras "
+        "y el brief pide 9000",
     ):
-        Brief.model_validate(crudo | {"target_words": 900})
+        Brief.model_validate(crudo | {"target_words": 9000})
 
 
 def test_un_perfil_desconocido_se_rechaza() -> None:
@@ -321,18 +357,18 @@ def test_un_perfil_desconocido_se_rechaza() -> None:
 
 def test_la_tolerancia_no_desborda_el_rango_de_obra_del_perfil() -> None:
     crudo = json.loads((BRIEFS / "01-semilla.json").read_text(encoding="utf-8"))
-    brief = Brief.model_validate(crudo | {"target_words": 500, "word_tolerance": 0.35})
-    assert brief.word_range() == (325, 500)
+    brief = Brief.model_validate(crudo | {"target_words": 1800, "word_tolerance": 0.35})
+    assert brief.word_range() == (1200, 1800)
 
 
-def test_una_cita_minima_del_jurado_cabe_en_un_parrafo_de_prueba() -> None:
-    """Las citas del Jurado (8 a 25 palabras) no se escalan: una de 8 ancla en 100."""
+def test_una_cita_minima_del_jurado_cabe_en_una_escena_de_prueba() -> None:
+    """Las citas del Jurado (8 a 25 palabras) no se escalan: una de 8 ancla en 400."""
     from verification.checks.evidence import MIN_QUOTE_WORDS, anchor
 
     port = _PruebaPort(_load("01-semilla.json"))
     parrafo = port._prosa()
     palabras = parrafo.split()
-    assert PRUEBA.scene_words[0] - 10 <= len(palabras) < PRUEBA.scene_words[0] + 10
+    assert PRUEBA.scene_words[0] <= len(palabras) <= PRUEBA.scene_words[1]
     cita = " ".join(palabras[20 : 20 + MIN_QUOTE_WORDS])
     evidencia = anchor(parrafo, cita)
     assert evidencia is not None and parrafo[evidencia.offset :].startswith(palabras[20])

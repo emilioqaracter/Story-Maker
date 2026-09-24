@@ -244,7 +244,7 @@ def test_el_ejemplo_del_esquema_del_arquitecto_pasa_su_propia_verificacion() -> 
 
 
 def _minima() -> Outline:
-    """La forma del perfil `prueba`: tres capitulos de una escena de un parrafo."""
+    """La forma del perfil `prueba`: tres capitulos de una escena de unas 500 palabras."""
     return Outline(
         arcs=(
             Arc(
@@ -270,9 +270,9 @@ def _minima() -> Outline:
             ActPlan(number=3, tension=(9,)),
         ),
         scenes=(
-            _escena("p1", 1, 1, act=1, words=130, function=SceneFunction.ESTABLISH),
-            _escena("p2", 2, 1, act=2, words=140, function=SceneFunction.CULMINATE),
-            _escena("p3", 3, 1, act=3, words=120, function=SceneFunction.ASSIMILATE),
+            _escena("p1", 1, 1, act=1, words=500, function=SceneFunction.ESTABLISH),
+            _escena("p2", 2, 1, act=2, words=520, function=SceneFunction.CULMINATE),
+            _escena("p3", 3, 1, act=3, words=480, function=SceneFunction.ASSIMILATE),
         ),
     )
 
@@ -280,19 +280,23 @@ def _minima() -> Outline:
 def test_una_escaleta_minima_pasa_con_el_perfil_prueba() -> None:
     from planning.outline.types import PRUEBA
 
-    assert check(_minima(), word_range=(300, 500), profile=PRUEBA) == []
+    assert check(_minima(), word_range=(1_200, 1_800), profile=PRUEBA) == []
 
 
 def test_la_escaleta_minima_no_vale_como_novela() -> None:
-    """El perfil por defecto sigue siendo EST-07 y EST-08: nada cambia sin pedirlo."""
-    tipos = {d.kind for d in check(_minima(), word_range=(300, 500))}
-    assert {"escena-fuera-de-rango", "capitulo-fuera-de-rango"} <= tipos
+    """El perfil por defecto sigue siendo EST-07 y EST-08: nada cambia sin pedirlo.
+
+    Sus escenas caben en EST-08; sus capitulos, de una escena, no llegan a EST-07.
+    """
+    tipos = {d.kind for d in check(_minima(), word_range=(1_200, 1_800))}
+    assert "capitulo-fuera-de-rango" in tipos
+    assert "escena-fuera-de-rango" not in tipos
 
 
 def test_una_escaleta_de_novela_no_vale_como_prueba() -> None:
     from planning.outline.types import PRUEBA
 
-    tipos = {d.kind for d in check(_valida(), word_range=(300, 500), profile=PRUEBA)}
+    tipos = {d.kind for d in check(_valida(), word_range=(1_200, 1_800), profile=PRUEBA)}
     assert {
         "escena-fuera-de-rango",
         "capitulo-fuera-de-rango",
@@ -306,7 +310,7 @@ def test_el_perfil_prueba_exige_exactamente_tres_capitulos(capitulos: int) -> No
     from planning.outline.types import PRUEBA
 
     base = _minima()
-    escenas = tuple(_escena(f"q{c}", c, 1, act=c, words=120) for c in range(1, capitulos + 1))
+    escenas = tuple(_escena(f"q{c}", c, 1, act=c, words=500) for c in range(1, capitulos + 1))
     arcos = tuple(
         a.model_copy(
             update={
@@ -319,7 +323,7 @@ def test_el_perfil_prueba_exige_exactamente_tres_capitulos(capitulos: int) -> No
     )
     tension = tuple(ActPlan(number=c, tension=(3 * c,)) for c in range(1, capitulos + 1))
     otra = Outline(arcs=arcos, acts=tension, scenes=escenas)
-    defectos = check(otra, word_range=(200, 500), profile=PRUEBA)
+    defectos = check(otra, word_range=(800, 2_000), profile=PRUEBA)
     # Un acto por capitulo sigue valiendo; lo que falla es cuantos hay.
     assert {d.kind for d in defectos} == {"capitulos-descuadrados", "actos-descuadrados"}
     [capitulos_mal] = [d for d in defectos if d.kind == "capitulos-descuadrados"]
@@ -339,11 +343,11 @@ def test_el_perfil_prueba_exige_tres_actos_de_un_capitulo() -> None:
             ),
         }
     )
-    defectos = check(dos_actos, word_range=(300, 500), profile=PRUEBA)
+    defectos = check(dos_actos, word_range=(1_200, 1_800), profile=PRUEBA)
     assert {d.where for d in defectos if d.kind == "actos-descuadrados"} == {"obra", "acto 1"}
     # La misma escaleta, como novela, no tiene forma de actos que cumplir.
     assert not [
-        d for d in check(dos_actos, word_range=(300, 500)) if d.kind == "actos-descuadrados"
+        d for d in check(dos_actos, word_range=(1_200, 1_800)) if d.kind == "actos-descuadrados"
     ]
 
 
@@ -356,4 +360,4 @@ def test_el_ejemplo_del_esquema_de_prueba_pasa_su_propia_verificacion() -> None:
     texto = prompts.schema(PRUEBA)
     assert "EXACTAMENTE 3 capitulos, con 1 escena" in texto
     ejemplo = Outline.model_validate(json.loads(texto[texto.index("{") :]))
-    assert check(ejemplo, word_range=(300, 500), profile=PRUEBA) == []
+    assert check(ejemplo, word_range=(1_200, 1_800), profile=PRUEBA) == []

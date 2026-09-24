@@ -220,7 +220,7 @@ class Brief(BaseModel):
         las cuatro cosas que tienen que cumplirse para dar la obra por terminada.
 
         Con un perfil que fija el rango de obra, la tolerancia no lo desborda:
-        una obra de prueba de 500 palabras no admite 550.
+        una obra de prueba de 1.800 palabras no admite 1.900.
         """
         margin = int(self.target_words * self.word_tolerance)
         low, high = self.target_words - margin, self.target_words + margin

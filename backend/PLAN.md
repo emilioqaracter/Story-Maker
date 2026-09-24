@@ -608,4 +608,4 @@ Hecho. Autoriza lo que construyen las olas 2 y 3 y deja escritas en su §9 las r
 
 | Requisitos | RF-274, RD-50 |
 |---|---|
-| **Puerta** | Una tirada con dobles de cada brief de evaluación cierra con 3 capítulos de 1 escena y entre 300 y 500 palabras; un brief `novela` sin perfil se comporta igual que hoy |
+| **Puerta** | Una tirada con dobles de cada brief de evaluación cierra con 3 capítulos de 1 escena y entre 1.200 y 1.800 palabras; un brief `novela` sin perfil se comporta igual que hoy |

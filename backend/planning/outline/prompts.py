@@ -55,7 +55,7 @@ def schema(profile: LengthProfile = NOVELA) -> str:
 
     Los rangos y el ejemplo salen del perfil de extension del brief (T53): un
     ejemplo de seis escenas de 900 palabras ensenaria a romper el perfil
-    `prueba`, que pide tres de un parrafo.
+    `prueba`, que pide tres de unas 500 palabras.
     """
     ejemplo = _example() if profile.scenes_per_chapter is None else _fixed_example(profile)
     scene_low, scene_high = profile.scene_words

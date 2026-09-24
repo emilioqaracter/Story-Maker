@@ -14,7 +14,7 @@
     {"source": "aitana", "target": "ulises", "kind": "confianza"}
   ],
   "style_guide": "Premisa: Aitana vuelve al pueblo para restaurar la lente del faro y descubre que alguien lo enciende de noche aunque lleva años apagado.\nGénero: misterio. Tono: melancólico.\nTercera persona, tiempo pasado, un solo punto de vista por escena. Nada de explicaciones al cierre: el misterio avanza por lo que se ve.",
-  "target_words": 400,
+  "target_words": 1500,
   "word_tolerance": 0.35,
   "length_profile": "prueba",
   "genre": "misterio",
