@@ -566,6 +566,56 @@ def test_un_hecho_que_reescribe_el_pasado_se_arbitra_y_se_repara(novela: Path) -
     assert segundo.scenes[0].text.startswith("REPARADO")
 
 
+def test_un_hecho_sobre_una_entidad_desconocida_se_descarta_y_el_capitulo_congela(
+    novela: Path, tmp_path: Path
+) -> None:
+    """D-130. Lo que tumbo eval-02: un `attribute.set` sobre una entidad que ni el
+    canon ni el delta crean. Se descarta con su motivo en la traza, el resto del
+    delta entra, el capitulo congela sin pasar por el Reparador y la tirada sigue."""
+
+    def fantasma(specs: Sequence[SceneSpec], t: Sequence[str], e: object) -> DeltaProposal:
+        bueno = _delta(specs, t, e)
+        malo = ProposedEvent(
+            world_time=specs[0].identity.world_time,
+            payload=AttributeSet(entity_id="cometa", name="estado", value="rota"),
+            quote=CITA,
+        )
+        return DeltaProposal(events=(malo, *bueno.events))
+
+    reparaciones: list[int] = []
+
+    def repara(_s: object, t: str, _d: object) -> str:
+        reparaciones.append(1)
+        return t
+
+    traza = Trace(tmp_path / "p.trace.jsonl")
+    informe = run(
+        novela,
+        _brief(),
+        _engine(extract_delta=fantasma, repair_scene=repara),
+        novel_id="p",
+        chapters=2,
+        specs_for=_specs,
+        trace=traza,
+    )
+
+    assert all(c.frozen for c in informe.chapters)
+    assert reparaciones == [], "un descarte no devuelve el capitulo al Reparador"
+    for c in informe.chapters:
+        assert c.events_applied == 1
+        assert [d.kind for d in c.rejected_facts] == ["unknown-entity"]
+        assert c.rejected_facts[0].severity is Severity.S2
+    descartes = [r for r in traza.records("process.defect") if r.fields.get("agent") == "archivero"]
+    assert len(descartes) == 2
+    assert descartes[0].fields["entity"] == "cometa"
+    assert descartes[0].fields["fact"] == "attribute.set"
+    assert "ni el canon ni el delta" in str(descartes[0].fields["reason"])
+    with connection.reader(novela) as con:
+        assert con.execute("SELECT count(*) AS n FROM entity WHERE id = 'cometa'").fetchone()["n"] == 0
+    frozen = traza.records("chapter.frozen")
+    assert [r.fields["rejected_facts"] for r in frozen] == [1, 1]
+
+
 def test_la_traza_recoge_cada_decision(novela: Path, tmp_path: Path) -> None:
     """RI-16, RF-24. Una linea por llamada, reintento, arbitraje y congelacion."""
     traza = Trace(tmp_path / "p.trace.jsonl")

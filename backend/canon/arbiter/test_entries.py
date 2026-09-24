@@ -99,3 +99,107 @@ def test_la_puerta_del_documentalista_resuelve_por_precedencia() -> None:
     assert vigentes["marcos.estado"].value == "sano"
     assert len(arbitrajes) == 1
     assert arbitrajes[0].rule is Rule.BRIEF_OVER_DERIVED
+
+
+# ------------------------------------------- D-130: entidad desconocida
+
+
+def _ev(stamp: str, payload: object, *, seq: int = 0) -> Event:
+    return Event(
+        world_time=WorldTime(stamp=stamp, seq=seq),
+        payload=payload,  # type: ignore[arg-type]
+        provenance=Provenance.PROSE,
+        chapter_origin=2,
+        entities=frozenset({"marcos"}),
+    )
+
+
+def test_un_atributo_sobre_una_entidad_desconocida_se_descarta_y_el_resto_sigue(
+    novela: Path,
+) -> None:
+    """D-130. La tirada eval-02 se estrello al congelar por esto: la clave ajena
+    de `attribute` a `entity`. Se descarta con su motivo; el capitulo no vuelve
+    al Reparador, porque la prosa no contradice nada: el que falla es el delta."""
+    texto = "La cometa roja quedo rota en la arena y Marcos siguio sano toda la tarde."
+    fantasma = _ev("2026-08-20", AttributeSet(entity_id="cometa", name="estado", value="rota"))
+    bueno = _set("2026-08-20", "recuperado", seq=1, chapter=2)
+    with connection.reader(novela) as con:
+        resultado = validate_delta(
+            con,
+            [fantasma, bueno],
+            quotes={0: "La cometa roja quedo rota en la arena"},
+            chapter_text=texto,
+        )
+
+    assert resultado.clean, "un descarte no es una contradiccion"
+    assert resultado.accepted == (bueno,)
+    (descarte,) = resultado.dropped
+    assert descarte.event == fantasma
+    assert descarte.entity == "cometa"
+    assert descarte.defect.kind == "unknown-entity"
+    assert descarte.defect.severity is Severity.S2
+    assert descarte.defect.evidence.quote == "La cometa roja quedo rota en la arena"
+    assert descarte.defect.evidence.offset == 0
+    assert "cometa" in descarte.defect.rule
+
+
+def test_una_entidad_creada_antes_en_el_mismo_delta_vale(novela: Path) -> None:
+    from canon.events.types import EntityCreated
+
+    crea = _ev("2026-08-20", EntityCreated(entity_id="cometa", kind="object", name="la cometa"))
+    usa = _ev(
+        "2026-08-20", AttributeSet(entity_id="cometa", name="estado", value="rota"), seq=1
+    )
+    with connection.reader(novela) as con:
+        resultado = validate_delta(con, [usa, crea])  # el orden de la lista no importa
+    assert resultado.dropped == ()
+    assert set(resultado.accepted) == {crea, usa}
+
+
+def test_una_entidad_creada_despues_de_usarla_se_descarta(novela: Path) -> None:
+    """La proyeccion aplica por `(world_time, seq)` y la clave ajena es inmediata:
+    usar antes de crear revienta igual que no crear."""
+    from canon.events.types import EntityCreated
+
+    usa = _ev("2026-08-20", AttributeSet(entity_id="cometa", name="estado", value="rota"))
+    crea = _ev("2026-08-21", EntityCreated(entity_id="cometa", kind="object", name="la cometa"))
+    with connection.reader(novela) as con:
+        resultado = validate_delta(con, [usa, crea])
+    assert resultado.accepted == (crea,)
+    assert [d.event for d in resultado.dropped] == [usa]
+    assert "antes de crearse" in resultado.dropped[0].defect.rule
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        "alias",
+        "relacion-origen",
+        "relacion-destino",
+        "conocimiento",
+        "competencia",
+        "renombre",
+    ],
+)
+def test_todo_evento_con_entidad_desconocida_se_descarta(novela: Path, payload: str) -> None:
+    """Todos los tipos que referencian `entity`: clave ajena o `UPDATE` sin efecto."""
+    from canon.events.types import (
+        AliasAdded,
+        CompetenceSet,
+        EntityRenamed,
+        KnowledgeGained,
+        RelationSet,
+    )
+
+    cuerpos = {
+        "alias": AliasAdded(entity_id="nadie", alias="el Nadie"),
+        "relacion-origen": RelationSet(source_id="nadie", target_id="marcos", kind="amistad"),
+        "relacion-destino": RelationSet(source_id="marcos", target_id="nadie", kind="amistad"),
+        "conocimiento": KnowledgeGained(entity_id="nadie", fact_key="marcos.estado"),
+        "competencia": CompetenceSet(entity_id="nadie", name="regate", level="alto"),
+        "renombre": EntityRenamed(entity_id="nadie", name="Nadie"),
+    }
+    with connection.reader(novela) as con:
+        resultado = validate_delta(con, [_ev("2026-08-20", cuerpos[payload])])
+    assert resultado.accepted == ()
+    assert [d.entity for d in resultado.dropped] == ["nadie"]

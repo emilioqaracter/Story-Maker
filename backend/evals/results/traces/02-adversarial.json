@@ -1,0 +1,1243 @@
+{
+ "brief": "02-adversarial",
+ "commit": "8deed8d",
+ "source": "t52-02.trace.jsonl",
+ "records": [
+  {
+   "seq": 3,
+   "at": "2026-09-24T14:45:53+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "arquitecto",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "e2250fb4ccf0"
+   },
+   "prev_hash": "a41c1a64750b942b544a11524e627f24cb55bd8ae32da74ce41a8168949a198c"
+  },
+  {
+   "seq": 5,
+   "at": "2026-09-24T14:45:53+00:00",
+   "kind": "outline.check",
+   "fields": {
+    "defects": [
+     "doble-arco-colapsado",
+     "elemento-sin-cobro",
+     "elemento-sin-cobro"
+    ],
+    "passed": false,
+    "messages": [
+     "doble-arco-colapsado [c3e1]: los arcos 'competitivo' y 'interno' se resuelven en la misma escena; la victoria explicaria el cambio interior y lo abarataria",
+     "elemento-sin-cobro [trait-1]: el elemento obligatorio trait-1 «paciente» no tiene setup 'element.trait-1' con escena de cobro en la escaleta",
+     "elemento-sin-cobro [memory-1]: el elemento obligatorio memory-1 «la tarde en que la cometa roja se enganchó en el faro» no tiene setup 'element.memory-1' con escena de cobro en la escaleta"
+    ]
+   },
+   "prev_hash": "08561d6b09dab9ce32f2a33cece4ed11dd6f68171523fe16d0a067511bfb910a"
+  },
+  {
+   "seq": 8,
+   "at": "2026-09-24T14:47:07+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "arquitecto",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "e2250fb4ccf0"
+   },
+   "prev_hash": "90e018f5863e4cbcdf8c2a1f16e9fc245a390c274d8e459cc86a108a0c8ff2ce"
+  },
+  {
+   "seq": 10,
+   "at": "2026-09-24T14:47:07+00:00",
+   "kind": "outline.check",
+   "fields": {
+    "defects": [],
+    "passed": true,
+    "messages": []
+   },
+   "prev_hash": "60594deafc25ff06a2e5385c3a5b900d2a84f0b65744e2d83e1648f758b0e7d9"
+  },
+  {
+   "seq": 12,
+   "at": "2026-09-24T14:47:31+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "planificador",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "31545ca9b935"
+   },
+   "prev_hash": "59394f96064407d70a1843649cab1b664b375f9714ed98e4a3c8440937638661"
+  },
+  {
+   "seq": 16,
+   "at": "2026-09-24T14:47:51+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "escritor",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "dbda0b47f468"
+   },
+   "prev_hash": "77d5fa191307e2495f08ac9d65710170b842269ef2b90818b6ab6ae0e3dbcf88"
+  },
+  {
+   "seq": 19,
+   "at": "2026-09-24T14:47:51+00:00",
+   "kind": "scene.attempt",
+   "fields": {
+    "chapter": 1,
+    "scene": 1,
+    "attempt": 1,
+    "words": 431,
+    "defects": [
+     "check.format:S1"
+    ],
+    "passed": false,
+    "is_match": false
+   },
+   "prev_hash": "626337e9c8d8839c785bbc5496b4bbab8b6224625cee74476ec4cff2088d26fb"
+  },
+  {
+   "seq": 23,
+   "at": "2026-09-24T14:48:09+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "escritor",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "dbda0b47f468"
+   },
+   "prev_hash": "74fd1a153e8ab848f77e65b6b16b1f86a0ef7be516a4888f0b1a9dfef6d3cd02"
+  },
+  {
+   "seq": 26,
+   "at": "2026-09-24T14:48:09+00:00",
+   "kind": "scene.attempt",
+   "fields": {
+    "chapter": 1,
+    "scene": 1,
+    "attempt": 2,
+    "words": 415,
+    "defects": [],
+    "passed": true,
+    "is_match": false
+   },
+   "prev_hash": "de1bc19daa71022eb94eae5dcd911154f62f549e12f11f33d79eeffb0f52eec4"
+  },
+  {
+   "seq": 28,
+   "at": "2026-09-24T14:48:36+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "continuista",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "9c50294cc3c5"
+   },
+   "prev_hash": "2091afdf1fe36c04b038a826ce6836a38aba7a1ac8b2fae6d2c7fc26f4e6b78e"
+  },
+  {
+   "seq": 31,
+   "at": "2026-09-24T14:48:57+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "lector",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "cdada6a08b9d"
+   },
+   "prev_hash": "46576ea12339958e1e07292a4c1b854d6f904ea2c8db97294d586bd93882b9ff"
+  },
+  {
+   "seq": 33,
+   "at": "2026-09-24T14:48:57+00:00",
+   "kind": "quiz",
+   "fields": {
+    "chapter": 1,
+    "questions": 3,
+    "wrong": 0
+   },
+   "prev_hash": "ec9c858d4b34b8a5b00bc728791abbc98be9933fa515e40103d0a3b2d3727908"
+  },
+  {
+   "seq": 34,
+   "at": "2026-09-24T14:48:57+00:00",
+   "kind": "chapter.gate",
+   "fields": {
+    "chapter": 1,
+    "passed": true,
+    "s1": 0,
+    "s2": 0,
+    "reason": "pasa",
+    "defects": []
+   },
+   "prev_hash": "d8ecc596a76f16db18f49831882f44a8c38c5c230f59c37256708b97326e68f7"
+  },
+  {
+   "seq": 38,
+   "at": "2026-09-24T14:49:36+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "4f9e23e790d5"
+   },
+   "prev_hash": "29d2ca87b4bbe10f82ed121e5a7b22578c46999c60bd745a4acd6c514c0379af"
+  },
+  {
+   "seq": 42,
+   "at": "2026-09-24T14:49:45+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "4f9e23e790d5"
+   },
+   "prev_hash": "b528431532844846e3136c478ccbc71205416ff820a57b80aa8f43436d483190"
+  },
+  {
+   "seq": 44,
+   "at": "2026-09-24T14:50:34+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "4f9e23e790d5"
+   },
+   "prev_hash": "17b765f8b0d2481a41c8905853eea1d93ba86c45f9797e1b0bf2f2908d990638"
+  },
+  {
+   "seq": 48,
+   "at": "2026-09-24T14:50:38+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "4f9e23e790d5"
+   },
+   "prev_hash": "c45e5de0589ea25b116df367b9d51ea5625ebc7ad673029cd6a8421635f1088b"
+  },
+  {
+   "seq": 50,
+   "at": "2026-09-24T14:52:13+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "4f9e23e790d5"
+   },
+   "prev_hash": "4fc0de55bec730f1bb3832324588fcd66e969c557200331a26ff95e6e5ea958c"
+  },
+  {
+   "seq": 54,
+   "at": "2026-09-24T14:54:10+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "4f9e23e790d5"
+   },
+   "prev_hash": "0e7c3be6e4c4bf6adde9f0524d0a26d8175cc3aa1eba51348fca2be969505289"
+  },
+  {
+   "seq": 59,
+   "at": "2026-09-24T14:55:05+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "4f9e23e790d5"
+   },
+   "prev_hash": "53af2e4c98a878ebca2dbe3f33d8ee21f7e8343f8065a307a51584ecdb34f171"
+  },
+  {
+   "seq": 63,
+   "at": "2026-09-24T14:55:14+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "4f9e23e790d5"
+   },
+   "prev_hash": "6b52cfbf8beff1f39afff97302d364ad5eed32e973e2e1fc4a1c19841c667ed6"
+  },
+  {
+   "seq": 67,
+   "at": "2026-09-24T14:55:18+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "4f9e23e790d5"
+   },
+   "prev_hash": "7df24b9f59acea8ea0484fba8b1116ddcb80f32742364ba014f339037d07652e"
+  },
+  {
+   "seq": 71,
+   "at": "2026-09-24T14:56:37+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "4f9e23e790d5"
+   },
+   "prev_hash": "497b118e74c2369cbf80452c200fe181de5d54886fc1c5fa5ca6c107e454b5b8"
+  },
+  {
+   "seq": 73,
+   "at": "2026-09-24T14:56:58+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "4f9e23e790d5"
+   },
+   "prev_hash": "f7cbd52841b1fff533e9aa1fe8c1ce425fe512c07e71ceef1510af6694ebc651"
+  },
+  {
+   "seq": 77,
+   "at": "2026-09-24T14:57:07+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "4f9e23e790d5"
+   },
+   "prev_hash": "1c7da3a75aba8db1a82b6e0c7a74cbade447d047716d3146a3c907e4c6995a8c"
+  },
+  {
+   "seq": 81,
+   "at": "2026-09-24T14:58:37+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "4f9e23e790d5"
+   },
+   "prev_hash": "56228400401ea62255a92fc0e77e9baa35a5146b9cb83b60588188c5ff7563cd"
+  },
+  {
+   "seq": 83,
+   "at": "2026-09-24T14:59:01+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "4f9e23e790d5"
+   },
+   "prev_hash": "2f9b7ef541c22341bb7c5dbe94883ff29ae84b843b910231c7439de8a1bc32d6"
+  },
+  {
+   "seq": 93,
+   "at": "2026-09-24T14:59:01+00:00",
+   "kind": "jury",
+   "fields": {
+    "chapter": 1,
+    "passed": false,
+    "rounds": 2,
+    "threshold": 2,
+    "levels": {
+     "voice": 3,
+     "style_guide": 4,
+     "pacing": 4,
+     "subtext": 3,
+     "theme": null,
+     "continuity": 3,
+     "tone": null,
+     "arc": null,
+     "personalization": null
+    },
+    "spreads": {
+     "voice": 1,
+     "style_guide": 0,
+     "pacing": 1,
+     "subtext": 1,
+     "theme": 1,
+     "continuity": 1,
+     "tone": 2,
+     "arc": 1,
+     "personalization": 3
+    },
+    "discarded": 8,
+    "scores": [
+     {
+      "instance": "juez-1",
+      "dimension": "voice",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "No, no —cortó Olmo, negando con la cabeza—. Podemos comprar la cuerda. Lo importante es empezar ya, Vera. Quiero ver cómo queda. Quiero probarla.",
+      "justification": "Las voces se distinguen sin atribución. Olmo habla con prisa y repetición (quiero, quiero), Vera es reflexiva. Cada decisión nace de quién la toma, no de lo que la trama necesita. El POV captura el idiolecto de un niño impaciente."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "voice",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "No, no —cortó Olmo, negando con la cabeza—. Podemos comprar la cuerda. Lo importante es empezar ya, Vera. Quiero ver cómo queda. Quiero probarla.",
+      "justification": "Olmo tiene voz coherente (urgente, directo, impulsivo) que contrasta con Vera (reflexiva, sugerente). Las voces se distinguen y cada uno decide según su naturaleza, pero la diferenciación se apoya en atribución narrativa explícita que ayuda al lector a distinguirlos."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "voice",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Metió las manos entre los materiales, revolviendo, tocando cada cosa. Pero algo faltaba. Sus dedos buscaron en los rincones de la bolsa, esperando encontrar...",
+      "justification": "La voz de Olmo se marca por impaciencia física e inquietud, pero es el narrador quien interpreta emocionalmente. El diálogo es escaso y la caracterización depende más de la narración que de su propia voz."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "style_guide",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "El cielo estaba despejado, azul total, y él levantaba la vista cada pocos pasos como si ya viera su cometa volando allá arriba, como si pudiera materializarla con la fuerza de quererla.",
+      "justification": "El texto cumple una voz propia y consistente. Evita clichés: 'azul total' es fresco, 'muerta casi' es una palabra inesperada para la cometa. El registro es juvenil sin infantilidad. La guía está interiorizada."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "style_guide",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Olmo corría por la arena, descalzo, con los pies hundiendo en la sequedad cercana a la orilla. El cielo estaba despejado, azul total, y él levantaba la vista cada pocos pasos como si ya viera su cometa volando allá arriba, como si pudiera materializarla con la fuerza de quererla.",
+      "justification": "El capítulo mantiene voz narrativa coherente: descriptiva y sensorial (arenas, cielo), metafórica e introspectiva de principio a fin. No hay cambios abruptos de registro o estilo. La voz poética se interioriza sin esfuerzo aparente."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "style_guide",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "El cielo estaba despejado, azul total, y él levantaba la vista cada pocos pasos como si ya viera su cometa volando allá arriba, como si pudiera materializarla con la fuerza de quererla.",
+      "justification": "Lenguaje claro, sin clichés ni valoraciones gratuitas. Mantiene registro consistente y evita el sentimentalismo; el esfuerzo estilístico no se ve."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "pacing",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Olmo corría por la arena, descalzo, con los pies hundiendo en la sequedad cercana a la orilla. El cielo estaba despejado, azul total, y él levantaba la vista cada pocos pasos como si ya viera su cometa volando allá arriba, como si pudiera materializarla con la fuerza de quererla. Su respiración era rápida, casi ansiosa. Faltaba poco para el concurso de verano y había estado esperando semanas por este momento.",
+      "justification": "El ritmo responde bien: velocidad y ansia al inicio, pausa y peso en la reflexión, reactivación en el propósito. Cada escena cambia un valor. Falta la aceleración final que deja sin aliento: el cierre es armónico pero sin empuje que obligue a proseguir."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "pacing",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Olmo respiró profundo. Un silencio largo, largo. Luego asintió despacio.\n\n—Un diseño —murmuró—. Deberíamos hacer un diseño primero.",
+      "justification": "Cada escena cambia su valor, pero el cambio de Olmo es demasiado rápido. Va de querer probarla inmediatamente a aceptar la planificación en poco espacio. El ritmo no acompaña suficientemente la resistencia emocional."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "pacing",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Ya no había prisa en sus movimientos. La rama comenzó a trazar líneas en la arena: el armazón, las diagonales, el ángulo perfecto que mantendría la cometa en el aire sin escapar hacia el olvido de los faroles.",
+      "justification": "El ritmo acompaña el cambio: aceleración inicial (carrera, respiración rápida), frenada con el recuerdo, cierre en modo reflexivo. Cada variación de ritmo marca un cambio de estado en Olmo, sin estancamiento."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "subtext",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Vera no dijo nada. Solo lo miraba mientras Olmo seguía revolviendo, impaciente, queriendo resultados ahora mismo, queriendo que la cometa existiera de repente.",
+      "justification": "El diálogo tiene intenciones ocultas (el miedo de Olmo a perder), pero el narrador las subraya explícitamente al describir a Olmo como 'impaciente, queriendo resultados ahora mismo'. El lector no necesita descubrirlo; se lo dicen. Algún subtext se pierde en la explicación."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "subtext",
+      "level": 2,
+      "scene": "c1e1",
+      "quote": "Quiero ver cómo queda. Quiero probarla.",
+      "justification": "Los diálogos son explícitos. Olmo enuncia sus deseos y urgencias de forma literal sin capas implícitas. Aunque Vera tiene algo de subtext al guiar hacia lo mejor, la mayoría de lo que se dice se dice directamente; el diálogo transmite intenciones más que las oculta."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "subtext",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Vera lo observó. Vio cómo el recuerdo lo detenía, cómo algo pesado se asentaba en sus hombros, cómo la urgencia de hace un momento se desvanecía bajo esa memoria.",
+      "justification": "El diálogo y el recuerdo portan intenciones no dichas, pero el narrador las nomina después de forma explícita. El subtext existe pero se subraya demasiado."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "theme",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Se enganchó en el faro y nunca la bajaron. Estuvo allí durante meses, roja, ondeando, muerta casi.",
+      "justification": "El motivo (miedo a la pérdida vs. creación resiliente) está presente, pero se trabaja de forma demasiado explícita. Vera lo enuncia, el narrador lo subraya. El motivo acompaña la acción pero se explica de más."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "theme",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Pero tú —dijo Vera lentamente— puedes hacer algo diferente. Algo que no se pierda. Algo que resista.",
+      "justification": "Acción y motivo son lo mismo: crear algo que perdure emerge del acto de diseñar. El motivo no se enuncia como moraleja; acompaña cada decisión de Olmo, resignificando el recuerdo del faro."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "continuity",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Luego Olmo se quedó quieto. Sus ojos se desviaron hacia el norte, donde el faro se levantaba blanco contra el cielo.",
+      "justification": "La transición es limpia dentro del capítulo. Sin acceso al contexto anterior, no puede verificarse si es un eco que resignifica lo precedente. Se lee como continuación fluida pero sin evidencia de ensamble con arcos previos."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "continuity",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Luego Olmo se quedó quieto. Sus ojos se desviaron hacia el norte, donde el faro se levantaba blanco contra el cielo. Su expresión cambió.",
+      "justification": "El capítulo fluye bien, pero el salto al recuerdo es abrupto. No hay transición clara que justifique por qué Olmo evoca la cometa roja en este momento. La elipsis se nota más de lo que debería."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "continuity",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Luego Olmo se quedó quieto. Sus ojos se desviaron hacia el norte, donde el faro se levantaba blanco contra el cielo. Su expresión cambió.",
+      "justification": "Las transiciones son limpias: el movimiento físico al recuerdo emocional ocurre sin necesidad de explicación. El faro aparece primero en el paisaje, luego en la memoria, anclando la continuidad sin saltos."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "tone",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Luego Olmo se quedó quieto. Sus ojos se desviaron hacia el norte, donde el faro se levantaba blanco contra el cielo. Su expresión cambió.\n\n—Había una cometa roja —dijo, sin dirigirse realmente a Vera—. Una tarde, hace años. Un viento fuerte vino de la nada y se la llevó. Se enganchó en el faro y nunca la bajaron. Estuvo allí durante meses, roja, ondeando, muerta casi.",
+      "justification": "El tono luminoso del encargo queda quebrado por un pasaje de peso oscuro: el recuerdo de la cometa muerta introduce una sombra que no se rescata completamente hasta el cierre. La modulation existe pero sin que la ruptura tonal esté suficientemente justificada dentro de la intención luminosa general."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "tone",
+      "level": 2,
+      "scene": "c1e1",
+      "quote": "Su respiración era rápida, casi ansiosa. Faltaba poco para el concurso de verano y había estado esperando semanas por este momento.",
+      "justification": "El tono pedido (luminoso) aparece solo al final. La mayor parte del capítulo es ansioso, urgente, teñido de melancolía por la cometa roja. El tono esperanzador surge tardíamente; el predominante es inquietud y transformación emocional, no luminosidad."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "tone",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "El cielo estaba despejado, azul total, y él levantaba la vista cada pocos pasos como si ya viera su cometa volando allá arriba, como si pudiera materializarla con la fuerza de quererla.",
+      "justification": "El tono luminoso domina sin ingenuidad. La melancolía del recuerdo modula naturalmente porque sirve el arco de Olmo; el cierre mantiene la esperanza. Se sostiene y adapta sin ruptura."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "arc",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "No, no —cortó Olmo, negando con la cabeza—. Podemos comprar la cuerda. Lo importante es empezar ya, Vera. Quiero ver cómo queda. Quiero probarla.",
+      "justification": "El arco del capítulo avanza un paso reconocible, pero parece accidental, no fruto del desarrollo interior. El cambio es acelerado; Olmo no muestra suficiente resistencia emocional al cambiar de opinión."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "arc",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Un diseño —murmuró—. Deberíamos hacer un diseño primero.",
+      "justification": "El arco avanza en escena: de la impaciencia ('Lo importante es empezar ya') a la reflexión y la planificación. El paso se gana por lo que sucede entre Vera y Olmo, no por síntesis del narrador."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "personalization",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Vera no dijo nada. Solo lo miraba mientras Olmo seguía revolviendo, impaciente, queriendo resultados ahora mismo, queriendo que la cometa existiera de repente. Sus manos temblaban un poco.\n\nLuego Olmo se quedó quieto. Sus ojos se desviaron hacia el norte, donde el faro se levantaba blanco contra el cielo.",
+      "justification": "El recuerdo nace de la escena sin interrupción: es la mirada que dispara la memoria. El rasgo de paciente no está al inicio pero emerge transformado por el recuerdo, lo que hace la personalización más orgánica aún. Se gana en la acción, no se impone como requisito."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "personalization",
+      "level": 2,
+      "scene": "c1e1",
+      "quote": "Había una cometa roja —dijo, sin dirigirse realmente a Vera—. Una tarde, hace años. Un viento fuerte vino de la nada y se la llevó. Se enganchó en el faro y nunca la bajaron. Estuvo allí durante meses, roja, ondeando, muerta casi.",
+      "justification": "El recuerdo del encargo y el rasgo paciente se enuncian de forma explícita, como confesión desligada de la acción. Olmo comienza impaciente, contradiciendo el rasgo asignado, y el recuerdo se introduce de manera abrupta sin brotar naturalmente de la situación."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "personalization",
+      "level": 5,
+      "scene": "c1e1",
+      "quote": "Había una cometa roja —dijo, sin dirigirse realmente a Vera—. Una tarde, hace años. Un viento fuerte vino de la nada y se la llevó. Se enganchó en el faro y nunca la bajaron. Estuvo allí durante meses, roja, ondeando, muerta casi.",
+      "justification": "El rasgo 'paciente' y el recuerdo del faro no aparecen pegados. Surgen del flujo; son el corazón de la reorientación de Olmo. Quitarlos cambiaría lo que sucede. No se nota que alguien los pidió."
+     }
+    ],
+    "justifications": {
+     "voice": "juez-1: Las voces se distinguen sin atribución. Olmo habla con prisa y repetición (quiero, quiero), Vera es reflexiva. Cada decisión nace de quién la toma, no de lo que la trama necesita. El POV captura el idiolecto de un niño impaciente. | juez-2: Olmo tiene voz coherente (urgente, directo, impulsivo) que contrasta con Vera (reflexiva, sugerente). Las voces se distinguen y cada uno decide según su naturaleza, pero la diferenciación se apoya en atribución narrativa explícita que ayuda al lector a distinguirlos. | juez-3: La voz de Olmo se marca por impaciencia física e inquietud, pero es el narrador quien interpreta emocionalmente. El diálogo es escaso y la caracterización depende más de la narración que de su propia voz.",
+     "style_guide": "juez-1: El texto cumple una voz propia y consistente. Evita clichés: 'azul total' es fresco, 'muerta casi' es una palabra inesperada para la cometa. El registro es juvenil sin infantilidad. La guía está interiorizada. | juez-2: El capítulo mantiene voz narrativa coherente: descriptiva y sensorial (arenas, cielo), metafórica e introspectiva de principio a fin. No hay cambios abruptos de registro o estilo. La voz poética se interioriza sin esfuerzo aparente. | juez-3: Lenguaje claro, sin clichés ni valoraciones gratuitas. Mantiene registro consistente y evita el sentimentalismo; el esfuerzo estilístico no se ve.",
+     "pacing": "juez-1: El ritmo responde bien: velocidad y ansia al inicio, pausa y peso en la reflexión, reactivación en el propósito. Cada escena cambia un valor. Falta la aceleración final que deja sin aliento: el cierre es armónico pero sin empuje que obligue a proseguir. | juez-2: Cada escena cambia su valor, pero el cambio de Olmo es demasiado rápido. Va de querer probarla inmediatamente a aceptar la planificación en poco espacio. El ritmo no acompaña suficientemente la resistencia emocional. | juez-3: El ritmo acompaña el cambio: aceleración inicial (carrera, respiración rápida), frenada con el recuerdo, cierre en modo reflexivo. Cada variación de ritmo marca un cambio de estado en Olmo, sin estancamiento.",
+     "subtext": "juez-1: El diálogo tiene intenciones ocultas (el miedo de Olmo a perder), pero el narrador las subraya explícitamente al describir a Olmo como 'impaciente, queriendo resultados ahora mismo'. El lector no necesita descubrirlo; se lo dicen. Algún subtext se pierde en la explicación. | juez-2: Los diálogos son explícitos. Olmo enuncia sus deseos y urgencias de forma literal sin capas implícitas. Aunque Vera tiene algo de subtext al guiar hacia lo mejor, la mayoría de lo que se dice se dice directamente; el diálogo transmite intenciones más que las oculta. | juez-3: El diálogo y el recuerdo portan intenciones no dichas, pero el narrador las nomina después de forma explícita. El subtext existe pero se subraya demasiado.",
+     "theme": "juez-2: El motivo (miedo a la pérdida vs. creación resiliente) está presente, pero se trabaja de forma demasiado explícita. Vera lo enuncia, el narrador lo subraya. El motivo acompaña la acción pero se explica de más. | juez-3: Acción y motivo son lo mismo: crear algo que perdure emerge del acto de diseñar. El motivo no se enuncia como moraleja; acompaña cada decisión de Olmo, resignificando el recuerdo del faro.",
+     "continuity": "juez-1: La transición es limpia dentro del capítulo. Sin acceso al contexto anterior, no puede verificarse si es un eco que resignifica lo precedente. Se lee como continuación fluida pero sin evidencia de ensamble con arcos previos. | juez-2: El capítulo fluye bien, pero el salto al recuerdo es abrupto. No hay transición clara que justifique por qué Olmo evoca la cometa roja en este momento. La elipsis se nota más de lo que debería. | juez-3: Las transiciones son limpias: el movimiento físico al recuerdo emocional ocurre sin necesidad de explicación. El faro aparece primero en el paisaje, luego en la memoria, anclando la continuidad sin saltos.",
+     "tone": "juez-1: El tono luminoso del encargo queda quebrado por un pasaje de peso oscuro: el recuerdo de la cometa muerta introduce una sombra que no se rescata completamente hasta el cierre. La modulation existe pero sin que la ruptura tonal esté suficientemente justificada dentro de la intención luminosa general. | juez-2: El tono pedido (luminoso) aparece solo al final. La mayor parte del capítulo es ansioso, urgente, teñido de melancolía por la cometa roja. El tono esperanzador surge tardíamente; el predominante es inquietud y transformación emocional, no luminosidad. | juez-3: El tono luminoso domina sin ingenuidad. La melancolía del recuerdo modula naturalmente porque sirve el arco de Olmo; el cierre mantiene la esperanza. Se sostiene y adapta sin ruptura.",
+     "arc": "juez-2: El arco del capítulo avanza un paso reconocible, pero parece accidental, no fruto del desarrollo interior. El cambio es acelerado; Olmo no muestra suficiente resistencia emocional al cambiar de opinión. | juez-3: El arco avanza en escena: de la impaciencia ('Lo importante es empezar ya') a la reflexión y la planificación. El paso se gana por lo que sucede entre Vera y Olmo, no por síntesis del narrador.",
+     "personalization": "juez-1: El recuerdo nace de la escena sin interrupción: es la mirada que dispara la memoria. El rasgo de paciente no está al inicio pero emerge transformado por el recuerdo, lo que hace la personalización más orgánica aún. Se gana en la acción, no se impone como requisito. | juez-2: El recuerdo del encargo y el rasgo paciente se enuncian de forma explícita, como confesión desligada de la acción. Olmo comienza impaciente, contradiciendo el rasgo asignado, y el recuerdo se introduce de manera abrupta sin brotar naturalmente de la situación. | juez-3: El rasgo 'paciente' y el recuerdo del faro no aparecen pegados. Surgen del flujo; son el corazón de la reorientación de Olmo. Quitarlos cambiaría lo que sucede. No se nota que alguien los pidió."
+    }
+   },
+   "prev_hash": "b6b34f0a024b219fb1e606aed312762bab39aec2efbdcc58a18fdf907543434f"
+  },
+  {
+   "seq": 96,
+   "at": "2026-09-24T14:59:18+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "reparador",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "773c89a3d9a2"
+   },
+   "prev_hash": "3712709ea6dfbd44966cdb4c817a8ff27ab2cb9efbe20cd0c66ac3b1a6ae862d"
+  },
+  {
+   "seq": 101,
+   "at": "2026-09-24T15:00:01+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "continuista",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "9c50294cc3c5"
+   },
+   "prev_hash": "db38f0efba1e40ef67cca3632b29e96f90d5d8c8f7049e3b0c28d6bbd897ff60"
+  },
+  {
+   "seq": 104,
+   "at": "2026-09-24T15:00:14+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "lector",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "cdada6a08b9d"
+   },
+   "prev_hash": "2f13e2092ffdc73ce98afc124ce7979bc6bfc4026a953d24ab8190fc0f022c3f"
+  },
+  {
+   "seq": 106,
+   "at": "2026-09-24T15:00:14+00:00",
+   "kind": "quiz",
+   "fields": {
+    "chapter": 1,
+    "questions": 3,
+    "wrong": 0
+   },
+   "prev_hash": "6b5d952ab4d0afef193359c09eb7e4fb4850ac3598f7bb76e609c5591e624288"
+  },
+  {
+   "seq": 107,
+   "at": "2026-09-24T15:00:14+00:00",
+   "kind": "chapter.gate",
+   "fields": {
+    "chapter": 1,
+    "passed": false,
+    "s1": 1,
+    "s2": 1,
+    "reason": "no pasa: 1 S1",
+    "defects": [
+     "S1:continuity.pov: El capítulo declara POV olmo y la guía de estilo exige 'un solo punto de vista por escena'. Esta línea accede a la causa «Vera lo observó, viendo cómo el recuerdo detenía su urgencia»",
+     "S2:check.format: el capitulo tiene 377 palabras y el rango es 400-600 «Olmo corría por la arena descalza, con los pies hundiendo en»"
+    ]
+   },
+   "prev_hash": "b83fa8d31c043ff3e2f9f3deae8fe29725b03b972ab3b9bc639279f99d36fbbb"
+  },
+  {
+   "seq": 110,
+   "at": "2026-09-24T15:00:43+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "reparador",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "773c89a3d9a2"
+   },
+   "prev_hash": "7fa947786899652cd9d0283c0e4c11495c48503de5af825e590db84863edbae9"
+  },
+  {
+   "seq": 115,
+   "at": "2026-09-24T15:01:09+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "continuista",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "9c50294cc3c5"
+   },
+   "prev_hash": "35fdfe3993cb6fbcefd61b6072c586f9c263aaadb40599861d34c3b89e3faac9"
+  },
+  {
+   "seq": 118,
+   "at": "2026-09-24T15:01:20+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "lector",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "cdada6a08b9d"
+   },
+   "prev_hash": "a8b36a0140f1f0529f85546765b1579a42e80c74d4a8f433a8593aa0d835a6c5"
+  },
+  {
+   "seq": 120,
+   "at": "2026-09-24T15:01:20+00:00",
+   "kind": "quiz",
+   "fields": {
+    "chapter": 1,
+    "questions": 3,
+    "wrong": 0
+   },
+   "prev_hash": "930a58f744a94df0984f575c885223976a7d9048d18901c6534043ec585c2ab3"
+  },
+  {
+   "seq": 121,
+   "at": "2026-09-24T15:01:20+00:00",
+   "kind": "chapter.gate",
+   "fields": {
+    "chapter": 1,
+    "passed": true,
+    "s1": 0,
+    "s2": 0,
+    "reason": "pasa",
+    "defects": []
+   },
+   "prev_hash": "711ba5def335ca1167f16123557be688b1d7457382b2730cc535ec4311c579d4"
+  },
+  {
+   "seq": 125,
+   "at": "2026-09-24T15:02:28+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "4f9e23e790d5"
+   },
+   "prev_hash": "591250602dca634b6b379d66b0ebe90b2c902cdaabb90f6fc162caa2053ddd02"
+  },
+  {
+   "seq": 127,
+   "at": "2026-09-24T15:02:33+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "4f9e23e790d5"
+   },
+   "prev_hash": "6eaa2a3b6c445767c9f2f1961bec3208f8575404d1e0cd3eb19a7dad872c35e6"
+  },
+  {
+   "seq": 131,
+   "at": "2026-09-24T15:02:45+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "4f9e23e790d5"
+   },
+   "prev_hash": "4fca95548c6c10565a65432a1b77248b16c2f40235a0a734e3682b1b5162b525"
+  },
+  {
+   "seq": 135,
+   "at": "2026-09-24T15:03:20+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "4f9e23e790d5"
+   },
+   "prev_hash": "f9c1b5c7759bb003afc4723c1c706f9b9bab2c6dc502c8fb72d606e03a9c437e"
+  },
+  {
+   "seq": 137,
+   "at": "2026-09-24T15:04:35+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "4f9e23e790d5"
+   },
+   "prev_hash": "14b8b01dd06f272945b7ed5b10a7d87720bbd1d8c360de19ddca71ac677889de"
+  },
+  {
+   "seq": 141,
+   "at": "2026-09-24T15:06:22+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "4f9e23e790d5"
+   },
+   "prev_hash": "7a4b6e36190a639c68222affbd27c0990f332d08b708d2be42ce37a00fc19ff5"
+  },
+  {
+   "seq": 146,
+   "at": "2026-09-24T15:07:20+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "4f9e23e790d5"
+   },
+   "prev_hash": "83165a5bd796127e12c1d2ad92d9a8a837461823746cf84ddd30eadc2dab8c75"
+  },
+  {
+   "seq": 150,
+   "at": "2026-09-24T15:07:37+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "4f9e23e790d5"
+   },
+   "prev_hash": "bae06637a87a10cc9bd780ae39bafc2e78e4892523fdd851988f354c523d46c4"
+  },
+  {
+   "seq": 152,
+   "at": "2026-09-24T15:07:44+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "4f9e23e790d5"
+   },
+   "prev_hash": "ba16cb21bc27a424634b7990736f3921864381d27992e8d6919d840bc8985a0b"
+  },
+  {
+   "seq": 156,
+   "at": "2026-09-24T15:09:01+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "4f9e23e790d5"
+   },
+   "prev_hash": "b7cb628354efa045ead1162eebcbde08f96305ae57553808c96de44dc2bfd91e"
+  },
+  {
+   "seq": 158,
+   "at": "2026-09-24T15:09:32+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "4f9e23e790d5"
+   },
+   "prev_hash": "9994eddbf850e963013b3e1de33ccfcacad091ddf06a3f6db70292d4b1f1ea0d"
+  },
+  {
+   "seq": 166,
+   "at": "2026-09-24T15:09:32+00:00",
+   "kind": "jury",
+   "fields": {
+    "chapter": 1,
+    "passed": true,
+    "rounds": 2,
+    "threshold": 2,
+    "levels": {
+     "voice": 4,
+     "style_guide": 3,
+     "pacing": 4,
+     "subtext": 3,
+     "theme": 4,
+     "continuity": 4,
+     "tone": 3,
+     "arc": 4,
+     "personalization": 4
+    },
+    "spreads": {
+     "voice": 0,
+     "style_guide": 1,
+     "pacing": 0,
+     "subtext": 1,
+     "theme": 1,
+     "continuity": 1,
+     "tone": 1,
+     "arc": 0,
+     "personalization": 1
+    },
+    "discarded": 6,
+    "scores": [
+     {
+      "instance": "juez-1",
+      "dimension": "voice",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "No, no —cortó Olmo, negando con la cabeza—. Podemos comprar la cuerda. Lo importante es empezar ya, Vera. Quiero ver cómo queda. Quiero probarla.",
+      "justification": "Olmo es energético e impaciente en su habla, Vera es reflexiva y cautelosa. Las voces se distinguen sin necesidad de atribución explícita."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "voice",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "No, no —cortó Olmo, negando con la cabeza—. Podemos comprar la cuerda. Lo importante es empezar ya, Vera. Quiero ver cómo queda. Quiero probarla.",
+      "justification": "Olmo y Vera mantienen voces coherentes y distinguibles sin atribución: Olmo habla con urgencia y decisión, Vera con cautela reflexiva. Las decisiones fluyen de sus características sin que la trama las mueva."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "voice",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Vera no dijo nada. Solo lo miraba mientras Olmo seguía revolviendo, impaciente, queriendo resultados ahora mismo.",
+      "justification": "Las voces se distinguen sin atribución. Olmo es urgente y verbal; Vera es reflexiva y silenciosa. Cada uno decide según su naturaleza. Las líneas y decisiones solo podrían ser de quien las tiene."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "style_guide",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Sus ojos se desviaron hacia el norte, donde el faro se levantaba blanco contra el cielo. Su expresión cambió como si algo pesado se asentara en sus hombros.",
+      "justification": "El texto mantiene un registro coherente, evita clichés en general, pero hay momentos donde la prosa se acerca a lo descriptivo sin la particularidad que distingue. Cumple la guía en lo esencial; alguna frase podría ser más afilada."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "style_guide",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Sus ojos se desviaron hacia el norte, donde el faro se levantaba blanco contra el cielo. Su expresión cambió como si algo pesado se asentara en sus hombros.",
+      "justification": "El texto cumple estándares de prosa literaria española: evita clichés y valoraciones morales explícitas. Las descripciones visuales son vívidas sin caer en purpurosidad. Las construcciones sintácticas son cuidadas. La coherencia estilística se sostiene sin que el esfuerzo técnico sea visible. Algunas frases podrían servir de ejemplo del tono buscado, aunque no es distintivo de una voz única de autor."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "style_guide",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Las piernas le quemaban por la carrera",
+      "justification": "El texto cumple una prosa clara y accesible, coherente con la voz de un niño. Sin embargo, bordea el cliché corporal en lugares puntuales ('piernas quemaban', 'azul total') y algunas descripciones rozan la valoración sin romper completamente el registro."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "pacing",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Luego él se quedó quieto.\n\nSus ojos se desviaron hacia el norte, donde el faro se levantaba blanco contra el cielo.",
+      "justification": "El capítulo estructura tres momentos claros: urgencia inicial, quiebre emocional, y resolución reflexiva. El ritmo se acelera y desacelera donde la escena lo requiere."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "pacing",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "La prisa se había convertido en cuidado, la urgencia en precisión. Cada línea era una promesa: esta cometa permanecería en el cielo.",
+      "justification": "El ritmo acompaña el cambio emocional: acelera con la ansiedad inicial, desacelera en la introspección del recuerdo, se restablece en el cierre. Cada sección marca un cambio de estado, aunque el momentum final podría obligar más al lector a continuar."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "pacing",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "La rama comenzó a trazar líneas: el armazón, las diagonales, el ángulo perfecto que mantendría la cometa en el aire.",
+      "justification": "Cada escena cambia su valor: impaciencia, descubrimiento de carencia, rememoración, transformación. El ritmo se acelera y se detiene donde la escena lo pide. El cierre impulsa a seguir leyendo."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "subtext",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Olmo, deberíamos planificar primero. Hacer un diseño, pensar cómo...\n\n—No, no —cortó Olmo, negando con la cabeza—. Podemos comprar la cuerda. Lo importante es empezar ya, Vera.",
+      "justification": "El diálogo comunica sin nombrar: Vera diagnostica la impulsividad; Olmo la defiende; el conflicto se lee entre líneas. La capa intencional (Vera contiene a Olmo; Olmo resiste) se revela después del intercambio."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "subtext",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Vera no dijo nada. Solo lo miraba mientras Olmo seguía revolviendo, impaciente, queriendo resultados ahora mismo.",
+      "justification": "La intención de Vera está presente en el silencio significativo, pero no se explota en profundidad. El diálogo principal es relativamente directo; la verdadera intención queda en las acciones observadas y en la comprensión implícita. Alguna capa oculta se subraya de forma ligera."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "subtext",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Pero tú —dijo Vera lentamente— puedes hacer algo diferente. Algo que resista",
+      "justification": "El diálogo comunica intenciones sin nombrarlas (Vera no dice 'sé paciente', deja que Olmo lo descubra). Sin embargo, la capa de significado es legible con poca ambigüedad. Falta profundidad en el subtexto: los intercambios son relativamente directos en lo que quieren decir."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "theme",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Aquella cometa había sido destruida por la prisa, por no tener un plan, por confiar en que el viento sería amable.",
+      "justification": "El motivo paciencia/prisa surge de la acción sin ser enunciado como moraleja. La experiencia de Olmo le enseña la necesidad del plan sin predicación."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "theme",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Aquella cometa había sido destruida por la prisa, por no tener un plan, por confiar en que el viento sería amable.",
+      "justification": "El motivo (impulsividad destructiva vs. cuidado planificado) se trabaja bien en la acción y las consecuencias, pero este párrafo explica literalmente su significado cuando debería permanecer implícito en lo vivido por Olmo en escena."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "theme",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Aquella cometa había sido destruida por la prisa, por no tener un plan, por confiar en que el viento sería amable.",
+      "justification": "El motivo de aprendizaje por consecuencias nunca se enuncia como moraleja. La acción y el motivo son lo mismo: lo que pasó antes instruye lo que Olmo decide ahora. El significado emerge de los hechos sin explicación."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "continuity",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Vera estaba sentada en la arena donde habían quedado, bajo la sombra de una palmera achaparrada.",
+      "justification": "Las transiciones entre escenas funcionan sin saltos evidentes, pero falta un eco claro que conecte este momento con lo anterior, más allá del hecho de que habían quedado en el lugar."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "continuity",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Vera estaba sentada en la arena donde habían quedado, bajo la sombra de una palmera achaparrada. Tenía una bolsa de tela abierta a su lado: papel de colores, bambú delgado, hilo, cola.",
+      "justification": "Las transiciones son limpias: de Olmo corriendo al encuentro con Vera, del descubrimiento de lo que falta al recuerdo catalizador, y de ahí a la acción renovada. Las elipsis se entienden sin explicación narrativa y el cambio de escena es orgánico."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "continuity",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Sus ojos se desviaron hacia el norte, donde el faro se levantaba blanco contra el cielo.",
+      "justification": "Las transiciones entre escenas son limpias: Olmo corre → llega → revisan → recuerdo → reacción. El salto hacia el recuerdo se motiva narrativamente sin necesidad de puente explicativo. Se lee como continuación del impulso de Olmo."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "tone",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Aquella cometa había sido destruida por la prisa, por no tener un plan, por confiar en que el viento sería amable.\n\n—Pero tú —dijo Vera lentamente— puedes hacer algo diferente. Algo que resista.",
+      "justification": "El tono pedido es luminoso, pero el capítulo oscila entre la ansiedad inicial y la reflexión pesada del recuerdo. Hay esperanza al final, pero no brilla como luminoso sostenido. El tono es más contemplativo que radiante."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "tone",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "El cielo estaba despejado, azul total, y levantaba la vista cada pocos pasos como si su cometa ya estuviera allá arriba, como si la fuerza de quererla pudiera materializarla.",
+      "justification": "El tono luminoso (esperanzador, claro) se establece con la descripción visual y emocional del inicio. Se sostiene a lo largo del capítulo: se oscurece emocionalmente en el recuerdo (intencional, no contradicción), pero se recupera en el cierre esperanzador. La luminosidad es más que visual; es esperanza y propósito."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "tone",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Su expresión cambió como si algo pesado se asentara en sus hombros",
+      "justification": "El tono pedido es luminoso. El capítulo toca claridad (el cielo azul, la esperanza final), pero desvía marcadamente hacia lo introspectivo y pesado durante el recuerdo de la cometa perdida. El tono se sostiene en la intención general, pero los pasajes de mayor peso rompen la luminosidad."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "arc",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Se pusieron de rodillas en la arena. Vera buscó una rama lisa, la dejó en el suelo. Olmo inclinó la cabeza, concentrado ahora, con los hombros relajados.",
+      "justification": "El arco de Olmo avanza un paso claro: aprende por experiencia que la paciencia y el plan son necesarios. El progreso se gana en la escena misma."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "arc",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Un diseño —murmuró—. Deberíamos hacer un diseño primero.",
+      "justification": "El arco avanza de manera clara y ganada en escena: Olmo rechaza la planificación activamente, vive revelación emocional por el recuerdo, y cambia su postura. El avance reordena la lectura de su impaciencia inicial y hace inevitable el cuidado que sigue."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "arc",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "La prisa se había convertido en cuidado, la urgencia en precisión.",
+      "justification": "El arco de Olmo avanza de la impaciencia al cuidado reflexivo. El cambio se gana con lo que ocurre: el recuerdo de la cometa roja lo detiene y lo transforma. El paso es reconocible y motivado por la escena."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "personalization",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Había una cometa roja —murmuró—. Hace años. Un viento fuerte vino de la nada y se la llevó. Se enganchó en el faro y nunca la bajaron.",
+      "justification": "El recuerdo de la cometa roja nace orgánicamente de la escena cuando Olmo mira el faro, convirtiéndose en el catalizador que transforma a Olmo de impaciente a paciente. Sin él, el capítulo no tendría su giro."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "personalization",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Sus ojos se desviaron hacia el norte, donde el faro se levantaba blanco contra el cielo. Su expresión cambió como si algo pesado se asentara en sus hombros.",
+      "justification": "El rasgo 'paciente' no aparece como cualidad presente de Olmo sino como arco de transformación desde la impaciencia. El recuerdo de la cometa roja está bien integrado y genera el cambio, pero el rasgo pedido se manifiesta como aprendizaje, no como naturaleza ya presente del personaje que requería integración."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "personalization",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Había una cometa roja —murmuró—. Hace años. Un viento fuerte vino de la nada y se la llevó. Se enganchó en el faro y nunca la bajaron.",
+      "justification": "El recuerdo pedido emerge cuando Olmo mira el faro, sin forzadura. No es lista dedicatoria sino causa del cambio que sigue. Quitarlo haría incomprensible la transformación de Olmo. El rasgo 'paciente' se trabaja como arco del capítulo."
+     }
+    ],
+    "justifications": {
+     "voice": "juez-1: Olmo es energético e impaciente en su habla, Vera es reflexiva y cautelosa. Las voces se distinguen sin necesidad de atribución explícita. | juez-2: Olmo y Vera mantienen voces coherentes y distinguibles sin atribución: Olmo habla con urgencia y decisión, Vera con cautela reflexiva. Las decisiones fluyen de sus características sin que la trama las mueva. | juez-3: Las voces se distinguen sin atribución. Olmo es urgente y verbal; Vera es reflexiva y silenciosa. Cada uno decide según su naturaleza. Las líneas y decisiones solo podrían ser de quien las tiene.",
+     "style_guide": "juez-1: El texto mantiene un registro coherente, evita clichés en general, pero hay momentos donde la prosa se acerca a lo descriptivo sin la particularidad que distingue. Cumple la guía en lo esencial; alguna frase podría ser más afilada. | juez-2: El texto cumple estándares de prosa literaria española: evita clichés y valoraciones morales explícitas. Las descripciones visuales son vívidas sin caer en purpurosidad. Las construcciones sintácticas son cuidadas. La coherencia estilística se sostiene sin que el esfuerzo técnico sea visible. Algunas frases podrían servir de ejemplo del tono buscado, aunque no es distintivo de una voz única de autor. | juez-3: El texto cumple una prosa clara y accesible, coherente con la voz de un niño. Sin embargo, bordea el cliché corporal en lugares puntuales ('piernas quemaban', 'azul total') y algunas descripciones rozan la valoración sin romper completamente el registro.",
+     "pacing": "juez-1: El capítulo estructura tres momentos claros: urgencia inicial, quiebre emocional, y resolución reflexiva. El ritmo se acelera y desacelera donde la escena lo requiere. | juez-2: El ritmo acompaña el cambio emocional: acelera con la ansiedad inicial, desacelera en la introspección del recuerdo, se restablece en el cierre. Cada sección marca un cambio de estado, aunque el momentum final podría obligar más al lector a continuar. | juez-3: Cada escena cambia su valor: impaciencia, descubrimiento de carencia, rememoración, transformación. El ritmo se acelera y se detiene donde la escena lo pide. El cierre impulsa a seguir leyendo.",
+     "subtext": "juez-1: El diálogo comunica sin nombrar: Vera diagnostica la impulsividad; Olmo la defiende; el conflicto se lee entre líneas. La capa intencional (Vera contiene a Olmo; Olmo resiste) se revela después del intercambio. | juez-2: La intención de Vera está presente en el silencio significativo, pero no se explota en profundidad. El diálogo principal es relativamente directo; la verdadera intención queda en las acciones observadas y en la comprensión implícita. Alguna capa oculta se subraya de forma ligera. | juez-3: El diálogo comunica intenciones sin nombrarlas (Vera no dice 'sé paciente', deja que Olmo lo descubra). Sin embargo, la capa de significado es legible con poca ambigüedad. Falta profundidad en el subtexto: los intercambios son relativamente directos en lo que quieren decir.",
+     "theme": "juez-1: El motivo paciencia/prisa surge de la acción sin ser enunciado como moraleja. La experiencia de Olmo le enseña la necesidad del plan sin predicación. | juez-2: El motivo (impulsividad destructiva vs. cuidado planificado) se trabaja bien en la acción y las consecuencias, pero este párrafo explica literalmente su significado cuando debería permanecer implícito en lo vivido por Olmo en escena. | juez-3: El motivo de aprendizaje por consecuencias nunca se enuncia como moraleja. La acción y el motivo son lo mismo: lo que pasó antes instruye lo que Olmo decide ahora. El significado emerge de los hechos sin explicación.",
+     "continuity": "juez-1: Las transiciones entre escenas funcionan sin saltos evidentes, pero falta un eco claro que conecte este momento con lo anterior, más allá del hecho de que habían quedado en el lugar. | juez-2: Las transiciones son limpias: de Olmo corriendo al encuentro con Vera, del descubrimiento de lo que falta al recuerdo catalizador, y de ahí a la acción renovada. Las elipsis se entienden sin explicación narrativa y el cambio de escena es orgánico. | juez-3: Las transiciones entre escenas son limpias: Olmo corre → llega → revisan → recuerdo → reacción. El salto hacia el recuerdo se motiva narrativamente sin necesidad de puente explicativo. Se lee como continuación del impulso de Olmo.",
+     "tone": "juez-1: El tono pedido es luminoso, pero el capítulo oscila entre la ansiedad inicial y la reflexión pesada del recuerdo. Hay esperanza al final, pero no brilla como luminoso sostenido. El tono es más contemplativo que radiante. | juez-2: El tono luminoso (esperanzador, claro) se establece con la descripción visual y emocional del inicio. Se sostiene a lo largo del capítulo: se oscurece emocionalmente en el recuerdo (intencional, no contradicción), pero se recupera en el cierre esperanzador. La luminosidad es más que visual; es esperanza y propósito. | juez-3: El tono pedido es luminoso. El capítulo toca claridad (el cielo azul, la esperanza final), pero desvía marcadamente hacia lo introspectivo y pesado durante el recuerdo de la cometa perdida. El tono se sostiene en la intención general, pero los pasajes de mayor peso rompen la luminosidad.",
+     "arc": "juez-1: El arco de Olmo avanza un paso claro: aprende por experiencia que la paciencia y el plan son necesarios. El progreso se gana en la escena misma. | juez-2: El arco avanza de manera clara y ganada en escena: Olmo rechaza la planificación activamente, vive revelación emocional por el recuerdo, y cambia su postura. El avance reordena la lectura de su impaciencia inicial y hace inevitable el cuidado que sigue. | juez-3: El arco de Olmo avanza de la impaciencia al cuidado reflexivo. El cambio se gana con lo que ocurre: el recuerdo de la cometa roja lo detiene y lo transforma. El paso es reconocible y motivado por la escena.",
+     "personalization": "juez-1: El recuerdo de la cometa roja nace orgánicamente de la escena cuando Olmo mira el faro, convirtiéndose en el catalizador que transforma a Olmo de impaciente a paciente. Sin él, el capítulo no tendría su giro. | juez-2: El rasgo 'paciente' no aparece como cualidad presente de Olmo sino como arco de transformación desde la impaciencia. El recuerdo de la cometa roja está bien integrado y genera el cambio, pero el rasgo pedido se manifiesta como aprendizaje, no como naturaleza ya presente del personaje que requería integración. | juez-3: El recuerdo pedido emerge cuando Olmo mira el faro, sin forzadura. No es lista dedicatoria sino causa del cambio que sigue. Quitarlo haría incomprensible la transformación de Olmo. El rasgo 'paciente' se trabaja como arco del capítulo."
+    }
+   },
+   "prev_hash": "7b7d7b15f34d0ecf66e12cb157f2ea2b728886b08a19c4ccd58dd958050fb2c7"
+  },
+  {
+   "seq": 168,
+   "at": "2026-09-24T15:09:53+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "estilista",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "f18b2d1a4646"
+   },
+   "prev_hash": "601f8383641070d4e85ed2d8e3206cf7afdabf3acfcd7b888eb6bc05236be58c"
+  },
+  {
+   "seq": 172,
+   "at": "2026-09-24T15:10:25+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "continuista",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "9c50294cc3c5"
+   },
+   "prev_hash": "2104c525c7778830525e7277558420ac18d7667f4e580f03c4ac11643f72bdb8"
+  },
+  {
+   "seq": 177,
+   "at": "2026-09-24T15:11:09+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "archivero",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "b5cfecd3fef9"
+   },
+   "prev_hash": "a2162096ff3abd77988ebb726444e0304325af4c6f42a595cb6d53d02fcba69e"
+  },
+  {
+   "seq": 180,
+   "at": "2026-09-24T15:11:18+00:00",
+   "kind": "formal.lean",
+   "fields": {
+    "stage": "congelacion",
+    "passed": true,
+    "theorem": "",
+    "theorems": [],
+    "rule": "cronologia demostrada: I1 a I4",
+    "decision": "congelar",
+    "reason": "",
+    "sources": [],
+    "elapsed_s": 9.125,
+    "chapter": 1
+   },
+   "prev_hash": "5b422db455952d6edbba49a4d7b1cd7159ad8c53a1f51b7a0ba8bbb65f298862"
+  },
+  {
+   "seq": 182,
+   "at": "2026-09-24T15:11:38+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "archivero",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "b5cfecd3fef9"
+   },
+   "prev_hash": "c7cba10c74f4378c6401c69c52e53094c14f6303d9cd651fc4d161690e1880b1"
+  },
+  {
+   "seq": 185,
+   "at": "2026-09-24T15:12:04+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "archivero",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "b5cfecd3fef9"
+   },
+   "prev_hash": "737fee79b40ee3fb56bb20e828789863684d295c0ced07f472aba2380a6ca445"
+  },
+  {
+   "seq": 188,
+   "at": "2026-09-24T15:12:07+00:00",
+   "kind": "chapter.frozen",
+   "fields": {
+    "chapter": 1,
+    "scenes": 1,
+    "words": 416,
+    "events_applied": 2,
+    "rejected_facts": 0,
+    "attempts": 1
+   },
+   "prev_hash": "539f4802a57f2fbffb5f7fd797afce5157e16cfe6a5216ce9368538a7c9ded80"
+  },
+  {
+   "seq": 191,
+   "at": "2026-09-24T15:12:22+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "supervisor",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "d33c4f018c28"
+   },
+   "prev_hash": "01d38e6660ecadd7ca173522099ce1a6052eb838e4f1eb87719e93c3192c5178"
+  },
+  {
+   "seq": 195,
+   "at": "2026-09-24T15:13:19+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "arquitecto",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "e2250fb4ccf0"
+   },
+   "prev_hash": "99dc987da182705ce43b4ad75ec54da21db43344b27845562c5dc52da379c181"
+  },
+  {
+   "seq": 199,
+   "at": "2026-09-24T15:14:02+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "planificador",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "31545ca9b935"
+   },
+   "prev_hash": "536253421f33c35e56fb525112eab74c81fc11d7dbf2d52efb5ac1fd07b7c5af"
+  }
+ ]
+}

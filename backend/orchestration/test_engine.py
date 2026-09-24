@@ -1002,3 +1002,42 @@ def test_verify_scene_da_la_prohibida_como_s1_y_no_como_repeticion(tmp_path: Pat
     prohibidas = [d for d in defectos if d.kind == "check.forbidden"]
     assert [(d.severity.value, d.evidence.quote) for d in prohibidas] == [("S1", "Linimentos")]
     assert not [d for d in defectos if d.kind == "check.repetition"]
+
+
+@pytest.mark.parametrize(("perfil", "casos"), [("novela", 5), ("prueba", 1)])
+def test_el_conjunto_dorado_juzga_los_casos_de_su_perfil(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, perfil: str, casos: int
+) -> None:
+    """RF-134, D-131. En `prueba`, un caso: la tirada eval-01 agoto su tope de
+    60 minutos en el cierre, con 42 llamadas al juez sobre 5 casos."""
+    from verification.jury import golden as jury_golden
+
+    brief = Brief.model_validate(
+        {
+            **_brief().model_dump(),
+            "length_profile": perfil,
+            "target_words": 1_500 if perfil == "prueba" else 3_600,
+        }
+    )
+    path = tmp_path / "n.sqlite"
+    create_novel(path, brief)
+    traza = Trace(tmp_path / "n.trace.jsonl")
+    c = Composer(
+        port=ScriptedPort(),
+        path=path,
+        brief=brief,
+        embedder=_Embedder(),
+        counter=TokenCounter(ModelFactors()),
+        model_id="haiku",
+        trace=traza,
+        admission=Admission(trace=traza),
+    )
+    pedidos: list[int] = []
+
+    def build(_con: object, *, limit: int = 10) -> list[object]:
+        pedidos.append(limit)
+        return []
+
+    monkeypatch.setattr(jury_golden, "build", build)
+    assert c.golden_check() == 0.0
+    assert pedidos == [casos]

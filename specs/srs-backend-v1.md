@@ -366,7 +366,7 @@ El corazón de la versión 1 y donde vive el RAG híbrido. Todo lo de esta secci
 | RF | Requisito | Fuente | Verificación |
 |---|---|---|---|
 | RF-55 | El Archivero extrae el delta canónico del capítulo aprobado con el paquete de §4.9, dentro de 24.500 de entrada y 5.000 de salida. Todo evento del delta lleva procedencia `prose` o `derived`, su capítulo de origen y un `world_seq` que no colisione con nada ya registrado (RD-19) | `architecture.md` §4.9, §10 | VER-12, VER-08 |
-| RF-56 | El delta se propone y se valida contra el canon vigente; nunca se aplica en bruto | `architecture.md` §10 | VER-05, VER-18 |
+| RF-56 | El delta se propone y se valida contra el canon vigente; nunca se aplica en bruto. Un hecho sobre una entidad que ni el canon ni el mismo delta crean antes se descarta con su motivo, y el resto sigue (`srs-backend-v4.md` D-130) | `architecture.md` §10 | VER-05, VER-18 |
 | RF-57 | La congelación aplica eventos, recalcula proyecciones, escribe el índice y sus vectores, guarda los resúmenes, inserta en la lista de proscripción (RF-108) y purga la memoria de trabajo en una sola transacción. Tras congelar no queda ninguna fila de memoria de trabajo del capítulo | PRO-I1; `architecture.md` §3.3 | VER-06 |
 | RF-58 | La congelación es la única operación que escribe canon y solo `canon/` la ejecuta | `architecture.md` §10 | VER-02, VER-05 |
 | RF-59 | Con contradicción, el Árbitro aplica la precedencia PRO-10 con el paquete de §4.9: canon congelado sobre delta nuevo; brief sobre canon derivado; invariante duro sobre preferencia estética; hecho con payoff cobrado sobre hecho sin cobrar. Todo arbitraje se registra con la regla aplicada | `architecture.md` §8, §10 | VER-04, VER-05 |

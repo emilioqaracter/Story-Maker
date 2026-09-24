@@ -1271,9 +1271,12 @@ class Composer:
         )
 
     def golden_check(self) -> float:
-        """RF-134. El Jurado contra los casos sembrados, sin saber que lo son."""
+        """RF-134. El Jurado contra los casos sembrados, sin saber que lo son.
+
+        Cuantos casos, lo dice el perfil de la obra (D-131).
+        """
         with connection.reader(self.path) as con:
-            casos = jury_golden.build(con, limit=5)
+            casos = jury_golden.build(con, limit=self.brief.profile().golden_cases)
             por_id = {
                 r["id"]: r
                 for r in con.execute(

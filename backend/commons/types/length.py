@@ -25,7 +25,9 @@ un rango de una constante: lo lee del perfil del brief.
   al cierre, para que la tirada de prueba tambien lo ejercite. Y el Jurado es
   mas facil de pasar (D-128): aprueba con mediana 2 en vez de 3, y ancla citas
   de 5 palabras en vez de 8. Solo el Jurado: `check.evidence` del Continuista
-  sigue en 8, y los verificadores deterministas no cambian.
+  sigue en 8, y los verificadores deterministas no cambian. El conjunto dorado
+  del cierre juzga un caso y no cinco (D-131): sigue ejercitandose, sin que el
+  cierre cueste mas que la obra.
 """
 
 from __future__ import annotations
@@ -70,6 +72,10 @@ class LengthProfile:
     #: las de `check.evidence`, 8 (`verification.md` §5.11). El maximo, 25, es
     #: el mismo en todos los perfiles y vive en el prompt del juez.
     quote_min_words: int = 8
+    #: RF-134, D-131. Casos del conjunto dorado que el Jurado juzga en cada
+    #: pasada. `novela`: 5. `prueba`: 1, porque corre al cierre y cada caso
+    #: son tres jueces con sus correcciones de cita.
+    golden_cases: int = 5
 
     def typical_chapter(self) -> int:
         """El punto medio del rango de capitulo: lo que mide un capitulo tipico."""
@@ -108,6 +114,7 @@ PRUEBA = LengthProfile(
     periodic_at_close=True,
     jury_threshold=2,
     quote_min_words=5,
+    golden_cases=1,
 )
 
 PROFILES: dict[LengthProfileName, LengthProfile] = {p.name: p for p in (NOVELA, PRUEBA)}

@@ -1565,7 +1565,7 @@ sequenceDiagram
   end
 ```
 
-Reglas duras: el delta se propone y se valida, nunca se aplica en bruto; todo hecho guarda procedencia (MET-09) y capítulo de origen; todo arbitraje deja registro con la regla aplicada; la congelación es la única operación que cambia el canon.
+Reglas duras: el delta se propone y se valida, nunca se aplica en bruto; un hecho sobre una entidad que ni el canon ni el delta crean antes se descarta con su motivo, como defecto del Archivero y no del capítulo (`specs/srs-backend-v4.md` D-130); todo hecho guarda procedencia (MET-09) y capítulo de origen; todo arbitraje deja registro con la regla aplicada; la congelación es la única operación que cambia el canon.
 
 **Dos comprobaciones más antes de toda congelación, retcon o enmienda**, porque miran lo que va a entrar y no lo que ya está: `check.forbidden` sobre el texto entero y la verificación formal de la cronología sobre el canon más el delta (`verification.md` §4.4). Van aquí y no al final de la obra porque el canon congelado gana: un fallo descubierto después de congelar no tiene a quién volver. Un fallo es un S1 con su cita que vuelve al Reparador; en una enmienda, la rechaza con el motivo y la versión no cambia.
 

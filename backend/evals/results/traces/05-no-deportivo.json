@@ -1,0 +1,89 @@
+{
+ "brief": "05-no-deportivo",
+ "commit": "8deed8d",
+ "source": "t52-05.trace.jsonl",
+ "records": [
+  {
+   "seq": 3,
+   "at": "2026-09-24T14:45:16+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "arquitecto",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": false,
+    "prompt_version": "e2250fb4ccf0"
+   },
+   "prev_hash": "2c73bbddbf5ac7485eca0994cc5f3a985d45c9abab0804076dbb8f6b0642fd84"
+  },
+  {
+   "seq": 7,
+   "at": "2026-09-24T14:46:19+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "arquitecto",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "e2250fb4ccf0"
+   },
+   "prev_hash": "3233b4cd4558340bcdc219853aa8e4d16d46db7fb0144d29382c157e2410da3f"
+  },
+  {
+   "seq": 9,
+   "at": "2026-09-24T14:46:19+00:00",
+   "kind": "outline.check",
+   "fields": {
+    "defects": [
+     "doble-arco-incompleto",
+     "elemento-sin-cobro",
+     "elemento-sin-cobro"
+    ],
+    "passed": false,
+    "messages": [
+     "doble-arco-incompleto [obra]: no hay ningun arco competitivo: el doble arco es el principio estructural del genero, no un adorno",
+     "elemento-sin-cobro [trait-1]: el elemento obligatorio trait-1 «meticulosa» no tiene setup 'element.trait-1' con escena de cobro en la escaleta",
+     "elemento-sin-cobro [memory-1]: el elemento obligatorio memory-1 «el invierno en que subió por primera vez los ciento doce escalones del faro» no tiene setup 'element.memory-1' con escena de cobro en la escaleta"
+    ]
+   },
+   "prev_hash": "9a8a808e21fec64f8d6ad3d2ca8ed7df7f68dd69bd153af5c1ad04305012b857"
+  },
+  {
+   "seq": 12,
+   "at": "2026-09-24T14:47:08+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "arquitecto",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "e2250fb4ccf0"
+   },
+   "prev_hash": "39b11d19a4d3e806dc95d89afa43bd19084fc61780d48227a5427a6f3e24d473"
+  },
+  {
+   "seq": 14,
+   "at": "2026-09-24T14:47:09+00:00",
+   "kind": "outline.check",
+   "fields": {
+    "defects": [
+     "doble-arco-colapsado"
+    ],
+    "passed": false,
+    "messages": [
+     "doble-arco-colapsado [c3e1]: los arcos 'competitivo' y 'interno' se resuelven en la misma escena; la victoria explicaria el cambio interior y lo abarataria"
+    ]
+   },
+   "prev_hash": "62384a5eb86d7edce2bd867ea09d1905350805253c7f72bed9aa1b95ca5d8fcb"
+  },
+  {
+   "seq": 16,
+   "at": "2026-09-24T14:47:09+00:00",
+   "kind": "work.close",
+   "fields": {
+    "closed": false,
+    "reason": "la escaleta no pasa la verificacion estructural tras varios intentos: ['doble-arco-colapsado']",
+    "words": 0,
+    "aborted": true
+   },
+   "prev_hash": "1e5fcd7462f2dba15e592c1cbd45382a7c4d9313df2a876b4defc6eae38ca43e"
+  }
+ ]
+}
