@@ -1155,6 +1155,8 @@ def test_forbidden_bloquea_la_escena_y_el_reintento_lleva_su_cita(tmp_path: Path
         "offset": defecto.evidence.offset,
         "decision": "reintentar",
         "stage": "escena",
+        # RF-253: la traza anade la regla de toda decision del motor de politicas.
+        "rule": "check.forbidden nivel cliente",
     }
     assert _congelado_con(path, "linimento") == 0
 

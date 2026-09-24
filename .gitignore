@@ -26,3 +26,6 @@ frontend/dist/
 # Lean: compilados de Lake y cronologias que genera run_lean
 backend/verification/formal/lean/.lake/
 backend/verification/formal/lean/Generated/
+
+# Hooks de Claude Code: audit log de desarrollo, de cada maquina (D-92)
+.claude/audit/

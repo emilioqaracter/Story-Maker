@@ -95,6 +95,11 @@ class TracePage(BaseModel):
 
     novel_id: str
     records: tuple[TraceRecord, ...]
+    chain_broken_at: int | None = Field(
+        default=None,
+        description="Linea, desde 1, del primer registro cuya cadena de hashes no verifica; "
+        "nulo si esta entera (RI-65, RF-253)",
+    )
 
 
 class _Registry:
@@ -194,11 +199,15 @@ def get_trace(
     limit: Annotated[int, Query(ge=1, le=5_000)] = 500,
     kind: Annotated[str | None, Query(max_length=40)] = None,
 ) -> TracePage:
-    """RI-27. Los registros de la traza, en orden de escritura."""
+    """RI-27, RI-65. Los registros de la traza, en orden de escritura, y donde se rompe."""
     _path(settings, novel_id)
     traza = Trace(settings.trace_path(novel_id))
     registros = traza.records(kind)
-    return TracePage(novel_id=novel_id, records=tuple(registros[-limit:]))
+    # RI-65. La cadena se comprueba entera, no solo la pagina ni el filtro: un
+    # registro borrado fuera de lo que se muestra tambien se senala.
+    return TracePage(
+        novel_id=novel_id, records=tuple(registros[-limit:]), chain_broken_at=traza.verify()
+    )
 
 
 # ---------------------------------------------- novelas y enmiendas · v3 §4.4

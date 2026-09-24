@@ -2131,6 +2131,18 @@
       },
       "TracePage": {
         "properties": {
+          "chain_broken_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Linea, desde 1, del primer registro cuya cadena de hashes no verifica; nulo si esta entera (RI-65, RF-253)",
+            "title": "Chain Broken At"
+          },
           "novel_id": {
             "title": "Novel Id",
             "type": "string"
@@ -2169,6 +2181,12 @@
             "description": "call, admission, retry, defect, arbitration, ...",
             "minLength": 1,
             "title": "Kind",
+            "type": "string"
+          },
+          "prev_hash": {
+            "default": "",
+            "description": "sha256 del JSON canonico del registro anterior; vacio en el primero (RD-45)",
+            "title": "Prev Hash",
             "type": "string"
           },
           "seq": {
@@ -3808,7 +3826,7 @@
     },
     "/novels/{novel_id}/trace": {
       "get": {
-        "description": "RI-27. Los registros de la traza, en orden de escritura.",
+        "description": "RI-27, RI-65. Los registros de la traza, en orden de escritura, y donde se rompe.",
         "operationId": "get_trace_novels__novel_id__trace_get",
         "parameters": [
           {
