@@ -15,10 +15,11 @@ Medido el 2026-09-23 sobre la rama `v2-oneshot`:
 
 | Comprobación | Resultado |
 |---|---|
-| `pytest` | 383 recogidas y en verde, con el contrato generativo sobre todas las rutas |
-| `mypy --strict` | Limpio, 184 ficheros |
+| `pytest` | 688 recogidas y en verde, con el contrato generativo sobre todas las rutas |
+| `mypy --strict` | Limpio, 225 ficheros |
 | `import-linter` | 3 contratos, 0 rotos: las tres reglas de `architecture.md` §2.3 se cumplen, `supervision/` y `evals/` incluidas |
-| TLC | El modelo de `orchestration/model/` con los estados de la versión 2, sin contraejemplo, con la salida guardada en `model/tlc/`: `chapter.cfg` 1.831 estados distintos y `run.cfg` 510.546, profundidad 242, con 5 capítulos. Las mutaciones versionadas `mutations/m1` a `m4` dan contraejemplo, y `code-today/` reproduce los fallos B1 a B4 del código actual |
+| TLC | El modelo de `orchestration/model/` con los estados de la versión 2, sin contraejemplo, con la salida guardada en `model/tlc/`: `chapter.cfg` 1.831 estados distintos y `run.cfg` 508.470, profundidad 242, con 5 capítulos y `PlanAttempts = 2`. Las mutaciones versionadas `mutations/m1` a `m4` dan contraejemplo, y `code-today/` conserva los contraejemplos B1 a B4 del código anterior al arreglo, que los cerró con una prueba por fallo (`orchestration/model/README.md` §7.1) |
+| Lean | `python -m verification.formal.fixtures` en la puerta: la fixture limpia se demuestra y la sembrada falla en sus cuatro teoremas y en nada más (RF-246) |
 | `gate.py` | Existe como un solo comando; CI lo ejecuta en cada cambio y la puerta lenta —`pip-audit`, mutación— a diario |
 
 ### 1.2 Estado por tramo del SRS
@@ -119,7 +120,8 @@ Producen código que funciona en la demo y falla en el capítulo 20.
 | T20 a T23 | Construidos, cableados en el bucle y en verde |
 | T24 | Bucle completo, rutas RI-29 y RI-30, TLC sin contraejemplo; falta la tirada real de la versión 2 y su comparación con la semilla |
 | T37 | Hecho: `specs/srs-backend-v4.md` y su propagación |
-| T38 a T52 | Especificados en `specs/srs-backend-v4.md`; se construyen en las olas de §8 |
+| T38 a T44 | Construidos, integrados en `v2-oneshot` y en verde. Queda una línea de código de T44: `violenta` y `macabra` en `canon/brief_rules.py:ADULT_TERMS`, con su prueba (D-99) |
+| T45 a T53 | Especificados en `specs/srs-backend-v4.md`; se construyen en las olas de §8 |
 
 ---
 
@@ -436,6 +438,8 @@ golden/v2-run/            · la tirada real de la versión 2, comparada con v1-s
 | La tirada real de T16 no cierra por coste o por tiempo | La traza muestra reintentos en escalera antes del cierre | Se acorta el brief, no la puerta: la condición es cerrar sin intervención, no cerrar largo |
 | El Continuista no cabe con el andamiaje en la ventana real | Ocupación real de su paquete en la traza | Es el riesgo que T18 existe para retirar; hasta entonces, riesgo aceptado del SRS §7.4 |
 | Un agente nuevo devuelve algo que valida pero no significa nada —delta vacío, defecto sin cita— | Tasa de descartes por `check.evidence` y de deltas vacíos en la traza | Trampa 12: se rechaza y consume reintento, nunca se congela |
+| El Escritor no ve las prohibidas del guardarraíl cuando hay muchos n-gramas proscritos | `context/packing/recipes.py:proscription_recent` ordena `proscribed` por `added_chapter DESC` con tope, y las del guardarraíl tienen `added_chapter = 0`: reintentos por `check.forbidden` que el paquete habría evitado | El guardarraíl las sigue parando, así que no se congela ninguna; el dueño de `context/` ordena primero por nivel, `level <> 'estilo'`, en un cambio propio |
+| Tres fallos de código que el arreglo de B1 a B4 vio y no tocó | `loop.py:_work_closes` usa `report.words`, que tras reanudar solo cuenta los capítulos de esa invocación, así que RF-23 mira una longitud parcial; `canon/manuscript.py:_current_texts` une fragmentos sin quitar el solape y la historia se guarda con `scene_text_from_chunks`, que sí lo quita; la especificación reescrita por `engine.respec` no se guarda y, tras caer después de una cuarentena de especificación, el capítulo se rehace con la de `specs_for` | Proceso C para el dueño de cada fichero: `_work_closes` con `_frozen_words(path)` siempre, una sola regla de unión de fragmentos, y la especificación reescrita en el punto de reanudación (`architecture.md` §7.4) |
 | Empezar el bloque 2 sin la semilla de T16 | Un módulo en `supervision/`, `jury/` o `evals/` sin `golden/v1-seed/` en el repositorio | El SRS v2 lo declara supuesto (§2.6): sin semilla no hay contra qué medir, y medir es lo que el bloque 2 hace |
 
 ---
@@ -482,19 +486,20 @@ Los tramos de `specs/srs-backend-v4.md` §11 con los requisitos que entrega cada
 | T37 | 42 en su parte de documento | — | VER-15 | `specs/srs-backend-v4.md`; `docs/architecture.md`, `verification.md`, `definitions.md`; `specs/srs-backend-v2.md` y `v3.md` en su sitio; `backend/PLAN.md`; `frontend/PLAN.md`; `AGENTS.md` | 1 · S-DOC |
 | T38 | 51 a 57 | RF-228, RF-229 | VER-18 | `orchestration/model/run.tla`, `run.cfg`, `chapter.tla`, `chapter.cfg`, `mutations/`, `tlc/`, `README.md`; `.github/workflows/backend.yml` (paso de TLC con versión fija, al cambiar el modelo) | 1 · S-TLA |
 | T39 | 26, 37; 38 en su medida | RF-230, RF-231 | VER-05 | `orchestration/tools/server.py` y `test_server.py`; `verification/checks/deterministic.py` y `test_deterministic.py`, con `check_chapter_length` ya escrita y sin llamar; `orchestration/engine.py`, solo `_name_candidates`, y `test_engine.py` | 1 · S-CHECKS · antes de S-B |
-| T40 | 28, 63, 67 | RF-233 a RF-235, RI-60 a RI-62, RD-44, RNF-53, RNF-54 | VER-05, VER-09, VER-11 | `commons/tracing/langfuse_export.py` y su test; `commons/tracing/trace.py`, solo el observador; `commons/provider/port.py`, `claude_cli.py` y `test_claude_cli.py`; `orchestration/dispatch.py` y `test_dispatch.py`; `orchestration/compose.py` y `app.py`, que enganchan el conductor en vivo y emiten `work.cost`; `pyproject.toml`. Además, lo que T39 dejó en `commons/`: `claude_cli.py:_tool_protocol` pasa a mostrar el esquema que exporta el servidor de herramientas (RF-230) | 2 · S-A · 1.º |
-| T41 | 38; 40, 70, 71, 72, 73, 75; 74 en su parte local | RF-232, RF-236 a RF-240, RD-37, RD-38 | VER-12, VER-06, VER-05, VER-09 | `verification/checks/forbidden.py` y `test_forbidden.py`; `verification/checks/deterministic.py`, para quitar las prohibidas de `check_repetition`; `orchestration/engine.py`, `verify_scene`; `orchestration/loop.py`, comprobación antes de `_freeze`, motivo del aborto, `guardrail.match` y la llamada a `check_chapter_length` en `_approve_chapter` (RF-232), con su prueba y la de `_work_closes` fuera de rango; `canon/db/migrations.py`, una migración; `canon/db/schema.sql`, comentario; `canon/db/forbidden_global.txt`; `canon/brief.py`, solo la carga por niveles en `create_novel`; pruebas de `loop`, `engine` y migraciones | 2 · S-B · 2.º |
-| T42 | 30, 31; 18 en su parte de esquema | RF-241, RF-242, RD-39, RD-40, RD-34 | VER-06, VER-05 | `canon/db/migrations.py`, una migración, que además añade el disparador que impide borrar de `manuscript_version` (RD-34); `canon/prose_index/index.py`; `canon/freeze/freeze.py`; `canon/arbiter/refreeze.py`; lectura de `chronology` en `canon/`; `orchestration/amend.py`, solo la lectura del registro en `affected_scenes`; pruebas | 2 · S-M · 3.º |
-| T43 | 32, 46, 47, 48 | RF-243 a RF-246, RI-63, RD-41, RNF-55 | VER-04, VER-06, VER-05, VER-15 | `verification/formal/`: `generate.py`, `check.py`, `fixtures/`, `lean/` con `lakefile.toml`, `lean-toolchain`, `StoryMaker/Types.lean`, `Invariants.lean`, `Fixture.lean` y `last-build.txt`, y sus pruebas; `gate.py`; `.github/workflows/backend.yml`, tras el paso de TLC de T38; `.gitignore`, `.lake/` y los ficheros generados | 2 · S-C · 4.º |
-| T44 | 04, 07, 58, 59, 60 | RF-247 a RF-250, RI-64, RD-42, RD-43 | VER-05, VER-08, VER-10 | `canon/brief_rules.py`, con la normalización de T41; `canon/brief.py`, modelos y `to_events`; `brief/extract.py`; `brief/draft.py`; `backend/openapi.json`; cliente regenerado en `frontend/commons/api/`; `backend/evals/briefs/01` a `05`; `evals/test_briefs.py` y `test_temporal.py`; pruebas de reglas, entrevista y rutas | 2 · S-F · después de S-B |
+| T40 | 28, 63, 67 | RF-233 a RF-235, RI-60 a RI-62, RD-44, RNF-53, RNF-54 | VER-05, VER-09, VER-11 | `commons/tracing/langfuse_export.py` y su test; `commons/tracing/trace.py`, solo el observador; `commons/provider/port.py`, `claude_cli.py` y `test_claude_cli.py`; `orchestration/dispatch.py` y `test_dispatch.py`; `orchestration/compose.py` y `app.py`, que enganchan el conductor en vivo y emiten `work.cost`; `pyproject.toml`. Además, lo que T39 dejó en `commons/`: `claude_cli.py:_tool_protocol` pasa a mostrar el esquema que exporta el servidor de herramientas (RF-230), que `orchestration/tools/server.py` le pasa con `ToolServer.input_schemas()` e `INPUT_SCHEMAS`, porque `commons/` no importa de `orchestration/`; `compose.py`, con `run_novel` y `amend_novel` que aceptan `compose=` para inyectar el motor; `orchestration/test_compose.py`, la prueba de la puerta; y `conftest.py`, que quita `LANGFUSE_*` y `OTEL_*` antes de recoger las pruebas para que ninguna tirada de prueba salga a Langfuse | 2 · S-A · 1.º |
+| T41 | 38; 40, 70, 71, 72, 73, 75; 74 en su parte local | RF-232, RF-236 a RF-240, RD-37, RD-38 | VER-12, VER-06, VER-05, VER-09 | `canon/normalize.py`, la normalización única, porque `canon/` no importa de `verification/`; `verification/checks/forbidden.py`, que la reexporta, y `test_forbidden.py`; `verification/checks/deterministic.py`, para quitar las prohibidas de `check_repetition`; `orchestration/engine.py`, `verify_scene`; `orchestration/loop.py`, comprobación antes de `_freeze`, motivo del aborto, `guardrail.match` y la llamada a `check_chapter_length` en `_approve_chapter` (RF-232), con su prueba y la de `_work_closes` fuera de rango; `canon/db/migrations.py`, una migración; `canon/db/schema.sql`, comentario; `canon/db/forbidden_global.txt`; `canon/brief.py`, solo la carga por niveles en `create_novel`; pruebas de `loop`, `engine` y migraciones | 2 · S-B · 2.º |
+| T42 | 30, 31; 18 en su parte de esquema | RF-241, RF-242, RD-39, RD-40, RD-34 | VER-06, VER-05 | `canon/db/migrations.py`, una migración, que además añade el disparador que impide borrar de `manuscript_version` (RD-34); `canon/prose_index/usage.py`, el registro y su relleno, y `canon/prose_index/chronology.py`, la lectura de la vista, que llaman `canon/freeze/freeze.py` y `canon/arbiter/refreeze.py`; `canon/manuscript.py`, `commit_amendment`, que refresca el registro en una enmienda sin escenas que reescribir; `orchestration/amend.py`, solo la lectura del registro en `affected_scenes`; pruebas: `canon/prose_index/test_usage.py`, `test_chronology.py`, `canon/db/test_migration_5.py` y `orchestration/test_fact_usage.py` | 2 · S-M · 3.º |
+| T43 | 32, 46, 47, 48 | RF-243 a RF-246, RI-63, RD-41, RNF-55 | VER-04, VER-06, VER-05, VER-15 | `verification/formal/`: `generate.py`, `check.py`, `fixtures/`, `fixtures/__main__.py`, el comando de la puerta; `lean/` con `lakefile.toml`, `lean-toolchain`, `lake-manifest.json`, `StoryMaker/Types.lean`, `Invariants.lean`, `Fixture.lean`, `Seeded.lean` en su propia `lean_lib`, la `lean_lib Generated` sin versionar y `last-build.txt`; y sus pruebas, `test_generate.py` y `test_check.py`; `gate.py`; `.github/workflows/backend.yml`, tras el paso de TLC de T38; `.gitignore`, `.lake/` y los ficheros generados | 2 · S-C · 4.º |
+| T44 | 04, 07, 58, 59, 60 | RF-247 a RF-250, RI-64, RD-42, RD-43 | VER-05, VER-08, VER-10 | `canon/brief_rules.py`, con la normalización de T41 en `canon/normalize.py`; `canon/brief.py`, modelos y `to_events`; `brief/extract.py`; `brief/draft.py`; `backend/openapi.json`; cliente regenerado en `frontend/commons/api/`; `backend/evals/briefs/01` a `05`; `evals/test_briefs.py` y `test_temporal.py`; pruebas de reglas, entrevista y rutas | 2 · S-F · después de S-B |
 | T45 | 24, 25, 76 | RF-251 a RF-253, RI-65, RI-66, RD-45, RNF-56 | VER-05, VER-12, VER-06 | `.claude/settings.json`; `.claude/hooks/chapter_gate.py` y `policy.py`; `commons/tracing/trace.py` y `test_trace.py`, la cadena; `orchestration/routes.py`, RI-27; `openapi.json` y cliente; pruebas con subprocess dentro de `backend/`; `.gitignore`, `.claude/audit/` | 3 · S-E · 1.º |
-| T46 | 49; 71 en su nivel `novela`; 16 en el renombrado de dos palabras | RF-254 a RF-256, RI-67, RD-49, RF-225 | VER-05 | `orchestration/loop.py`, `_extract_and_validate` y `_try_retcon`; `orchestration/amend.py`, `_apply`, `forbid` y `counts` con la forma de hoy de RF-225 y D-78, que quita el `xfail` que dejó S-TESTS; `orchestration/engine.py`, `formal_check`; `orchestration/compose.py` y `app.py`, `lake` al arrancar; `brief/interpret.py`; `canon/manuscript.py`, la solicitud con `kind` y `term`; `canon/db/migrations.py`, una migración; `orchestration/routes.py`, RI-49; `openapi.json` y cliente; pruebas de `loop` y `amend` | 3 · S-G · 2.º |
-| T47 | 39, 43 | RF-257 a RF-261, RD-47, RNF-57 | VER-05, VER-17, VER-19, VER-12 | `commons/types/rubrics.py`; `verification/jury/prompts.py` y `verdict.py`; `context/packing/recipes.py`, receta del Jurado; `orchestration/engine.py`, `judge_chapter` y el Archivero; `orchestration/loop.py`, traza del Jurado; `canon/events/types.py`; `canon/db/migrations.py`, una migración; `canon/brief.py`, eventos de los elementos; `canon/archivist/prompts.py` y `extract.py`; `canon/freeze/`, usos anclados; `planning/outline/check.py` y `prompts.py`; `planning/ledger/setups.py`; pruebas | 3 · S-J · 3.º |
+| T46 | 49; 71 en su nivel `novela`; 16 en el renombrado de dos palabras | RF-254 a RF-256, RI-67, RD-49, RF-225 | VER-05 | `orchestration/loop.py`, `_extract_and_validate` y `_try_retcon`; `orchestration/amend.py`, `_apply`, que pasa el número de solicitud al contexto de sus llamadas (D-100), `forbid` y `counts` con la forma de hoy de RF-225 y D-78, que quita el `xfail` que dejó S-TESTS; `orchestration/engine.py`, `formal_check`; `orchestration/compose.py` y `app.py`, `lake` al arrancar; `brief/interpret.py`; `canon/manuscript.py`, la solicitud con `kind` y `term`; `canon/db/migrations.py`, una migración; `orchestration/routes.py`, RI-49; `openapi.json` y cliente; pruebas de `loop` y `amend` | 3 · S-G · 2.º |
+| T47 | 39, 43 | RF-257 a RF-261, RF-273, RD-47, RNF-57 | VER-05, VER-17, VER-19, VER-12 | `commons/types/rubrics.py`; `verification/jury/prompts.py` y `verdict.py`; `context/packing/recipes.py`, receta del Jurado; `orchestration/engine.py`, `judge_chapter` y el Archivero; `orchestration/loop.py`, traza del Jurado; `canon/events/types.py`; `canon/db/migrations.py`, una migración; `canon/brief.py`, eventos de los elementos; `canon/archivist/prompts.py` y `extract.py`; `canon/freeze/`, usos anclados; `planning/outline/check.py`, también el encuentro sin reglamento (RF-273), y `prompts.py`; `planning/ledger/setups.py`; pruebas | 3 · S-J · 3.º |
 | T48 | 64, 65, 66, 68, 69, 74 | RF-262 a RF-266, RI-68, RD-46 | VER-09, VER-05, VER-16 | `commons/tracing/langfuse_export.py`; `commons/settings.py`, ruta de la traza de entrevista; `brief/extract.py`, `interpret.py`, `routes.py` y `store.py`; `orchestration/tools/server.py` y `engine.py`, el registro `tool`; `orchestration/dispatch.py`; `orchestration/prompts_sync.py`; `orchestration/app.py`, reexportación de la entrevista al crear la novela; `evals/compare.py` | 3 · S-S · 4.º |
 | T49 | 41 | RF-267, RI-69 | VER-05 | `.mcp.json`; `frontend/visual/tour.mjs` y `results/`; `frontend/package.json` | 3 · S-V · 5.º |
 | T50 | 42 | RF-268 | VER-15 | `backend/coherence.py` y su prueba | 3 · quien integra, después de T39, T41, T43 y T46 |
 | T51 | 44, 45, 61 en su parte de código | RF-269 a RF-271, RD-48 | VER-10 | `evals/brief_table.py`, `human_template.py`, `human_vs_jury.py` y sus pruebas; esquema de `evals/human/` | 3 o 4 · con dobles, sin tirada |
 | T52 | 44, 45, 50, 61, 62 | RF-272, RNF-58 | VER-10, VER-16 | `evals/results/briefs.md`, `human-vs-jury.md`, `tuning-01.md` y `traces/`; `evals/formal/CASOS.md` y `test_case.py`; `evals/human/<novela>.json`; enlace desde §1.4 | 4 · en secuencia, cuando T16 termine |
+| T53 | — | RF-274, RD-50 | VER-05, VER-08 | `canon/brief.py`, `length_profile` y el rango de obra por perfil; `planning/outline/types.py`, los rangos por perfil en vez de `CHAPTER_WORDS`, `check.py` y `prompts.py`; `orchestration/compose.py`, el número de capítulos, `engine.py`, el rango de escena del Escritor y de `check.format`, y `loop.py`, `check_chapter_length` en `_approve_chapter`; `verification/checks/deterministic.py`; `backend/evals/briefs/01` a `05` con `prueba`, y sus pruebas; `backend/openapi.json` y el cliente regenerado en `frontend/commons/api/` | 3 · S-MINI · después de S-FIX y S-S |
 
 ---
 
@@ -502,7 +507,7 @@ Los tramos de `specs/srs-backend-v4.md` §11 con los requisitos que entrega cada
 
 Su spec es [`specs/srs-backend-v4.md`](../specs/srs-backend-v4.md), que es T37. No añade paso al orden de construcción: endurece los pasos 4, 5, 9 y 11. Los ficheros de cada tramo están en §7.1; los requisitos y las puertas son los de la spec y no se repiten distintos aquí.
 
-**Orden de integración.** Una sola sesión integra en `v2-oneshot`, en el orden de §7.1, y pasa `python gate.py` después de cada merge. Las migraciones de `canon/db/migrations.py` se numeran en ese mismo orden: T41, T42, T46 y T47. Las tiradas con modelo de T52 van de una en una y sobre un commit etiquetado (RNF-58).
+**Orden de integración.** Una sola sesión integra en `v2-oneshot`, en el orden de §7.1, y pasa `python gate.py` después de cada merge. Las migraciones de `canon/db/migrations.py` se numeran en ese mismo orden: T41 la 4, T42 la 5, el arreglo de B1 a B4 la 6 (`wm_run_state`, `specs/srs-backend-v1.md` RD-07), y después T46 y T47. Las tiradas con modelo de T52 van de una en una y sobre un commit etiquetado (RNF-58).
 
 ### T37 · `specs/srs-backend-v4.md`
 
@@ -530,7 +535,7 @@ Hecho. Autoriza lo que construyen las olas 2 y 3 y deja escritas en su §9 las r
 
 | Requisitos | RF-232, RF-236 a RF-240, RD-37, RD-38 |
 |---|---|
-| **Puerta** | La tirada de la sonda de la auditoría, con una prohibida en la prosa, no congela ningún capítulo con la palabra dentro: o repara, o acaba en `RunAbortedError` con término y nivel; `mar` no casa en `Marcos` y `luz` sí en `luces`; una prueba por nivel; un capítulo escrito de 1.200 palabras no pasa la puerta de capítulo y `chapter.gate` lo cita |
+| **Puerta** | La tirada de la sonda de la auditoría, con una prohibida en la prosa, no congela ningún capítulo con la palabra dentro: o repara, o acaba en `RunAbortedError` con término y nivel; `mar` no casa en `Marcos` y `luz` sí en `luces`; una prueba por nivel; un capítulo escrito de 1.200 palabras deja un S2 de `check.format` en la puerta de capítulo y `chapter.gate` lo cita, y con otros dos S2 no pasa (RF-232) |
 
 ### T42 · Hecho × capítulo y cronología
 
@@ -564,9 +569,9 @@ Hecho. Autoriza lo que construyen las olas 2 y 3 y deja escritas en su §9 las r
 
 ### T47 · Jurado versión 2 y elementos obligatorios
 
-| Requisitos | RF-257 a RF-261, RD-47, RNF-57 |
+| Requisitos | RF-257 a RF-261, RF-273, RD-47, RNF-57 |
 |---|---|
-| **Puerta** | El Jurado puntúa nueve dimensiones con justificación trazada y cabe en 13.200; un recuerdo obligatorio sin uso anclado impide cerrar la obra y el motivo lo nombra |
+| **Puerta** | El Jurado puntúa nueve dimensiones con justificación trazada y cabe en 13.200; un recuerdo obligatorio sin uso anclado impide cerrar la obra y el motivo lo nombra; una escena con `is_match` en un brief sin reglamento hace fallar `outline.check` |
 
 ### T48 · Langfuse completo
 
@@ -597,3 +602,9 @@ Hecho. Autoriza lo que construyen las olas 2 y 3 y deja escritas en su §9 las r
 | Requisitos | RF-272, RNF-58 |
 |---|---|
 | **Puerta** | `evals/results/briefs.md`, `human-vs-jury.md`, `tuning-01.md` y `evals/formal/CASOS.md` existen, versionados, y se regeneran con un comando desde ficheros versionados |
+
+### T53 · Perfil de extensión `prueba`
+
+| Requisitos | RF-274, RD-50 |
+|---|---|
+| **Puerta** | Una tirada con dobles de cada brief de evaluación cierra con 3 capítulos de 1 escena y entre 300 y 500 palabras; un brief `novela` sin perfil se comporta igual que hoy |

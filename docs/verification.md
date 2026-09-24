@@ -345,7 +345,7 @@ Explorar de forma exhaustiva los estados y transiciones alcanzables del flujo pa
 
 El tercer invariante es el que más se rompe en la práctica: revalidar solo desde el punto que falló deja pasar la corrección de estilo que rompió la continuidad.
 
-El modelo de la tirada lleva como banderas las correcciones que el código aún no tiene: `run.cfg` las activa y cada configuración de `code-today/` da el contraejemplo del código actual (`backend/orchestration/model/README.md` §7.1).
+El modelo de la tirada lleva como banderas las cuatro correcciones que destapó TLC. `run.cfg` las activa, y es lo que hace el código. Cada configuración de `code-today/` apaga una y conserva el contraejemplo del código anterior al arreglo, con la prueba VER-05 que lo reproduce (`backend/orchestration/model/README.md` §7.1).
 
 ### 5.11 VER-19 · Anclaje de evidencia
 
@@ -520,6 +520,8 @@ Lo que este catálogo **no** verifica, dicho de forma explícita. Es la clase U 
 | Corrección de la implementación frente al modelo formal de VER-04 y VER-18 | La prueba cubre el modelo; cerrar la distancia exigiría código verificado, que no compensa | Cobertura de mutación de VER-07 sobre los módulos afectados |
 | Una palabra común al principio de frase, a una edición de un nombre corto del canon, que no sale en minúscula en la escena: `check.lexicon` la toma por errata y da un falso S1, como «Llena» con Elena en el canon | Sin diccionario del español no se distingue de una errata. La lista de palabras comunes lo reduce, no lo elimina | El defecto dice «variante mal escrita de X» y cita la palabra, así que el Reparador lo ve y la traza cuenta cuántos hay |
 | Que un tema prohibido del brief aparezca en la prosa | Un tema no se detecta sin modelo; la palabra prohibida sí, y esa la cubre VER-12 | Las dimensiones de tono y tema del Jurado, y la evaluación humana de referencia |
+| Que plegar la «ñ» haga casar una prohibida con otra palabra —«año» y «ano» normalizan igual— y `check.forbidden` mande a reparar prosa correcta con un falso S1 | La normalización quita las marcas combinantes para que «cabrón» y «cabron» sean la misma palabra, y el precio es el mismo en el término que en el texto (`specs/srs-backend-v4.md` RF-237) | Cada coincidencia deja `guardrail.match` con la cita en la traza, así que un falso positivo se ve y se cuenta |
+| Que un recuerdo con una fecha imposible, narrado dentro de una escena del presente, no lo vea VER-04 | Lean demuestra lo que dice la cronología de escenas, y un recuerdo no es una escena: solo salta si la escaleta pone una escena en esa fecha con el personaje presente | `check.timeline` marca toda fecha escrita «D de mes», que las permitidas llegan en ISO 8601; por eso mismo un acierto suyo puede venir de esa regla y no de la trampa, y la tabla por brief de VER-10 dice qué verificador cazó cada una (`specs/srs-backend-v4.md` §4.7) |
 
 Un riesgo en esta tabla es una decisión, no una omisión. Sacar una fila de aquí exige un método; meter una nueva exige motivo y señal.
 

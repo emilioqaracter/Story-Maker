@@ -223,7 +223,7 @@ Todo lo que el sistema sostiene mientras produce un capítulo y que **no es verd
 
 | Tabla | Qué guarda | Se vacía |
 |---|---|---|
-| `run_state` | En qué capítulo, escena y paso va la tirada. Es el punto de reanudación (PRO-14) | Al terminar la novela |
+| `run_state` | En qué capítulo, escena y paso va la tirada, los reintentos consumidos del capítulo y la escaleta vigente. Es el punto de reanudación (PRO-14) | Al terminar la novela |
 | `draft` | Prosa de escena y de capítulo aún no congelada (PRO-06) | Al congelar: pasa al índice de prosa |
 | `defect` | Defectos abiertos (CAL-05) con su evidencia y su estado en el bucle de §7.3 | Al congelar |
 | `verdict` | Puntuaciones del jurado por dimensión, con su dispersión (CAL-11) | Al congelar |
@@ -522,7 +522,7 @@ Ese andamiaje **no cuenta contra el techo de 100.000 de §4.1**. El techo acota 
 
 El cache del prefijo sobrevive entre invocaciones del CLI —medido: la segunda llamada leyó 37.154 fichas de cache—, así que el andamiaje se paga caro una vez por agente y barato después. Volver a la API es cambiar la implementación del puerto (RI-21), no tocar un agente.
 
-**El CLI del motor no carga la configuración de quien lo ejecuta.** Cada `claude -p` se lanza sin la configuración de usuario ni la del proyecto —ni plugins, ni hooks, ni `CLAUDE.md`, ni skills, ni servidores MCP— y con un entorno sin variables `LANGFUSE_*` ni `OTEL_*` (`specs/srs-backend-v4.md` RI-62). El motivo es de datos, no de tokens: un plugin de observabilidad del usuario engancharía cada llamada de la novela y mandaría el brief a un servicio por una vía que nadie decidió. Lo que sale hacia Langfuse sale solo por el exportador (§11). El suelo de 38.600 se vuelve a medir con esta forma; hasta entonces se conserva, porque sobreestimar el andamiaje es el lado seguro.
+**El CLI del motor no carga la configuración de quien lo ejecuta.** Cada `claude -p` se lanza sin la configuración de usuario ni la del proyecto —ni plugins, ni hooks, ni `CLAUDE.md`, ni skills, ni servidores MCP— y con un entorno sin variables `LANGFUSE_*` ni `OTEL_*` (`specs/srs-backend-v4.md` RI-62). Lo hacen dos argumentos: `--setting-sources ""`, que no carga ajustes de usuario, proyecto ni local, y `--safe-mode`, que desactiva `CLAUDE.md`, skills, plugins, hooks y servidores MCP y conserva la autenticación por suscripción; `--bare` no sirve, porque exige clave de API. El motivo es de datos, no de tokens: un plugin de observabilidad del usuario engancharía cada llamada de la novela y mandaría el brief a un servicio por una vía que nadie decidió. Lo que sale hacia Langfuse sale solo por el exportador (§11). El suelo de 38.600 se vuelve a medir con esta forma; hasta entonces se conserva, porque sobreestimar el andamiaje es el lado seguro.
 
 #### Embeddings locales
 
@@ -1368,10 +1368,13 @@ La tirada persiste su punto de reanudación (PRO-14) en `run_state` al cerrar **
 | | |
 |---|---|
 | **Al arrancar** | Si hay un capítulo sin congelar, se reanuda desde la última escena cerrada |
-| **Qué se descarta** | Todo borrador posterior a ese punto: puede estar a medias y no ha pasado ninguna puerta (PRO-I2) |
-| **Qué se conserva** | Las escenas ya cerradas del capítulo y su cuenta de reintentos consumidos |
+| **Al arrancar con el capítulo ya congelado** | Si la caída llegó después de congelar y antes de avanzar el punto, el capítulo no se reescribe: se sigue desde su puerta de acto |
+| **Qué se descarta** | Todo borrador posterior a ese punto: puede estar a medias y no ha pasado ninguna puerta (PRO-I2). Al decidir una cuarentena de capítulo, también las escenas del pase descartado: el punto vuelve al principio del capítulo con el peldaño ya gastado (D-26) |
+| **Qué se conserva** | Las escenas ya cerradas del capítulo, su cuenta de reintentos consumidos y la escaleta vigente, con las replanificaciones de acto, de Supervisor y de cuarentena ya hechas. Reanudar no vuelve a pedir la escaleta al Arquitecto |
 
 Por escena y no por llamada porque la escena **ya es** la unidad de reintento de §7.3: reanudar por ahí reaprovecha una frontera que el diseño tiene, en vez de inventar otra. Persistir cada llamada obligaría a serializar su paquete de contexto y multiplicaría la escritura sin comprar nada.
+
+Cada fila tiene su porqué. Sin la escaleta, reanudar escribiría los capítulos que faltan contra otra distinta. Sin volver al principio tras una cuarentena, una caída reutilizaría escenas de un encargo que la escalera ya dio por malo, y reanudar no daría lo mismo que no caer (`specs/srs-backend-v1.md` RNF-08). Y reescribir un capítulo ya congelado sustituiría prosa congelada y duplicaría su delta en el registro de eventos.
 
 #### Admisión de llamadas: CTX-20 como semáforo
 
@@ -1442,7 +1445,7 @@ Coste despreciable, cero falsos positivos si están bien escritos. Se ejecutan s
 - Conocimiento (`check.knowledge`): menciones de hechos canónicos por personajes cuyo PER-10 no los incluye.
 - Anclaje de la evidencia (`check.evidence`): toda cita que acompaña a un defecto o a una puntuación existe literal y una sola vez en la escena que nombra. Corre sobre la salida de los jueces, no sobre la prosa.
 - Palabras prohibidas del encargo (`check.forbidden`): S1, por palabra normalizada con variantes simples, en cada intento y sobre el capítulo entero antes de congelar.
-- Longitud del capítulo escrito frente a EST-07, con `check.format` en la puerta de capítulo.
+- Longitud del capítulo escrito frente al rango de su perfil de extensión (PRO-15), que en el perfil `novela` es EST-07, con `check.format` en la puerta de capítulo. La longitud de escena y el número de capítulos también salen del perfil, nunca de una constante (`specs/srs-backend-v4.md` RF-274).
 - Cronología demostrada (`check.formal`): los invariantes de `verification.md` §4.4 sobre el canon más lo que va a entrar, con Lean.
 
 De la primera línea, la duración de las elipsis y, de la tercera, las estadísticas acumuladas no tienen hoy verificador propio: las ve el Continuista y constan como riesgo aceptado en `specs/srs-backend-v4.md` §7.4. El orden de los eventos lo demuestra `check.formal`.
@@ -1458,13 +1461,13 @@ Cuatro tipos: programático, semántico, formal de la historia y formal del sist
 | Programático | `check.lexicon` | `deterministic.py:check_lexicon` | Puerta de escena | S1 | Reintento de escena |
 | Programático | `check.knowledge` | `deterministic.py:check_knowledge` | Puerta de escena | S1 | Reintento de escena |
 | Programático | `check.repetition` | `deterministic.py:check_repetition` | Puerta de escena | S2 | El Estilista lo recibe en su pase |
-| Programático | `check.forbidden` | `verification/checks/forbidden.py:check_forbidden` | Puerta de escena en cada intento y, sobre el capítulo entero, justo antes de `loop.py:_freeze` | S1 | Reintento; agotada la escalera, `RunAbortedError` con término y nivel |
+| Programático | `check.forbidden` | `verification/checks/forbidden.py:check_forbidden`, sobre la normalización de `canon/normalize.py` | Puerta de escena en cada intento y, sobre el capítulo entero, justo antes de `loop.py:_freeze` | S1 | Reintento; agotada la escalera, `RunAbortedError` con término y nivel |
 | Programático | `check.ledger`, `check.availability` | `deterministic.py:check_ledger`, `check_availability`, `check_milestones` | Escena de encuentro: `engine.py:Composer.verify_match` | S1 | Reintento de escena |
 | Programático | `check.format`, longitud de capítulo | `deterministic.py:check_chapter_length` | Puerta de capítulo: `loop.py:_approve_chapter`, sobre las escenas unidas | S2 | Cuenta en el máximo de la puerta de capítulo; reparación |
 | Programático | `quiz.grade` | `verification/quiz/grade.py` | Puerta de capítulo, antes del Jurado | S2 por respuesta errónea | Reparación |
 | Programático | `check.evidence` | `verification/checks/evidence.py` | Sobre la salida del Continuista, del Jurado y del Archivero | — | La cita se descarta como defecto de proceso |
 | Programático | `outline.check` | `planning/outline/check.py` | Tras el Arquitecto: `loop.py:_plan_with_gate` | S1 | La escaleta vuelve con sus defectos; agotado, `RunAbortedError` |
-| Programático | Reglas del brief | `canon/brief_rules.py:contradictions` | Carga del brief (RI-01) y cada turno de la entrevista | — | 422 con la regla; en la entrevista, la contradicción se muestra |
+| Programático | Reglas del brief | `canon/brief_rules.py:contradictions`, con la misma normalización | Carga del brief (RI-01) y cada turno de la entrevista | — | 422 con la regla; en la entrevista, la contradicción se muestra |
 | Programático | Validación del delta | `canon/arbiter/entries.py:validate_delta` | Antes de congelar: `loop.py:_extract_and_validate` | S1 | Arbitraje y reparación (§10) |
 | Programático | Puerta de acto | `planning/act_gate/gate.py:check_act` | Al congelar el último capítulo de un acto | — | Replanifica el tramo siguiente |
 | Programático | Cierre de obra | `loop.py:_work_closes` | Tras el último capítulo | — | La obra no cierra y la traza dice por qué |
