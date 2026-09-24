@@ -1,0 +1,2665 @@
+{
+ "brief": "01-semilla",
+ "commit": "69d605e",
+ "source": "eval-01-abortada.trace.jsonl",
+ "records": [
+  {
+   "seq": 3,
+   "at": "2026-09-24T10:05:20+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "arquitecto",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "1b419d930a3c"
+   },
+   "prev_hash": "353fdcb08a167fbd6768e6a6367fe0b526723a23249d0fe7d07f3a745dc1f07f"
+  },
+  {
+   "seq": 5,
+   "at": "2026-09-24T10:05:20+00:00",
+   "kind": "outline.check",
+   "fields": {
+    "defects": [
+     "doble-arco-colapsado"
+    ],
+    "passed": false,
+    "messages": [
+     "doble-arco-colapsado [c3e1]: los arcos 'competitivo' y 'interno' se resuelven en la misma escena; la victoria explicaria el cambio interior y lo abarataria"
+    ]
+   },
+   "prev_hash": "0206270eda3692db5da5eea91eec1b799975f520582ba75a0ce7a563fb089461"
+  },
+  {
+   "seq": 8,
+   "at": "2026-09-24T10:06:24+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "arquitecto",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "1b419d930a3c"
+   },
+   "prev_hash": "0b0f7ae80b1c19766448bd60e95074c977d008b169fad3ecc7d046ca5ec8ab07"
+  },
+  {
+   "seq": 10,
+   "at": "2026-09-24T10:06:24+00:00",
+   "kind": "outline.check",
+   "fields": {
+    "defects": [],
+    "passed": true,
+    "messages": []
+   },
+   "prev_hash": "5894dfb86dbaed8994576eb4a013564c985740af25b8cffda6397af8b96b79c3"
+  },
+  {
+   "seq": 12,
+   "at": "2026-09-24T10:06:53+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "planificador",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "31545ca9b935"
+   },
+   "prev_hash": "2af14d4f89ed6d99e76e6a71abc09cc2c44b34614e3bd6d6c8196964f4938654"
+  },
+  {
+   "seq": 16,
+   "at": "2026-09-24T10:07:10+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "escritor",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "dbda0b47f468"
+   },
+   "prev_hash": "47bd0e5c3fa5d61c9e61fae8c050c6fd4594d24bc74825001713c971dec97b5b"
+  },
+  {
+   "seq": 19,
+   "at": "2026-09-24T10:07:10+00:00",
+   "kind": "scene.attempt",
+   "fields": {
+    "chapter": 1,
+    "scene": 1,
+    "attempt": 1,
+    "words": 149,
+    "defects": [
+     "check.format:S1"
+    ],
+    "passed": false,
+    "is_match": false
+   },
+   "prev_hash": "f3830a4ec0bb17f32e6e7cc2c1695e1cc3937bf55ded3f634135b3efc2634f5c"
+  },
+  {
+   "seq": 23,
+   "at": "2026-09-24T10:07:22+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "escritor",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "dbda0b47f468"
+   },
+   "prev_hash": "8d77f8b54d3a985e8c082e595356ade77337dbc7aff4bb14f121ba152a9d191b"
+  },
+  {
+   "seq": 26,
+   "at": "2026-09-24T10:07:22+00:00",
+   "kind": "scene.attempt",
+   "fields": {
+    "chapter": 1,
+    "scene": 1,
+    "attempt": 2,
+    "words": 146,
+    "defects": [],
+    "passed": true,
+    "is_match": false
+   },
+   "prev_hash": "50ac918c9f5cd0dc304b7e63fff93e01cccde30346853929463d401a820c3b90"
+  },
+  {
+   "seq": 28,
+   "at": "2026-09-24T10:08:02+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "continuista",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "9c50294cc3c5"
+   },
+   "prev_hash": "e1670f725965eece639906efb509dbbd3ad69baeb3e9f42c495f360a51e07412"
+  },
+  {
+   "seq": 31,
+   "at": "2026-09-24T10:08:13+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "lector",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "cdada6a08b9d"
+   },
+   "prev_hash": "bc938e7c750415b6919118b4929404006fe5ea941ee8a54af6d002147f0c595c"
+  },
+  {
+   "seq": 33,
+   "at": "2026-09-24T10:08:13+00:00",
+   "kind": "quiz",
+   "fields": {
+    "chapter": 1,
+    "questions": 3,
+    "wrong": 0
+   },
+   "prev_hash": "28950d8b5adfd442dbed1f8a44bd96acf365a6de909204416ef627072fe198b6"
+  },
+  {
+   "seq": 34,
+   "at": "2026-09-24T10:08:13+00:00",
+   "kind": "chapter.gate",
+   "fields": {
+    "chapter": 1,
+    "passed": true,
+    "s1": 0,
+    "s2": 0,
+    "reason": "pasa",
+    "defects": []
+   },
+   "prev_hash": "86eccc5e4cb7fd895fa228bc74d5050e3e53af37c60eddb2e403693e22a4abdb"
+  },
+  {
+   "seq": 38,
+   "at": "2026-09-24T10:08:54+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "102114d1e495ddc036807ca0089dd85d2e347dd97c6a87776577af162bc50db8"
+  },
+  {
+   "seq": 42,
+   "at": "2026-09-24T10:09:02+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "1e05374be96b50c1a76a691362fe6a5f40764004d868ba478b0b136645f8d168"
+  },
+  {
+   "seq": 46,
+   "at": "2026-09-24T10:09:07+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "ec4f783d23bc27286813bfdfe8ffa15b9f97f5d08c318ef681f0e1df361dd5be"
+  },
+  {
+   "seq": 50,
+   "at": "2026-09-24T10:09:43+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "4d601d0e8ab90cf9dfcb2d4fe203d467a45f7ceb72ea948bb23454acb5f72527"
+  },
+  {
+   "seq": 54,
+   "at": "2026-09-24T10:09:53+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "28194b05e13bd22abd14733989df7e7131bd9cfe329ab57c7a2ba4b92bd80ea2"
+  },
+  {
+   "seq": 56,
+   "at": "2026-09-24T10:10:15+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "ab4eaed61a5ef45d3809b74a5e0b80765f240b1ba2ea355ba220f13283f9d710"
+  },
+  {
+   "seq": 58,
+   "at": "2026-09-24T10:10:25+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "d0663dc7720246eed0496b65867d1df5470686724261cf94ed70b66f9741251d"
+  },
+  {
+   "seq": 60,
+   "at": "2026-09-24T10:10:25+00:00",
+   "kind": "jury",
+   "fields": {
+    "chapter": 1,
+    "passed": false,
+    "rounds": 1,
+    "levels": {
+     "voice": 2,
+     "style_guide": 4,
+     "pacing": 3,
+     "subtext": 2,
+     "theme": 2,
+     "continuity": 4,
+     "tone": 4,
+     "arc": 3,
+     "personalization": 1
+    },
+    "spreads": {
+     "voice": 1,
+     "style_guide": 1,
+     "pacing": 0,
+     "subtext": 0,
+     "theme": 1,
+     "continuity": 1,
+     "tone": 1,
+     "arc": 0,
+     "personalization": 1
+    },
+    "discarded": 0,
+    "scores": [
+     {
+      "instance": "juez-1",
+      "dimension": "voice",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Marcos sintió el peso de esas palabras. Escuchó la precisión con que el míster diseccionaba al rival, cada gesto, cada virtud.",
+      "justification": "La narración se adhiere a la perspectiva de Marcos y sus marcas emocionales son visibles, pero sin diálogos propios la coherencia del idiolecto no emerge; es más la voz del narrador que la del personaje en su particularidad."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "voice",
+      "level": 2,
+      "scene": "c1e1",
+      "quote": "Se planta, espera el momento, mata. Eso es lo que no se puede dejar",
+      "justification": "El míster es coherente con su rol de entrenador táctico, pero Marcos como POV carece de marca distintiva; sus pensamientos suenan neutros sin idiolecto propio."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "voice",
+      "level": 2,
+      "scene": "c1e1",
+      "quote": "Marcos sintió el peso de esas palabras. Escuchó la precisión con que el míster diseccionaba al rival, cada gesto, cada virtud.",
+      "justification": "El POV es de Marcos, pero la voz narrativa predomina sobre el idiolecto del personaje. Las líneas suenan como interpretación del narrador sobre Marcos, no como pensamiento propio; falta marca distintiva de cómo Marcos en particular experimenta y procesa."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "style_guide",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Los otros ya estaban allí —Dani y Pol— pero toda la atención gravitaba hacia Aurelio Peña, que señalaba sobre una pizarra invisible.",
+      "justification": "El texto evita clichés deportivos evidentes y mantiene precisión en la descripción, pero sin acceso a la guía específica de la obra no puede evaluarse la interiorización de sus principios; cumple sin que se note esfuerzo en este fragmento."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "style_guide",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Los otros ya estaban allí —Dani y Pol— pero toda la atención gravitaba hacia Aurelio Peña",
+      "justification": "Lenguaje preciso sin clichés ni valoraciones forzadas; el estilo es limpio y efectivo, aparentemente sin esfuerzo consciente."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "style_guide",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Los otros ya estaban allí —Dani y Pol— pero toda la atención gravitaba hacia Aurelio Peña, que señalaba sobre una pizarra invisible.",
+      "justification": "La prosa es limpia y evita clichés. Las palabras (\"gravitaba\") son precisas sin ser afectadas. El capítulo cumple estándares de buena escritura; no hay valoraciones ni registro que contraríe una voz narrativa cuidada."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "pacing",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Cuando salió hacia el campo minutos después, la seguridad se había esfumado.",
+      "justification": "Las escenas cambian su estado emocional y el ritmo lo acompaña, pero el salto temporal «minutos después» elide un espacio que podría haber sido una transición más labrada; hay un tramo que se estanca en la aceleración final."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "pacing",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Caminó hacia la banda dudando de su propio nivel",
+      "justification": "Hay cambio entre escenas, pero el movimiento se cuenta más que se muestra; falta aceleración estratégica del ritmo para sostener la tensión."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "pacing",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Cuando salió hacia el campo minutos después, la seguridad se había esfumado.",
+      "justification": "Hay cambio de valor claro, pero la transición se comprime: \"minutos después\" elide todo lo intermedio entre el vestuario y el campo. La escena salta sin escalas que mantengan la tensión del cambio emocional."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "subtext",
+      "level": 2,
+      "scene": "c1e1",
+      "quote": "Cuando salió hacia el campo minutos después, la seguridad se había esfumado. Sus propias capacidades se sintieron de repente menores, oscurecidas por la sombra de otro delantero.",
+      "justification": "El narrador explicita lo que Marcos siente al salir sin dejar que la inseguridad emerja de lo no dicho; enumera el estado emocional en lugar de dejarlo entre líneas, literalizando la intención donde debería ser omisión."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "subtext",
+      "level": 2,
+      "scene": "c1e1",
+      "quote": "Marcos sintió el peso de esas palabras. Escuchó la precisión con que el míster diseccionaba al rival",
+      "justification": "El diálogo del míster lleva una intención oculta dirigida a Marcos, pero el narrador la explica de inmediato sin permitir que el lector la descubra solo."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "subtext",
+      "level": 2,
+      "scene": "c1e1",
+      "quote": "Iker se mueve en espacios cerrados como nadie», dijo el entrenador, los ojos fijos en ningún punto específico, dibujando con las manos.",
+      "justification": "No hay verdadero intercambio dialogado. El entrenador expone análisis técnico sin respuesta de Marcos más allá de reacción emocional silenciosa. La intención (intimidar sin saberlo) existe en la lectura, pero no nace del diálogo mismo."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "theme",
+      "level": 1,
+      "scene": "c1e1",
+      "quote": "Caminó hacia la banda dudando de su propio nivel.",
+      "justification": "No hay motivo temático reconocible siendo trabajado sin ser anunciado; es una situación de competencia y duda frente a un rival que no toca una idea más profunda ni resuena con propósitos de la obra, solo describe un estado funcional."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "theme",
+      "level": 2,
+      "scene": "c1e1",
+      "quote": "Sus propias capacidades se sintieron de repente menores, oscurecidas por la sombra de otro delantero",
+      "justification": "Emerge un motivo sobre la comparación y la inferioridad, pero sin contexto de la obra no se verifica si es intencional o si resignifica motivos anteriores."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "theme",
+      "level": 2,
+      "scene": "c1e1",
+      "quote": "Sus propias capacidades se sintieron de repente menores, oscurecidas por la sombra de otro delantero.",
+      "justification": "El motivo sobre inseguridad ante la excelencia ajena aparece, pero se enuncia de forma explícita. El narrador lo interpreta para el lector en lugar de permitir que emerja de lo que ocurre en la escena."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "continuity",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Marcos entró al vestuario y encontró al míster en plena disertación táctica. Los otros ya estaban allí —Dani y Pol— pero toda la atención gravitaba hacia Aurelio Peña, que señalaba sobre una pizarra invisible.",
+      "justification": "Como primer capítulo carece de anterior con el que resonar, pero internamente la transición (entrada, escucha, salida) es clara y sin sobresaltos; la escena se lee como un movimiento completo aunque aislado."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "continuity",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Cuando salió hacia el campo minutos después, la seguridad se había esfumado",
+      "justification": "Las transiciones entre vestuario y campo son limpias; la elipsis temporal se comprende sin necesidad de explicación, aunque sea el capítulo inicial."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "continuity",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Marcos entró al vestuario y encontró al míster en plena disertación táctica. Los otros ya estaban allí —Dani y Pol— pero toda la atención gravitaba hacia Aurelio Peña, que señalaba sobre una pizarra invisible.",
+      "justification": "Es el inicio del capítulo sin precedente que seguir, pero abre con claridad de espacio, personajes y conflicto. Las transiciones son limpias y el lector entiende sin explicaciones de dónde viene Marcos ni qué acaba de pasar."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "tone",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "La voz del técnico resonó una vez más: «Así ataca Iker. Esto es lo que no se puede dejar.",
+      "justification": "El tono que emerge es de tensión controlada y sobriedad profesional, coherente a lo largo del capítulo, pero sin tono declarado en el encargo su modulación es por defecto; sostiene sin romperse pero tampoco redefine la escena."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "tone",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Sus propias capacidades se sintieron de repente menores, oscurecidas por la sombra de otro delantero",
+      "justification": "El tono introspectivo y dubitativo se sostiene sin ruptura en todo el capítulo, modulando según la escena interna de Marcos."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "tone",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Caminó hacia la banda dudando de su propio nivel.",
+      "justification": "El tono introspectivo y tenso se sostiene del inicio al final sin ruptura. La línea final refuerza lo que se estableció desde el diálogo inicial; el tono es coherente y modulado con la progresión emocional."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "arc",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Cuando salió hacia el campo minutos después, la seguridad se había esfumado. Sus propias capacidades se sintieron de repente menores, oscurecidas por la sombra de otro delantero.",
+      "justification": "Marcos experimenta un cambio emocional reconocible (de oyente atento a dudas sobre su propio nivel) causado por la presentación del rival, pero es un paso reactivo; la inseguridad le sucede más que ser ganada en la acción de la escena."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "arc",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Cuando salió hacia el campo minutos después, la seguridad se había esfumado",
+      "justification": "El arco avanza un paso reconocible desde la confianza inicial hasta la duda final; el cambio se gana en escena sin ser evidente desde el comienzo."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "arc",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Cuando salió hacia el campo minutos después, la seguridad se había esfumado. Sus propias capacidades se sintieron de repente menores, oscurecidas por la sombra de otro delantero.",
+      "justification": "El capítulo muestra un paso reconocible del arco de inseguridad: Marcos pasa de estar presente en el vestuario a dudar de su nivel. El cambio existe, pero se logra de forma pasiva, por exposición a información sobre el rival, no por acción o decisión de Marcos."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "personalization",
+      "level": 1,
+      "scene": "c1e1",
+      "quote": "Caminó hacia la banda dudando de su propio nivel.",
+      "justification": "No hay destinatario declarado en el encargo; la escena es un conflicto deportivo genérico sin rasgos particulares que personalicen a Marcos más allá de su rol de delantero inquieto, como si pudiera ser cualquier futbolista."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "personalization",
+      "level": 1,
+      "scene": "c1e1",
+      "quote": "Marcos entró al vestuario y encontró al míster en plena disertación táctica",
+      "justification": "Sin destinatario declarado, el capítulo no integra ningún rasgo, recuerdo o particularidad de Marcos; podría ocurrirle a cualquier delantero."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "personalization",
+      "level": 2,
+      "scene": "c1e1",
+      "quote": "Marcos entró al vestuario y encontró al míster en plena disertación táctica.",
+      "justification": "Marcos aparece en la escena, pero sin rasgos diferenciadores. La ficha indica dorsal 9, delantero, nivel 62, pero nada de esto aparece integrado. Falta el idiolecto único de cómo Marcos, jugador con esa historia, experimenta la amenaza de Iker."
+     }
+    ],
+    "justifications": {
+     "voice": "juez-1: La narración se adhiere a la perspectiva de Marcos y sus marcas emocionales son visibles, pero sin diálogos propios la coherencia del idiolecto no emerge; es más la voz del narrador que la del personaje en su particularidad. | juez-2: El míster es coherente con su rol de entrenador táctico, pero Marcos como POV carece de marca distintiva; sus pensamientos suenan neutros sin idiolecto propio. | juez-3: El POV es de Marcos, pero la voz narrativa predomina sobre el idiolecto del personaje. Las líneas suenan como interpretación del narrador sobre Marcos, no como pensamiento propio; falta marca distintiva de cómo Marcos en particular experimenta y procesa.",
+     "style_guide": "juez-1: El texto evita clichés deportivos evidentes y mantiene precisión en la descripción, pero sin acceso a la guía específica de la obra no puede evaluarse la interiorización de sus principios; cumple sin que se note esfuerzo en este fragmento. | juez-2: Lenguaje preciso sin clichés ni valoraciones forzadas; el estilo es limpio y efectivo, aparentemente sin esfuerzo consciente. | juez-3: La prosa es limpia y evita clichés. Las palabras (\"gravitaba\") son precisas sin ser afectadas. El capítulo cumple estándares de buena escritura; no hay valoraciones ni registro que contraríe una voz narrativa cuidada.",
+     "pacing": "juez-1: Las escenas cambian su estado emocional y el ritmo lo acompaña, pero el salto temporal «minutos después» elide un espacio que podría haber sido una transición más labrada; hay un tramo que se estanca en la aceleración final. | juez-2: Hay cambio entre escenas, pero el movimiento se cuenta más que se muestra; falta aceleración estratégica del ritmo para sostener la tensión. | juez-3: Hay cambio de valor claro, pero la transición se comprime: \"minutos después\" elide todo lo intermedio entre el vestuario y el campo. La escena salta sin escalas que mantengan la tensión del cambio emocional.",
+     "subtext": "juez-1: El narrador explicita lo que Marcos siente al salir sin dejar que la inseguridad emerja de lo no dicho; enumera el estado emocional en lugar de dejarlo entre líneas, literalizando la intención donde debería ser omisión. | juez-2: El diálogo del míster lleva una intención oculta dirigida a Marcos, pero el narrador la explica de inmediato sin permitir que el lector la descubra solo. | juez-3: No hay verdadero intercambio dialogado. El entrenador expone análisis técnico sin respuesta de Marcos más allá de reacción emocional silenciosa. La intención (intimidar sin saberlo) existe en la lectura, pero no nace del diálogo mismo.",
+     "theme": "juez-1: No hay motivo temático reconocible siendo trabajado sin ser anunciado; es una situación de competencia y duda frente a un rival que no toca una idea más profunda ni resuena con propósitos de la obra, solo describe un estado funcional. | juez-2: Emerge un motivo sobre la comparación y la inferioridad, pero sin contexto de la obra no se verifica si es intencional o si resignifica motivos anteriores. | juez-3: El motivo sobre inseguridad ante la excelencia ajena aparece, pero se enuncia de forma explícita. El narrador lo interpreta para el lector en lugar de permitir que emerja de lo que ocurre en la escena.",
+     "continuity": "juez-1: Como primer capítulo carece de anterior con el que resonar, pero internamente la transición (entrada, escucha, salida) es clara y sin sobresaltos; la escena se lee como un movimiento completo aunque aislado. | juez-2: Las transiciones entre vestuario y campo son limpias; la elipsis temporal se comprende sin necesidad de explicación, aunque sea el capítulo inicial. | juez-3: Es el inicio del capítulo sin precedente que seguir, pero abre con claridad de espacio, personajes y conflicto. Las transiciones son limpias y el lector entiende sin explicaciones de dónde viene Marcos ni qué acaba de pasar.",
+     "tone": "juez-1: El tono que emerge es de tensión controlada y sobriedad profesional, coherente a lo largo del capítulo, pero sin tono declarado en el encargo su modulación es por defecto; sostiene sin romperse pero tampoco redefine la escena. | juez-2: El tono introspectivo y dubitativo se sostiene sin ruptura en todo el capítulo, modulando según la escena interna de Marcos. | juez-3: El tono introspectivo y tenso se sostiene del inicio al final sin ruptura. La línea final refuerza lo que se estableció desde el diálogo inicial; el tono es coherente y modulado con la progresión emocional.",
+     "arc": "juez-1: Marcos experimenta un cambio emocional reconocible (de oyente atento a dudas sobre su propio nivel) causado por la presentación del rival, pero es un paso reactivo; la inseguridad le sucede más que ser ganada en la acción de la escena. | juez-2: El arco avanza un paso reconocible desde la confianza inicial hasta la duda final; el cambio se gana en escena sin ser evidente desde el comienzo. | juez-3: El capítulo muestra un paso reconocible del arco de inseguridad: Marcos pasa de estar presente en el vestuario a dudar de su nivel. El cambio existe, pero se logra de forma pasiva, por exposición a información sobre el rival, no por acción o decisión de Marcos.",
+     "personalization": "juez-1: No hay destinatario declarado en el encargo; la escena es un conflicto deportivo genérico sin rasgos particulares que personalicen a Marcos más allá de su rol de delantero inquieto, como si pudiera ser cualquier futbolista. | juez-2: Sin destinatario declarado, el capítulo no integra ningún rasgo, recuerdo o particularidad de Marcos; podría ocurrirle a cualquier delantero. | juez-3: Marcos aparece en la escena, pero sin rasgos diferenciadores. La ficha indica dorsal 9, delantero, nivel 62, pero nada de esto aparece integrado. Falta el idiolecto único de cómo Marcos, jugador con esa historia, experimenta la amenaza de Iker."
+    }
+   },
+   "prev_hash": "8a204b0ad9b3b4bd443d88fdfe33b902f96a20e596025b48b13c7aea52566e9e"
+  },
+  {
+   "seq": 63,
+   "at": "2026-09-24T10:10:54+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "reparador",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "773c89a3d9a2"
+   },
+   "prev_hash": "9528aa8cd74156d0af4af4d672ec108150edab386b95f9bb1c355c33c1c73f3b"
+  },
+  {
+   "seq": 68,
+   "at": "2026-09-24T10:11:26+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "continuista",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "9c50294cc3c5"
+   },
+   "prev_hash": "27a3050424026af758d6291e6fcdddc1227228d2c7a6febc1af77c937d8e87d4"
+  },
+  {
+   "seq": 71,
+   "at": "2026-09-24T10:11:39+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "lector",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "cdada6a08b9d"
+   },
+   "prev_hash": "483956acbef03bba389e87a6f0ea55123c02c326bdf05178cc3ad1d408189058"
+  },
+  {
+   "seq": 73,
+   "at": "2026-09-24T10:11:39+00:00",
+   "kind": "quiz",
+   "fields": {
+    "chapter": 1,
+    "questions": 3,
+    "wrong": 0
+   },
+   "prev_hash": "e3b26c97bc1c2b1b0b8086f2ca61ffa4ada1f932b69ac92be52db0c359f566a8"
+  },
+  {
+   "seq": 74,
+   "at": "2026-09-24T10:11:39+00:00",
+   "kind": "chapter.gate",
+   "fields": {
+    "chapter": 1,
+    "passed": true,
+    "s1": 0,
+    "s2": 0,
+    "reason": "pasa",
+    "defects": []
+   },
+   "prev_hash": "9b4d22c6cebde70465102e308eaf5d1b6a2251389e94cf2e756514a0400adb6f"
+  },
+  {
+   "seq": 78,
+   "at": "2026-09-24T10:12:39+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "229b2f98833b17137dd8cf4fc81c10609529751f232f7021af032e0b60eb2636"
+  },
+  {
+   "seq": 82,
+   "at": "2026-09-24T10:12:48+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "0b39a9e81251c59c7d2adbe394c9423bcabb33665862a441d3468d57f9933e65"
+  },
+  {
+   "seq": 86,
+   "at": "2026-09-24T10:13:00+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "0c7c2f7b16ab73ad2576c49ba8297ecd19e4c5399ff8d557932acc77b9e51e46"
+  },
+  {
+   "seq": 90,
+   "at": "2026-09-24T10:13:54+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "16dfd5c506b521d1d351a6a31e1ecc1840d0724f00bd0bba9d3bcbc8b5ffc193"
+  },
+  {
+   "seq": 94,
+   "at": "2026-09-24T10:14:06+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "66dd48ad639f147ebec8f999e33e527b1cf38fe392269779b0da27732051c460"
+  },
+  {
+   "seq": 98,
+   "at": "2026-09-24T10:14:40+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "94c91582ed0036d2e3a3f1d492c9887b6d0df2a9eb40a8a861bc9913a6dfdf37"
+  },
+  {
+   "seq": 102,
+   "at": "2026-09-24T10:15:12+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "19848df01f1c4cbf55cf794f5b44e311488ad773da54a80d07dd7c6e3d048b86"
+  },
+  {
+   "seq": 104,
+   "at": "2026-09-24T10:15:26+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "3f3c27d1de871e3555a465f48637f2ae7bdc0c58ea01bd74e446e7daa7bc260a"
+  },
+  {
+   "seq": 106,
+   "at": "2026-09-24T10:15:29+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "00752086b2649c0403d71750b817c2ed211761af4e1614b10610bb734def1805"
+  },
+  {
+   "seq": 111,
+   "at": "2026-09-24T10:16:16+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "1cca9052ea3475ae9c3154c960c74b1bee59ac3c76939876eef4a159979f14c4"
+  },
+  {
+   "seq": 115,
+   "at": "2026-09-24T10:16:22+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "9e623c901edcfabdd5f5fa2ecf3678088b5a0eebd5c7b3bafb05852b3668449c"
+  },
+  {
+   "seq": 119,
+   "at": "2026-09-24T10:17:07+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "ab9f87c16790229b8cded8883e4144656c1921eacfc126c1cffec141db5bee03"
+  },
+  {
+   "seq": 123,
+   "at": "2026-09-24T10:17:11+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "ea9145691ebaa59a89d87a33067fa504b027798cfe0e24034f0da9037532fa7f"
+  },
+  {
+   "seq": 127,
+   "at": "2026-09-24T10:17:45+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "f838c2b65eba6f834198d66b7e1beceaff08f9071fb3777179f83cc5dbfb6f7f"
+  },
+  {
+   "seq": 131,
+   "at": "2026-09-24T10:17:49+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "601e5449e67d93fdf35f7f2ead2a3fa898c69aa0606a3fe74962a51ed164923b"
+  },
+  {
+   "seq": 133,
+   "at": "2026-09-24T10:18:28+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "dc2a74d5475f31c04014a820954f7906e9d3e47c59f30b9df15d497a2b2216de"
+  },
+  {
+   "seq": 137,
+   "at": "2026-09-24T10:19:14+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "48ab3964c863ade026193f72f27e0da191fc426d78b4aa496e663e5ed1a92798"
+  },
+  {
+   "seq": 139,
+   "at": "2026-09-24T10:19:22+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "45ab04b95be3b7982378e81811a4ae9bd86132eb2cabba333f8f646c64c02af7"
+  },
+  {
+   "seq": 150,
+   "at": "2026-09-24T10:19:22+00:00",
+   "kind": "jury",
+   "fields": {
+    "chapter": 1,
+    "passed": false,
+    "rounds": 2,
+    "levels": {
+     "voice": 3,
+     "style_guide": 4,
+     "pacing": 4,
+     "subtext": 4,
+     "theme": null,
+     "continuity": 3,
+     "tone": 4,
+     "arc": 3,
+     "personalization": 3
+    },
+    "spreads": {
+     "voice": 1,
+     "style_guide": 0,
+     "pacing": 1,
+     "subtext": 0,
+     "theme": 0,
+     "continuity": 1,
+     "tone": 0,
+     "arc": 1,
+     "personalization": 1
+    },
+    "discarded": 9,
+    "scores": [
+     {
+      "instance": "juez-1",
+      "dimension": "voice",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "¿y si no era suficiente? ¿Si Iker veía lo que él no veía?\n\nCaminó hacia la banda con el dorsal 9 pesando en los hombros, el nivel que creía suyo ahora frágil.",
+      "justification": "La voz de Marcos es distintivamente introspectiva. Sus preguntas interiores y sus acciones son coherentes con quien es: un delantero joven enfrentando la competencia de alguien que considera superior."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "voice",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Aurelio señalaba en el aire. «Iker se mueve en los espacios donde no hay luz",
+      "justification": "Aurelio tiene voz poética diferente. Pero el narrador en tercera persona POV suena muy cercano a Marcos (metáforas como 'pegadas como sombra'). El narrador y el POV casi no se distinguen."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "voice",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Los pies respondían por costumbre, pero la seguridad ya no estaba. En su lugar, una pregunta que mordía: ¿y si no era suficiente?",
+      "justification": "Marcos tiene marcas propias en su intriga interna (duda, cuerpo versus mente), pero el narrador mantiene cierta neutralidad literaria que no es completamente característica de su voz específica."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "style_guide",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "las palabras del míster pegadas como sombra. No era sobre tácticas. Era sobre presencia. Era sobre saber qué hacer cuando todo se cierra.",
+      "justification": "El registro literario es consistente y coherente. Las metáforas son precisas sin caer en clichés. La prosa reflexiva mantiene tono y estilo uniforme sin que el esfuerzo sea visible."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "style_guide",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Marcos se vistió lentamente, las palabras del míster pegadas como sombra.",
+      "justification": "Coherencia estilística: mezcla equilibrada de directo y metafórico sin clichés. Frases variadas en extensión. El estilo parece interiorizado, no impuesto."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "style_guide",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "las palabras del míster pegadas como sombra. No era sobre tácticas. Era sobre presencia.",
+      "justification": "El texto mantiene coherencia estilística: prosa reflexiva, metáforas precisas, alternancia de frases cortas y largas. Se sostiene sin parecer forzado, aunque sin guía declarada no alcanza nivel máximo."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "pacing",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Marcos se vistió lentamente, las palabras del míster pegadas como sombra. No era sobre tácticas. Era sobre presencia. Era sobre saber qué hacer cuando todo se cierra.",
+      "justification": "El ritmo lento y reflexivo acompaña deliberadamente el cambio en el estado mental de Marcos. La concentración en la transformación interna mantiene tensión sin aceleración artificial."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "pacing",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Caminó hacia la banda con el dorsal 9 pesando en los hombros, el nivel que creía suyo ahora frágil.",
+      "justification": "Ritmo concentrado y tenso. Cada párrafo empuja sin estancamientos. El cierre con la pregunta final genera necesidad de seguir leyendo."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "pacing",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Cuando salió hacia el campo minutos después, algo había cambiado. Los pies respondían por costumbre, pero la seguridad ya no estaba.",
+      "justification": "Cada escena marca un cambio de estado, pero el ritmo es uniformemente lento y reflexivo. No hay variación de velocidad que acompañe dinámicamente el cambio emocional."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "subtext",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Dani y Pol escuchaban inmóviles. Marcos se vistió lentamente, las palabras del míster pegadas como sombra.",
+      "justification": "Las palabras de Aurelio son una lección táctica que Marcos lee como existencial; la absorción silenciosa ('pegadas como sombra') muestra comprensión sin explicación, aunque el párrafo siguiente hace explícito lo que podría permanecer velado."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "subtext",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Cuando salió hacia el campo minutos después, algo había cambiado. Los pies respondían por costumbre, pero la seguridad ya no estaba.",
+      "justification": "El discurso de Aurelio sobre Iker funciona como comparación implícita que Marcos interpreta sin que se nombren las intenciones. El lector entiende que está siendo evaluado sin que se diga. El cambio se comunica por omisión."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "subtext",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Iker se mueve en los espacios donde no hay luz», decía, y sus dedos trazaban una geometría invisible. «Se planta. Mata en el silencio.",
+      "justification": "Lo importante se dice por omisión. Aurelio nunca enuncia que Marcos es insuficiente; Marcos lo entiende y termina preguntando si Iker ve lo que él no. Cada intercambio tiene una capa oculta."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "theme",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "No era sobre tácticas. Era sobre presencia. Era sobre saber qué hacer cuando todo se cierra.",
+      "justification": "El motivo de la 'presencia' y el 'saber qué hacer cuando todo se cierra' emerge de la acción sin ser predicado; no es una moraleja sino el significado inmanente de lo que Marcos experimenta, integrado en su duda sin distancia narrativa."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "continuity",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Cuando salió hacia el campo minutos después, algo había cambiado.",
+      "justification": "Como primera escena, las transiciones internas son limpias y los tiempos están claros ('minutos después'); el movimiento físico de Marcos (vestuario → campo) estructura la secuencia sin rupuras aunque carece del 'eco de lo anterior' que requeriría una continuación explícita."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "continuity",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Marcos entró al vestuario mientras Aurelio señalaba en el aire.",
+      "justification": "Se lee como parte de una acción en curso. Las transiciones son limpias (vestuario a campo) pero funcionales; las elipsis se entienden sin explicarse, aunque sin ecos que den sentido nuevo a lo anterior."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "continuity",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Marcos entró al vestuario mientras Aurelio señalaba en el aire.",
+      "justification": "Apertura clara y autosuficiente. La escena se entiende sin referencias previas, pero es un inicio sin ecos de lo anterior porque es el capítulo primero."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "tone",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Cuando salió hacia el campo minutos después, algo había cambiado. Los pies respondían por costumbre, pero la seguridad ya no estaba. En su lugar, una pregunta que mordía: ¿y si no era suficiente?",
+      "justification": "Sin tono declarado en el encargo, pero la escena sostiene un tono coherente de incertidumbre e introversión que modula con el movimiento físico sin romperse, desde el vestuario hasta el campo."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "tone",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "No era sobre tácticas. Era sobre presencia. Era sobre saber qué hacer cuando todo se cierra.",
+      "justification": "El tono reflexivo e introspectivo se sostiene en todo el fragmento y modula con las transiciones (vestuario a campo, escucha a duda) sin ruptura. No es un barniz sino la manera de mirar."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "tone",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "En su lugar, una pregunta que mordía: ¿y si no era suficiente?",
+      "justification": "Tono reflexivo y angustioso se sostiene sin ruptura. La personificación de la pregunta como algo que muerde es la manera de mirar del capítulo."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "arc",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Los pies respondían por costumbre, pero la seguridad ya no estaba. En su lugar, una pregunta que mordía: ¿y si no era suficiente? ¿Si Iker veía lo que él no veía?",
+      "justification": "El arco de Marcos transita de la confianza inicial a la inseguridad y la duda, causado directamente por las palabras del míster sobre Iker. El movimiento no es accidental sino resultado directo de lo que ocurre en escena."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "arc",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "En su lugar, una pregunta que mordía: ¿y si no era suficiente?",
+      "justification": "Hay cambio emocional (inseguridad súbita), pero es más reacción a las palabras de Aurelio que movimiento de carácter ganado en la escena. El avance es reconocible pero inicial."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "arc",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Cuando salió hacia el campo minutos después, algo había cambiado. Los pies respondían por costumbre, pero la seguridad ya no estaba. En su lugar, una pregunta que mordía: ¿y si no era suficiente?",
+      "justification": "El arco de Marcos avanza de confianza a inseguridad, pero el paso se logra por lo que oye de Aurelio, no por una decisión o acción propia. Es un movimiento reconocible pero pasivo."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "personalization",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Caminó hacia la banda con el dorsal 9 pesando en los hombros, el nivel que creía suyo ahora frágil.",
+      "justification": "Marcos aparece integrado en la escena a través de sus atributos (dorsal, nivel) que pesan literal y metafóricamente en su experiencia, sin parecer impuestos; el 'nivel que creía suyo ahora frágil' encarna su fragilidad psicológica."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "personalization",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Caminó hacia la banda con el dorsal 9 pesando en los hombros, el nivel que creía suyo ahora frágil.",
+      "justification": "Los rasgos (dorsal 9, nivel 62) están integrados en la acción física, no en lista. Pero aparecen como datos que pesan más que como fuerzas de conflicto interior; se nota que están ahí para cumplir, no que nazcan de la escena."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "personalization",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "el dorsal 9 pesando en los hombros, el nivel que creía suyo ahora frágil",
+      "justification": "Sin destinatario declarado, los rasgos de ficha (dorsal, nivel) se integran como metáforas de carga y fragilidad. Están presentes pero podrían ser el corazón de la escena."
+     }
+    ],
+    "justifications": {
+     "voice": "juez-1: La voz de Marcos es distintivamente introspectiva. Sus preguntas interiores y sus acciones son coherentes con quien es: un delantero joven enfrentando la competencia de alguien que considera superior. | juez-2: Aurelio tiene voz poética diferente. Pero el narrador en tercera persona POV suena muy cercano a Marcos (metáforas como 'pegadas como sombra'). El narrador y el POV casi no se distinguen. | juez-3: Marcos tiene marcas propias en su intriga interna (duda, cuerpo versus mente), pero el narrador mantiene cierta neutralidad literaria que no es completamente característica de su voz específica.",
+     "style_guide": "juez-1: El registro literario es consistente y coherente. Las metáforas son precisas sin caer en clichés. La prosa reflexiva mantiene tono y estilo uniforme sin que el esfuerzo sea visible. | juez-2: Coherencia estilística: mezcla equilibrada de directo y metafórico sin clichés. Frases variadas en extensión. El estilo parece interiorizado, no impuesto. | juez-3: El texto mantiene coherencia estilística: prosa reflexiva, metáforas precisas, alternancia de frases cortas y largas. Se sostiene sin parecer forzado, aunque sin guía declarada no alcanza nivel máximo.",
+     "pacing": "juez-1: El ritmo lento y reflexivo acompaña deliberadamente el cambio en el estado mental de Marcos. La concentración en la transformación interna mantiene tensión sin aceleración artificial. | juez-2: Ritmo concentrado y tenso. Cada párrafo empuja sin estancamientos. El cierre con la pregunta final genera necesidad de seguir leyendo. | juez-3: Cada escena marca un cambio de estado, pero el ritmo es uniformemente lento y reflexivo. No hay variación de velocidad que acompañe dinámicamente el cambio emocional.",
+     "subtext": "juez-1: Las palabras de Aurelio son una lección táctica que Marcos lee como existencial; la absorción silenciosa ('pegadas como sombra') muestra comprensión sin explicación, aunque el párrafo siguiente hace explícito lo que podría permanecer velado. | juez-2: El discurso de Aurelio sobre Iker funciona como comparación implícita que Marcos interpreta sin que se nombren las intenciones. El lector entiende que está siendo evaluado sin que se diga. El cambio se comunica por omisión. | juez-3: Lo importante se dice por omisión. Aurelio nunca enuncia que Marcos es insuficiente; Marcos lo entiende y termina preguntando si Iker ve lo que él no. Cada intercambio tiene una capa oculta.",
+     "theme": "juez-1: El motivo de la 'presencia' y el 'saber qué hacer cuando todo se cierra' emerge de la acción sin ser predicado; no es una moraleja sino el significado inmanente de lo que Marcos experimenta, integrado en su duda sin distancia narrativa.",
+     "continuity": "juez-1: Como primera escena, las transiciones internas son limpias y los tiempos están claros ('minutos después'); el movimiento físico de Marcos (vestuario → campo) estructura la secuencia sin rupuras aunque carece del 'eco de lo anterior' que requeriría una continuación explícita. | juez-2: Se lee como parte de una acción en curso. Las transiciones son limpias (vestuario a campo) pero funcionales; las elipsis se entienden sin explicarse, aunque sin ecos que den sentido nuevo a lo anterior. | juez-3: Apertura clara y autosuficiente. La escena se entiende sin referencias previas, pero es un inicio sin ecos de lo anterior porque es el capítulo primero.",
+     "tone": "juez-1: Sin tono declarado en el encargo, pero la escena sostiene un tono coherente de incertidumbre e introversión que modula con el movimiento físico sin romperse, desde el vestuario hasta el campo. | juez-2: El tono reflexivo e introspectivo se sostiene en todo el fragmento y modula con las transiciones (vestuario a campo, escucha a duda) sin ruptura. No es un barniz sino la manera de mirar. | juez-3: Tono reflexivo y angustioso se sostiene sin ruptura. La personificación de la pregunta como algo que muerde es la manera de mirar del capítulo.",
+     "arc": "juez-1: El arco de Marcos transita de la confianza inicial a la inseguridad y la duda, causado directamente por las palabras del míster sobre Iker. El movimiento no es accidental sino resultado directo de lo que ocurre en escena. | juez-2: Hay cambio emocional (inseguridad súbita), pero es más reacción a las palabras de Aurelio que movimiento de carácter ganado en la escena. El avance es reconocible pero inicial. | juez-3: El arco de Marcos avanza de confianza a inseguridad, pero el paso se logra por lo que oye de Aurelio, no por una decisión o acción propia. Es un movimiento reconocible pero pasivo.",
+     "personalization": "juez-1: Marcos aparece integrado en la escena a través de sus atributos (dorsal, nivel) que pesan literal y metafóricamente en su experiencia, sin parecer impuestos; el 'nivel que creía suyo ahora frágil' encarna su fragilidad psicológica. | juez-2: Los rasgos (dorsal 9, nivel 62) están integrados en la acción física, no en lista. Pero aparecen como datos que pesan más que como fuerzas de conflicto interior; se nota que están ahí para cumplir, no que nazcan de la escena. | juez-3: Sin destinatario declarado, los rasgos de ficha (dorsal, nivel) se integran como metáforas de carga y fragilidad. Están presentes pero podrían ser el corazón de la escena."
+    }
+   },
+   "prev_hash": "2be86990bc9d2b61a01d34f188a2895f377547868c93791cf794cdcdaf3e09dc"
+  },
+  {
+   "seq": 153,
+   "at": "2026-09-24T10:19:41+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "reparador",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "773c89a3d9a2"
+   },
+   "prev_hash": "0332f0a6e0849396b6b71878a2378eba68c0bd84a631dacf73b18c731d7ca139"
+  },
+  {
+   "seq": 158,
+   "at": "2026-09-24T10:20:28+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "continuista",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "9c50294cc3c5"
+   },
+   "prev_hash": "192e890541b7983cae8d7aa6a6a4f73e8a53ba182a24a6d08750990c0b64c182"
+  },
+  {
+   "seq": 161,
+   "at": "2026-09-24T10:20:43+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "lector",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "cdada6a08b9d"
+   },
+   "prev_hash": "7eeeeef9a471cdcafbbf70baa6df7b89b94ecd7cb1ca8502a7b51af55c64d9ea"
+  },
+  {
+   "seq": 163,
+   "at": "2026-09-24T10:20:43+00:00",
+   "kind": "quiz",
+   "fields": {
+    "chapter": 1,
+    "questions": 3,
+    "wrong": 0
+   },
+   "prev_hash": "2c5c9c4247e4a5e1f907e16bc412763ae0751f9e5e94d604f881605cc70ed5ad"
+  },
+  {
+   "seq": 164,
+   "at": "2026-09-24T10:20:43+00:00",
+   "kind": "chapter.gate",
+   "fields": {
+    "chapter": 1,
+    "passed": true,
+    "s1": 0,
+    "s2": 0,
+    "reason": "pasa",
+    "defects": []
+   },
+   "prev_hash": "8075986019f831e20f1e76277a09dbd7e5c1028fcc9727cad445a8a2fd71376b"
+  },
+  {
+   "seq": 168,
+   "at": "2026-09-24T10:21:17+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "986700cbc51db9057b794561f0437f8508cfcf8bef0714bcd6f4f611a2d31fd3"
+  },
+  {
+   "seq": 172,
+   "at": "2026-09-24T10:21:22+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "24797a0b1124af77c64e168bcb4e98f91b1c31766b7771defb7f34ac6f0372e6"
+  },
+  {
+   "seq": 176,
+   "at": "2026-09-24T10:21:34+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "d782f50d87e211fc0bd0ad623fe0ef4d5fe6331d30faef01fa3785fb999343fe"
+  },
+  {
+   "seq": 180,
+   "at": "2026-09-24T10:21:52+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "c686fb1a2b993dc032b4a3100973e900792d51fe5032ed44f4bc2b397c60144d"
+  },
+  {
+   "seq": 184,
+   "at": "2026-09-24T10:22:43+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "d4084f140504a78f503408f9cdc07c25436e4c4f9794fe83c5228ba25c70688f"
+  },
+  {
+   "seq": 188,
+   "at": "2026-09-24T10:22:54+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "38ca7b7dcf7d93fb4520ef028691f358b36db617ba44ae018901a99187c7c4ed"
+  },
+  {
+   "seq": 190,
+   "at": "2026-09-24T10:23:13+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "340d57d8043c169b4e692ac4fc9feff9fe5e155daa6577810e7d23c817019acd"
+  },
+  {
+   "seq": 192,
+   "at": "2026-09-24T10:23:49+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "c70b8913453ea6b823a34743b4b86d0cd5cc0cc561729b5eb19b62015ea110d0"
+  },
+  {
+   "seq": 197,
+   "at": "2026-09-24T10:24:24+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "7c5d546a58651b0a6b842e486b94e454a0a396f43ae82ec3de921a3b687c68ad"
+  },
+  {
+   "seq": 201,
+   "at": "2026-09-24T10:24:30+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "f05a2eb986ccf7108067f2c5e85ca9a65251941b882b743766d74efe7c773bef"
+  },
+  {
+   "seq": 205,
+   "at": "2026-09-24T10:24:37+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "7a410f7396c12dcfca0de06baaf00028ae328d130e801434014a9d24d4d00f8e"
+  },
+  {
+   "seq": 209,
+   "at": "2026-09-24T10:25:43+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "6c19bd0b33fc9fb9bb809ba62c8e2c7987b77221e18ee8ab0834b8856f31907e"
+  },
+  {
+   "seq": 213,
+   "at": "2026-09-24T10:25:44+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "47661e0e3ece4a2aaadc0d0fd17cdbd7ced94764fbe86ed9b54fa673a2e82d9f"
+  },
+  {
+   "seq": 217,
+   "at": "2026-09-24T10:26:06+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "68d82b95b8cd399b4e9d9fc94a42c0951e1a3cb8ea88211d0b80c0d61238da09"
+  },
+  {
+   "seq": 221,
+   "at": "2026-09-24T10:26:55+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "d033137840e945e73b07a99edbb23d8dcf45ec4fffba64fec2b9c739152d8150"
+  },
+  {
+   "seq": 223,
+   "at": "2026-09-24T10:27:37+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "0aad962f47c75a53b6112b7d8c26d283e23b52c6ca6352022419ed62040d9427"
+  },
+  {
+   "seq": 225,
+   "at": "2026-09-24T10:28:05+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "a3d6a790238f5b189ea3cb4ae4429ef906112f398490ef7389ba360dcd6d504f"
+  },
+  {
+   "seq": 239,
+   "at": "2026-09-24T10:28:05+00:00",
+   "kind": "jury",
+   "fields": {
+    "chapter": 1,
+    "passed": false,
+    "rounds": 2,
+    "levels": {
+     "voice": null,
+     "style_guide": null,
+     "pacing": 3,
+     "subtext": null,
+     "theme": 3,
+     "continuity": 3,
+     "tone": null,
+     "arc": 3,
+     "personalization": null
+    },
+    "spreads": {
+     "voice": 1,
+     "style_guide": 1,
+     "pacing": 1,
+     "subtext": 1,
+     "theme": 0,
+     "continuity": 0,
+     "tone": 0,
+     "arc": 0,
+     "personalization": 0
+    },
+    "discarded": 12,
+    "scores": [
+     {
+      "instance": "juez-1",
+      "dimension": "voice",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "¿Y si Iker veía lo que él no veía?",
+      "justification": "Se distingue la voz de Marcos (interrogante, ansiosa) de la del narrador, pero hay tramos donde la frontera es ambigua, especialmente en los análisis de la acción."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "voice",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Los pies respondían por costumbre, pero la seguridad ya no estaba",
+      "justification": "Las voces se distinguen: Aurelio habla en frases cortas declarativas; Marcos piensa en complejidad introspectiva. Sus decisiones (lentitud, duda progresiva) son coherentes con él como personaje inseguro ante la amenaza presentada."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "style_guide",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Caminó hacia la banda con la duda anclada en el pecho.",
+      "justification": "El texto mantiene coherencia estilística limpia, metáforas bien elegidas, registro consistente y evita clichés de fútbol o valoraciones obvias."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "style_guide",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "No era sobre tácticas. Era sobre presencia. Era sobre saber qué hacer cuando todo se cierra",
+      "justification": "El capítulo sostiene un registro coherente: frases breves, metáforas corporales, estructura declarativa. Cumple una voz distintiva, pero la construcción anafórica repetida resulta mecánica sin la guía explícita de la obra."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "pacing",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Cuando salió hacia el campo, algo había cambiado.",
+      "justification": "Cada escena cambia el estado (escucha→duda→salida), pero el ritmo es uniforme, sin aceleración ni desaceleración que subraye el cambio o fuerce a seguir leyendo."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "pacing",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Caminó hacia la banda con la duda anclada en el pecho.",
+      "justification": "El capítulo es muy breve (cuatro párrafos). Cada uno marca un cambio emocional, pero algunos tramos se estancan: la descripción de Aurelio se alarga sin acción visible, y la salida es abrupta."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "pacing",
+      "level": 2,
+      "scene": "c1e1",
+      "quote": "Cuando salió hacia el campo, algo había cambiado.",
+      "justification": "Hay cambio, pero se cuenta en vez de mostrarse. La transición del vestuario al campo es abrupta y el cambio emocional llega sin preparación suficiente."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "subtext",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "No era sobre tácticas. Era sobre presencia. Era sobre saber qué hacer cuando todo se cierra.",
+      "justification": "El diálogo de Aurelio contiene capas no dichas, pero el narrador las explica de forma directa, quitándole al lector la oportunidad de inferirlas."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "subtext",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Iker se mueve en los espacios donde no hay luz",
+      "justification": "El diálogo de Aurelio no enuncia la advertencia de forma literal, sino que la cifra en una imagen. Marcos entiende lo que no se dice explícitamente. Lo importante se comunica por desvío; la reacción del personaje lo decodifica."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "theme",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Iker se mueve en los espacios donde no hay luz», decía.",
+      "justification": "El motivo de lo invisible, lo oculto, la presencia sin visibilidad se trabaja a través de la acción interna de Marcos, pero permanece como tema acompañante de la trama sin resignificar lo anterior."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "theme",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "El nivel que creía suyo se había vuelto frágil.",
+      "justification": "La presencia invisible y la inseguridad están presentes en la acción, pero la línea anterior 'Era sobre presencia. Era sobre saber qué hacer cuando todo se cierra' subraya el motivo más de lo necesario."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "theme",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Se planta. Mata en el silencio.» No era sobre tácticas. Era sobre presencia.",
+      "justification": "El motivo de la inseguridad ante la superioridad acompaña la acción, pero el narrador explica de más el significado de lo que Aurelio dice."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "continuity",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "No era sobre tácticas. Era sobre presencia. Era sobre saber qué hacer cuando todo se cierra.",
+      "justification": "Se lee como flujo lógico dentro del capítulo (vestuario-escucha-salida), pero sin contexto anterior es imposible evaluar si retoma ecos o enlaza adecuadamente con lo que precede."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "continuity",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Cuando salió hacia el campo, algo había cambiado.",
+      "justification": "Al ser el primer capítulo, la continuidad con lo anterior es inaplicable. Internamente, transiciones limpias entre entra-escucha-se viste-sale, pero la elipsis del cambio podría ser más clara sin explicarla."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "continuity",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Caminó hacia la banda con la duda anclada en el pecho.",
+      "justification": "Es el primer capítulo, sin continuación de lo anterior. Internamente la escena es coherente; las elipsis del vestuario al campo se entienden sin explicarlas."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "tone",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Cuando salió hacia el campo, algo había cambiado. «Los pies respondían por costumbre, pero la seguridad ya no estaba.» El dorsal 9 pesaba en sus hombros. «¿Y si Iker veía lo que él no veía?» El nivel que creía suyo se había vuelto frágil.",
+      "justification": "El tono grave, introspectivo y melancólico se sostiene sin ruptura. Modula con la tensión interior de forma coherente: lo físico (pies) se tiñe de lo emocional (duda, fragilidad)."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "tone",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Caminó hacia la banda con la duda anclada en el pecho",
+      "justification": "El tono de tensión introspectiva se sostiene a lo largo: modula entre lo que sucede (charla de Aurelio) y lo que siente Marcos (progresión de seguridad a inseguridad). No hay quiebres tonales injustificados."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "arc",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Cuando salió hacia el campo, algo había cambiado.",
+      "justification": "El arco avanza un paso reconocible: Marcos pasa de una seguridad no cuestionada a la duda sobre su propio nivel. Pero el avance no reordena lo anterior ni hace inevitable lo que viene después."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "arc",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "El nivel que creía suyo se había vuelto frágil.",
+      "justification": "Marcos entra seguro como delantero titular y sale dudando tras oír de Iker. Es un paso reconocible en el arco emocional, pero el cambio es estrecho: solo modula su confianza interna sin afectar sus acciones."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "arc",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "El nivel que creía suyo se había vuelto frágil.",
+      "justification": "El arco del capítulo avanza un paso reconocible: de la confianza en su nivel a la duda sobre él. Sin embargo, es un cambio interno que no se gana con lo que ocurre en escena sino que surge como revelación."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "personalization",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "El dorsal 9 pesaba en sus hombros. «¿Y si Iker veía lo que él no veía?» El nivel que creía suyo se había vuelto frágil.",
+      "justification": "Los rasgos de Marcos (dorsal 9, nivel 62) están integrados en la emoción de la escena, pero sin particularidades que lo distingan del prototipo de delantero inseguro. Faltan marcas idiosincrásicas."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "personalization",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "El nivel que creía suyo se había vuelto frágil",
+      "justification": "Los rasgos de la ficha (dorsal 9, nivel 62) están integrados pero se notan puestos para cumplir. El dorsal aparece como peso físico; el nivel como seguridad que se quiebra. Nacen de la escena pero sin ser su corazón."
+     }
+    ],
+    "justifications": {
+     "voice": "juez-1: Se distingue la voz de Marcos (interrogante, ansiosa) de la del narrador, pero hay tramos donde la frontera es ambigua, especialmente en los análisis de la acción. | juez-3: Las voces se distinguen: Aurelio habla en frases cortas declarativas; Marcos piensa en complejidad introspectiva. Sus decisiones (lentitud, duda progresiva) son coherentes con él como personaje inseguro ante la amenaza presentada.",
+     "style_guide": "juez-1: El texto mantiene coherencia estilística limpia, metáforas bien elegidas, registro consistente y evita clichés de fútbol o valoraciones obvias. | juez-3: El capítulo sostiene un registro coherente: frases breves, metáforas corporales, estructura declarativa. Cumple una voz distintiva, pero la construcción anafórica repetida resulta mecánica sin la guía explícita de la obra.",
+     "pacing": "juez-1: Cada escena cambia el estado (escucha→duda→salida), pero el ritmo es uniforme, sin aceleración ni desaceleración que subraye el cambio o fuerce a seguir leyendo. | juez-2: El capítulo es muy breve (cuatro párrafos). Cada uno marca un cambio emocional, pero algunos tramos se estancan: la descripción de Aurelio se alarga sin acción visible, y la salida es abrupta. | juez-3: Hay cambio, pero se cuenta en vez de mostrarse. La transición del vestuario al campo es abrupta y el cambio emocional llega sin preparación suficiente.",
+     "subtext": "juez-1: El diálogo de Aurelio contiene capas no dichas, pero el narrador las explica de forma directa, quitándole al lector la oportunidad de inferirlas. | juez-3: El diálogo de Aurelio no enuncia la advertencia de forma literal, sino que la cifra en una imagen. Marcos entiende lo que no se dice explícitamente. Lo importante se comunica por desvío; la reacción del personaje lo decodifica.",
+     "theme": "juez-1: El motivo de lo invisible, lo oculto, la presencia sin visibilidad se trabaja a través de la acción interna de Marcos, pero permanece como tema acompañante de la trama sin resignificar lo anterior. | juez-2: La presencia invisible y la inseguridad están presentes en la acción, pero la línea anterior 'Era sobre presencia. Era sobre saber qué hacer cuando todo se cierra' subraya el motivo más de lo necesario. | juez-3: El motivo de la inseguridad ante la superioridad acompaña la acción, pero el narrador explica de más el significado de lo que Aurelio dice.",
+     "continuity": "juez-1: Se lee como flujo lógico dentro del capítulo (vestuario-escucha-salida), pero sin contexto anterior es imposible evaluar si retoma ecos o enlaza adecuadamente con lo que precede. | juez-2: Al ser el primer capítulo, la continuidad con lo anterior es inaplicable. Internamente, transiciones limpias entre entra-escucha-se viste-sale, pero la elipsis del cambio podría ser más clara sin explicarla. | juez-3: Es el primer capítulo, sin continuación de lo anterior. Internamente la escena es coherente; las elipsis del vestuario al campo se entienden sin explicarlas.",
+     "tone": "juez-2: El tono grave, introspectivo y melancólico se sostiene sin ruptura. Modula con la tensión interior de forma coherente: lo físico (pies) se tiñe de lo emocional (duda, fragilidad). | juez-3: El tono de tensión introspectiva se sostiene a lo largo: modula entre lo que sucede (charla de Aurelio) y lo que siente Marcos (progresión de seguridad a inseguridad). No hay quiebres tonales injustificados.",
+     "arc": "juez-1: El arco avanza un paso reconocible: Marcos pasa de una seguridad no cuestionada a la duda sobre su propio nivel. Pero el avance no reordena lo anterior ni hace inevitable lo que viene después. | juez-2: Marcos entra seguro como delantero titular y sale dudando tras oír de Iker. Es un paso reconocible en el arco emocional, pero el cambio es estrecho: solo modula su confianza interna sin afectar sus acciones. | juez-3: El arco del capítulo avanza un paso reconocible: de la confianza en su nivel a la duda sobre él. Sin embargo, es un cambio interno que no se gana con lo que ocurre en escena sino que surge como revelación.",
+     "personalization": "juez-2: Los rasgos de Marcos (dorsal 9, nivel 62) están integrados en la emoción de la escena, pero sin particularidades que lo distingan del prototipo de delantero inseguro. Faltan marcas idiosincrásicas. | juez-3: Los rasgos de la ficha (dorsal 9, nivel 62) están integrados pero se notan puestos para cumplir. El dorsal aparece como peso físico; el nivel como seguridad que se quiebra. Nacen de la escena pero sin ser su corazón."
+    }
+   },
+   "prev_hash": "d4dc1d9b4466bfb6ea6e54557119857f750954454b16f908b8072fd977ce01d2"
+  },
+  {
+   "seq": 243,
+   "at": "2026-09-24T10:28:25+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "planificador",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "31545ca9b935"
+   },
+   "prev_hash": "bb9378d2b9b3ba08d4d4eb238de0cba6ea5ccc67aa687f51bea653031deaf567"
+  },
+  {
+   "seq": 247,
+   "at": "2026-09-24T10:28:38+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "escritor",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "dbda0b47f468"
+   },
+   "prev_hash": "4124fc5c02449c5daba264f50a4c5cfc57fb77f14c7f0a85dbe40a0fd9e19034"
+  },
+  {
+   "seq": 250,
+   "at": "2026-09-24T10:28:38+00:00",
+   "kind": "scene.attempt",
+   "fields": {
+    "chapter": 1,
+    "scene": 1,
+    "attempt": 1,
+    "words": 153,
+    "defects": [],
+    "passed": true,
+    "is_match": false
+   },
+   "prev_hash": "245dba8bc1722802657887500813447c5d665a39de0a30ccb46e5b740b73d796"
+  },
+  {
+   "seq": 252,
+   "at": "2026-09-24T10:29:40+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "continuista",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "9c50294cc3c5"
+   },
+   "prev_hash": "3304ba72d1ee52b54292a8803dfbd50cb2a286caf4963a47ed494a8d83f768b3"
+  },
+  {
+   "seq": 255,
+   "at": "2026-09-24T10:30:01+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "lector",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "cdada6a08b9d"
+   },
+   "prev_hash": "94bd3deea734cf80a610824abe4a79b68edbf6a0d9bd2b3e0f799a266830f958"
+  },
+  {
+   "seq": 257,
+   "at": "2026-09-24T10:30:01+00:00",
+   "kind": "quiz",
+   "fields": {
+    "chapter": 1,
+    "questions": 3,
+    "wrong": 0
+   },
+   "prev_hash": "508545945a77357fc27b2e697a4bb8a5f0ef0e2968430e10576920db7f7f7ce6"
+  },
+  {
+   "seq": 258,
+   "at": "2026-09-24T10:30:01+00:00",
+   "kind": "chapter.gate",
+   "fields": {
+    "chapter": 1,
+    "passed": false,
+    "s1": 1,
+    "s2": 2,
+    "reason": "no pasa: 1 S1",
+    "defects": [
+     "S2:continuity.knowledge: El estado inicial registra marcos: nada registrado en conocimiento previo; el texto asume que Marcos sabe de antemano qu «ese nueve que había estado de boca en boca toda la semana»",
+     "S1:continuity.character: Contradicción factual: el texto atribuye a Iker capacidad de penetrar defensas imposibles, pero acto seguido dice que el «Marcos reconoció entonces en esos movimientos algo que siemp»",
+     "S2:continuity.fact: Sin contexto documentado: no consta en el canon por qué Marcos sale del campo (lesión, sustitución, fin de tiempo) ni en «Cuando salió del campo minutes después, la seguridad que lo »"
+    ]
+   },
+   "prev_hash": "3702ff8a4e41724e345bab40b0d0c4210b4c3539eb0fe7f8ca26b2a613b12b0a"
+  },
+  {
+   "seq": 261,
+   "at": "2026-09-24T10:30:34+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "reparador",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "773c89a3d9a2"
+   },
+   "prev_hash": "913aab92816726408166a25e4badc9e842ee00a3270a9e553984d8c7e2f66419"
+  },
+  {
+   "seq": 266,
+   "at": "2026-09-24T10:31:04+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "continuista",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "9c50294cc3c5"
+   },
+   "prev_hash": "6045d44f36b5a15ae50f71c1acdbcc18a62c6299c987bcc9f393abcd8c7d3b55"
+  },
+  {
+   "seq": 269,
+   "at": "2026-09-24T10:31:15+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "lector",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "cdada6a08b9d"
+   },
+   "prev_hash": "f4b4e82b985241730e6643a77a1cf9d6264c464d6b41f83c51d579d37a3ff1bb"
+  },
+  {
+   "seq": 271,
+   "at": "2026-09-24T10:31:15+00:00",
+   "kind": "quiz",
+   "fields": {
+    "chapter": 1,
+    "questions": 3,
+    "wrong": 0
+   },
+   "prev_hash": "cbdce29a2529491ad57e315309df3ab751223759ff9a889d254dc77494a53d43"
+  },
+  {
+   "seq": 272,
+   "at": "2026-09-24T10:31:15+00:00",
+   "kind": "chapter.gate",
+   "fields": {
+    "chapter": 1,
+    "passed": true,
+    "s1": 0,
+    "s2": 0,
+    "reason": "pasa",
+    "defects": []
+   },
+   "prev_hash": "a0b4fbe64f97cfdcecd752ab432e0a1e38f023205d905c7c021b56780ac39bb6"
+  },
+  {
+   "seq": 276,
+   "at": "2026-09-24T10:32:06+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "798308a23e45d9c37a4d0a04c79daf0eba97403e18f58406ec2c4cb0cd2c678f"
+  },
+  {
+   "seq": 280,
+   "at": "2026-09-24T10:32:16+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "98fb41fc70f824747fff6a893684c6b1193a6460007014da7b7c2cc1fb04808f"
+  },
+  {
+   "seq": 284,
+   "at": "2026-09-24T10:32:21+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "74b3963bd40ee4f6908fd85bb494c93e48857ce7a61e3b017890f93aa5ea1567"
+  },
+  {
+   "seq": 288,
+   "at": "2026-09-24T10:33:11+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "552b42a34d9695b127ae7d084de259770e0ed106c123597737d0b039a39a58ca"
+  },
+  {
+   "seq": 292,
+   "at": "2026-09-24T10:33:31+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "ba371922fe21ca7cb84c6041f143b6c68f38b30237475c0bdf7f9e58ded14ccc"
+  },
+  {
+   "seq": 296,
+   "at": "2026-09-24T10:33:54+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "0c46557599f60076dc3932f9b2d4141ea23cf0be8da600363eebcb788b26916e"
+  },
+  {
+   "seq": 298,
+   "at": "2026-09-24T10:34:45+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "6eff451355fc3dff955a6844c60667121d0175a14612ac6ba595bf6204ffe44a"
+  },
+  {
+   "seq": 300,
+   "at": "2026-09-24T10:34:46+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "a7b771a49dd55579f234558e7ebe90fd7cda24a969ef1e134842b0fadb80dd28"
+  },
+  {
+   "seq": 305,
+   "at": "2026-09-24T10:35:43+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "b58c5e2845cbd0b3e186576a47234048e5f048a2e8e65b2e3ff0d9803b82c415"
+  },
+  {
+   "seq": 309,
+   "at": "2026-09-24T10:35:55+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "74e589a3ca34bb17b2be8fca10de29ccb798c14269f7d912da75c70da73add6c"
+  },
+  {
+   "seq": 313,
+   "at": "2026-09-24T10:36:01+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "2d0adfc41c34ee1ebefa75d7ef26b4177417005e754a1caec9f6f0c04450cc7a"
+  },
+  {
+   "seq": 317,
+   "at": "2026-09-24T10:36:34+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "8a5c82643f60392b287165ee2b14bf7acace785e7b23672db0f546f735fef8c1"
+  },
+  {
+   "seq": 321,
+   "at": "2026-09-24T10:36:59+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "616e71556e983463da36f72bf674543ca0b3562a6b2bc85747367a2511327743"
+  },
+  {
+   "seq": 323,
+   "at": "2026-09-24T10:37:03+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "b30c4fa0199d6b788126e430dee89197129bc055934cfd0f0e2dbcfef74c6115"
+  },
+  {
+   "seq": 327,
+   "at": "2026-09-24T10:37:09+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "0c334cb0d09c2805d354c1e76c778b294d23fc4ccb2e2d051b49170b84ff2950"
+  },
+  {
+   "seq": 329,
+   "at": "2026-09-24T10:37:53+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "407cd32adf17e420fc26e584f4c13d5e61d7553f79db3db9e009e3357b58d73c"
+  },
+  {
+   "seq": 333,
+   "at": "2026-09-24T10:37:53+00:00",
+   "kind": "jury",
+   "fields": {
+    "chapter": 1,
+    "passed": false,
+    "rounds": 2,
+    "levels": {
+     "voice": 4,
+     "style_guide": 4,
+     "pacing": 4,
+     "subtext": 2,
+     "theme": 3,
+     "continuity": 3,
+     "tone": 4,
+     "arc": 4,
+     "personalization": 2
+    },
+    "spreads": {
+     "voice": 1,
+     "style_guide": 0,
+     "pacing": 1,
+     "subtext": 1,
+     "theme": 1,
+     "continuity": 1,
+     "tone": 1,
+     "arc": 1,
+     "personalization": 1
+    },
+    "discarded": 2,
+    "scores": [
+     {
+      "instance": "juez-1",
+      "dimension": "voice",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Marcos observó sin parpadear, evaluando, catalogando. Luego notó al míster.",
+      "justification": "La voz de Marcos emerge de sus acciones cognitivas: observador metódico, evaluador, catalogador. Solo este personaje tomaría decisiones de esta forma, tan controlada y analítica."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "voice",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Marcos observó sin parpadear, evaluando, catalogando. Luego notó al míster. Aurelio seguía cada gesto de Iker con intensidad que nunca le había visto, ni en el entrenamiento.",
+      "justification": "La voz de Marcos como jugador-analista es coherente en cada línea: los verbos (catalogando), las observaciones mixtas de táctica y emoción, la reacción de reconocimiento que solo él podría tener."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "voice",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Sus ojos buscaron ese nueve contrario. Iker. Ahí estaba, moviéndose entre espacios cerrados, sus toques precisos y económicos, como si el balón respirara con él. Marcos observó sin parpadear, evaluando, catalogando.",
+      "justification": "La voz es coherente: Marcos es observador, evaluador, analítico. Las frases cortas reflejan su pensamiento fragmentado, como el de quien juega. Las decisiones se explican por quien las toma, pero alguna línea suena más narrativa que interna."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "style_guide",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "sus toques precisos y económicos, como si el balón respirara con él",
+      "justification": "La prosa mantiene un tono elegante y analítico sin caer en clichés. Las metáforas son sutiles y el registro es coherente entre observación e intuición. Cumple la guía sin esfuerzo evidente."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "style_guide",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "sus toques precisos y económicos, como si el balón respirara con él. Marcos observó sin parpadear, evaluando, catalogando.",
+      "justification": "El registro poético está interiorizado: metáfora viva sin cliché, paralelismo rítmico, puntuación que suspende, densidad que obliga al lector a lentificar. No se nota el esfuerzo de la guía."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "style_guide",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Iker. Ahí estaba, moviéndose entre espacios cerrados, sus toques precisos y económicos, como si el balón respirara con él.",
+      "justification": "La prosa es elegante sin esfuerzo visible. Evita clichés: 'precisos y económicos' es específico al fútbol, la comparación 'como si el balón respirara' es precisa sin caer en lo obvio. El registro literario se sostiene coherente."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "pacing",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Entonces, en uno de esos movimientos donde Iker intentaba penetrar lo imposible, Marcos vio el balón escapársele.",
+      "justification": "Cada secuencia empuja la siguiente: entrada al campo, observación de Iker, observación del míster, punto de quiebre. El ritmo concentra la tensión en el instante decisivo sin caer."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "pacing",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Entonces, en uno de esos movimientos donde Iker intentaba penetrar lo imposible, Marcos vio el balón escapársele. Reconoció en ese instante algo que creyó exclusivo suyo: el intento de lo sobrenatural y su fracaso.",
+      "justification": "Cada cambio de perspectiva cambia un valor: entrada segura, observación admirativa, hipnosis del míster, fallo del rival, reconocimiento del propio límite. La tensión se acelera sin atropellamiento."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "pacing",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Entonces, en uno de esos movimientos donde Iker intentaba penetrar lo imposible, Marcos vio el balón escapársele. Reconoció en ese instante algo que creyó exclusivo suyo: el intento de lo sobrenatural y su fracaso.",
+      "justification": "El ritmo es contemplativo y lento en todo el capítulo. El cambio decisivo se comprime en pocas líneas sin aceleración que acompañe la revelación. La tensión existe pero no hay variación de ritmo que la module."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "subtext",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Esa atención hipnotizada decía más que cualquier análisis.",
+      "justification": "Existe subtext en lo que Marcos observa: la obsesión del míster por Iker, pero el narrador lo explica explícitamente en lugar de permitir que el lector lo descubra por sí solo."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "subtext",
+      "level": 2,
+      "scene": "c1e1",
+      "quote": "Aurelio seguía cada gesto de Iker con intensidad que nunca le había visto, ni en el entrenamiento. Esa atención hipnotizada decía más que cualquier análisis.",
+      "justification": "La intención oculta (la amenaza o referencia que Iker representa) está presente, pero el narrador la explica de forma directa en lugar de dejar que el lector la infiera del silencio o la acción."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "subtext",
+      "level": 2,
+      "scene": "c1e1",
+      "quote": "Luego notó al míster. Aurelio seguía cada gesto de Iker con intensidad que nunca le había visto, ni en el entrenamiento. Esa atención hipnotizada decía más que cualquier análisis.",
+      "justification": "Hay intención oculta en la observación, pero el narrador la explica. 'Decía más que cualquier análisis' es un enunciado que le impide al lector descubrir el subtexto por sí solo."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "theme",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "el intento de lo sobrenatural y su fracaso",
+      "justification": "El motivo está presente: lo imposible y su fracaso tanto en Iker como en Marcos. Pero se enuncia explícitamente en el pensamiento en lugar de vivirse en la acción. Aparece decorativo en su formulación."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "theme",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Reconoció en ese instante algo que creyó exclusivo suyo: el intento de lo sobrenatural y su fracaso.",
+      "justification": "El motivo de la inseguridad está integrado en la acción sin enunciarse como moraleja. Se trabaja por la identificación que Marcos hace con Iker."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "theme",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Reconoció en ese instante algo que creyó exclusivo suyo: el intento de lo sobrenatural y su fracaso.",
+      "justification": "El tema emerge de la acción (Marcos se reconoce en el fracaso de Iker), pero se enuncia explícitamente en lugar de dejarse solo en la dramatización para que el lector lo descubra."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "continuity",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Cuando salió del campo minutos después, la seguridad que lo sostenía se había convertido en una pregunta sin respuesta.",
+      "justification": "La elipsis 'minutos después' salta del pre-partido a la salida sin mostrar qué ocurrió en el partido. La transición se entiende pero la discontinuidad se nota más de lo que debería."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "continuity",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Sus ojos buscaron ese nueve contrario. Iker. Ahí estaba, moviéndose entre espacios cerrados, sus toques precisos y económicos, como si el balón respirara con él.",
+      "justification": "Las transiciones y elipsis internas son limpias: la búsqueda que se encuentra, el salto temporal (minutos después) que funciona. Sin capítulos anteriores no hay ecos que retomar."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "continuity",
+      "level": 2,
+      "scene": "c1e1",
+      "quote": "Marcos pisó el césped del Molinón con el peso de quien sabe su lugar.",
+      "justification": "Sin contexto de lo anterior, el capítulo se lee como inicio desconectado. No hay transiciones que enlacen con lo previo ni ecos de una escena anterior que den sentido a lo nuevo."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "tone",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Luego notó al míster. Aurelio seguía cada gesto de Iker con intensidad que nunca le había visto, ni en el entrenamiento.",
+      "justification": "Sin tono declarado en el encargo, el tono reflexivo-tenso es coherente y se sostiene sin quiebres. Modula desde observación controlada hacia revelación incómoda de forma orgánica."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "tone",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Marcos pisó el césped del Molinón con el peso de quien sabe su lugar.",
+      "justification": "El tono reflexivo e introspectivo se sostiene de inicio a fin, modulando entre la observación táctica, la admiración, y la vulnerabilidad final sin ruptura ni dislocación."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "tone",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Marcos pisó el césped del Molinón con el peso de quien sabe su lugar. El Racing calentaba al otro extremo. Sus ojos buscaron ese nueve contrario.",
+      "justification": "El tono es seguro, observacional, tenso. Se sostiene sin ruptura. Sin tono declarado en el encargo, no se puede verificar si es el pedido, pero es coherente consigo mismo en todo el capítulo."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "arc",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Cuando salió del campo minutos después, la seguridad que lo sostenía se había convertido en una pregunta sin respuesta.",
+      "justification": "Marcos comienza pisando el césped con el peso de quien sabe su lugar y termina con esa seguridad convertida en pregunta. El cambio nace de lo que ocurre en escena, no por accidente de trama."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "arc",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Cuando salió del campo minutos después, la seguridad que lo sostenía se había convertido en una pregunta sin respuesta.",
+      "justification": "El arco de la seguridad a la duda es ganado por la acción de observar: la maestría de Iker, la hipnosis del míster, el fallo del rival que lo reconoce en sí mismo, y la salida con incertidumbre que lo cambia."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "arc",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Cuando salió del campo minutos después, la seguridad que lo sostenía se había convertido en una pregunta sin respuesta.",
+      "justification": "El capítulo muestra un cambio de estado interno en Marcos, de seguridad a incertidumbre, causado por la observación de Iker. Es un paso del arco reconocible, pero no reordena lo anterior ni hace inevitable lo siguiente."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "personalization",
+      "level": 2,
+      "scene": "c1e1",
+      "quote": "Marcos pisó el césped del Molinón con el peso de quien sabe su lugar.",
+      "justification": "Sus rasgos de posición y equipo están integrados al patrón de búsqueda del rival, pero la integración es superficial. No aparecen su apodo 'el Chino' ni recuerdos específicos que lo hagan único."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "personalization",
+      "level": 2,
+      "scene": "c1e1",
+      "quote": "Reconoció en ese instante algo que creyó exclusivo suyo: el intento de lo sobrenatural y su fracaso.",
+      "justification": "Aparece una sola caracterización (la aspiración a lo imposible) bien integrada en la acción, pero el capítulo dedica casi todo a observar a Iker y al míster en lugar de revelar quién es Marcos: su dorsal, su apodo, sus recuerdos, sus hábitos como jugador."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "personalization",
+      "level": 1,
+      "scene": "c1e1",
+      "quote": "Marcos pisó el césped del Molinón con el peso de quien sabe su lugar.",
+      "justification": "El encargo declara 'sin destinatario'. No hay rasgos ni recuerdos de ningún destinatario integrados en la historia. Se cuenta de forma genérica."
+     }
+    ],
+    "justifications": {
+     "voice": "juez-1: La voz de Marcos emerge de sus acciones cognitivas: observador metódico, evaluador, catalogador. Solo este personaje tomaría decisiones de esta forma, tan controlada y analítica. | juez-2: La voz de Marcos como jugador-analista es coherente en cada línea: los verbos (catalogando), las observaciones mixtas de táctica y emoción, la reacción de reconocimiento que solo él podría tener. | juez-3: La voz es coherente: Marcos es observador, evaluador, analítico. Las frases cortas reflejan su pensamiento fragmentado, como el de quien juega. Las decisiones se explican por quien las toma, pero alguna línea suena más narrativa que interna.",
+     "style_guide": "juez-1: La prosa mantiene un tono elegante y analítico sin caer en clichés. Las metáforas son sutiles y el registro es coherente entre observación e intuición. Cumple la guía sin esfuerzo evidente. | juez-2: El registro poético está interiorizado: metáfora viva sin cliché, paralelismo rítmico, puntuación que suspende, densidad que obliga al lector a lentificar. No se nota el esfuerzo de la guía. | juez-3: La prosa es elegante sin esfuerzo visible. Evita clichés: 'precisos y económicos' es específico al fútbol, la comparación 'como si el balón respirara' es precisa sin caer en lo obvio. El registro literario se sostiene coherente.",
+     "pacing": "juez-1: Cada secuencia empuja la siguiente: entrada al campo, observación de Iker, observación del míster, punto de quiebre. El ritmo concentra la tensión en el instante decisivo sin caer. | juez-2: Cada cambio de perspectiva cambia un valor: entrada segura, observación admirativa, hipnosis del míster, fallo del rival, reconocimiento del propio límite. La tensión se acelera sin atropellamiento. | juez-3: El ritmo es contemplativo y lento en todo el capítulo. El cambio decisivo se comprime en pocas líneas sin aceleración que acompañe la revelación. La tensión existe pero no hay variación de ritmo que la module.",
+     "subtext": "juez-1: Existe subtext en lo que Marcos observa: la obsesión del míster por Iker, pero el narrador lo explica explícitamente en lugar de permitir que el lector lo descubra por sí solo. | juez-2: La intención oculta (la amenaza o referencia que Iker representa) está presente, pero el narrador la explica de forma directa en lugar de dejar que el lector la infiera del silencio o la acción. | juez-3: Hay intención oculta en la observación, pero el narrador la explica. 'Decía más que cualquier análisis' es un enunciado que le impide al lector descubrir el subtexto por sí solo.",
+     "theme": "juez-1: El motivo está presente: lo imposible y su fracaso tanto en Iker como en Marcos. Pero se enuncia explícitamente en el pensamiento en lugar de vivirse en la acción. Aparece decorativo en su formulación. | juez-2: El motivo de la inseguridad está integrado en la acción sin enunciarse como moraleja. Se trabaja por la identificación que Marcos hace con Iker. | juez-3: El tema emerge de la acción (Marcos se reconoce en el fracaso de Iker), pero se enuncia explícitamente en lugar de dejarse solo en la dramatización para que el lector lo descubra.",
+     "continuity": "juez-1: La elipsis 'minutos después' salta del pre-partido a la salida sin mostrar qué ocurrió en el partido. La transición se entiende pero la discontinuidad se nota más de lo que debería. | juez-2: Las transiciones y elipsis internas son limpias: la búsqueda que se encuentra, el salto temporal (minutos después) que funciona. Sin capítulos anteriores no hay ecos que retomar. | juez-3: Sin contexto de lo anterior, el capítulo se lee como inicio desconectado. No hay transiciones que enlacen con lo previo ni ecos de una escena anterior que den sentido a lo nuevo.",
+     "tone": "juez-1: Sin tono declarado en el encargo, el tono reflexivo-tenso es coherente y se sostiene sin quiebres. Modula desde observación controlada hacia revelación incómoda de forma orgánica. | juez-2: El tono reflexivo e introspectivo se sostiene de inicio a fin, modulando entre la observación táctica, la admiración, y la vulnerabilidad final sin ruptura ni dislocación. | juez-3: El tono es seguro, observacional, tenso. Se sostiene sin ruptura. Sin tono declarado en el encargo, no se puede verificar si es el pedido, pero es coherente consigo mismo en todo el capítulo.",
+     "arc": "juez-1: Marcos comienza pisando el césped con el peso de quien sabe su lugar y termina con esa seguridad convertida en pregunta. El cambio nace de lo que ocurre en escena, no por accidente de trama. | juez-2: El arco de la seguridad a la duda es ganado por la acción de observar: la maestría de Iker, la hipnosis del míster, el fallo del rival que lo reconoce en sí mismo, y la salida con incertidumbre que lo cambia. | juez-3: El capítulo muestra un cambio de estado interno en Marcos, de seguridad a incertidumbre, causado por la observación de Iker. Es un paso del arco reconocible, pero no reordena lo anterior ni hace inevitable lo siguiente.",
+     "personalization": "juez-1: Sus rasgos de posición y equipo están integrados al patrón de búsqueda del rival, pero la integración es superficial. No aparecen su apodo 'el Chino' ni recuerdos específicos que lo hagan único. | juez-2: Aparece una sola caracterización (la aspiración a lo imposible) bien integrada en la acción, pero el capítulo dedica casi todo a observar a Iker y al míster en lugar de revelar quién es Marcos: su dorsal, su apodo, sus recuerdos, sus hábitos como jugador. | juez-3: El encargo declara 'sin destinatario'. No hay rasgos ni recuerdos de ningún destinatario integrados en la historia. Se cuenta de forma genérica."
+    }
+   },
+   "prev_hash": "6b3f40269e253dfe158bee340a1cbea3b7c11b4746f0daaf4e17f86fae7c84f3"
+  },
+  {
+   "seq": 336,
+   "at": "2026-09-24T10:38:53+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "reparador",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "773c89a3d9a2"
+   },
+   "prev_hash": "cd484ef35cebcc3b912d0432650081d882d74de29672db3bf6f8d116166f00e4"
+  },
+  {
+   "seq": 341,
+   "at": "2026-09-24T10:39:12+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "continuista",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "9c50294cc3c5"
+   },
+   "prev_hash": "fb641bce2a66a4ae4e81593128e8ad9245fdc2fb9f011cd67359aa773503cb4d"
+  },
+  {
+   "seq": 344,
+   "at": "2026-09-24T10:39:22+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "lector",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "cdada6a08b9d"
+   },
+   "prev_hash": "2193003284cf88d1c736d187435d5e4490e823e7b551b8923c3da1c1ec3f5523"
+  },
+  {
+   "seq": 346,
+   "at": "2026-09-24T10:39:22+00:00",
+   "kind": "quiz",
+   "fields": {
+    "chapter": 1,
+    "questions": 3,
+    "wrong": 0
+   },
+   "prev_hash": "1f92b053f236b0baf5c787910970a90b639a7e3ac3e7d63cda5dd838431ec814"
+  },
+  {
+   "seq": 347,
+   "at": "2026-09-24T10:39:22+00:00",
+   "kind": "chapter.gate",
+   "fields": {
+    "chapter": 1,
+    "passed": true,
+    "s1": 0,
+    "s2": 0,
+    "reason": "pasa",
+    "defects": []
+   },
+   "prev_hash": "69799c483f1539cbad199bd0870fbdabbe2c5bc94e7f4422cabaf2921c6cd7cc"
+  },
+  {
+   "seq": 351,
+   "at": "2026-09-24T10:40:04+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "a72a8f97b7e016dc7d2a8f9ce51947361de2693fbdc57a5c670b3ad582b33800"
+  },
+  {
+   "seq": 355,
+   "at": "2026-09-24T10:40:25+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "aa524d6c6cee98795aad8a53978545dad6ed2727e0e76fbb0ac796b074545c60"
+  },
+  {
+   "seq": 359,
+   "at": "2026-09-24T10:40:36+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "c632a67e61d8816c11736ae4f9c1f3857eda51ebc04f49a0a771bde8bbbb7b6d"
+  },
+  {
+   "seq": 363,
+   "at": "2026-09-24T10:40:51+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "0e217b8ba99ff7f66dfef0bc16c38b162d3b4820b3cea9d0930e40ebb635d787"
+  },
+  {
+   "seq": 367,
+   "at": "2026-09-24T10:41:24+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "0ac107415c65c70175b70eba796c42b34eded9b46d8dea5556c9a5f0b8a3218a"
+  },
+  {
+   "seq": 371,
+   "at": "2026-09-24T10:41:33+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "f43672be68f0c78017f11fb1e86a37268c711aeed9120b87b9057bf22d84d09c"
+  },
+  {
+   "seq": 373,
+   "at": "2026-09-24T10:41:47+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "784789ddfd6e25717b1f7656f92e4c37228c3059679809e0fbe565a8d82157b5"
+  },
+  {
+   "seq": 375,
+   "at": "2026-09-24T10:42:24+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "673df9b479fdb7d1398460694428e6bb2f8b1ad9d62378c4ef9a8ae70fe1bab9"
+  },
+  {
+   "seq": 380,
+   "at": "2026-09-24T10:43:14+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "624e4cf2b72419ee7a714139360355960f25b09d7c8123abb6ca49046bb71395"
+  },
+  {
+   "seq": 384,
+   "at": "2026-09-24T10:43:18+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "db0d1f5878046cc8139de3bf200bfbfb3e290b3f247c72edcfd8aed1415017d9"
+  },
+  {
+   "seq": 388,
+   "at": "2026-09-24T10:44:03+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "555981cb9ea0400182e730b596d9cce97089ace029eef13b2e5ca49f9cc6a061"
+  },
+  {
+   "seq": 392,
+   "at": "2026-09-24T10:44:06+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "bce09806defd6d2bc9e5d7150c17fc7704963359c5dbbdc49640d536faea43bb"
+  },
+  {
+   "seq": 396,
+   "at": "2026-09-24T10:44:42+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "f0751dc32c66551d9034dce3dcf9b73f71e588b9e994c41950bc4f662430a774"
+  },
+  {
+   "seq": 400,
+   "at": "2026-09-24T10:44:49+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "b10b242299bffd3da8b8f500269953cbe136faf5d5076ad2fff8d9c6f3d418e9"
+  },
+  {
+   "seq": 402,
+   "at": "2026-09-24T10:45:14+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "b5bd2673f50874c0aa820ff5e7c642a9b841c6fefa82033cdc29521db1cbacff"
+  },
+  {
+   "seq": 406,
+   "at": "2026-09-24T10:45:40+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "f77c443f22ccb09163584ce0657af569c1e888b674cd8ca9d5bbd13ae429bbaa"
+  },
+  {
+   "seq": 408,
+   "at": "2026-09-24T10:47:12+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "7fe707a80eb1"
+   },
+   "prev_hash": "2516a92e736878d33317e949d29f329d76d4d93c48c1511f8f3742b8fa8cb516"
+  },
+  {
+   "seq": 416,
+   "at": "2026-09-24T10:47:13+00:00",
+   "kind": "jury",
+   "fields": {
+    "chapter": 1,
+    "passed": false,
+    "rounds": 2,
+    "levels": {
+     "voice": null,
+     "style_guide": 4,
+     "pacing": 3,
+     "subtext": 4,
+     "theme": null,
+     "continuity": 3,
+     "tone": 4,
+     "arc": 3,
+     "personalization": null
+    },
+    "spreads": {
+     "voice": 1,
+     "style_guide": 0,
+     "pacing": 1,
+     "subtext": 1,
+     "theme": 2,
+     "continuity": 1,
+     "tone": 0,
+     "arc": 1,
+     "personalization": 0
+    },
+    "discarded": 6,
+    "scores": [
+     {
+      "instance": "juez-2",
+      "dimension": "voice",
+      "level": 2,
+      "scene": "c1e1",
+      "quote": "Reconoció en ese instante algo que creyó exclusivo suyo: el intento de lo sobrenatural y su fracaso.",
+      "justification": "La voz de Marcos como observador analítico (evalúa, cataloga) es coherente en las acciones, pero 'lo sobrenatural' suena a narrador omnisciente, no a delantero joven. Marcos hablaría de 'lo imposible' o 'esas cosas locas que intenta'. La línea queda en registro del narrador, no de su idiolecto."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "voice",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Sus ojos buscaron al contrario. Iker. Ahí estaba, moviéndose entre espacios cerrados, sus toques precisos y económicos, como si el balón respirara con él. Marcos observó sin parpadear, evaluando, catalogando.",
+      "justification": "Se distingue la voz de Marcos por el ritmo acelerado, las frases cortas y su forma de observar: analítico, técnico, obsesivo. La voz es coherente con su perfil de delantero que estudia al rival."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "style_guide",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "sus toques precisos y económicos, como si el balón respirara con él.",
+      "justification": "La prosa mantiene un registro consistente, económico, sin valoraciones explícitas ni clichés. La comparación poética está controlada y el estilo se sostiene sin esfuerzo visible."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "style_guide",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "el intento de lo sobrenatural y su fracaso.",
+      "justification": "Evita clichés deportivos: 'toques precisos y económicos' es específico sin tópica; 'sobrenatural' es fresco para ambición futbolera. El registro literario se sostiene sin exceso de valoración."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "style_guide",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "sus toques precisos y económicos, como si el balón respirara con él",
+      "justification": "Lenguaje elegante sin clichés deportivos. La metáfora orgánica no fuerza la comparación. El registro es consistente, evita valoraciones altisonantes y frases hechas del género."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "pacing",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Entonces, en uno de esos movimientos donde Iker intentaba penetrar lo imposible, Marcos vio el balón escapársele.",
+      "justification": "Hay cambio claro entre entrada, observación y revelación. El punto de giro existe pero llega sin aceleración rítmica previa. La escena cambia su valor sin preparación."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "pacing",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Cuando salió del campo minutos después, la seguridad que lo sostenía se había convertido en una pregunta sin respuesta.",
+      "justification": "El ritmo acompaña el cambio: observación lenta que acelera hacia el reconocimiento del fallo ajeno, culminando en la inversión emocional. Cada párrafo modifica la carga. El cierre obliga a seguir."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "pacing",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Entonces, en uno de esos movimientos donde Iker intentaba penetrar lo imposible, Marcos vio el balón escapársele. Reconoció en ese instante algo que creyó exclusivo suyo: el intento de lo sobrenatural y su fracaso.",
+      "justification": "La escena cambia su valor: del observador seguro al cuestionado. Pero falta aceleración que prepare la revelación; el ritmo es monótono y la conclusión llega sin suficiente tensión acumulada."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "subtext",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Reconoció en ese instante algo que creyó exclusivo suyo: el intento de lo sobrenatural y su fracaso.",
+      "justification": "Marcos comunica su fragilidad por identificación con el fracaso de Iker sin verbalizarla. El lector intuye lo fundamental por omisión y observación indirecta."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "subtext",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Reconoció en ese instante algo que creyó exclusivo suyo: el intento de lo sobrenatural y su fracaso.",
+      "justification": "La identificación de Marcos con el fracaso de Iker se expresa sin nombrarla directamente. El lector entiende la admiración, el espejo y la rivalidad velada por omisión. Lo importante no se enuncia."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "subtext",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Aurelio seguía cada gesto de Iker sin respirar, los ojos entornados. Entonces, en uno de esos movimientos donde Iker intentaba penetrar lo imposible, Marcos vio el balón escapársele.",
+      "justification": "Hay capas no nombradas: importancia de Iker para el míster, observación envidiosa de Marcos. Pero la última frase subraya de más la intención al explicar qué significa todo."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "theme",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "el intento de lo sobrenatural y su fracaso",
+      "justification": "El motivo central de la aspiración imposible se trabaja en la acción (observar a Iker es reconocerse en el fracaso) sin ser enunciado como moraleja. La acción y el significado son lo mismo: lo que ve es lo que significa."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "theme",
+      "level": 2,
+      "scene": "c1e1",
+      "quote": "Reconoció en ese instante algo que creyó exclusivo suyo: el intento de lo sobrenatural y su fracaso.",
+      "justification": "El motivo de 'el intento de lo imposible y su fracaso' aparece completamente enunciado, convertido en moraleja explícita. No emerge de la acción: se anuncia después, como si el narrador explicara al lector lo que debería haber descubierto solo."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "theme",
+      "level": 2,
+      "scene": "c1e1",
+      "quote": "el intento de lo sobrenatural y su fracaso",
+      "justification": "El motivo se enuncia como conclusión reflexiva de Marcos en lugar de integrarse en la acción; aparece como moraleja del capítulo más que como descubrimiento."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "continuity",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Marcos pisó el césped del Molinón con el mismo dorsal que Iker Landa. Nueve contra nueve, racing contra sporting.",
+      "justification": "Como capítulo inicial, la escena es clara y coherente internamente sin rupturas. Funciona como introducción efectiva, aunque sin contexto anterior no hay continuidad que verificar."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "continuity",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Entonces, en uno de esos movimientos donde Iker intentaba penetrar lo imposible, Marcos vio el balón escapársele.",
+      "justification": "La transición de presente de observación a la salida del campo es abrupta sin conexión visual intermedia. Se lee como inicio coherente, pero la elipsis de 'minutos después' se nota más de lo que debería."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "continuity",
+      "level": 2,
+      "scene": "c1e1",
+      "quote": "Marcos pisó el césped del Molinón con el mismo dorsal que Iker Landa. Nueve contra nueve, racing contra sporting.",
+      "justification": "Es apertura fuerte pero sin ecos de algo anterior. Como primer capítulo carece de transiciones hacia un contexto previo; entra en escena sin preparación narrativa ni continuidad de un afuera."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "tone",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "la seguridad que lo sostenía se había convertido en una pregunta sin respuesta.",
+      "justification": "El tono sobrio, observacional e introspectivo se sostiene desde el inicio sin rupturas. La modulación hacia lo existencial es coherente con la naturaleza de la revelación interior."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "tone",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "sus toques precisos y económicos, como si el balón respirara con él.",
+      "justification": "El tono contemplativo y poético se sostiene sin quiebra. La imagen establece una manera de ver que modula toda la observación. Los pasajes reflexivos no rompen la atmósfera de meditación."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "tone",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Marcos observó sin parpadear, evaluando, catalogando. Luego notó al míster. Aurelio seguía cada gesto de Iker sin respirar, los ojos entornados.",
+      "justification": "El tono de observación obsesiva se sostiene consistentemente sin romperse. Crea atmósfera de inquietud contenida que no se disuelve ni se exagera, aunque sin tono declarado en el encargo."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "arc",
+      "level": 4,
+      "scene": "c1e1",
+      "quote": "Cuando salió del campo minutos después, la seguridad que lo sostenía se había convertido en una pregunta sin respuesta.",
+      "justification": "El arco de Marcos avanza desde la evaluación fría y la certeza inicial hacia la duda existencial. Este movimiento es ganado en escena al reconocer en el fracaso de Iker su propia fragilidad."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "arc",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Cuando salió del campo minutos después, la seguridad que lo sostenía se había convertido en una pregunta sin respuesta.",
+      "justification": "Hay cambio reconocible de seguridad a incertidumbre, pero es un paso único. No reordena lo anterior ni hace inevitable lo siguiente; es un reconocimiento puntual más que un arco de transformación."
+     },
+     {
+      "instance": "juez-3",
+      "dimension": "arc",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "la seguridad que lo sostenía se había convertido en una pregunta sin respuesta",
+      "justification": "Se plantea el paso inicial de un arco: Marcos pasa de la certeza observadora a la incertidumbre existencial. El movimiento es reconocible pero incipiente, sin resolución clara que consolidara el cambio."
+     },
+     {
+      "instance": "juez-1",
+      "dimension": "personalization",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Reconoció en ese instante algo que creyó exclusivo suyo: el intento de lo sobrenatural y su fracaso.",
+      "justification": "Los rasgos psicológicos de Marcos (ambición, fragilidad, obsesión técnica) nacen de la escena sin ser forzados. Sin destinatario explícito, están integrados pero permanecen universales; no hay marca de lo idiosincrásico que solo a Marcos lo define."
+     },
+     {
+      "instance": "juez-2",
+      "dimension": "personalization",
+      "level": 3,
+      "scene": "c1e1",
+      "quote": "Reconoció en ese instante algo que creyó exclusivo suyo: el intento de lo sobrenatural y su fracaso.",
+      "justification": "Los rasgos de Marcos como jugador analítico están integrados en sus acciones (observa, evalúa, cataloga), pero la reflexión final se nota puesta como explicación al lector de quién es Marcos. La ambición y el cuestionamiento nacen de la acción, pero se formulan de modo muy didáctico."
+     }
+    ],
+    "justifications": {
+     "voice": "juez-2: La voz de Marcos como observador analítico (evalúa, cataloga) es coherente en las acciones, pero 'lo sobrenatural' suena a narrador omnisciente, no a delantero joven. Marcos hablaría de 'lo imposible' o 'esas cosas locas que intenta'. La línea queda en registro del narrador, no de su idiolecto. | juez-3: Se distingue la voz de Marcos por el ritmo acelerado, las frases cortas y su forma de observar: analítico, técnico, obsesivo. La voz es coherente con su perfil de delantero que estudia al rival.",
+     "style_guide": "juez-1: La prosa mantiene un registro consistente, económico, sin valoraciones explícitas ni clichés. La comparación poética está controlada y el estilo se sostiene sin esfuerzo visible. | juez-2: Evita clichés deportivos: 'toques precisos y económicos' es específico sin tópica; 'sobrenatural' es fresco para ambición futbolera. El registro literario se sostiene sin exceso de valoración. | juez-3: Lenguaje elegante sin clichés deportivos. La metáfora orgánica no fuerza la comparación. El registro es consistente, evita valoraciones altisonantes y frases hechas del género.",
+     "pacing": "juez-1: Hay cambio claro entre entrada, observación y revelación. El punto de giro existe pero llega sin aceleración rítmica previa. La escena cambia su valor sin preparación. | juez-2: El ritmo acompaña el cambio: observación lenta que acelera hacia el reconocimiento del fallo ajeno, culminando en la inversión emocional. Cada párrafo modifica la carga. El cierre obliga a seguir. | juez-3: La escena cambia su valor: del observador seguro al cuestionado. Pero falta aceleración que prepare la revelación; el ritmo es monótono y la conclusión llega sin suficiente tensión acumulada.",
+     "subtext": "juez-1: Marcos comunica su fragilidad por identificación con el fracaso de Iker sin verbalizarla. El lector intuye lo fundamental por omisión y observación indirecta. | juez-2: La identificación de Marcos con el fracaso de Iker se expresa sin nombrarla directamente. El lector entiende la admiración, el espejo y la rivalidad velada por omisión. Lo importante no se enuncia. | juez-3: Hay capas no nombradas: importancia de Iker para el míster, observación envidiosa de Marcos. Pero la última frase subraya de más la intención al explicar qué significa todo.",
+     "theme": "juez-1: El motivo central de la aspiración imposible se trabaja en la acción (observar a Iker es reconocerse en el fracaso) sin ser enunciado como moraleja. La acción y el significado son lo mismo: lo que ve es lo que significa. | juez-2: El motivo de 'el intento de lo imposible y su fracaso' aparece completamente enunciado, convertido en moraleja explícita. No emerge de la acción: se anuncia después, como si el narrador explicara al lector lo que debería haber descubierto solo. | juez-3: El motivo se enuncia como conclusión reflexiva de Marcos en lugar de integrarse en la acción; aparece como moraleja del capítulo más que como descubrimiento.",
+     "continuity": "juez-1: Como capítulo inicial, la escena es clara y coherente internamente sin rupturas. Funciona como introducción efectiva, aunque sin contexto anterior no hay continuidad que verificar. | juez-2: La transición de presente de observación a la salida del campo es abrupta sin conexión visual intermedia. Se lee como inicio coherente, pero la elipsis de 'minutos después' se nota más de lo que debería. | juez-3: Es apertura fuerte pero sin ecos de algo anterior. Como primer capítulo carece de transiciones hacia un contexto previo; entra en escena sin preparación narrativa ni continuidad de un afuera.",
+     "tone": "juez-1: El tono sobrio, observacional e introspectivo se sostiene desde el inicio sin rupturas. La modulación hacia lo existencial es coherente con la naturaleza de la revelación interior. | juez-2: El tono contemplativo y poético se sostiene sin quiebra. La imagen establece una manera de ver que modula toda la observación. Los pasajes reflexivos no rompen la atmósfera de meditación. | juez-3: El tono de observación obsesiva se sostiene consistentemente sin romperse. Crea atmósfera de inquietud contenida que no se disuelve ni se exagera, aunque sin tono declarado en el encargo.",
+     "arc": "juez-1: El arco de Marcos avanza desde la evaluación fría y la certeza inicial hacia la duda existencial. Este movimiento es ganado en escena al reconocer en el fracaso de Iker su propia fragilidad. | juez-2: Hay cambio reconocible de seguridad a incertidumbre, pero es un paso único. No reordena lo anterior ni hace inevitable lo siguiente; es un reconocimiento puntual más que un arco de transformación. | juez-3: Se plantea el paso inicial de un arco: Marcos pasa de la certeza observadora a la incertidumbre existencial. El movimiento es reconocible pero incipiente, sin resolución clara que consolidara el cambio.",
+     "personalization": "juez-1: Los rasgos psicológicos de Marcos (ambición, fragilidad, obsesión técnica) nacen de la escena sin ser forzados. Sin destinatario explícito, están integrados pero permanecen universales; no hay marca de lo idiosincrásico que solo a Marcos lo define. | juez-2: Los rasgos de Marcos como jugador analítico están integrados en sus acciones (observa, evalúa, cataloga), pero la reflexión final se nota puesta como explicación al lector de quién es Marcos. La ambición y el cuestionamiento nacen de la acción, pero se formulan de modo muy didáctico."
+    }
+   },
+   "prev_hash": "60fbcbf667cbe8d3fbd158c5b43ea3e660626338dffc653e48a74dcbfbb50008"
+  },
+  {
+   "seq": 420,
+   "at": "2026-09-24T10:48:16+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "arquitecto",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": false,
+    "prompt_version": "1b419d930a3c"
+   },
+   "prev_hash": "5fd507be03e4afe58e7ce79be78c205660a3a2bea17c9f83bbae997fe156296c"
+  }
+ ]
+}
