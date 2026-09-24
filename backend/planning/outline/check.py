@@ -15,6 +15,9 @@ Si te ves pidiendole a un modelo que valide la escaleta, has cruzado la regla de
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+
+from canon.brief import ELEMENT_PREFIX
 from planning.outline.types import (
     NOVELA,
     ArcKind,
@@ -53,12 +56,22 @@ class OutlineDefect:
 
 
 def check(
-    outline: Outline, *, word_range: tuple[int, int], profile: LengthProfile = NOVELA
+    outline: Outline,
+    *,
+    word_range: tuple[int, int],
+    profile: LengthProfile = NOVELA,
+    elements: Sequence[tuple[str, str]] = (),
+    has_rulebook: bool = True,
 ) -> list[OutlineDefect]:
     """Devuelve los defectos estructurales. Lista vacia significa que pasa.
 
     `profile` es el perfil de extension del brief (T53): de el salen los rangos
     de escena y de capitulo, y la forma de la obra si el perfil la fija.
+
+    `elements` son los rasgos y recuerdos **obligatorios** del destinatario,
+    como (identificador, texto): cada uno necesita su setup `element.<id>` con
+    cobro planificado (RF-260). `has_rulebook` dice si el brief trae
+    reglamento: sin el, ninguna escena puede ser un encuentro (RF-273).
     """
     defects: list[OutlineDefect] = []
     defects += _check_scene_ids(outline)
@@ -70,6 +83,8 @@ def check(
     defects += _check_scenes(outline, profile)
     defects += _check_chapters(outline, profile)
     defects += _check_shape(outline, profile)
+    defects += _check_elements(outline, elements)
+    defects += _check_matches(outline, has_rulebook=has_rulebook)
     return defects
 
 
@@ -215,9 +230,16 @@ def _check_setups(outline: Outline) -> list[OutlineDefect]:
                         f"se {nombre} en {scene_id!r}, que no esta en la escaleta",
                     )
                 )
-        if {setup.planted_scene, setup.payoff_scene} <= known and _position(
-            outline, setup.payoff_scene
-        ) <= _position(outline, setup.planted_scene):
+        # Un elemento del brief ya lo planto el encargo: su setup puede plantarse
+        # y cobrarse en la misma escena, que es donde se integra (RF-260).
+        mismo_sitio = setup.id.startswith(ELEMENT_PREFIX) and (
+            setup.planted_scene == setup.payoff_scene
+        )
+        if (
+            not mismo_sitio
+            and {setup.planted_scene, setup.payoff_scene} <= known
+            and _position(outline, setup.payoff_scene) <= _position(outline, setup.planted_scene)
+        ):
             out.append(
                 OutlineDefect(
                     "setup-invertido",
@@ -226,6 +248,50 @@ def _check_setups(outline: Outline) -> list[OutlineDefect]:
                 )
             )
     return out
+
+
+def _check_elements(outline: Outline, elements: Sequence[tuple[str, str]]) -> list[OutlineDefect]:
+    """RF-260, D-95. Todo elemento obligatorio tiene su setup con cobro planificado.
+
+    Un recuerdo que la escaleta no situa en ninguna escena no aparece nunca: el
+    Escritor no lo sabe y el Archivero no tiene nada que citar. Que el cobro
+    exista en la escaleta lo mira `_check_setups`; aqui, que el setup exista.
+    """
+    planificados = {s.id for s in outline.setups}
+    out: list[OutlineDefect] = []
+    for element_id, texto in elements:
+        setup = f"{ELEMENT_PREFIX}{element_id}"
+        if setup not in planificados:
+            out.append(
+                OutlineDefect(
+                    "elemento-sin-cobro",
+                    element_id,
+                    f"el elemento obligatorio {element_id} «{texto[:80]}» no tiene setup "
+                    f"{setup!r} con escena de cobro en la escaleta",
+                )
+            )
+    return out
+
+
+def _check_matches(outline: Outline, *, has_rulebook: bool) -> list[OutlineDefect]:
+    """RF-273, D-104. Sin reglamento (DEP-02) no hay encuentros.
+
+    `verify_match` comprueba el encuentro contra el reglamento del brief; con
+    `is_match` y sin reglamento correria contra nada. Es una regla sobre los
+    datos de la escaleta, sin juicio: va aqui, con la escena que lo trae.
+    """
+    if has_rulebook:
+        return []
+    return [
+        OutlineDefect(
+            "encuentro-sin-reglamento",
+            s.id,
+            "la escena es un encuentro (is_match) y el brief no tiene reglamento: "
+            "sin el, el encuentro no se puede verificar",
+        )
+        for s in outline.scenes
+        if s.is_match
+    ]
 
 
 # ----------------------------------------------------------- curva de tension

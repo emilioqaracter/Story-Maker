@@ -6,6 +6,11 @@ tirada entera de cada uno con el motor real y un proveedor guionizado que
 responde con el reparto de ese brief: lo que se comprueba es que el perfil llega
 a todos los consumidores de rangos --escaleta, puerta de escena, puerta de
 capitulo y cierre de obra-- y que la obra cierra con la forma que el perfil fija.
+
+Con textos de un parrafo tambien tienen que funcionar el Jurado de nueve
+dimensiones y los elementos obligatorios del brief (T47): el proveedor integra
+cada rasgo y recuerdo obligatorio en la prosa, el Arquitecto los planifica como
+setups `element.<id>` y el Archivero cita su uso.
 """
 
 from __future__ import annotations
@@ -18,11 +23,13 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from canon.brief import Brief, create_novel
+from canon.brief import Brief, create_novel, elements
+from canon.db import connection
 from commons.tokens.counter import TokenCounter
 from commons.tokens.factors import ModelFactors
 from commons.tracing.trace import Trace
 from commons.types.length import PRUEBA
+from commons.types.rubrics import DEFAULT_RUBRICS
 from orchestration.admission import Admission
 from orchestration.compose import chapters_for
 from orchestration.engine import Composer, specs_provider
@@ -55,6 +62,13 @@ class _PruebaPort(ScriptedPort):
         self.inicio = date.fromisoformat(brief.start.stamp)
         #: Las instrucciones de resumen, para comprobar su tope (T53).
         self.resumenes: list[str] = []
+        #: RF-260. Los elementos obligatorios, cada uno con su frase en la prosa.
+        self.elementos = [e for e in elements(brief) if e.mandatory]
+
+    def _frase(self, i: int) -> str:
+        """La frase que integra el elemento i: unica en la escena y de mas de ocho palabras."""
+        ordinal = ("primero", "segundo", "tercero", "cuarto")[i]
+        return f"Por dentro volvió a pensar en su recuerdo {ordinal} y sonrió."
 
     def _stamp(self, capitulo: int) -> str:
         return (self.inicio + timedelta(days=2 + 7 * (capitulo - 1))).isoformat()
@@ -70,6 +84,7 @@ class _PruebaPort(ScriptedPort):
             f"ventanas. {self.nombre} respiró hondo, levantó la vista y decidió que ese "
             "día no iba a esperar a nadie. Recogió sus cosas, cerró la puerta con cuidado "
             "y salió con paso firme hacia la luz de la mañana."
+            + "".join(" " + self._frase(i) for i in range(len(self.elementos)))
         )
 
     def _outline(self) -> str:
@@ -120,7 +135,17 @@ class _PruebaPort(ScriptedPort):
                         "planted_scene": "c1e1",
                         "payoff_scene": "c2e1",
                         "description": "La lista",
-                    }
+                    },
+                    # RF-260: un setup por elemento obligatorio, que el brief ya planto.
+                    *(
+                        {
+                            "id": e.setup_id,
+                            "planted_scene": f"c{min(i + 1, 3)}e1",
+                            "payoff_scene": f"c{min(i + 1, 3)}e1",
+                            "description": e.text,
+                        }
+                        for i, e in enumerate(self.elementos)
+                    ),
                 ],
             }
         )
@@ -160,6 +185,12 @@ class _PruebaPort(ScriptedPort):
             for evento in respuesta["events"]:
                 evento["payload"]["entity_id"] = self.pov
                 evento["quote"] = f"{self.nombre} entró en {self.lugar} cuando todavía era temprano"
+            # RF-261: cada elemento que el capitulo integra, con su cita literal.
+            respuesta["elements"] = [
+                {"element_id": e.id, "scene": "", "quote": self._frase(i)}
+                for i, e in enumerate(self.elementos)
+                if f"- {e.id} (" in instruction and self._frase(i) in instruction
+            ]
             return json.dumps(respuesta)
         return super()._answer(prefix, instruction)
 
@@ -238,6 +269,17 @@ def test_la_tirada_de_prueba_cierra_con_tres_capitulos_de_una_escena(
     escaleta = Outline.model_validate_json(str(paso.fields["outline"]))
     assert check(escaleta, word_range=brief.word_range(), profile=brief.profile()) == []
     assert "arquitecto" in puerto.calls and "juez" in puerto.calls
+
+    # T47 con textos de un parrafo. El Jurado puntua las nueve dimensiones, cada
+    # puntuacion con su justificacion en la traza (RF-257, RF-259).
+    nueve = {d.value for d in DEFAULT_RUBRICS.dimensions}
+    for r in traza.records("jury"):
+        assert set(r.fields["levels"]) == nueve  # type: ignore[arg-type]
+        assert all(s["justification"] for s in r.fields["scores"])  # type: ignore[index, union-attr, call-overload]
+    # Cada elemento obligatorio tiene uso anclado en SQLite, y por eso cierra (RF-261).
+    with connection.reader(path) as con:
+        usados = {row["element_id"] for row in con.execute("SELECT element_id FROM element_use")}
+    assert usados == {e.id for e in puerto.elementos}
 
     # Tres actos de un capitulo: la puerta de acto corre tras cada capitulo.
     assert [r.fields["act"] for r in traza.records("act.gate")] == [1, 2, 3]

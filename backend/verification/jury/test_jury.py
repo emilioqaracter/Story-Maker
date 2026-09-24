@@ -35,7 +35,14 @@ CITA = "Marcos entró el último y nadie levantó la vista del suelo"
 def _instancia(niveles: Mapping[Dimension, int], *, cita: str = CITA) -> InstanceVerdict:
     return InstanceVerdict(
         scores=tuple(
-            Score(dimension=d, level=n, scene="c1e1", quote=cita) for d, n in niveles.items()
+            Score(
+                justification="justificada en la cita",
+                dimension=d,
+                level=n,
+                scene="c1e1",
+                quote=cita,
+            )
+            for d, n in niveles.items()
         )
     )
 
@@ -73,8 +80,20 @@ def test_una_cita_que_nombra_mal_la_escena_ancla_donde_esta() -> None:
     otra = "El silbato sono y el estadio entero se puso en pie a la vez para verlo."
     ver = InstanceVerdict(
         scores=(
-            Score(dimension=Dimension.PACING, level=4, scene="capitulo", quote=CITA),
-            Score(dimension=Dimension.VOICE, level=4, scene="c1e2", quote=CITA),
+            Score(
+                justification="justificada en la cita",
+                dimension=Dimension.PACING,
+                level=4,
+                scene="capitulo",
+                quote=CITA,
+            ),
+            Score(
+                justification="justificada en la cita",
+                dimension=Dimension.VOICE,
+                level=4,
+                scene="c1e2",
+                quote=CITA,
+            ),
         )
     )
     validas, descartes = anchor({"j1": (1, ver)}, {"c1e1": ESCENA, "c1e2": otra})
@@ -84,7 +103,15 @@ def test_una_cita_que_nombra_mal_la_escena_ancla_donde_esta() -> None:
 
 def test_una_cita_que_esta_en_dos_escenas_no_es_una_posicion() -> None:
     ver = InstanceVerdict(
-        scores=(Score(dimension=Dimension.PACING, level=4, scene="capitulo", quote=CITA),)
+        scores=(
+            Score(
+                justification="justificada en la cita",
+                dimension=Dimension.PACING,
+                level=4,
+                scene="capitulo",
+                quote=CITA,
+            ),
+        )
     )
     validas, _ = anchor({"j1": (1, ver)}, {"c1e1": ESCENA, "c1e2": ESCENA})
     assert validas == []
@@ -164,6 +191,7 @@ def test_nunca_hay_nivel_resultante_con_dispersion_invalida(niveles: list[int]) 
     """Propiedad de la SRS v2 §7.3."""
     scores = [
         AnchoredScore(
+            justification="justificada en la cita",
             instance=f"j{i}",
             seed=i,
             dimension=Dimension.THEME,
@@ -289,14 +317,27 @@ def test_el_motivo_de_una_cita_que_no_ancla_se_le_dice_al_juez() -> None:
 
     ver = InstanceVerdict(
         scores=(
-            Score(dimension=Dimension.VOICE, level=4, scene="c1e1", quote="Marcos entró el último"),
             Score(
+                justification="justificada en la cita",
+                dimension=Dimension.VOICE,
+                level=4,
+                scene="c1e1",
+                quote="Marcos entró el último",
+            ),
+            Score(
+                justification="justificada en la cita",
                 dimension=Dimension.PACING,
                 level=4,
                 scene="c1e1",
                 quote="Marcos entró el último... la camiseta del nueve seguía colgada en su gancho",
             ),
-            Score(dimension=Dimension.THEME, level=4, scene="c1e1", quote=CITA),
+            Score(
+                justification="justificada en la cita",
+                dimension=Dimension.THEME,
+                level=4,
+                scene="c1e1",
+                quote=CITA,
+            ),
         )
     )
     motivos = unanchored(ver, {"c1e1": ESCENA})

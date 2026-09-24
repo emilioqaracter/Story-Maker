@@ -65,7 +65,13 @@ def closes_an_act(outline: Outline, chapter: int) -> int | None:
     return None
 
 
-def check_act(outline: Outline, act: int, frozen_scenes: frozenset[str]) -> ActGateResult:
+def check_act(
+    outline: Outline,
+    act: int,
+    frozen_scenes: frozenset[str],
+    *,
+    used_elements: frozenset[str] = frozenset(),
+) -> ActGateResult:
     """Todo setup con payoff planificado dentro del acto aparece cobrado.
 
     **El umbral no es un numero nuevo**: lo fija la propia escaleta, que ya
@@ -77,7 +83,7 @@ def check_act(outline: Outline, act: int, frozen_scenes: frozenset[str]) -> ActG
 
     sin_cobrar = tuple(
         st.id
-        for st in status(outline, frozen_scenes)
+        for st in status(outline, frozen_scenes, used_elements=used_elements)
         if st.payoff_scene in escenas_del_acto and st.state is not SetupState.PAID
     )
     return ActGateResult(act=act, passed=not sin_cobrar, unpaid=sin_cobrar)

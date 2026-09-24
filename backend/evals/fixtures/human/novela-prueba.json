@@ -4,18 +4,18 @@
  "manuscript_version": 1,
  "instructions": "Lectura humana fuera del ciclo: la novela ya esta congelada y esta lectura no la cambia. Por cada capitulo y cada dimension, un nivel del 1 al 5 con la rubrica de este mismo fichero (el 3 es cumple), la escena que lo justifica, una cita literal de esa escena de al menos 8 palabras que aparezca una sola vez, y la justificacion. El revisor va por su papel, nunca por su nombre.",
  "rubrics": {
-  "version": 1,
+  "version": 2,
   "rubrics": [
    {
     "dimension": "voice",
     "skill": "voice.audit",
-    "question": "¿Cada personaje habla y piensa con su idiolecto, distinto del de los demas?",
+    "question": "¿Cada personaje es coherente consigo mismo: habla y piensa con su idiolecto, distinto del de los demas, y decide como decidiria el?",
     "levels": [
-     "Las voces son intercambiables: cualquier linea podria decirla cualquiera.",
-     "Se distingue el narrador de los personajes, pero los personajes suenan igual entre si.",
-     "Cada POV tiene marcas propias reconocibles; hay alguna linea neutra que no las lleva.",
-     "Las voces se distinguen sin atribucion; el idiolecto se sostiene en toda la escena.",
-     "Cada linea solo podria ser de quien la dice, y la voz cambia cuando el personaje cambia."
+     "Voces intercambiables, o un personaje decide lo contrario de lo que es sin motivo.",
+     "Se distingue el narrador, pero los personajes suenan igual o deciden por la trama.",
+     "Cada POV tiene marcas propias y decide segun su ficha; alguna linea queda neutra.",
+     "Las voces se distinguen sin atribucion, y cada decision se explica por quien la toma.",
+     "Cada linea y cada decision solo podrian ser de quien las tiene, y cambian con el."
     ]
    },
    {
@@ -65,6 +65,54 @@
      "La accion y el motivo son lo mismo: lo que pasa es lo que significa.",
      "El capitulo resignifica un motivo anterior sin nombrarlo."
     ]
+   },
+   {
+    "dimension": "continuity",
+    "skill": "continuity.audit",
+    "question": "¿El capitulo se lee como continuacion de lo anterior: transiciones, elipsis y ecos? No si los hechos cuadran, que eso lo comprueba el Continuista.",
+    "levels": [
+     "Se lee suelto: nada enlaza con lo anterior y el salto no se explica.",
+     "Enlaza por los hechos, pero las transiciones chirrian o repiten lo ya contado.",
+     "Se lee como continuacion; alguna elipsis se nota mas de lo que deberia.",
+     "Las transiciones son limpias y las elipsis se entienden sin explicarlas.",
+     "Retoma un eco de lo anterior que da sentido nuevo a lo que viene."
+    ]
+   },
+   {
+    "dimension": "tone",
+    "skill": "tone.audit",
+    "question": "¿El tono es el que pide el encargo y se sostiene en todo el capitulo?",
+    "levels": [
+     "El tono contradice el pedido: grave donde se pidio ligero, o al reves.",
+     "El tono pedido aparece a ratos y se pierde en otros pasajes.",
+     "El tono es el pedido; algun pasaje se sale sin motivo dramatico.",
+     "El tono pedido se sostiene y modula con la escena sin romperse.",
+     "El tono pedido es la manera de mirar del capitulo, no un barniz."
+    ]
+   },
+   {
+    "dimension": "arc",
+    "skill": "arc.audit",
+    "question": "¿El capitulo hace avanzar los arcos que le tocaba mover?",
+    "levels": [
+     "Ningun arco se mueve: el personaje y el conflicto acaban como empezaron.",
+     "Algo cambia, pero por accidente de trama y no por el arco.",
+     "El arco del capitulo avanza un paso reconocible; otro queda quieto.",
+     "Los arcos avanzan y el paso se gana con lo que ocurre en escena.",
+     "El avance del arco reordena lo anterior y hace inevitable lo siguiente."
+    ]
+   },
+   {
+    "dimension": "personalization",
+    "skill": "personalization.audit",
+    "question": "¿El destinatario, sus rasgos y sus recuerdos aparecen integrados en la historia de forma natural, y no pegados?",
+    "levels": [
+     "Los rasgos o recuerdos aparecen como lista o dedicatoria, fuera de la historia.",
+     "Aparecen, pero forzados: la escena se detiene para colocarlos.",
+     "Estan integrados; alguno se nota puesto para cumplir.",
+     "Nacen de la escena: quitarlos cambiaria lo que pasa.",
+     "Son el corazon de la escena sin que se note que alguien los pidio."
+    ]
    }
   ]
  },
@@ -110,6 +158,34 @@
      "scene": "c1e2",
      "quote": "Cuando Tito por fin preguntó si tenía miedo, Inés contestó que el miedo se quedaba en la orilla",
      "justification": "El nudo del abuelo vuelve sin anunciarse."
+    },
+    {
+     "dimension": "continuity",
+     "level": 3,
+     "scene": "c1e2",
+     "quote": "Cuando Tito por fin preguntó si tenía miedo, Inés contestó que el miedo se quedaba en la orilla",
+     "justification": "La escena retoma lo anterior sin repetirlo."
+    },
+    {
+     "dimension": "tone",
+     "level": 4,
+     "scene": "c1e2",
+     "quote": "Cuando Tito por fin preguntó si tenía miedo, Inés contestó que el miedo se quedaba en la orilla",
+     "justification": "El tono contenido que pide el encargo se sostiene."
+    },
+    {
+     "dimension": "arc",
+     "level": 2,
+     "scene": "c1e2",
+     "quote": "Cuando Tito por fin preguntó si tenía miedo, Inés contestó que el miedo se quedaba en la orilla",
+     "justification": "Ines da un paso hacia lo que teme, sin que se anuncie."
+    },
+    {
+     "dimension": "personalization",
+     "level": 4,
+     "scene": "c1e2",
+     "quote": "Cuando Tito por fin preguntó si tenía miedo, Inés contestó que el miedo se quedaba en la orilla",
+     "justification": "El recuerdo del abuelo nace de la escena, no se coloca."
     }
    ]
   },
@@ -154,6 +230,34 @@
      "scene": "c2e2",
      "quote": "Inés ató la barca con el nudo que le había enseñado su abuelo",
      "justification": "El nudo del abuelo vuelve sin anunciarse."
+    },
+    {
+     "dimension": "continuity",
+     "level": 4,
+     "scene": "c2e2",
+     "quote": "Inés ató la barca con el nudo que le había enseñado su abuelo",
+     "justification": "La escena retoma lo anterior sin repetirlo."
+    },
+    {
+     "dimension": "tone",
+     "level": 3,
+     "scene": "c2e2",
+     "quote": "Inés ató la barca con el nudo que le había enseñado su abuelo",
+     "justification": "El tono contenido que pide el encargo se sostiene."
+    },
+    {
+     "dimension": "arc",
+     "level": 4,
+     "scene": "c2e2",
+     "quote": "Inés ató la barca con el nudo que le había enseñado su abuelo",
+     "justification": "Ines da un paso hacia lo que teme, sin que se anuncie."
+    },
+    {
+     "dimension": "personalization",
+     "level": 3,
+     "scene": "c2e2",
+     "quote": "Inés ató la barca con el nudo que le había enseñado su abuelo",
+     "justification": "El recuerdo del abuelo nace de la escena, no se coloca."
     }
    ]
   }

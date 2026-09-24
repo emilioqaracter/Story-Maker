@@ -70,7 +70,9 @@ BUDGETS: dict[str, AgentBudget] = {
             tools=_TOOLS,
         ),
         AgentBudget(agent="estilista", input_tokens=20_000, output_tokens=7_000),
-        AgentBudget(agent="juez", input_tokens=11_500, output_tokens=1_500),
+        # RNF-57, D-94: 11.500 mas las cuatro dimensiones nuevas a 300 y el bloque
+        # del encargo a 500. Tres instancias suman 39.600 (§4.2).
+        AgentBudget(agent="juez", input_tokens=13_200, output_tokens=1_500),
         AgentBudget(
             agent="reparador",
             input_tokens=14_500,

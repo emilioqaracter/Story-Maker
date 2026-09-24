@@ -14,6 +14,12 @@ propuesta de un hecho:
 3. **Un delta vacio es un fallo, no un exito.** Cada escena declara un cambio de
    valor; un capitulo que no cambia nada en el mundo es un capitulo que el
    Archivero no ha leido (trampa 12 del plan).
+
+Ademas de los eventos, el delta lleva los **elementos del brief** que aparecen
+en el capitulo, cada uno con su cita literal (RF-261, D-95). No son eventos --el
+canon ya los tiene desde el brief--: son usos, y el codigo los ancla con
+`check.evidence` en la escena antes de congelarlos. Lo hace el Orquestador,
+porque `canon/` no importa de `verification/`.
 """
 
 from __future__ import annotations
@@ -25,7 +31,7 @@ from typing import Self
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from canon.events import log
-from canon.events.types import Event, Payload
+from canon.events.types import ElementDeclared, Event, Payload
 from commons.types.primitives import Provenance, WorldTime
 
 
@@ -50,6 +56,10 @@ class ProposedEvent(BaseModel):
 
     @model_validator(mode="after")
     def _derive_entities(self) -> Self:
+        if isinstance(self.payload, ElementDeclared):
+            # RD-47: un elemento lo declara el brief. El Archivero lo cita en
+            # `elements`; declararlo seria reescribir lo que se pidio.
+            raise ValueError("element.declared no es un hecho de la prosa: va en elements")
         if self.entities:
             return self
         derivadas = _entities_of(self.payload)
@@ -59,12 +69,23 @@ class ProposedEvent(BaseModel):
         return self
 
 
+class ElementMention(BaseModel):
+    """RF-261. Un elemento del brief que el capitulo usa, con la cita que lo muestra."""
+
+    model_config = ConfigDict(frozen=True)
+
+    element_id: str = Field(min_length=1)
+    scene: str = Field(default="", description="La escena que nombra: pista, no prueba")
+    quote: str = Field(min_length=1, description="Pasaje literal del capitulo")
+
+
 class DeltaProposal(BaseModel):
     """CAN-11 antes de validarse: lo que el Archivero propone."""
 
     model_config = ConfigDict(frozen=True)
 
     events: tuple[ProposedEvent, ...] = Field(default_factory=tuple)
+    elements: tuple[ElementMention, ...] = Field(default_factory=tuple)
 
     @property
     def is_empty(self) -> bool:

@@ -37,7 +37,9 @@ from canon.arbiter.precedence import Claim
 from canon.archivist import extract as archivist
 from canon.archivist import prompts as archivist_prompts
 from canon.brief import Brief
+from canon.brief import elements as brief_elements
 from canon.db import connection
+from canon.freeze import elements as freeze_elements
 from canon.freeze import rows as freeze_rows
 from canon.skills import read
 from canon.skills.read import WorldState
@@ -559,7 +561,8 @@ class Composer:
                 )
             ]
             proscritos = recipes.proscription_recent(con)
-        deuda = debt(outline, congeladas)
+            usados = freeze_elements.used(con)
+        deuda = debt(outline, congeladas, used_elements=usados)
         packet = recipes.simple_packet(
             "planificador",
             anchor=self.anchor(planner_prompts.SYSTEM),
@@ -656,7 +659,9 @@ class Composer:
                 congeladas = frozenset(r["id"] for r in con.execute("SELECT id FROM prose_scene"))
                 abiertas = [
                     f"{s.id}: {s.description}"
-                    for s in debt(self.outline, congeladas).open_setups
+                    for s in debt(
+                        self.outline, congeladas, used_elements=freeze_elements.used(con)
+                    ).open_setups
                     if s.id in spec.content.setups_to_pay or not spec.content.setups_to_pay
                 ][:5]
             packet, facts = recipes.writer_packet(
@@ -933,8 +938,12 @@ class Composer:
                 )
             ]
             congeladas = frozenset(r["id"] for r in con.execute("SELECT id FROM prose_scene"))
+            usados = freeze_elements.used(con)
         abiertas = (
-            [f"{s.id}: {s.description}" for s in debt(self.outline, congeladas).open_setups]
+            [
+                f"{s.id}: {s.description}"
+                for s in debt(self.outline, congeladas, used_elements=usados).open_setups
+            ]
             if self.outline
             else []
         )
@@ -1111,6 +1120,9 @@ class Composer:
         self, specs: Sequence[SceneSpec], texts: Sequence[str], state_before: WorldState
     ) -> archivist.DeltaProposal:
         chapter = specs[0].identity.chapter
+        # RF-261. Los elementos del brief que el Archivero puede citar, del canon.
+        with connection.reader(self.path) as con:
+            encargo = [(e.id, e.kind, e.text) for e in freeze_elements.declared(con)]
         secciones = [
             (
                 "esquema",
@@ -1130,7 +1142,9 @@ class Composer:
             "archivero",
             prefix=packet.cacheable_prefix,
             packet=packet.body(),
-            instruction=archivist_prompts.instruction(specs, texts, state_before, chapter=chapter),
+            instruction=archivist_prompts.instruction(
+                specs, texts, state_before, chapter=chapter, elements=encargo
+            ),
             schema=archivist_prompts.schema(),
             parse=archivist.DeltaProposal,
             context={"chapter": chapter},
@@ -1153,9 +1167,12 @@ class Composer:
         """RF-126 a RF-131, RF-160. Tres instancias en paralelo bajo la admision.
 
         Cada una con su semilla; el paquete es el de §4.9 del Jurado: invariantes
-        sin guia de estilo, rubricas, capitulo, fichas de voz. Nada del Escritor.
+        sin guia de estilo, rubricas, encargo como dato, capitulo, fichas de voz.
+        Nada del Escritor. Las dimensiones son las del conjunto de rubricas del
+        fichero: nueve en la version 2 (RF-257, RF-258).
         """
         rubricas = self._rubrics()
+        encargo = self._commission()
         with connection.reader(self.path) as con:
             povs = sorted({s.identity.pov for s in specs})
             voz = recipes.cards_text(read.query(con, povs, at=specs[0].identity.world_time))
@@ -1168,7 +1185,12 @@ class Composer:
                 prefix=jury_prompts.SYSTEM,
                 packet="",
                 instruction=jury_prompts.instruction(
-                    specs, texts, rubrics=rubricas, voice_cards=voz, seed=semilla
+                    specs,
+                    texts,
+                    rubrics=rubricas,
+                    voice_cards=voz,
+                    seed=semilla,
+                    commission=encargo,
                 ),
                 schema=jury_prompts.schema(),
                 parse=InstanceVerdict,
@@ -1181,7 +1203,20 @@ class Composer:
             with ThreadPoolExecutor(max_workers=len(seeds)) as pool:
                 return dict(pool.map(lambda par: una(*par), enumerate(seeds, 1)))
 
-        return adjudicate(run, textos, seeds=[base + i for i in range(INSTANCES)])
+        return adjudicate(
+            run, textos, seeds=[base + i for i in range(INSTANCES)], dimensions=rubricas.dimensions
+        )
+
+    def _commission(self) -> str:
+        """RF-258. El encargo del Jurado: destinatario, rasgos y recuerdos
+        obligatorios, y el tono pedido. Del brief, como dato delimitado."""
+        obligatorios = [e for e in brief_elements(self.brief) if e.mandatory]
+        return jury_prompts.commission_text(
+            recipient=self.brief.recipient_name(),
+            traits=[e.text for e in obligatorios if e.kind == "trait"],
+            memories=[e.text for e in obligatorios if e.kind == "memory"],
+            tone=self.brief.tone,
+        )
 
     def golden_check(self) -> float:
         """RF-134. El Jurado contra los casos sembrados, sin saber que lo son."""
@@ -1356,6 +1391,7 @@ class Composer:
         resumenes = supervisor_summaries(outline, por_capitulo, por_arco)
         with connection.reader(self.path) as con:
             congeladas = frozenset(r["id"] for r in con.execute("SELECT id FROM prose_scene"))
+            usados = freeze_elements.used(con)
             ritmo = {
                 int(r["chapter"]): r["lvl"]
                 for r in con.execute(
@@ -1364,7 +1400,10 @@ class Composer:
                     "GROUP BY s.chapter"
                 )
             }
-        deuda = [f"{s.id}: {s.description}" for s in debt(outline, congeladas).open_setups]
+        deuda = [
+            f"{s.id}: {s.description}"
+            for s in debt(outline, congeladas, used_elements=usados).open_setups
+        ]
         curva = "\n".join(
             f"  acto {a.number}: planificada {list(a.tension)}; realizada "
             + str(

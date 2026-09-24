@@ -124,6 +124,13 @@ def _plan_json() -> str:
     return json.dumps({"scenes": {f"c{c}e{e}": cuerpo for c in (1, 2) for e in (1, 2)}})
 
 
+def _dimensions_in(instruction: str) -> list[str]:
+    """Las dimensiones que pide la instruccion del Jurado, en su orden (RF-257)."""
+    orden = re.search(r"en este orden: ([a-z_, ]+)\.", instruction)
+    assert orden, "la instruccion del Jurado no dice que dimensiones puntuar"
+    return [d.strip() for d in orden.group(1).split(",")]
+
+
 class ScriptedPort:
     """Responde segun el agente que reconoce en el prefijo cacheable."""
 
@@ -186,8 +193,9 @@ class ScriptedPort:
                             "level": 4,
                             "scene": escenas[0],
                             "quote": cierre.group(0) if cierre else "sin cierre",
+                            "justification": "La cita sostiene el nivel en esta escena.",
                         }
-                        for d in ("voice", "style_guide", "pacing", "subtext", "theme")
+                        for d in _dimensions_in(instruction)
                     ]
                 }
             )

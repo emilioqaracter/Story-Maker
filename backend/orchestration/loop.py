@@ -26,6 +26,7 @@ import json
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from pydantic import JsonValue
 
@@ -34,14 +35,17 @@ from canon.arbiter import retcon as retcon_rules
 from canon.archivist import proscription
 from canon.archivist.extract import DeltaProposal, EmptyDeltaError, quotes_by_event, to_events
 from canon.brief import Brief, load_brief
+from canon.brief import elements as brief_elements
 from canon.db import connection
+from canon.freeze import elements as freeze_elements
 from canon.freeze import rows as freeze_rows
+from canon.freeze.elements import ElementUse
 from canon.freeze.freeze import PreparedChapter, SceneToFreeze, commit_chapter, prepare
 from canon.skills import read
 from canon.skills.read import WorldState
 from canon.summaries import levels
 from commons.tracing.trace import Trace
-from commons.types.primitives import Defect
+from commons.types.primitives import Defect, Evidence
 from commons.types.scene import SceneSpec
 from generation.sports.simulate import MatchResult
 from generation.writer import drafts
@@ -71,6 +75,7 @@ from planning.outline.check import check as check_outline
 from planning.outline.types import NOVELA, LengthProfile, Outline
 from supervision import metrics as health_metrics
 from supervision.prompts import HealthVerdict, clamp
+from verification.checks import evidence as check_evidence
 from verification.checks import forbidden
 from verification.checks.deterministic import check_chapter_length
 from verification.continuity.review import Anchored, scene_of, scene_offsets
@@ -123,6 +128,8 @@ class ChapterResult:
     discarded_citations: int = 0
     #: T20, T21. El veredicto del Jurado y la huella del capitulo aprobado.
     jury: JuryVerdict | None = None
+    #: RF-261. Los elementos del brief que el capitulo usa, con la cita anclada.
+    element_uses: list[ElementUse] = field(default_factory=list)
     fingerprint: Fingerprint | None = None
     style_reverted: bool = False
 
@@ -436,6 +443,21 @@ def _chapter_frozen(path: Path, chapter: int) -> bool:
 # ------------------------------------------------------------------ escaleta
 
 
+def _outline_rules(brief: Brief | None) -> dict[str, Any]:
+    """Lo que `outline.check` necesita del brief ademas de la longitud.
+
+    Los elementos obligatorios, cada uno con su setup (RF-260), y si hay
+    reglamento, sin el cual no hay encuentros (RF-273). Sin brief no se aplican:
+    es la replanificacion de un tramo cuyo brief no viaja hasta aqui.
+    """
+    if brief is None:
+        return {}
+    return {
+        "elements": [(e.id, e.text) for e in brief_elements(brief) if e.mandatory],
+        "has_rulebook": bool(brief.rulebook),
+    }
+
+
 def _plan_with_gate(brief: Brief, engine: Engine, *, chapters: int, trace: Trace) -> Outline:
     """RF-25, RF-27. La escaleta vuelve al Arquitecto hasta que pasa.
 
@@ -446,7 +468,9 @@ def _plan_with_gate(brief: Brief, engine: Engine, *, chapters: int, trace: Trace
     defectos_previos: list[OutlineDefect] = []
     while True:
         outline = engine.plan_outline(brief, chapters, defectos_previos)
-        defectos = check_outline(outline, word_range=brief.word_range(), profile=brief.profile())
+        defectos = check_outline(
+            outline, word_range=brief.word_range(), profile=brief.profile(), **_outline_rules(brief)
+        )
         trace.emit(
             "outline.check",
             defects=[d.kind for d in defectos],
@@ -616,7 +640,14 @@ def _write_chapter(
                 specs = list(engine.respec(specs, defectos))
             case Action.QUARANTINE_AND_REPLAN:
                 outline = _replan(
-                    outline, engine, _act_of(outline, numero), numero, (), motivos, trace
+                    outline,
+                    engine,
+                    _act_of(outline, numero),
+                    numero,
+                    (),
+                    motivos,
+                    trace,
+                    brief=load_brief(path),
                 )
                 # R1. La escaleta replanificada es la vigente desde ya.
                 save_outline(path, outline.model_dump_json())
@@ -813,13 +844,30 @@ def _approve_chapter(
                 levels={d.dimension.value: d.level for d in jurado.dimensions},
                 spreads={d.dimension.value: d.spread for d in jurado.dimensions},
                 discarded=len(jurado.discarded),
-                # RI-36: cada veredicto de juez con su instancia y sus puntuaciones.
-                # Las citas descartadas ya van, una a una, como `process.defect`.
+                # RI-36, RF-259: cada puntuacion con su instancia, nivel, escena,
+                # cita y justificacion. Las citas descartadas ya van, una a una,
+                # como `process.defect`.
                 scores=[
-                    f"{s.instance}:{s.dimension.value}:{s.level}:{s.scene}"
+                    {
+                        "instance": s.instance,
+                        "dimension": d.dimension.value,
+                        "level": s.level,
+                        "scene": s.scene,
+                        "quote": s.evidence.quote,
+                        "justification": s.justification,
+                    }
                     for d in jurado.dimensions
                     for s in d.scores
                 ],
+                # Por dimension, las justificaciones de las instancias: el
+                # comentario del score `jury.<dimension>` de Langfuse (RF-265).
+                justifications={
+                    d.dimension.value: " | ".join(
+                        f"{s.instance}: {s.justification}" for s in d.scores
+                    )
+                    for d in jurado.dimensions
+                    if d.scores
+                },
             )
             if not jurado.passed:
                 defectos = jurado.defects()
@@ -1125,6 +1173,10 @@ def _extract_and_validate(
     proposal = _extract_with_retries(engine, capitulo.specs, capitulo.texts, estado_antes, trace)
 
     with connection.reader(path) as con:
+        declarados = {e.id for e in freeze_elements.declared(con)}
+    capitulo.element_uses = _anchor_elements(proposal, capitulo, declarados, trace)
+
+    with connection.reader(path) as con:
         eventos = to_events(proposal, con, chapter=capitulo.number)
         validacion = entries.validate_delta(
             con,
@@ -1152,6 +1204,61 @@ def _extract_and_validate(
     if len(restantes) != len(validacion.rejections):
         validacion = validacion.model_copy(update={"rejections": tuple(restantes)})
     return proposal, validacion
+
+
+def _anchor_elements(
+    proposal: DeltaProposal,
+    capitulo: ChapterResult,
+    declared: set[str],
+    trace: Trace,
+) -> list[ElementUse]:
+    """RF-261. Cada elemento que el Archivero cita se ancla con `check.evidence`.
+
+    En la escena que nombra, o en la unica del capitulo que contiene la cita:
+    la escena es una pista y la prueba es la cita, como en el Jurado. Anclada,
+    es un uso que la congelacion registra; sin anclar, o de un elemento que el
+    brief no declara, se descarta como defecto de proceso del Archivero. Un
+    elemento se registra una vez por escena.
+    """
+    textos = {s.spec.identity.scene_id: s.text for s in capitulo.scenes}
+    usos: dict[tuple[str, str], ElementUse] = {}
+    for m in proposal.elements:
+        conocido = m.element_id in declared
+        sitio = _locate_quote(m.scene, m.quote, textos) if conocido else None
+        if sitio is None:
+            trace.emit(
+                "process.defect",
+                agent="archivero",
+                chapter=capitulo.number,
+                element=m.element_id,
+                quote=m.quote[:80],
+                reason="cita sin anclar" if conocido else "elemento no declarado",
+            )
+            continue
+        escena, ev = sitio
+        usos.setdefault(
+            (m.element_id, escena),
+            ElementUse(element_id=m.element_id, scene_id=escena, quote=ev.quote, offset=ev.offset),
+        )
+    return list(usos.values())
+
+
+def _locate_quote(scene: str, quote: str, texts: Mapping[str, str]) -> tuple[str, Evidence] | None:
+    """La escena donde la cita ancla literal y unica: la nombrada, o la unica que la tiene."""
+    propia = texts.get(scene)
+    if propia is not None and (ev := check_evidence.anchor(propia, quote)) is not None:
+        return scene, ev
+    halladas = [
+        (sid, e)
+        for sid, t in texts.items()
+        if sid != scene and (e := check_evidence.anchor(t, quote)) is not None
+    ]
+    return halladas[0] if len(halladas) == 1 else None
+
+
+def _used_elements(path: Path) -> frozenset[str]:
+    with connection.reader(path) as con:
+        return freeze_elements.used(con)
 
 
 def _try_retcon(
@@ -1321,6 +1428,7 @@ def _freeze(
         verdicts=_verdict_rows(capitulo),
         fingerprint=huella,
         metrics=_metric_rows(path, capitulo, outline, huella, trace),
+        element_uses=capitulo.element_uses,
     )
     with connection.canon_writer(path) as con:
         commit_chapter(con, preparado)
@@ -1411,7 +1519,7 @@ def _close_act_if_needed(
     if acto is None:
         return outline
 
-    veredicto = check_act(outline, acto, frozenset(congeladas))
+    veredicto = check_act(outline, acto, frozenset(congeladas), used_elements=_used_elements(path))
     plan = next((a.tension for a in outline.acts if a.number == acto), ())
     capitulos = sorted({s.chapter for s in outline.scenes if s.act == acto})
     realizada = _realized_pacing(path, capitulos)
@@ -1451,6 +1559,7 @@ def _close_act_if_needed(
         trace,
         word_range=brief.word_range(),
         profile=brief.profile(),
+        brief=brief,
     )
 
 
@@ -1480,8 +1589,10 @@ def _metric_rows(
         historia = freeze_rows.read_metrics(con)
         previas = freeze_rows.read_fingerprints(con)
         congeladas = {r["id"] for r in con.execute("SELECT id FROM prose_scene")}
+        usados = set(freeze_elements.used(con))
     congeladas |= {s.spec.identity.scene_id for s in capitulo.scenes}
-    deuda = debt(outline, frozenset(congeladas))
+    usados |= {u.element_id for u in capitulo.element_uses}
+    deuda = debt(outline, frozenset(congeladas), used_elements=frozenset(usados))
     acto = _act_of(outline, capitulo.number)
     anterior = capitulo.number - 1
     cuarentenas_previas = next(
@@ -1553,6 +1664,7 @@ def _supervise(
         trace,
         word_range=brief.word_range(),
         profile=brief.profile(),
+        brief=brief,
     )
 
 
@@ -1567,19 +1679,21 @@ def _replan(
     *,
     word_range: tuple[int, int] | None = None,
     profile: LengthProfile = NOVELA,
+    brief: Brief | None = None,
 ) -> Outline:
     """`replan.arc` con su verificacion determinista detras (RF-27, RF-106).
 
-    La escaleta replanificada vuelve a `outline.check` como la primera. Se le
-    dan a la replanificacion los intentos del arco; agotados, la tirada se para
-    con motivo: no hay cuarto nivel.
+    La escaleta replanificada vuelve a `outline.check` como la primera, con
+    las mismas reglas del brief: sus elementos obligatorios y el reglamento
+    (RF-260, RF-273). Se le dan a la replanificacion los intentos del arco;
+    agotados, la tirada se para con motivo: no hay cuarto nivel.
     """
     presupuesto = Budget()
     motivos = list(reasons)
     while True:
         nueva = engine.replan_act(outline, act, from_chapter, unpaid, motivos)
         rango = word_range or _word_range_of(outline)
-        defectos = check_outline(nueva, word_range=rango, profile=profile)
+        defectos = check_outline(nueva, word_range=rango, profile=profile, **_outline_rules(brief))
         trace.emit(
             "replan",
             act=act,
@@ -1615,8 +1729,16 @@ def _work_closes(
     congeladas: set[str],
     path: Path,
 ) -> tuple[bool, str]:
-    """RF-23. Las cuatro condiciones de cierre de obra."""
-    deuda = debt(outline, frozenset(congeladas))
+    """RF-23. Las cuatro condiciones de cierre de obra.
+
+    La deuda cuenta los elementos del brief como promesas que solo cobra un uso
+    anclado (RF-261, D-95), y el motivo nombra cada elemento obligatorio que no
+    lo tiene: `architecture.md` §9.3, deuda cero con los elementos incluidos.
+    """
+    with connection.reader(path) as con:
+        usados = freeze_elements.used(con)
+        faltan = freeze_elements.unused_mandatory(con)
+    deuda = debt(outline, frozenset(congeladas), used_elements=usados)
     low, high = brief.word_range()
     abiertos = [a for a in outline.arcs if a.resolution_scene is None and not a.left_open]
     palabras = report.words or _frozen_words(path)
@@ -1626,6 +1748,9 @@ def _work_closes(
         fallos.append(
             f"{len(deuda.open_setups)} promesas sin cobrar y {len(deuda.planned)} sin plantar"
         )
+    for e in faltan:
+        tipo = "recuerdo" if e.kind == "memory" else "rasgo"
+        fallos.append(f"{tipo} obligatorio {e.id} sin uso anclado: «{e.text[:80]}»")
     if abiertos:
         fallos.append(f"{len(abiertos)} arcos sin resolver")
     if not low <= palabras <= high:
@@ -1633,7 +1758,7 @@ def _work_closes(
 
     if fallos:
         return False, "; ".join(fallos)
-    return True, "deuda cero, arcos resueltos y longitud en rango"
+    return True, "deuda cero, elementos obligatorios usados, arcos resueltos y longitud en rango"
 
 
 def _frozen_words(path: Path) -> int:

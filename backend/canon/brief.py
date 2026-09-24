@@ -31,6 +31,7 @@ from canon.events.types import (
     AttributeSet,
     CompetenceSet,
     DocumentVersion,
+    ElementDeclared,
     EntityCreated,
     Event,
     RelationSet,
@@ -229,6 +230,47 @@ class Brief(BaseModel):
         return (low, high)
 
 
+class BriefElement(BaseModel):
+    """RF-260, RD-47. Un rasgo o un recuerdo del destinatario, con su identificador.
+
+    El identificador es el tipo y la posicion, `memory-1`, `trait-2`: lo leen el
+    Arquitecto, que planifica el setup `element.<id>`, y el Archivero, que cita
+    su uso, y tiene que ser corto y estable entre las dos llamadas.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    id: str
+    kind: Literal["trait", "memory"]
+    text: str
+    mandatory: bool
+
+    @property
+    def setup_id(self) -> str:
+        """El setup de la escaleta que lo planifica, y su clave en hecho x escena."""
+        return f"{ELEMENT_PREFIX}{self.id}"
+
+
+#: RF-261. Prefijo del setup y de la clave de hecho x escena de un elemento.
+ELEMENT_PREFIX = "element."
+
+
+def elements(brief: Brief) -> list[BriefElement]:
+    """RF-260. Los rasgos y recuerdos del destinatario, obligatorios salvo los opcionales."""
+    if brief.recipient is None:
+        return []
+    opcionales = set(brief.recipient.optional)
+    out = [
+        BriefElement(id=f"trait-{i}", kind="trait", text=t, mandatory=t not in opcionales)
+        for i, t in enumerate(brief.recipient.traits, 1)
+    ]
+    out += [
+        BriefElement(id=f"memory-{i}", kind="memory", text=m, mandatory=m not in opcionales)
+        for i, m in enumerate(brief.recipient.memories, 1)
+    ]
+    return out
+
+
 def to_events(brief: Brief) -> list[Event]:
     """Descompone el brief en eventos.
 
@@ -283,6 +325,23 @@ def to_events(brief: Brief) -> list[Event]:
         if brief.recipient.birth_date is not None:
             nacimiento = brief.recipient.birth_date.isoformat()
             add(AttributeSet(entity_id=rid, name="birth_date", value=nacimiento), {rid})
+
+    # RF-260, RD-47. Cada rasgo y recuerdo entra como hecho consultable del
+    # canon, sobre el destinatario: la cobertura se comprueba contra SQLite,
+    # no buscando la cadena en la prosa (D-95).
+    if brief.recipient is not None:
+        rid = brief.recipient.entity_id
+        for el in elements(brief):
+            add(
+                ElementDeclared(
+                    element_id=el.id,
+                    element_kind=el.kind,
+                    text=el.text,
+                    mandatory=el.mandatory,
+                    entity_id=rid,
+                ),
+                {rid},
+            )
 
     for rel in brief.relations:
         add(

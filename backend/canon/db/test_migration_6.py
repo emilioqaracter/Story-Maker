@@ -43,7 +43,7 @@ def test_un_fichero_nuevo_nace_con_las_columnas(tmp_path: Path) -> None:
     connection.create(path)
     assert set(NUEVAS) <= _columnas(path)
     with connection.reader(path) as con:
-        assert current_version(con) == SCHEMA_VERSION == 6
+        assert current_version(con) == SCHEMA_VERSION >= 6
 
 
 def test_un_fichero_de_la_version_5_sube_sin_perder_el_punto(tmp_path: Path) -> None:
@@ -57,7 +57,7 @@ def test_un_fichero_de_la_version_5_sube_sin_perder_el_punto(tmp_path: Path) -> 
 
     assert set(NUEVAS) <= _columnas(path)
     with connection.reader(path) as con:
-        assert current_version(con) == 6
+        assert current_version(con) == SCHEMA_VERSION
         fila = dict(con.execute("SELECT * FROM wm_run_state").fetchone())
     assert (fila["chapter"], fila["last_closed_scene"]) == (3, 1)
     assert (fila["chapter_attempts"], fila["arc_replans"], fila["outline"]) == (0, 0, None)

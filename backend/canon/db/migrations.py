@@ -31,7 +31,7 @@ from collections.abc import Callable
 from canon.prose_index import chronology
 
 #: Version que este codigo escribe.
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 8
 
 Step = str | Callable[[sqlite3.Connection], None]
 
@@ -321,6 +321,37 @@ MIGRATIONS: dict[int, tuple[Step, ...]] = {
     # una tirada a medias de un fichero anterior reanuda con la cuenta a cero y
     # replanifica una vez, como hacia hasta ahora.
     6: (_add_run_state_resume,),
+    # `specs/srs-backend-v4.md` T47. La 7 es de T46 (orden de integracion,
+    # `backend/PLAN.md` §8); esta no depende de ella. Elementos del brief y su uso.
+    8: (
+        # RD-47. Proyeccion de `element.declared`: se vacia y se reconstruye con
+        # el resto del canon estructurado (`canon/projections/rebuild.py`).
+        """
+        CREATE TABLE IF NOT EXISTS brief_element (
+            id              TEXT    PRIMARY KEY,
+            kind            TEXT    NOT NULL CHECK (kind IN ('trait', 'memory')),
+            text            TEXT    NOT NULL,
+            mandatory       INTEGER NOT NULL CHECK (mandatory IN (0, 1)),
+            entity_id       TEXT    NOT NULL,
+            source_event    INTEGER NOT NULL REFERENCES event(id)
+        )
+        """,
+        # RF-261. El uso anclado de un elemento: la cita que `check.evidence`
+        # encontro literal en la escena. Indice, como hecho x escena, donde
+        # tambien entra como `element.<id>`; la cita es lo que permite volver a
+        # anclarlo cuando la escena se recongela.
+        """
+        CREATE TABLE IF NOT EXISTS element_use (
+            element_id      TEXT    NOT NULL,
+            scene_id        TEXT    NOT NULL REFERENCES prose_scene(id),
+            chapter         INTEGER NOT NULL,
+            quote           TEXT    NOT NULL,
+            offset          INTEGER NOT NULL,
+            PRIMARY KEY (element_id, scene_id)
+        )
+        """,
+        "CREATE INDEX IF NOT EXISTS idx_element_use_scene ON element_use (scene_id)",
+    ),
 }
 
 

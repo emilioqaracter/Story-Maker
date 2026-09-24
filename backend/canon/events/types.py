@@ -28,6 +28,7 @@ class EventType(StrEnum):
     COMPETENCE_SET = "competence.set"
     DOCUMENT_VERSION = "document.version"
     ENTITY_RENAMED = "entity.renamed"
+    ELEMENT_DECLARED = "element.declared"
 
 
 # ------------------------------------------------------------------- payloads
@@ -104,6 +105,30 @@ class EntityRenamed(BaseModel):
     name: str = Field(min_length=1)
 
 
+class ElementDeclared(BaseModel):
+    """RD-47, RF-260, D-95. Un rasgo o un recuerdo del destinatario.
+
+    Solo lo produce la carga del brief (procedencia `brief`): es lo que quien
+    encarga pidio que aparezca, no algo que la prosa pueda afirmar. Es
+    obligatorio salvo que la entrevista lo marcara opcional. El Arquitecto lo
+    planifica como setup `element.<element_id>` y el Archivero cita su uso.
+    """
+
+    model_config = ConfigDict(frozen=True)
+    type: Literal[EventType.ELEMENT_DECLARED] = EventType.ELEMENT_DECLARED
+    element_id: str = Field(min_length=1, pattern=r"^(trait|memory)-\d+$")
+    element_kind: Literal["trait", "memory"]
+    text: str = Field(min_length=1)
+    mandatory: bool
+    entity_id: str = Field(min_length=1, description="El destinatario")
+
+    @model_validator(mode="after")
+    def _id_matches_kind(self) -> Self:
+        if not self.element_id.startswith(f"{self.element_kind}-"):
+            raise ValueError(f"el elemento {self.element_id!r} no es de tipo {self.element_kind!r}")
+        return self
+
+
 Payload = (
     EntityCreated
     | AliasAdded
@@ -113,6 +138,7 @@ Payload = (
     | CompetenceSet
     | DocumentVersion
     | EntityRenamed
+    | ElementDeclared
 )
 
 
@@ -143,6 +169,9 @@ class Event(BaseModel):
         brief = self.provenance is Provenance.BRIEF
         if brief != (self.chapter_origin is None):
             raise ValueError("solo el brief va sin capitulo de origen, y el brief nunca lo lleva")
+        if isinstance(self.payload, ElementDeclared) and not brief:
+            # RD-47: lo que pidio quien encarga no lo puede declarar la prosa.
+            raise ValueError("element.declared solo lo produce la carga del brief")
         return self
 
 
