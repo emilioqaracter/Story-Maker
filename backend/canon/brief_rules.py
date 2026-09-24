@@ -23,7 +23,16 @@ MIN_AGE_FOR_ADULT = 12
 #: para un nino como un genero erotico. Se compara por palabra normalizada con
 #: sus variantes (RF-237): «eróticas», «EROTICO» y «Macabro» casan; «aterrorizado»
 #: no casa con «terror».
-ADULT_TERMS = ("terror", "erótico", "erótica", "gore", "violento", "macabro")
+ADULT_TERMS = (
+    "terror",
+    "erótico",
+    "erótica",
+    "gore",
+    "violento",
+    "violenta",
+    "macabro",
+    "macabra",
+)
 
 
 class Contradiction(BaseModel):

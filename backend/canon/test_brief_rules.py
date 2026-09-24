@@ -61,6 +61,14 @@ def test_seis_anos_y_tono_thriller_erotico_es_contradiccion() -> None:
     assert _c(age=6, genre="novela gore", tone="Macabros") == ["edad-genero", "edad-tono"]
 
 
+def test_la_lista_adulta_incluye_el_femenino_y_su_plural() -> None:
+    """D-99: `violenta` y `macabra` entran en la lista, porque las variantes de
+    RF-237 no se componen (o→a y luego +s) y «violentas» no casaba con «violento»."""
+    assert {"violenta", "macabra"} <= set(ADULT_TERMS)
+    assert _c(age=6, tone="Violentas") == ["edad-tono"]
+    assert _c(age=6, genre="historias macabras") == ["edad-genero"]
+
+
 def test_la_regla_de_edad_compara_por_palabra_y_no_por_subcadena() -> None:
     """RF-237: «aterrorizado» no es «terror» ni «gorense» es «gore»."""
     assert _c(age=6, tone="aterrorizado") == []
