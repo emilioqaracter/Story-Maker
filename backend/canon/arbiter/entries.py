@@ -16,6 +16,14 @@ nuevo contradice al canon cuando afirma algo sobre un instante que el canon ya
 tiene cubierto con otro valor. Que Marcos se lesione el dia 20 estando sano el
 10 no es una contradiccion, es la novela; que se lesione el dia 5 cuando el
 canon dice que estaba sano el 10, si.
+
+Antes de arbitrar, la puerta 1 comprueba que cada hecho habla de una entidad que
+existe cuando se aplica: en el canon o creada antes en el mismo delta, en el
+orden en que la proyeccion lo aplica (D-130). Un hecho sobre una entidad
+desconocida no contradice nada --no hay nada con que contradecir--, asi que no
+se arbitra ni devuelve el capitulo al Reparador: se descarta con su motivo y el
+resto del delta sigue. Dejarlo pasar es lo que tumbo la tirada eval-02: la
+clave ajena de la proyeccion revienta la congelacion entera.
 """
 
 from __future__ import annotations
@@ -31,7 +39,10 @@ from canon.events.types import (
     AttributeSet,
     CompetenceSet,
     EntityCreated,
+    EntityRenamed,
     Event,
+    KnowledgeGained,
+    RelationSet,
 )
 from commons.types.primitives import Defect, Evidence, Provenance, Severity
 
@@ -46,6 +57,21 @@ class Rejection(BaseModel):
     defect: Defect
 
 
+class DroppedFact(BaseModel):
+    """D-130. Un hecho del delta sobre una entidad que no existe cuando se aplica.
+
+    No es un rechazo de arbitraje: la prosa no contradice al canon, es el
+    Archivero el que nombra una entidad que nadie creo. Por eso el defecto es
+    S2 y el capitulo no vuelve al Reparador.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    event: Event
+    entity: str
+    defect: Defect
+
+
 class DeltaValidation(BaseModel):
     """Resultado de la puerta 1."""
 
@@ -53,6 +79,8 @@ class DeltaValidation(BaseModel):
 
     accepted: tuple[Event, ...]
     rejections: tuple[Rejection, ...] = Field(default_factory=tuple)
+    #: D-130. Lo descartado por entidad desconocida. No cuenta para `clean`.
+    dropped: tuple[DroppedFact, ...] = Field(default_factory=tuple)
 
     @property
     def clean(self) -> bool:
@@ -136,6 +164,72 @@ def _conflict_of(con: sqlite3.Connection, ev: Event) -> tuple[str, Claim] | None
             return None
 
 
+def _referenced(ev: Event) -> tuple[str, ...]:
+    """Las entidades que la proyeccion de este evento necesita que existan.
+
+    Todos los tipos que escriben en una tabla con clave ajena a `entity`, mas el
+    renombre, que es un `UPDATE` que sobre una entidad desconocida no haria nada
+    en silencio. `entity.created` no referencia: crea.
+    """
+    payload = ev.payload
+    match payload:
+        case RelationSet():
+            return (payload.source_id, payload.target_id)
+        case AliasAdded() | AttributeSet() | KnowledgeGained() | CompetenceSet() | EntityRenamed():
+            return (payload.entity_id,)
+        case _:
+            return ()
+
+
+def _unknown_entities(
+    con: sqlite3.Connection, delta: Sequence[Event]
+) -> dict[int, tuple[str, bool]]:
+    """D-130. Por posicion en `delta`: la entidad que falta y si se crea despues.
+
+    Se recorre en el orden de la proyeccion, `(world_time, world_seq)`, porque
+    `rebuild.apply_all` aplica asi y la clave ajena se comprueba en cada
+    sentencia: una entidad creada en el delta vale para lo que va detras de su
+    creacion, no para lo que va delante.
+    """
+    conocidas = {r["id"] for r in con.execute("SELECT id FROM entity")}
+    creadas_en_delta = {
+        ev.payload.entity_id for ev in delta if isinstance(ev.payload, EntityCreated)
+    }
+    orden = sorted(
+        range(len(delta)),
+        key=lambda i: (delta[i].world_time.stamp, delta[i].world_time.seq, i),
+    )
+    out: dict[int, tuple[str, bool]] = {}
+    for i in orden:
+        ev = delta[i]
+        if isinstance(ev.payload, EntityCreated):
+            conocidas.add(ev.payload.entity_id)
+            continue
+        falta = next((e for e in _referenced(ev) if e not in conocidas), None)
+        if falta is not None:
+            out[i] = (falta, falta in creadas_en_delta)
+    return out
+
+
+def _dropped(ev: Event, entity: str, *, later: bool, quote: str, chapter_text: str) -> DroppedFact:
+    offset = chapter_text.find(quote) if quote else -1
+    motivo = (
+        f"el hecho usa la entidad {entity!r} en {ev.world_time.stamp} antes de crearse en el delta"
+        if later
+        else f"el hecho usa la entidad {entity!r}, que ni el canon ni el delta crean"
+    )
+    return DroppedFact(
+        event=ev,
+        entity=entity,
+        defect=Defect(
+            kind="unknown-entity",
+            severity=Severity.S2,
+            evidence=Evidence(quote=quote or f"{ev.payload.type}:{entity}", offset=max(offset, 0)),
+            rule=motivo,
+        ),
+    )
+
+
 def _new_value(ev: Event) -> str:
     payload = ev.payload
     match payload:
@@ -167,8 +261,18 @@ def validate_delta(
     quotes = quotes or {}
     accepted: list[Event] = []
     rejections: list[Rejection] = []
+    dropped: list[DroppedFact] = []
+    desconocidas = _unknown_entities(con, delta)
 
     for i, ev in enumerate(delta):
+        if i in desconocidas:
+            entidad, despues = desconocidas[i]
+            dropped.append(
+                _dropped(
+                    ev, entidad, later=despues, quote=quotes.get(i, ""), chapter_text=chapter_text
+                )
+            )
+            continue
         conflicto = _conflict_of(con, ev)
         if conflicto is None:
             accepted.append(ev)
@@ -210,7 +314,9 @@ def validate_delta(
             )
         )
 
-    return DeltaValidation(accepted=tuple(accepted), rejections=tuple(rejections))
+    return DeltaValidation(
+        accepted=tuple(accepted), rejections=tuple(rejections), dropped=tuple(dropped)
+    )
 
 
 def resolve_claims(
