@@ -72,14 +72,17 @@ def normalize(text: str) -> str:
     return _normalized_with_map(text)[0]
 
 
-def anchor(text: str, quote: str) -> Evidence | None:
+def anchor(text: str, quote: str, *, min_words: int = MIN_QUOTE_WORDS) -> Evidence | None:
     """La cita anclada en `text`, o `None` si no ancla.
 
     `None` significa que el veredicto se descarta sin evaluarlo y se anota como
     defecto de proceso de quien lo emitio, nunca como defecto del texto.
+
+    `min_words` es el minimo de palabras. El Continuista usa siempre el de
+    `verification.md` §5.11; el Jurado, el de su perfil de extension (D-115).
     """
     q = normalize(quote)
-    if len(q.split()) < MIN_QUOTE_WORDS:
+    if len(q.split()) < min_words:
         return None
 
     t, positions = _normalized_with_map(text)

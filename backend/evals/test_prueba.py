@@ -64,6 +64,8 @@ class _PruebaPort(ScriptedPort):
         self.resumenes: list[str] = []
         #: RF-260. Los elementos obligatorios, cada uno con su frase en la prosa.
         self.elementos = [e for e in elements(brief) if e.mandatory]
+        #: D-115. Las instrucciones de sistema del juez, para comprobar su perfil.
+        self.jueces: list[str] = []
 
     def _frase(self, i: int) -> str:
         """La frase que integra el elemento i: unica en la escena y de mas de ocho palabras."""
@@ -214,6 +216,9 @@ class _PruebaPort(ScriptedPort):
         if "Resumes partes" in prefix:
             self.resumenes.append(instruction)
             return super()._answer(prefix, instruction)
+        if "instancia del Jurado" in prefix:
+            self.jueces.append(prefix)
+            return super()._answer(prefix, instruction)
         if "Archivero" in prefix:
             self.calls.append("archivero")
             respuesta = json.loads(super()._answer(prefix, instruction))
@@ -318,7 +323,11 @@ def test_la_tirada_de_prueba_cierra_con_tres_capitulos_de_una_escena(
         esperadas.discard("tone")
     for r in traza.records("jury"):
         assert set(r.fields["levels"]) == esperadas  # type: ignore[arg-type]
+        # D-115. El Jurado de `prueba` aprueba con mediana 2.
+        assert r.fields["threshold"] == PRUEBA.jury_threshold == 2
         assert all(s["justification"] for s in r.fields["scores"])  # type: ignore[index, union-attr, call-overload]
+    # D-115. Y sus jueces piden citas de 5 a 25 palabras de una sola frase.
+    assert puerto.jueces and all("de 5 a 25 palabras" in p for p in puerto.jueces)
     # Cada elemento obligatorio tiene uso anclado en SQLite, y por eso cierra (RF-261).
     with connection.reader(path) as con:
         usados = {row["element_id"] for row in con.execute("SELECT element_id FROM element_use")}
@@ -369,7 +378,8 @@ def test_la_tolerancia_no_desborda_el_rango_de_obra_del_perfil() -> None:
 
 
 def test_una_cita_minima_del_jurado_cabe_en_una_escena_de_prueba() -> None:
-    """Las citas del Jurado (8 a 25 palabras) no se escalan: una de 8 ancla en 400."""
+    """Las citas de `check.evidence` (8 a 25 palabras) no se escalan: una de 8
+    ancla en 400. Las del Jurado de `prueba` bajan a 5 (D-115)."""
     from verification.checks.evidence import MIN_QUOTE_WORDS, anchor
 
     port = _PruebaPort(_load("01-semilla.json"))
@@ -412,3 +422,24 @@ def test_sin_destinatario_el_jurado_no_juzga_la_personalizacion(tmp_path: Path) 
     assert jurados
     for r in jurados:
         assert "personalization" not in r.fields["levels"]  # type: ignore[operator]
+
+
+def test_una_prosa_que_cumple_el_resultado_obligatorio_pasa_check_ledger() -> None:
+    """D-115. Lo que pide el prompt es exactamente lo que `check.ledger` exige:
+    un marcador parcial en cifras es S1, uno dicho con palabras no."""
+    from generation.sports.narrate import scorers
+    from generation.sports.test_narrate import NOMBRES, _result
+    from verification.checks.deterministic import check_ledger, check_milestones
+
+    equipos = ["el Sporting", "el Racing"]
+    cumple = (
+        "Marcos Vela marco en el minuto 12. Iker Landa empato en el 40. "
+        "Marcos Vela volvio a marcar en el 77 y el Sporting se puso por delante. "
+        "El partido acabo 2-1."
+    )
+    assert check_ledger(cumple, expected_score="2-1", team_names=equipos) == []
+    assert check_milestones(cumple, scorers=scorers(_result(), NOMBRES)) == []
+    parcial = "Al descanso iban 1-1. " + cumple
+    assert check_ledger(parcial, expected_score="2-1", team_names=equipos)
+    sin_nombre = cumple.replace("Iker Landa", "Landa")
+    assert check_milestones(sin_nombre, scorers=scorers(_result(), NOMBRES))

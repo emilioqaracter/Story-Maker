@@ -343,3 +343,75 @@ def test_el_motivo_de_una_cita_que_no_ancla_se_le_dice_al_juez() -> None:
     motivos = unanchored(ver, {"c1e1": ESCENA})
     assert len(motivos) == 2
     assert "minimo" in motivos[0] and "puntos suspensivos" in motivos[1]
+
+
+# ------------------------------------------------- perfil de extension, D-115
+
+
+def test_con_perfil_prueba_una_mediana_de_2_aprueba_y_con_novela_no() -> None:
+    """D-115. El umbral sale del perfil: 2 en `prueba`, 3 en `novela`."""
+    from commons.types.length import NOVELA, PRUEBA
+
+    def run(_seeds: Sequence[int]) -> dict[str, tuple[int, InstanceVerdict]]:
+        return {f"j{i}": (i, _instancia(_todas(n))) for i, n in enumerate((2, 2, 3), 1)}
+
+    prueba = adjudicate(run, {"c1e1": ESCENA}, seeds=[1, 2, 3], profile=PRUEBA)
+    novela = adjudicate(run, {"c1e1": ESCENA}, seeds=[1, 2, 3], profile=NOVELA)
+    assert prueba.passed and prueba.threshold == 2
+    assert all(d.level == 2 for d in prueba.dimensions)
+    assert not novela.passed and novela.threshold == THRESHOLD == 3
+    assert "por debajo de 3" in novela.defects()[0].rule
+
+
+def test_con_perfil_prueba_la_dispersion_sigue_invalidando() -> None:
+    """D-115. Solo baja el umbral: rango 2 sigue sin promediarse."""
+    from commons.types.length import PRUEBA
+
+    def run(_seeds: Sequence[int]) -> dict[str, tuple[int, InstanceVerdict]]:
+        return {f"j{i}": (i, _instancia(_todas(n))) for i, n in enumerate((2, 4, 4), 1)}
+
+    veredicto = adjudicate(run, {"c1e1": ESCENA}, seeds=[1, 2, 3], profile=PRUEBA)
+    assert veredicto.rounds == 2 and not veredicto.passed
+    assert all(not d.valid for d in veredicto.dimensions)
+
+
+def test_con_perfil_prueba_una_cita_de_cinco_palabras_ancla_y_con_novela_no() -> None:
+    """D-115. El minimo de la cita del Jurado sale del perfil: 5 y 8."""
+    from commons.types.length import NOVELA, PRUEBA
+    from verification.jury.verdict import unanchored
+
+    corta = "el técnico dobló la lista"
+    veredicto = _instancia({Dimension.VOICE: 3}, cita=corta)
+    validas, descartes = anchor({"j1": (1, veredicto)}, {"c1e1": ESCENA}, profile=PRUEBA)
+    assert [s.evidence.quote for s in validas] == [corta] and descartes == []
+    assert unanchored(veredicto, {"c1e1": ESCENA}, profile=PRUEBA) == []
+
+    validas, descartes = anchor({"j1": (1, veredicto)}, {"c1e1": ESCENA}, profile=NOVELA)
+    assert validas == [] and descartes == [("j1", corta)]
+    assert "el minimo es 8" in unanchored(veredicto, {"c1e1": ESCENA}, profile=NOVELA)[0]
+    cuatro = _instancia({Dimension.VOICE: 3}, cita="el técnico dobló la")
+    assert "el minimo es 5" in unanchored(cuatro, {"c1e1": ESCENA}, profile=PRUEBA)[0]
+
+
+def test_el_minimo_de_check_evidence_no_cambia_con_el_perfil() -> None:
+    """D-115. Solo el Jurado baja a 5: `check.evidence` del Continuista sigue en 8."""
+    from commons.types.length import NOVELA, PRUEBA
+    from verification.checks import evidence
+
+    assert evidence.MIN_QUOTE_WORDS == NOVELA.quote_min_words == 8
+    assert PRUEBA.quote_min_words == 5 and PRUEBA.jury_threshold == 2
+    assert evidence.anchor(ESCENA, "el técnico dobló la lista") is None
+    assert evidence.anchor(ESCENA, "el técnico dobló la lista", min_words=5) is not None
+
+
+def test_el_prompt_del_juez_dice_el_minimo_de_su_perfil() -> None:
+    """D-115. `prueba` pide de 5 a 25 palabras de una sola frase; `novela`, lo de siempre."""
+    from commons.types.length import NOVELA, PRUEBA
+
+    prueba = prompts.system(PRUEBA)
+    assert "de 5 a 25 palabras" in prueba
+    assert "UNA sola" in prueba and "sin comillas anadidas" in prueba
+    assert "de 8 a 25 palabras" in prompts.system(NOVELA)
+    assert "de 8 a 25" not in prueba
+    assert prompts.system(NOVELA) == prompts.SYSTEM
+    assert "UNA sola" not in prompts.SYSTEM
