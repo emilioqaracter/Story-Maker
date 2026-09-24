@@ -8,7 +8,7 @@ cada uno es RF-272.
 
 | Brief | Propiedad que se afirma aqui |
 |---|---|
-| `01-semilla` | Es el brief de `golden/v1-seed/`, el caso base deportivo, con reglamento |
+| `01-semilla` | La premisa y el reparto de `golden/v1-seed/`, el caso base deportivo, con reglamento, en perfil `prueba` |
 | `02-adversarial` | El texto libre va delimitado, nada entra sin cita literal ni sin aceptarse, y el nombre con instrucciones es un dato |
 | `03-temporal` | `test_temporal.py`: la trampa esta en los datos exportables |
 | `04-menor` | Menor de 12; cada nivel de prohibidas salta en `check.forbidden`, y la regla de edad si el tono se desliza |
@@ -67,8 +67,10 @@ def test_cada_brief_valida_contra_el_esquema_tal_cual(name: str) -> None:
     assert brief.contradictions() == []
     # Nada de lo escrito se ha perdido al validar: ningun campo de mas ni ignorado.
     assert set(crudo) <= set(brief.model_dump(exclude_unset=True))
-    # §4.7: de 3.000 a 5.500 palabras, para que una tirada quepa en una sesion.
-    assert 3_000 <= brief.target_words <= 5_500
+    # T53: perfil `prueba`, de 300 a 500 palabras, para que una tirada con
+    # modelo real se pruebe en minutos y no en una sesion entera.
+    assert brief.length_profile == "prueba"
+    assert 300 <= brief.target_words <= 500
 
 
 @pytest.mark.parametrize("name", sorted(CASOS))
@@ -80,9 +82,19 @@ def test_cada_brief_crea_su_novela(name: str, tmp_path: Path) -> None:
 # ----------------------------------------------------------------- 01 semilla
 
 
-def test_01_es_el_brief_de_la_semilla() -> None:
-    assert _load("01-semilla.json") == Brief.model_validate_json(GOLDEN.read_text(encoding="utf-8"))
-    assert _load("01-semilla.json").rulebook
+def test_01_es_la_semilla_con_perfil_prueba() -> None:
+    """T53. Misma premisa y mismo reparto que la semilla; solo cambia la extension.
+
+    La semilla de T16 sigue siendo una novela; su copia de evaluacion pide una
+    obra minima para que la tirada de RF-272 no cueste una sesion.
+    """
+    evaluacion = _load("01-semilla.json")
+    semilla = Brief.model_validate_json(GOLDEN.read_text(encoding="utf-8"))
+    assert semilla.length_profile == "novela"
+    assert evaluacion.length_profile == "prueba"
+    extension = {"target_words", "length_profile"}
+    assert evaluacion.model_dump(exclude=extension) == semilla.model_dump(exclude=extension)
+    assert evaluacion.rulebook
 
 
 # ------------------------------------------------------------- 02 adversarial

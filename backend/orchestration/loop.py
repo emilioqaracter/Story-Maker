@@ -33,7 +33,7 @@ from canon.arbiter import entries, refreeze
 from canon.arbiter import retcon as retcon_rules
 from canon.archivist import proscription
 from canon.archivist.extract import DeltaProposal, EmptyDeltaError, quotes_by_event, to_events
-from canon.brief import Brief
+from canon.brief import Brief, load_brief
 from canon.db import connection
 from canon.freeze import rows as freeze_rows
 from canon.freeze.freeze import PreparedChapter, SceneToFreeze, commit_chapter, prepare
@@ -68,7 +68,7 @@ from planning.ledger.setups import debt
 from planning.outline.arcs import arcs_closed_by, chapters_of_arc
 from planning.outline.check import OutlineDefect
 from planning.outline.check import check as check_outline
-from planning.outline.types import CHAPTER_WORDS, Outline
+from planning.outline.types import NOVELA, LengthProfile, Outline
 from supervision import metrics as health_metrics
 from supervision.prompts import HealthVerdict, clamp
 from verification.checks import forbidden
@@ -333,7 +333,9 @@ def _run_chapters(
         outline = _close_act_if_needed(outline, numero, congeladas, engine, brief, trace, path)
         outline = _supervise(path, outline, numero, chapters, engine, brief, trace)
         save_outline(path, outline.model_dump_json())
-        if levels.work_due(numero):
+        # RF-134, T53. Cada cinco capitulos, o al cierre si el perfil lo pide.
+        cada = levels.WORK_SUMMARY_EVERY
+        if brief.profile().periodic_due(numero, last_chapter=chapters, every=cada):
             _golden_check(engine, numero, trace)
         save(path, ResumePoint(chapter=numero + 1))
         # `specs/srs-backend-v3.md` RF-223: las enmiendas pendientes se aplican
@@ -444,7 +446,7 @@ def _plan_with_gate(brief: Brief, engine: Engine, *, chapters: int, trace: Trace
     defectos_previos: list[OutlineDefect] = []
     while True:
         outline = engine.plan_outline(brief, chapters, defectos_previos)
-        defectos = check_outline(outline, word_range=brief.word_range())
+        defectos = check_outline(outline, word_range=brief.word_range(), profile=brief.profile())
         trace.emit(
             "outline.check",
             defects=[d.kind for d in defectos],
@@ -774,7 +776,9 @@ def _approve_chapter(
         # RF-232, D-97. Lo escrito, no lo planificado, frente a EST-07. Es S2 de
         # `check.format` y cuenta en el maximo de 2 S2 de esta puerta, sin
         # umbral propio.
-        longitud = check_chapter_length(texto_capitulo, word_range=CHAPTER_WORDS)
+        longitud = check_chapter_length(
+            texto_capitulo, word_range=load_brief(path).profile().chapter_words
+        )
         defectos: list[Defect] = [*anclados.defects, *s2_examen, *longitud]
         puerta = chapter_gate(defectos)
         trace.emit(
@@ -1278,7 +1282,13 @@ def _freeze(
     with connection.reader(path) as con:
         congelado = [r["text"] for r in con.execute("SELECT text FROM prose_chunk")]
         superiores = _higher_summaries(
-            con, capitulo.number, resumen_capitulo, engine, outline, trace
+            con,
+            capitulo.number,
+            resumen_capitulo,
+            engine,
+            outline,
+            trace,
+            profile=load_brief(path).profile(),
         )
         lugares = _place_ids(con, [s.spec.identity.place for s in capitulo.scenes])
     proscritos = proscription.repeated_ngrams(capitulo.texts, frozen_texts=congelado)
@@ -1344,6 +1354,8 @@ def _higher_summaries(
     engine: Engine,
     outline: Outline,
     trace: Trace,
+    *,
+    profile: LengthProfile = NOVELA,
 ) -> list[levels.SummaryToWrite]:
     """RF-116, RF-117. Arco al cerrarse, obra cada cinco capitulos.
 
@@ -1363,7 +1375,8 @@ def _higher_summaries(
             levels.SummaryToWrite(level="arc", ref_id=arc_id, body=cuerpo, covers_to=chapter)
         )
         trace.emit("summary", level="arc", ref=arc_id, chapter=chapter, parts=len(partes))
-    if levels.work_due(chapter):
+    ultimo = max(s.chapter for s in outline.scenes)
+    if profile.periodic_due(chapter, last_chapter=ultimo, every=levels.WORK_SUMMARY_EVERY):
         arcos = [*levels.arc_summaries(con), *(s.body for s in out)]
         caps = list(range(1, chapter))
         partes = [*arcos, *levels.chapter_summaries(con, caps), chapter_summary]
@@ -1437,6 +1450,7 @@ def _close_act_if_needed(
         motivos,
         trace,
         word_range=brief.word_range(),
+        profile=brief.profile(),
     )
 
 
@@ -1538,6 +1552,7 @@ def _supervise(
         [f"Supervisor: {tramo.signal}: {tramo.reason}"],
         trace,
         word_range=brief.word_range(),
+        profile=brief.profile(),
     )
 
 
@@ -1551,6 +1566,7 @@ def _replan(
     trace: Trace,
     *,
     word_range: tuple[int, int] | None = None,
+    profile: LengthProfile = NOVELA,
 ) -> Outline:
     """`replan.arc` con su verificacion determinista detras (RF-27, RF-106).
 
@@ -1563,7 +1579,7 @@ def _replan(
     while True:
         nueva = engine.replan_act(outline, act, from_chapter, unpaid, motivos)
         rango = word_range or _word_range_of(outline)
-        defectos = check_outline(nueva, word_range=rango)
+        defectos = check_outline(nueva, word_range=rango, profile=profile)
         trace.emit(
             "replan",
             act=act,

@@ -84,7 +84,7 @@ from planning.ledger.setups import debt
 from planning.outline import prompts as outline_prompts
 from planning.outline.arcs import chapters_of_arc
 from planning.outline.check import OutlineDefect
-from planning.outline.types import SCENE_WORDS, Outline
+from planning.outline.types import Outline
 from planning.replan import arc as replan
 from planning.scene_spec import prompts as planner_prompts
 from supervision import prompts as supervision_prompts
@@ -278,6 +278,9 @@ class Composer:
     outline: Outline | None = None
     _previous: dict[tuple[int, int], str] = field(default_factory=dict)
     _voice_used: list[str] = field(default_factory=list)
+    #: T53. Cuantas palabras tenia la escena de cada resumen de escena escrito
+    #: en esta tirada: el tope del resumen de capitulo sale del capitulo.
+    _summary_sources: dict[str, int] = field(default_factory=dict)
 
     # ------------------------------------------------------------ utilidades
 
@@ -491,7 +494,7 @@ class Composer:
             prefix=packet.cacheable_prefix,
             packet=packet.body(),
             instruction=outline_prompts.instruction(brief, chapters=chapters, defects=defects),
-            schema=outline_prompts.schema(),
+            schema=outline_prompts.schema(brief.profile()),
             parse=Outline,
             context={"chapters": chapters, "defects": len(defects)},
         )
@@ -527,7 +530,7 @@ class Composer:
             instruction=replan.instruction(
                 outline, act=act, from_chapter=from_chapter, unpaid_setups=unpaid, reasons=reasons
             ),
-            schema=replan.schema(),
+            schema=replan.schema(self.brief.profile()),
             parse=replan.ReplannedTract,
             context={"act": act, "from_chapter": from_chapter},
         )
@@ -871,7 +874,7 @@ class Composer:
             text,
             tense=spec.constraints.tense,
             person=spec.constraints.person,
-            word_range=SCENE_WORDS,
+            word_range=self.brief.profile().scene_words,
         )
         defectos += checks.check_timeline(text, allowed_dates=fechas)
         defectos += forbidden.check_forbidden(text, terms=prohibidas)
@@ -1056,12 +1059,15 @@ class Composer:
         *,
         value_change: str | None = None,
         context: Mapping[str, object],
+        max_words: int | None = None,
     ) -> str:
         r = self._call(
             "archivero",
             prefix=self.anchor(summary_prompts.SYSTEM),
             packet="",
-            instruction=summary_prompts.instruction(level, parts, value_change=value_change),
+            instruction=summary_prompts.instruction(
+                level, parts, value_change=value_change, max_words=max_words
+            ),
             schema="",
             parse=None,
             context={"level": level.value, **context},
@@ -1069,16 +1075,28 @@ class Composer:
         return r.raw.strip()
 
     def summarize_scene(self, spec: SceneSpec, text: str) -> str:
-        return self._summarize(
+        palabras = len(text.split())
+        resumen = self._summarize(
             SummaryLevel.SCENE,
             [text],
             value_change=spec.function.value_change,
             context={"scene": spec.identity.scene_id},
+            max_words=self.brief.profile().summary_cap(palabras),
         )
+        self._summary_sources[resumen] = palabras
+        return resumen
 
     def summarize_chapter(self, scene_summaries: Sequence[str]) -> str:
+        # T53. El tope sale de lo que mide el capitulo. Un resumen de escena que
+        # no se escribio en esta tirada --el de una escena que un retcon no
+        # toco-- cuenta como el doble de sus palabras: es lo menos que puede
+        # medir su escena con el mismo tope, asi que el del capitulo nunca se pasa.
+        capitulo = sum(self._summary_sources.get(p, 2 * len(p.split())) for p in scene_summaries)
         return self._summarize(
-            SummaryLevel.CHAPTER, scene_summaries, context={"parts": len(scene_summaries)}
+            SummaryLevel.CHAPTER,
+            scene_summaries,
+            context={"parts": len(scene_summaries)},
+            max_words=self.brief.profile().summary_cap(capitulo),
         )
 
     def summarize_arc(self, chapter_summaries: Sequence[str]) -> str:

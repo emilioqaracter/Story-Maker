@@ -68,6 +68,11 @@
             "title": "Genre",
             "type": "string"
           },
+          "length_profile": {
+            "$ref": "#/components/schemas/LengthProfileName",
+            "default": "novela",
+            "description": "T53. Perfil de extension: novela, o prueba para una obra minima"
+          },
           "origin_interview": {
             "anyOf": [
               {
@@ -1415,6 +1420,14 @@
         "type": "object"
       },
       "JsonValue": {},
+      "LengthProfileName": {
+        "enum": [
+          "novela",
+          "prueba"
+        ],
+        "title": "LengthProfileName",
+        "type": "string"
+      },
       "Manifest": {
         "description": "RI-43. Portada e indice de una version.",
         "properties": {

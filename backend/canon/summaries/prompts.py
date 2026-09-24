@@ -56,9 +56,23 @@ REGLAS QUE NO SE NEGOCIAN
 Devuelves SOLO el resumen, sin titulo ni notas."""
 
 
-def instruction(level: Level, parts: Sequence[str], *, value_change: str | None = None) -> str:
-    """La parte que cambia: que se resume y a que tamano."""
+def instruction(
+    level: Level,
+    parts: Sequence[str],
+    *,
+    value_change: str | None = None,
+    max_words: int | None = None,
+) -> str:
+    """La parte que cambia: que se resume y a que tamano.
+
+    `max_words` es el tope que fija el perfil de extension de la obra (T53): en
+    una obra de prueba, un resumen no puede ser mas largo que la mitad del texto
+    que resume. El rango del nivel se recorta a el; sin tope, rige el nivel.
+    """
     low, high = WORDS[level]
+    if max_words is not None:
+        high = min(high, max_words)
+        low = min(low, high)
     rango = f"exactamente {low}" if low == high else f"entre {low} y {high}"
     que = {
         Level.SCENE: "esta escena",

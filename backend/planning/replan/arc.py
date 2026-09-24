@@ -25,7 +25,7 @@ from collections.abc import Mapping, Sequence
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from planning.outline.types import SCENE_WORDS, Outline, SceneEntry, Setup
+from planning.outline.types import NOVELA, LengthProfile, Outline, SceneEntry, Setup
 
 SYSTEM = """Replanificas un tramo de la escaleta de una novela. Eres un componente
 de un sistema automatico: devuelves JSON y nada mas.
@@ -65,7 +65,10 @@ class ReplannedTract(BaseModel):
     tension: tuple[int, ...] = Field(default_factory=tuple)
 
 
-def schema() -> str:
+def schema(profile: LengthProfile = NOVELA) -> str:
+    """El rango de escena y el ejemplo salen del perfil de extension (T53)."""
+    low, high = profile.scene_words
+    palabras = 900 if low <= 900 <= high else (low + high) // 2
     ejemplo = {
         "scenes": [
             {
@@ -77,7 +80,7 @@ def schema() -> str:
                 "pov": "marcos",
                 "value_change": "de la evasion a la confesion",
                 "world_time": {"stamp": "2026-09-02", "seq": 0},
-                "target_words": 900,
+                "target_words": palabras,
                 "is_match": False,
                 "arcs": ["interno"],
             }
@@ -89,8 +92,8 @@ def schema() -> str:
     return (
         "Objeto con scenes (lista de escenas con la forma de la escaleta), payoffs "
         "(setup_id -> id de escena), resolutions (arc_id -> id de escena) y tension "
-        f"(un valor por capitulo del tramo). target_words entre {SCENE_WORDS[0]} y "
-        f"{SCENE_WORDS[1]}.\nEjemplo:\n" + json.dumps(ejemplo, ensure_ascii=False, indent=1)
+        f"(un valor por capitulo del tramo). target_words entre {low} y "
+        f"{high}.\nEjemplo:\n" + json.dumps(ejemplo, ensure_ascii=False, indent=1)
     )
 
 

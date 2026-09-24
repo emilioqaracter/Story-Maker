@@ -15,14 +15,18 @@ from typing import Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+# T53. Los perfiles de extension: EST-07 y EST-08 dejan de ser constantes y
+# pasan a ser los rangos del perfil del brief. Viven en `commons/` porque el
+# brief (`canon/`) valida su extension contra ellos; aqui se reexportan para
+# quien planifica.
+from commons.types.length import NOVELA as NOVELA
+from commons.types.length import PROFILES as PROFILES
+from commons.types.length import PRUEBA as PRUEBA
+from commons.types.length import SCENE_WORDS_BOUNDS
+from commons.types.length import LengthProfile as LengthProfile
+from commons.types.length import LengthProfileName as LengthProfileName
 from commons.types.primitives import WorldTime
 from commons.types.scene import SceneFunction
-
-#: EST-07. Rango de longitud de un capitulo.
-CHAPTER_WORDS = (1_500, 4_000)
-
-#: EST-08. Rango de longitud de una escena.
-SCENE_WORDS = (400, 1_500)
 
 
 class ArcKind(StrEnum):
@@ -95,7 +99,9 @@ class SceneEntry(BaseModel):
     pov: str = Field(min_length=1, description="EST-I1: exactamente uno")
     value_change: str = Field(min_length=1, description="EST-13. Una escena sin el es relleno")
     world_time: WorldTime
-    target_words: int = Field(ge=SCENE_WORDS[0], le=SCENE_WORDS[1])
+    #: Los limites de todos los perfiles: el del perfil de la obra lo comprueba
+    #: `outline.check`, con su cita, y no el esquema (T53).
+    target_words: int = Field(ge=SCENE_WORDS_BOUNDS[0], le=SCENE_WORDS_BOUNDS[1])
     is_match: bool = Field(default=False, description="DEP-06")
     arcs: tuple[str, ...] = Field(default_factory=tuple)
 

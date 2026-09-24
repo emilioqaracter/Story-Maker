@@ -509,6 +509,11 @@ export interface components {
              */
             genre?: string;
             /**
+             * @description T53. Perfil de extension: novela, o prueba para una obra minima
+             * @default novela
+             */
+            length_profile?: components["schemas"]["LengthProfileName"];
+            /**
              * Origin Interview
              * @description RF-249: la entrevista de la que sale el brief, si sale de una
              */
@@ -1072,6 +1077,11 @@ export interface components {
             question: components["schemas"]["Question"] | null;
         };
         JsonValue: unknown;
+        /**
+         * LengthProfileName
+         * @enum {string}
+         */
+        LengthProfileName: "novela" | "prueba";
         /**
          * Manifest
          * @description RI-43. Portada e indice de una version.

@@ -37,6 +37,8 @@ from canon.events.types import (
 )
 from canon.projections import rebuild
 from commons.types import rubrics
+from commons.types.length import LengthProfile, LengthProfileName
+from commons.types.length import of as length_profile_of
 from commons.types.primitives import Provenance, WorldTime
 
 #: RF-248, RI-64, D-93. El brief, sus partes y la salida de la extraccion
@@ -126,6 +128,10 @@ class Brief(BaseModel):
     rulebook: str = Field(default="", description="DEP-02, vacio si no es deportiva")
     target_words: int = Field(gt=0)
     word_tolerance: float = Field(default=0.1, gt=0, lt=1)
+    length_profile: LengthProfileName = Field(
+        default=LengthProfileName.NOVELA,
+        description="T53. Perfil de extension: novela, o prueba para una obra minima",
+    )
     genre: str = ""
     tone: str = ""
     dedication: str = ""
@@ -137,6 +143,20 @@ class Brief(BaseModel):
         pattern=INTERVIEW_ID_PATTERN,
         description="RF-249: la entrevista de la que sale el brief, si sale de una",
     )
+
+    @model_validator(mode="after")
+    def _extension_fits_profile(self) -> Self:
+        # T53. Un perfil con rango de obra propio no admite una extension fuera
+        # de el: el brief pediria una obra que su perfil no puede planificar.
+        perfil = self.profile()
+        if perfil.work_words is not None:
+            low, high = perfil.work_words
+            if not low <= self.target_words <= high:
+                raise ValueError(
+                    f"el perfil de extension «{perfil.name}» admite una obra de {low} a "
+                    f"{high} palabras y el brief pide {self.target_words}"
+                )
+        return self
 
     @model_validator(mode="after")
     def _relations_point_somewhere(self) -> Self:
@@ -188,14 +208,25 @@ class Brief(BaseModel):
             return ""
         return next((e.name for e in self.entities if e.id == self.recipient.entity_id), "")
 
+    def profile(self) -> LengthProfile:
+        """T53. Los rangos de longitud de la obra: los lee todo consumidor."""
+        return length_profile_of(self.length_profile)
+
     def word_range(self) -> tuple[int, int]:
         """Rango de longitud aceptable de la obra.
 
         Lo consulta la condicion de cierre: una novela dentro de rango es una de
         las cuatro cosas que tienen que cumplirse para dar la obra por terminada.
+
+        Con un perfil que fija el rango de obra, la tolerancia no lo desborda:
+        una obra de prueba de 500 palabras no admite 550.
         """
         margin = int(self.target_words * self.word_tolerance)
-        return (self.target_words - margin, self.target_words + margin)
+        low, high = self.target_words - margin, self.target_words + margin
+        obra = self.profile().work_words
+        if obra is not None:
+            low, high = max(low, obra[0]), min(high, obra[1])
+        return (low, high)
 
 
 def to_events(brief: Brief) -> list[Event]:
