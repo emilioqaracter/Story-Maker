@@ -70,7 +70,7 @@ El repositorio es un monorepo con dos artefactos desplegables.
 
 De ahí se sigue una prueba barata de que el diseño se respeta: **el sistema completa una novela con el frontend apagado**. El día que no pueda, hay un fallo de diseño.
 
-**Fuera de las dos mitades, la configuración del trabajo de desarrollo.** `.claude/settings.json` declara los hooks de Claude Code y `.claude/hooks/` sus guiones: uno valida un fichero de capítulo con los verificadores reales del backend y otro aplica la política sobre lo que hace el agente de desarrollo, con su audit log en `.claude/audit/` (`specs/srs-backend-v4.md` RF-251 a RF-253). `.mcp.json` declara el MCP de navegador de la validación visual (RF-267). Nada de esto corre dentro de una tirada, y los `claude -p` del motor no lo cargan (§4.8): actúa sobre quien construye el sistema, no sobre la novela.
+**Fuera de las dos mitades, la configuración del trabajo de desarrollo.** `.claude/settings.json` declara los hooks de Claude Code y `.claude/hooks/` sus guiones: `chapter_gate.py`, en `PostToolUse`, valida un fichero de capítulo con los verificadores reales del backend, y `policy.py`, en `PreToolUse`, aplica la política sobre lo que hace el agente de desarrollo, con su audit log en `.claude/audit/policy.jsonl`, que es de cada máquina y git ignora (`specs/srs-backend-v4.md` RF-251 a RF-253). Importan `backend/` y no forman parte de él. `.mcp.json` declara el MCP de navegador de la validación visual (RF-267). Nada de esto corre dentro de una tirada, y los `claude -p` del motor no lo cargan (§4.8): actúa sobre quien construye el sistema, no sobre la novela.
 
 ### 2.2 Frontera entre las dos mitades
 
@@ -150,7 +150,7 @@ El cliente generado vive en `commons/` y no en cada funcionalidad: es uno solo, 
 
 1. **Una funcionalidad no importa de otra funcionalidad.** Solo de `commons/`. Si dos se necesitan entre sí, o lo común baja a `commons/` o la frontera está mal puesta.
 2. **Dos excepciones, una en cada extremo.** `orchestration/` es la raíz de composición: conoce a todas las funcionalidades y ninguna lo conoce a él. `canon/` es la base: todas pueden importar de él **en lectura**, es decir, las skills `canon.*` y las proyecciones de §3, y él no importa de ninguna. La escritura sigue siendo exclusiva del Archivero, que vive dentro de `canon/`. Con eso el grafo de imports tiene tres pisos: `canon/` abajo, las funcionalidades en medio, `orchestration/` arriba. Son «el canon es la fuente de verdad» y «todo entra y sale por el Orquestador» (§6.2) escritos en imports. Sin la excepción de `canon/`, el Documentalista, el Planificador y el Continuista no podrían leer el canon sin romper la regla 1, y llevarse el API de lectura a `commons/` partiría al dueño de los almacenes en dos carpetas.
-3. **A `commons/` se entra por uso, no por previsión.** Algo baja cuando lo usan dos funcionalidades, nunca cuando parece que podría usarse. Sin esa regla, `commons/` acaba siendo el vertedero donde cae todo y la organización por funcionalidad deja de significar nada.
+3. **A `commons/` se entra por uso, no por previsión.** Algo baja cuando lo usan dos funcionalidades, nunca cuando parece que podría usarse. Así bajaron las rúbricas del Jurado, `commons/types/rubrics.py`, y los perfiles de extensión (PRO-15), `commons/types/length.py`: estos los usan `canon/`, que valida con ellos la extensión del brief, y `planning/`, que los reexporta. Sin esa regla, `commons/` acaba siendo el vertedero donde cae todo y la organización por funcionalidad deja de significar nada.
 
 La regla 1 y sus dos excepciones son estáticamente comprobables, así que no se dejan en convención: son un patrón de análisis estático en la puerta de CI (VER-02).
 
@@ -210,7 +210,8 @@ Los dos niveles son baratos: una obra de 200.000 palabras da del orden de 200 a 
 
 | Pieza | Dónde | Qué da |
 |---|---|---|
-| Hecho × escena, `fact_usage` | Índice de prosa, escrito al congelar | Qué escenas y capítulos usan cada hecho `entidad.atributo`, y dónde aparece cada elemento obligatorio del destinatario. Misma regla que el cálculo de las escenas afectadas por una enmienda, así que no pueden discrepar sin que salte |
+| Hecho × escena, `fact_usage` | Índice de prosa, escrito al congelar | Qué escenas y capítulos usan cada hecho `entidad.atributo`, y dónde aparece cada elemento obligatorio del destinatario, como `element.<id>`. Misma regla que el cálculo de las escenas afectadas por una enmienda, así que no pueden discrepar sin que salte |
+| Usos de elementos, `element_use` | Índice de prosa, escrito al congelar | Cada uso anclado de un elemento obligatorio con su escena y su cita literal, que sirve para volver a anclarlo cuando la escena se recongela: sin la cita, una escena reescrita que pierde el recuerdo seguiría cobrándolo |
 | Cronología, vista `chronology` | Vista SQL sobre el índice de prosa | Una fila por escena congelada con instante, lugar y personajes presentes, en orden de mundo (MUN-05). Es lo que lee el generador de Lean |
 | Niveles de proscripción | Columna `level` de la lista de proscripción (POE-12) | `global`, copiado de un fichero versionado al crear la novela; `cliente`, las prohibidas de la entrevista; `novela`, las que añade una solicitud de cambio; y `estilo`, los n-gramas de §4.6, que no son guardarraíl |
 | Elementos del brief, `brief_element` | Proyección del evento `element.declared` | Rasgos y recuerdos del destinatario, obligatorios salvo los marcados opcionales |
@@ -478,6 +479,8 @@ Se generan al congelar, nunca sobre la marcha:
 - Capítulo cerrado: 150–250 palabras, construidas desde los resúmenes de escena, no desde el texto completo.
 - Arco cerrado: 300 palabras.
 - Obra: se regenera cada 5 capítulos.
+
+En el perfil de extensión `prueba` (PRO-15), con 3 capítulos de una escena, el resumen de obra se escribe una vez, al cerrar, y cada resumen mide como mucho la mitad del texto que resume (`specs/srs-backend-v4.md` D-112): un resumen más largo que su texto no resume.
 
 Esto es lo que mantiene la memoria completa dentro de 100.000 tokens cuando la novela pasa de 150.000 palabras. Sin jerarquía, el Continuista deja de caber en la ventana alrededor del capítulo 20.
 
@@ -791,7 +794,7 @@ No ve el paquete que generó el texto ni los veredictos de otros capítulos: rep
 | Estado del mundo antes del capítulo | 3.000 | El delta es la diferencia contra esto |
 | Fichas compactas de las entidades presentes | 2.800 | 10 × 280 |
 | Escaleta del capítulo | 1.500 | Lo que debía pasar, para detectar lo que pasó de más |
-| Setups que el capítulo debía plantar o cobrar | 1.000 | |
+| Setups que el capítulo debía plantar o cobrar | 1.000 | Incluye los elementos obligatorios del encargo con su identificador, que el Archivero cita con su escena cuando aparecen |
 | Esquema del delta con sus tipos de evento | 1.500 | El contrato de salida, literal |
 | Resúmenes de escena del capítulo | 800 | 6 × 130, para regenerar los de nivel superior |
 | Instrucción | 1.000 | |
@@ -1466,21 +1469,21 @@ Cuatro tipos: programático, semántico, formal de la historia y formal del sist
 | Programático | `check.format`, longitud de capítulo | `deterministic.py:check_chapter_length` | Puerta de capítulo: `loop.py:_approve_chapter`, sobre las escenas unidas | S2 | Cuenta en el máximo de la puerta de capítulo; reparación |
 | Programático | `quiz.grade` | `verification/quiz/grade.py` | Puerta de capítulo, antes del Jurado | S2 por respuesta errónea | Reparación |
 | Programático | `check.evidence` | `verification/checks/evidence.py` | Sobre la salida del Continuista, del Jurado y del Archivero | — | La cita se descarta como defecto de proceso |
-| Programático | `outline.check` | `planning/outline/check.py` | Tras el Arquitecto: `loop.py:_plan_with_gate` | S1 | La escaleta vuelve con sus defectos; agotado, `RunAbortedError` |
+| Programático | `outline.check` | `planning/outline/check.py`, con los elementos obligatorios y el reglamento del brief que le pasa `loop.py:_outline_rules` | Tras el Arquitecto: `loop.py:_plan_with_gate`, y en toda replanificación, `loop.py:_replan` | S1. Además de los de estructura y setups: `elemento-sin-cobro`, un obligatorio sin setup `element.<id>`; `encuentro-sin-reglamento`, una escena de encuentro sin reglamento; y `escena-fuera-de-rango`, `capitulos-descuadrados`, `escenas-descuadradas` y `actos-descuadrados` frente al perfil de extensión. Un setup `element.*` se puede sembrar y cobrar en la misma escena, porque lo planta el encargo | La escaleta vuelve con sus defectos; agotado, `RunAbortedError` |
 | Programático | Reglas del brief | `canon/brief_rules.py:contradictions`, con la misma normalización | Carga del brief (RI-01) y cada turno de la entrevista | — | 422 con la regla; en la entrevista, la contradicción se muestra |
 | Programático | Validación del delta | `canon/arbiter/entries.py:validate_delta` | Antes de congelar: `loop.py:_extract_and_validate` | S1 | Arbitraje y reparación (§10) |
 | Programático | Puerta de acto | `planning/act_gate/gate.py:check_act` | Al congelar el último capítulo de un acto | — | Replanifica el tramo siguiente |
 | Programático | Cierre de obra | `loop.py:_work_closes` | Tras el último capítulo | — | La obra no cierra y la traza dice por qué |
 | Semántico | `continuity.review` | `verification/continuity/review.py`, desde `engine.py:Composer.review_chapter` | Puerta de capítulo, y otra vez tras el pase de estilo | S1 y S2 | Reparación; la reparación que abre un S1 se revierte |
 | Semántico | Jurado, las `*.audit` | `verification/jury/verdict.py`, desde `engine.py:Composer.judge_chapter` | Tras pasar la puerta de capítulo | Por dimensión, según CAL-06 | Reparación; dispersión alta, segunda ronda |
-| Semántico | Conjunto dorado | `verification/jury/golden.py`, desde `loop.py:_golden_check` | Cada 5 capítulos | — | Alarma en la traza: el Jurado ha derivado |
-| Formal de la historia | `check.formal` | `verification/formal/`, con `run_lean` | Antes de cada congelación, retcon y enmienda; y en la puerta de CI sobre dos fixtures | S1 | Reparación; en una enmienda, se rechaza sin crear versión |
+| Semántico | Conjunto dorado | `verification/jury/golden.py`, desde `loop.py:_golden_check` | Cada 5 capítulos; en el perfil `prueba`, una vez, al congelar el último | — | Alarma en la traza: el Jurado ha derivado |
+| Formal de la historia | `check.formal` | `verification/formal/`, con `run_lean`; `lake` se comprueba en `verification/formal/check.py:check_toolchain`, desde `compose.py:check_lean` | Antes de congelar un capítulo, en `loop.py:_approve_chapter` tras la segunda red de `check.forbidden` (`_formal_before_freeze`); antes de reescribir en `loop.py:_try_retcon` y `amend.py:_formal_or_reject`; en `amend.py:_apply_forbid`; y en la puerta de CI sobre dos fixtures | S1; un hecho que no se exporta es S1 con el motivo como evidencia | Reparación; en un retcon gana el congelado; en una enmienda, se rechaza sin crear versión |
 | Formal del sistema | TLA+ con TLC | `orchestration/model/` | En CI, al cambiar el modelo | — | CI en rojo |
 | Desarrollo | Hook de capítulo | `.claude/hooks/chapter_gate.py` | `PostToolUse` de Claude Code sobre un fichero de capítulo | S1 bloquea | Código de salida 2 y los defectos al agente |
 | Desarrollo | Hook de política | `.claude/hooks/policy.py` | `PreToolUse` de Claude Code | — | Deniega con el motivo y lo registra |
 | Visual | Recorrido de lectura | `frontend/visual/` y el MCP de navegador | Al cambiar el frontend y antes de entregar | — | Registro fechado: fallo de datos al backend, de presentación al frontend |
 
-La puerta de CI contrasta las filas `check.*` de esta tabla con los `kind` del código (`specs/srs-backend-v4.md` RF-268): una tabla que describe validadores que no existen es peor que ninguna.
+La puerta de CI contrasta las filas `check.*` de esta tabla con el código (`specs/srs-backend-v4.md` RF-268): una tabla que describe validadores que no existen es peor que ninguna. Un validador existe en el código de dos formas: como `kind` que el código asigna, `kind="check.x"` o `KIND = "check.x"`; o como módulo validador, un `verification/checks/<x>.py` cuyo docstring abre con `` `check.<x>` ``, que es como existe `check.evidence`, que descarta citas y no marca defectos con `kind` propio. Toda fila dice dónde corre, y la tabla por brief de `evals/brief_table.py` tiene una columna fija por cada validador que esta tabla pone en la puerta de escena o en la escena de encuentro.
 
 ### 9.2 Jurado
 
@@ -1519,7 +1522,7 @@ Es la única de las cinco que no se evalúa por capítulo, y por eso se le escap
 
 | | |
 |---|---|
-| **Qué comprueba** | Que todo setup (CAN-08) cuyo payoff estaba **planificado dentro de este acto** aparece cobrado. El umbral no es un número nuevo: lo fija la propia escaleta, que ya declara dónde se cobra cada promesa |
+| **Qué comprueba** | Que todo setup (CAN-08) cuyo payoff estaba **planificado dentro de este acto** aparece cobrado. El umbral no es un número nuevo: lo fija la propia escaleta, que ya declara dónde se cobra cada promesa. Un elemento obligatorio del encargo se cobra con su uso anclado, en cualquier escena, y no con que su escena de cobro esté congelada |
 | **Y su mitad de juicio** | Que la curva de tensión realizada —el nivel de ritmo del Jurado por capítulo— acompañe a la planificada. Se comparan en dirección, no en valor, porque son escalas distintas: falla cuando la realizada baja donde la planificada no baja, sostenido tres capítulos como la deriva de la huella. El remedio es el mismo que el de la deuda |
 | **Si falla** | El Arquitecto replanifica el tramo **siguiente** para dar payoff a lo que quedó sin cobrar |
 | **Qué no hace nunca** | Tocar el acto que se acaba de cerrar. El canon congelado gana (PRO-10), así que el remedio solo puede mirar hacia delante |
@@ -1573,9 +1576,9 @@ En un sistema sin supervisión externa, la observabilidad no es un extra: es el 
 
 **Dos destinos, una sola fuente.** La traza local JSONL de cada novela (RI-16) es la fuente de verdad: se escribe siempre, sin red, y se copia con la tirada. **Langfuse es su espejo**: una sesión por novela, que agrupa la entrevista, la tirada y las solicitudes de cambio; un span por agente y por llamada a herramienta; tokens, coste y latencia por llamada; los resultados de cada verificador, del Jurado y de la verificación formal como scores; y los prompts de cada agente versionados, para que un resultado diga qué versión lo produjo. El espejo observa y no gobierna: un fallo al exportar se registra en la traza local y la tirada sigue, y todo lo que muestra Langfuse se puede reconstruir desde el JSONL.
 
-Cómo se hace, en `specs/srs-backend-v4.md` §4.3 y §4.11. Lo que hay que retener: **una traza por generación** —cada invocación de la tirada, cada solicitud de cambio y cada entrevista—, con `session_id` igual a la novela; **un conductor en vivo y otro por lote** con la misma correspondencia; **coste** es el equivalente de API que da el CLI, o nulo, nunca calculado aquí; **latencia** es la medida en `dispatch`; **los prompts** se publican desde el repositorio con su `prompt_version` como etiqueta y la tirada nunca los lee de Langfuse.
+Cómo se hace, en `specs/srs-backend-v4.md` §4.3 y §4.11. Lo que hay que retener: **una traza por generación** —cada invocación de la tirada, cada solicitud de cambio y cada entrevista—, con `session_id` igual a la novela; **un conductor en vivo y otro por lote** con la misma correspondencia; **coste** es el equivalente de API que da el CLI, o nulo, nunca calculado aquí; **latencia** es la medida en `dispatch`; **los prompts** se publican desde el repositorio con su `prompt_version` como etiqueta y la tirada nunca los lee de Langfuse; el espejo solo resuelve el número de versión de cada etiqueta, en su hilo, para enlazar la generation con su prompt (`specs/srs-backend-v4.md` D-108).
 
-Cada registro de la traza lleva el hash del anterior, así que **la traza es también el audit log**: se puede borrar una línea, pero `verify_chain` lo detecta, y RI-27 dice dónde. Las decisiones del motor de políticas —arbitraje, propuesta de retcon, coincidencia del guardarraíl y resultado de la verificación formal— llevan decisión, regla e instante.
+Cada registro de la traza lleva el hash del anterior, así que **la traza es también el audit log**: se puede editar, borrar, insertar o reordenar una línea, pero `verify_chain` señala la primera afectada, y RI-27 la devuelve como `chain_broken_at`, su número de línea. El eslabón se calcula contra la última línea del fichero, así que una tirada reanudada, una ruta y el hook continúan la misma cadena. La traza sigue sin gobernar: una cadena rota se informa, no para la tirada. Las decisiones del motor de políticas —arbitraje, propuesta de retcon, coincidencia del guardarraíl y resultado de la verificación formal— llevan decisión, regla e instante.
 
 **Roles.** Los nombres de rol que usa la traza exportada no son agentes nuevos: son etiquetas que agrupan los de §6.
 
@@ -1588,17 +1591,32 @@ Cada registro de la traza lleva el hash del anterior, así que **la traza es tam
 | `canon` | Archivero, Árbitro |
 | `supervisor` | Supervisor |
 
-**Scores.** Cada verificador llega a la traza o al span que evaluó:
+**Nombres y tipos.** Los nombres son fijos y el número va en los metadatos, porque un número en el nombre crea un nombre por ejecución y deja sin filtro a lo que lo busca por nombre (`specs/srs-backend-v4.md` D-106):
 
-| Score | Tipo | Sobre qué |
-|---|---|---|
-| `check.<kind>` | Booleano | Intento de escena |
-| `gate.scene`, `gate.chapter` | Booleano, con S1 y S2 como numéricos | Escena y capítulo |
-| `jury.<dimensión>` | Numérico de 1 a 5, con la dispersión y la justificación como comentario | Capítulo |
-| `quiz.wrong` | Numérico | Capítulo |
-| `outline.check`, `act.gate`, `work.close` | Booleano | Tirada o acto |
-| `formal.lean` | Booleano, con el teorema que falló como comentario | Capítulo, retcon o enmienda |
-| `guardrail.forbidden` | Booleano, con el nivel y el término como hash | Intento de escena y capítulo |
+| Objeto de Langfuse | Nombre | Tipo | De qué registro |
+|---|---|---|---|
+| Traza | `run`, `amend`, `change_request` o `interview` | — | La invocación de la tirada, la aplicación de enmiendas fuera de tirada, cada solicitud de cambio y cada entrevista |
+| Span | `chapter` y `scene`, la escena colgada de su capítulo | Span | Se abre con el primer registro que lleva capítulo, o capítulo y escena; `chapter.frozen` lo cierra |
+| Llamada al modelo | `<rol>.<agente>` según la tabla de roles | Generation | `call`, con modelo, uso, coste, duración y el prompt enlazado |
+| Herramienta | El de la herramienta | `retriever` para `canon.lookup`, `tool` para las demás | `tool`, hermana de la generation que la pidió bajo el mismo span, que queda en `metadata.call` |
+| Verificador | El tipo del registro, como `scene.checks` o `chapter.gate` | `evaluator` | Los registros con score de la tabla de abajo, salvo el guardarraíl |
+| Guardarraíl | El tipo del registro, como `guardrail.match` | `guardrail` | `guardrail.*` |
+| Resto de registros | El tipo del registro | Event | Los que no llevan score |
+
+La API de ingestión solo admite generation, span y event, así que `retriever`, `tool`, `evaluator` y `guardrail` viajan como span con el tipo en `metadata.observation_type`; el tipo nativo llega con la migración a OTLP, abierta en `specs/srs-backend-v4.md` §10. Un evento que la ingestión rechaza queda como `export.failed`.
+
+**Scores.** Cada verificador llega a la traza o al span que evaluó. Todo tipo de registro está en la lista de los que puntúan o en la de los que no, y una prueba falla con uno sin clasificar:
+
+| Score | Tipo | Registro | Sobre qué |
+|---|---|---|---|
+| `check.<kind>`, con el `kind` tal cual, como `check.timeline` | Booleano: verdadero si corrió y no marcó | `scene.checks`, que lista los que corrieron y los que fallaron | Span de escena |
+| `gate.scene`, `gate.scene.s1`, `gate.scene.s2` | Booleano, y S1 y S2 como numéricos | `scene.attempt` | Span de escena |
+| `gate.chapter`, `gate.chapter.s1`, `gate.chapter.s2` | Booleano con el motivo como comentario, y S1 y S2 como numéricos | `chapter.gate` | Span de capítulo |
+| `jury.<dimensión>` | Numérico de 1 a 5, con la dispersión y la justificación como comentario | `jury` | Span de capítulo |
+| `quiz.wrong` | Numérico | `quiz` | Span de capítulo |
+| `outline.check`, `act.gate`, `work.close` | Booleano; `act.gate` con el acto como comentario | Su registro | Traza |
+| `formal.lean` | Booleano, con el teorema que falló, o la regla, como comentario | `formal.lean` | Span de escena o de capítulo, o la traza de su solicitud |
+| `guardrail.forbidden` | Booleano: falso por cada coincidencia, con el nivel y el término como hash; verdadero cuando el intento o el capítulo pasaron sin ninguna | `guardrail.match` da el falso; `scene.attempt` y `chapter.gate`, el verdadero | Span de escena o de capítulo |
 
 | Métrica | Señal de alarma |
 |---|---|

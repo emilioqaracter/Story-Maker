@@ -36,16 +36,16 @@ La idea central del dominio: **una novela larga no es un texto largo, es un esta
 | Ontología del dominio | ✅ Completa |
 | Modelos y diagramas | ✅ Completos |
 | Arquitectura, agentes y skills | ✅ Especificados |
-| SRS del backend (`specs/`) | ✅ Versión 1 (`srs-backend-v1.md`, pasos 1 a 6) y versión 2 (`srs-backend-v2.md`, pasos 7 a 10 y retcon), y versión 3 (`srs-backend-v3.md`, T33 a T36): entrevista, versiones, fichas y solicitudes de cambio que el frontend exige. Versión 4 (`srs-backend-v4.md`, T37 a T53): Lean sobre la cronología, guardarraíl bloqueante, espejo en Langfuse, hecho × capítulo, hooks de Claude Code, Jurado con las dimensiones del encargo, TLA+ del flujo completo y evaluación del sistema; T37 a T44 construidos, T45 a T53 por construir |
+| SRS del backend (`specs/`) | ✅ Versión 1 (`srs-backend-v1.md`, pasos 1 a 6) y versión 2 (`srs-backend-v2.md`, pasos 7 a 10 y retcon), y versión 3 (`srs-backend-v3.md`, T33 a T36): entrevista, versiones, fichas y solicitudes de cambio que el frontend exige. Versión 4 (`srs-backend-v4.md`, T37 a T53): Lean sobre la cronología, guardarraíl bloqueante, espejo en Langfuse, hecho × capítulo, hooks de Claude Code, Jurado con las dimensiones del encargo, TLA+ del flujo completo, evaluación del sistema y perfil de extensión `prueba`; construida salvo las tiradas de evaluación de T52 |
 | SRS del frontend (`specs/`) | ✅ Versión 1 (`srs-frontend-v1.md`, paso 11): entrevista del brief, lectura por versiones, ficha de personajes y lugares, enmiendas al brief desde la lectura. Las rutas nuevas que exige las realiza `srs-backend-v3.md`. Su plan de implementación es `frontend/PLAN.md`, T26 a T32 |
 | Estrategia de verificación | ✅ Completa |
-| Implementación del backend | 🟡 Versiones 1 y 2 construidas, cableadas y en verde (T0 a T24). De la versión 4, T37 a T44 construidos, integrados y en verde (`python gate.py`, con Lean; TLC en CI al cambiar el modelo): TLA+ del flujo, verificadores endurecidos, Langfuse base, guardarraíl, hecho × escena y cronología, Lean y brief. Faltan T45 a T53 y las dos tiradas reales: la de T16, que produce `golden/v1-seed/`, y la de T24, que se compara con ella (`backend/PLAN.md` §1.7) |
+| Implementación del backend | 🟡 Versiones 1 y 2 construidas, cableadas y en verde (T0 a T24). De la versión 4, T37 a T51 y T53 construidos, integrados y en verde (`python gate.py`, con Lean; TLC en CI al cambiar el modelo): TLA+ del flujo, verificadores endurecidos, Langfuse como espejo, guardarraíl, hecho × escena y cronología, Lean antes de congelar, brief, hooks de Claude Code y audit log, Jurado de nueve dimensiones con elementos obligatorios, validación visual, tabla de validadores en la puerta, herramientas de evaluación y perfil `prueba`. T52, las tiradas de evaluación, en curso. Faltan también las dos tiradas reales: la de T16, que produce `golden/v1-seed/`, y la de T24, que se compara con ella (`backend/PLAN.md` §1.7) |
 | Implementación del frontend | ✅ T26 a T31 construidos y en verde (`node gate.mjs`): entrevista, lectura por versiones con marcas de cambio, ficha de personajes y lugares, solicitudes de cambio, estado, deuda y grafo. T32 con modelo real sobre una copia de la tirada real; la tirada entera de una novela encargada desde la entrevista depende de T16 (`frontend/PLAN.md`) |
 | Implementación del backend v3 | ✅ T34 a T36 construidos y en verde (`python gate.py`): `brief/`, versiones, fichas, lista de novelas y solicitudes aplicadas por el Orquestador |
 | Agentes de modelo | ✅ Los trece con prompt o código y cableados en el motor real |
 | Capa de memoria | ✅ Cinco almacenes en SQLite, memoria de trabajo, delta canónico validado al congelar y traza local por tirada |
 
-**El repositorio está cerrando el backend: las versiones 1 a 3 tienen el código completo, la 4 va por T44, y faltan sus tramos T45 a T53 y las tiradas reales que lo demuestran.** El plan de lo que falta, con su orden y sus puertas, es `backend/PLAN.md`. No crees agentes, skills ni código fuera de ese plan salvo que se pida de forma explícita.
+**El repositorio está cerrando el backend: las versiones 1 a 4 tienen el código completo, y faltan las tiradas reales que lo demuestran: T16 y T24, y las de evaluación de T52, en curso.** El plan de lo que falta, con su orden y sus puertas, es `backend/PLAN.md`. No crees agentes, skills ni código fuera de ese plan salvo que se pida de forma explícita.
 
 ---
 
@@ -62,7 +62,7 @@ Es un **monorepo**: backend y frontend viven en la misma raíz, junto a la espec
 │   ├── domain-knowledge.md   ← modelos visuales de esa ontología
 │   ├── architecture.md       ← cómo se construye el sistema
 │   └── verification.md       ← cómo se verifica el código y la salida de los agentes
-├── .mcp.json                 ← MCP de navegador de la validación visual
+├── .mcp.json                 ← MCP de navegador de la validación visual; su guion repetible es frontend/visual/
 ├── .claude/settings.json     ← hooks de Claude Code del trabajo de desarrollo
 ├── .claude/hooks/            ← sus guiones: validación de capítulo y política, con audit log en .claude/audit/
 ├── .claude/skills/           ← reglas de este repositorio, ejecutables
@@ -76,14 +76,14 @@ Es un **monorepo**: backend y frontend viven en la misma raíz, junto a la espec
 └── frontend/                 ← visualización del estado narrativo
 ```
 
-`backend/` tiene el código de las versiones 1 y 2 (§2). `frontend/` tiene la versión 1 entera (§2), con su plan en `frontend/PLAN.md`. El paso 11 está fuera del camino crítico (§8).
+`backend/` tiene el código de las versiones 1 a 4 (§2). `frontend/` tiene la versión 1 entera (§2), con su plan en `frontend/PLAN.md`. El paso 11 está fuera del camino crítico (§8).
 
 ### 3.1 Stack por carpeta
 
 | Carpeta | Stack | Responsabilidad |
 |---|---|---|
 | `backend/` | Python + FastAPI | Orquestador, agentes, skills, capa de memoria y canon. Todo lo especificado en `docs/architecture.md` |
-| `frontend/` | React | Entrevista del brief, lectura del manuscrito por versiones con ficha de personajes y lugares, enmiendas al brief desde la lectura, y visualización del estado del mundo, del grafo canónico y de la curva de tensión |
+| `frontend/` | React | Entrevista del brief, lectura del manuscrito por versiones con ficha de personajes y lugares, enmiendas al brief desde la lectura, y visualización del estado del mundo, del grafo canónico y de la curva de tensión. `frontend/visual/` es la validación visual repetible, que no es una vista |
 
 **Las dos se organizan por funcionalidad, no por capa técnica.** Cada funcionalidad es una carpeta con todo lo suyo dentro y lo compartido vive en `commons/`; en el frontend, además, **no se usa Feature-Sliced Design**. El reparto concreto, con las tres reglas que impiden que degenere, está en `docs/architecture.md` §2.3.
 
@@ -396,6 +396,7 @@ Los tres niveles de documento describen un solo sistema desde tres alturas: `doc
 | Todo requisito está asignado a un tramo, y en `frontend/PLAN.md` al mismo que le da su SRS | `specs/*.md` §11 o `backend/PLAN.md`; `frontend/PLAN.md` y su §7.2 |
 | Toda sección de `architecture.md` tiene fila en la matriz de cobertura de cada plan | `docs/architecture.md` ↔ `backend/PLAN.md` §7 y `frontend/PLAN.md` §7.1 |
 | Todo paquete de `backend/` y toda carpeta de `frontend/` están declarados en el reparto físico | `backend/`, `frontend/` ↔ `architecture.md` §2.3 |
+| Todo `kind` `check.*` que asigna el código y todo módulo validador —un `verification/checks/<x>.py` cuyo docstring abre con `` `check.<x>` ``— tienen fila en la tabla de validadores; todo `check.*` de una fila existe en el código y toda fila dice dónde corre; y la tabla por brief tiene una columna fija por cada validador de la puerta de escena o de la escena de encuentro, ni una más ni una menos | `architecture.md` §9.1 ↔ `backend/` y `backend/evals/brief_table.py` (`specs/srs-backend-v4.md` RF-268) |
 | Ningún número de tramo se define dos veces | `specs/*.md` §11 ↔ `backend/PLAN.md` |
 
 **Qué hacer cuando falla.** Lo que la puerta señala es una desalineación, y la dirección de la corrección la fija §3.3: la spec nunca contradice a la arquitectura en silencio, y el plan nunca contradice a la spec. Se corrige el documento de menor altura, salvo que al hacerlo se descubra que el de mayor altura está mal: entonces se ejecuta el proceso A o B que corresponda y se propagan los tres en la misma entrega.
