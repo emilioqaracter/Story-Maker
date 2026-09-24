@@ -509,7 +509,7 @@ export interface components {
              */
             genre?: string;
             /**
-             * @description T53. Perfil de extension: novela, o prueba para una obra minima
+             * @description T53, D-132. Perfil de extension: novela; prueba, una obra minima; o breve, diez capitulos de 1.000 a 1.500 palabras
              * @default novela
              */
             length_profile?: components["schemas"]["LengthProfileName"];
@@ -1097,7 +1097,7 @@ export interface components {
          * LengthProfileName
          * @enum {string}
          */
-        LengthProfileName: "novela" | "prueba";
+        LengthProfileName: "novela" | "prueba" | "breve";
         /**
          * Manifest
          * @description RI-43. Portada e indice de una version.
@@ -1298,6 +1298,11 @@ export interface components {
              */
             closed?: boolean | null;
             /**
+             * Cost Usd
+             * @description RF-285. Coste en dolares de todas las llamadas a modelo de la novela, tambien las de la invocacion en curso; `None` si ninguna lo declaro
+             */
+            cost_usd?: number | null;
+            /**
              * Error
              * @default
              */
@@ -1320,6 +1325,12 @@ export interface components {
             reason?: string;
             /** Running */
             running: boolean;
+            /**
+             * Writing Ms
+             * @description RF-285. Tiempo de redaccion: la suma, por invocacion, del reloj de su primer registro a su `work.cost`; la en curso, hasta ahora
+             * @default 0
+             */
+            writing_ms?: number;
         };
         /**
          * SceneAt

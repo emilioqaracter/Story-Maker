@@ -62,8 +62,15 @@ def previous_defects(defects: Sequence[Defect]) -> str:
     )
 
 
-def instruction(spec: SceneSpec, previous: Sequence[Defect] = ()) -> str:
-    """La parte que cambia en cada escena."""
+def instruction(
+    spec: SceneSpec, previous: Sequence[Defect] = (), *, min_words: int | None = None
+) -> str:
+    """La parte que cambia en cada escena.
+
+    `min_words` es el minimo de escena del perfil de la obra (D-135): con «en
+    torno a» solo, el Escritor entregaba de 880 a 1.000 palabras cuando se le
+    pedian 1.250, y una obra `breve` no llegaba a su rango de cierre.
+    """
     beats = "\n".join(f"  {i}. {b}" for i, b in enumerate(spec.content.beats, 1))
     prohibidos = (
         "\nNO uses estas expresiones: " + ", ".join(spec.constraints.forbidden)
@@ -73,6 +80,13 @@ def instruction(spec: SceneSpec, previous: Sequence[Defect] = ()) -> str:
     ignora = (
         "\nEl POV NO sabe todavia: " + "; ".join(spec.constraints.facts_unknown_to_pov)
         if spec.constraints.facts_unknown_to_pov
+        else ""
+    )
+
+    minimo = (
+        f" NUNCA menos de {min_words}: una escena mas corta no cumple su extension. "
+        "Desarrolla cada paso con accion, dialogo y detalle fisico hasta llegar."
+        if min_words is not None
         else ""
     )
 
@@ -90,6 +104,6 @@ COMO TERMINA: {spec.output.ends_with}
 PASOS:
 {beats}
 
-LONGITUD: en torno a {spec.output.target_words} palabras.{prohibidos}{ignora}{previous_defects(previous)}
+LONGITUD: en torno a {spec.output.target_words} palabras.{minimo}{prohibidos}{ignora}{previous_defects(previous)}
 
 Devuelve SOLO la prosa de la escena. Sin titulo, sin numero, sin notas."""

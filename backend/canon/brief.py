@@ -131,7 +131,10 @@ class Brief(BaseModel):
     word_tolerance: float = Field(default=0.1, gt=0, lt=1)
     length_profile: LengthProfileName = Field(
         default=LengthProfileName.NOVELA,
-        description="T53. Perfil de extension: novela, o prueba para una obra minima",
+        description=(
+            "T53, D-132. Perfil de extension: novela; prueba, una obra minima; o breve, "
+            "diez capitulos de 1.000 a 1.500 palabras"
+        ),
     )
     genre: str = ""
     tone: str = ""

@@ -72,3 +72,42 @@ def test_una_escena_sin_especificar_es_un_error() -> None:
 def test_sin_pasos_no_hay_especificacion() -> None:
     with pytest.raises(ValidationError):
         parse(json.dumps({"scenes": {"c1e1": _body(beats=[])}}), [_entry()])
+
+
+def test_el_modelo_de_la_llamada_rechaza_una_escena_ausente_para_que_se_reintente() -> None:
+    """D-134. Lo que `parse` rechazaria lo rechaza ya el modelo de `dispatch`, que reintenta."""
+    from planning.scene_spec.prompts import plan_model
+
+    with pytest.raises(ValidationError, match="no especifico las escenas"):
+        plan_model([_entry()]).model_validate_json(json.dumps({"scenes": {"c1": _body()}}))
+
+
+def test_el_modelo_de_la_llamada_rechaza_un_pov_fuera_del_elenco() -> None:
+    """D-134, EST-I1: tambien dentro del reintento, no despues."""
+    from planning.scene_spec.prompts import plan_model
+
+    with pytest.raises(ValidationError):
+        plan_model([_entry()]).model_validate_json(
+            json.dumps({"scenes": {"c1e1": _body(cast=["tecnico"])}})
+        )
+
+
+def test_el_modelo_de_la_llamada_acepta_lo_que_parse_acepta() -> None:
+    from planning.scene_spec.prompts import plan_model
+
+    raw = json.dumps({"scenes": {"c1e1": _body()}})
+    plan_model([_entry()]).model_validate_json(raw)
+    assert parse(raw, [_entry()])[0].identity.scene_id == "c1e1"
+
+
+def test_la_instruccion_dice_las_claves_exactas() -> None:
+    """D-134. Sin razonamiento, el modelo necesita las claves dichas, no deducidas."""
+    from planning.ledger.setups import Debt
+    from planning.outline.types import Outline
+    from planning.scene_spec.prompts import instruction
+
+    outline = Outline.model_validate(
+        {"arcs": [], "acts": [{"number": 1, "tension": [3]}], "scenes": [_entry().model_dump()], "setups": []}
+    )
+    texto = instruction([_entry()], outline, cards=[], debt=Debt(open_setups=(), planned=()))
+    assert "exactamente estas claves: c1e1" in texto

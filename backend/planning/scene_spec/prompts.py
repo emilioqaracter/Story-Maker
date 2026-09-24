@@ -17,7 +17,7 @@ from __future__ import annotations
 import json
 from collections.abc import Sequence
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from canon.skills.read import EntityCard
 from commons.types.primitives import Defect
@@ -141,10 +141,14 @@ def instruction(
         lista = "\n".join(f"  - [{d.severity}] {d.kind}: {d.rule}" for d in defects)
         fallos = f"\n\nDEFECTOS DEL INTENTO ANTERIOR, que esta especificacion tiene que hacer imposibles:\n{lista}"
 
+    claves = ", ".join(e.id for e in entries)
     return f"""Especifica las escenas de este capitulo.
 
 TRAMO DE ESCALETA:
 {tramo}
+
+El objeto scenes lleva exactamente estas claves: {claves}. Ni una mas, ni una menos,
+escritas tal cual.
 
 PROMESAS DE ESTE CAPITULO:
 {promesas}
@@ -161,11 +165,35 @@ LO QUE PASO ANTES:
 Devuelve SOLO el JSON."""
 
 
+def plan_model(
+    entries: Sequence[SceneEntry], *, forbidden: Sequence[str] = ()
+) -> type[ChapterPlan]:
+    """D-134. El modelo que `dispatch` exige a la salida de esta llamada.
+
+    Compone las especificaciones igual que `parse`, asi que una escena sin
+    especificar o un POV fuera del elenco (EST-I1) son una salida que no encaja
+    --un reintento con su motivo, RI-18-- y no un error que para la tirada.
+    """
+
+    class ChapterPlanFor(ChapterPlan):
+        @model_validator(mode="after")
+        def _compone(self) -> ChapterPlanFor:
+            _compose(self, entries, forbidden)
+            return self
+
+    return ChapterPlanFor
+
+
 def parse(
     raw: str, entries: Sequence[SceneEntry], *, forbidden: Sequence[str] = ()
 ) -> list[SceneSpec]:
     """Valida la salida y la compone con la escaleta. EST-I1 se impone aqui (RF-29)."""
-    plan = ChapterPlan.model_validate_json(raw)
+    return _compose(ChapterPlan.model_validate_json(raw), entries, forbidden)
+
+
+def _compose(
+    plan: ChapterPlan, entries: Sequence[SceneEntry], forbidden: Sequence[str]
+) -> list[SceneSpec]:
     faltan = [e.id for e in entries if e.id not in plan.scenes]
     if faltan:
         raise ValueError(f"el Planificador no especifico las escenas {faltan}")

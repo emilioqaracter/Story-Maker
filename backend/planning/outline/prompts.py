@@ -12,7 +12,9 @@ decir.
 from __future__ import annotations
 
 import json
+import math
 from collections.abc import Sequence
+from datetime import date, timedelta
 
 from canon.brief import Brief, elements
 from planning.outline.check import OutlineDefect
@@ -86,7 +88,14 @@ def schema(profile: LengthProfile = NOVELA) -> str:
 
 
 def _scene(
-    cap: int, pos: int, act: int, func: str, dia: int, arcs: list[str], words: int = 900
+    cap: int,
+    pos: int,
+    act: int,
+    func: str,
+    dia: int,
+    arcs: list[str],
+    words: int = 900,
+    stamp: str | None = None,
 ) -> dict[str, object]:
     return {
         "id": f"c{cap}e{pos}",
@@ -96,7 +105,7 @@ def _scene(
         "function": func,
         "pov": "marcos",
         "value_change": "de la confianza a la duda",
-        "world_time": {"stamp": f"2026-08-{dia:02d}", "seq": 0},
+        "world_time": {"stamp": stamp or f"2026-08-{dia:02d}", "seq": 0},
         "target_words": words,
         "is_match": False,
         "arcs": arcs,
@@ -150,30 +159,50 @@ def _example() -> dict[str, object]:
 
 
 def _fixed_example(profile: LengthProfile) -> dict[str, object]:
-    """T53. El ejemplo de un perfil de forma fija: una escena por capitulo.
+    """T53, D-132. El ejemplo de un perfil de forma fija: una escena por capitulo.
 
     Con una escena por capitulo el doble arco se sigue resolviendo en momentos
-    distintos (DEP-20): el competitivo en el capitulo 2, el interno en el 3. Los
-    actos son los del perfil: con un capitulo por acto, un valor de tension en
-    cada uno.
+    distintos (DEP-20): el competitivo en el penultimo capitulo, el interno en
+    el ultimo. Con tres capitulos (`prueba`) es el ejemplo de siempre: una
+    semana entre capitulos y un capitulo por acto. Con mas (`breve`), un dia
+    entre capitulos, tres actos y funciones que cambian por el medio: un ejemplo
+    de diez capitulos iguales ensenaria relleno, y uno con fechas de agosto que
+    no existen ensenaria a escribirlas.
     """
     capitulos = profile.chapters or 3
-    por_acto = profile.chapters_per_act or max(1, capitulos - 1)
+    corto = capitulos <= 3
+    por_acto = profile.chapters_per_act or (
+        max(1, capitulos - 1) if corto else math.ceil(capitulos / 3)
+    )
     palabras = (profile.scene_words[0] + profile.scene_words[1]) // 2
+    paso = 7 if corto else 1
+    medio = ["complicar", "revelar", "decidir"]
 
     def acto(c: int) -> int:
         return (c - 1) // por_acto + 1
 
-    funciones = ["establecer", "culminar", "asimilar"]
+    def funcion(c: int) -> str:
+        if c == 1:
+            return "establecer"
+        if c == capitulos:
+            return "asimilar"
+        if c == capitulos - 1:
+            return "culminar"
+        return medio[(c - 2) % len(medio)]
+
+    def tension(c: int) -> int:
+        return 3 * c if corto else round(1 + 9 * (c - 1) / (capitulos - 1))
+
     escenas = [
         _scene(
             c,
             1,
             acto(c),
-            funciones[min(c - 1, len(funciones) - 1)],
-            10 + 7 * (c - 1),
+            funcion(c),
+            0,
             ["competitivo", "interno"],
             words=palabras,
+            stamp=(date(2026, 8, 10) + timedelta(days=paso * (c - 1))).isoformat(),
         )
         for c in range(1, capitulos + 1)
     ]
@@ -184,8 +213,8 @@ def _fixed_example(profile: LengthProfile) -> dict[str, object]:
                 "kind": "competitivo",
                 "subject": "equipo",
                 "start_scene": "c1e1",
-                "crisis_scene": "c1e1",
-                "resolution_scene": "c2e1",
+                "crisis_scene": f"c{max(1, capitulos - 2)}e1",
+                "resolution_scene": f"c{capitulos - 1}e1",
                 "left_open": False,
             },
             {
@@ -193,7 +222,7 @@ def _fixed_example(profile: LengthProfile) -> dict[str, object]:
                 "kind": "interno",
                 "subject": "marcos",
                 "start_scene": "c1e1",
-                "crisis_scene": "c2e1",
+                "crisis_scene": f"c{capitulos - 1}e1",
                 "resolution_scene": f"c{capitulos}e1",
                 "left_open": False,
             },
@@ -201,7 +230,7 @@ def _fixed_example(profile: LengthProfile) -> dict[str, object]:
         "acts": [
             {
                 "number": a,
-                "tension": [3 * c for c in range(1, capitulos + 1) if acto(c) == a],
+                "tension": [tension(c) for c in range(1, capitulos + 1) if acto(c) == a],
             }
             for a in sorted({acto(c) for c in range(1, capitulos + 1)})
         ],
@@ -210,7 +239,7 @@ def _fixed_example(profile: LengthProfile) -> dict[str, object]:
             {
                 "id": "la-lista",
                 "planted_scene": "c1e1",
-                "payoff_scene": "c2e1",
+                "payoff_scene": f"c{capitulos - 1}e1",
                 "description": "La lista que el tecnico guarda en el bolsillo",
             }
         ],

@@ -19,6 +19,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from canon import normalize
 from canon.brief import Brief, BriefEntity, Recipient
 from canon.brief_rules import Contradiction, contradictions
+from commons.types.length import BREVE, LengthProfileName
 from commons.types.primitives import WorldTime
 
 FieldName = Literal[
@@ -363,6 +364,14 @@ def style_guide(draft: Draft) -> str:
     return "\n".join(partes)
 
 
+def profile_for(target_words: int) -> LengthProfileName:
+    """D-137. El perfil del brief de la entrevista, que no lo pregunta: `breve`
+    si la extension cae en su rango de obra --el encargo de diez capitulos
+    breves, permisivo (D-136)--, y `novela` si no."""
+    low, high = BREVE.work_words or (0, 0)
+    return LengthProfileName.BREVE if low <= target_words <= high else LengthProfileName.NOVELA
+
+
 def to_brief(draft: Draft, *, origin_interview: str | None = None) -> Brief | None:
     """RF-219. El brief en la forma que RI-01 acepta, o `None` si falta algo o se contradice.
 
@@ -403,6 +412,7 @@ def to_brief(draft: Draft, *, origin_interview: str | None = None) -> Brief | No
         entities=tuple(entidades),
         style_guide=style_guide(draft),
         target_words=draft.target_words,
+        length_profile=profile_for(draft.target_words),
         genre=draft.genre,
         tone=draft.tone,
         dedication=draft.dedication,

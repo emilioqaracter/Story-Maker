@@ -274,3 +274,16 @@ def test_los_hechos_invalidos_constan_como_descartados() -> None:
     assert [p.value for p in s.proposed] == ["Valiente"]
     assert s.discarded_quotes == 2
     assert "no eran de ningún tipo" in s.messages[-2].text
+
+
+def test_la_entrevista_elige_breve_en_su_rango_y_novela_fuera() -> None:
+    """D-137. El brief de la entrevista es `breve`, permisivo (D-136), si la
+    extension pedida cae en 10.000-15.000; si no, `novela`."""
+    from brief.draft import profile_for
+    from commons.types.length import LengthProfileName
+
+    assert profile_for(10_000) is LengthProfileName.BREVE
+    assert profile_for(12_500) is LengthProfileName.BREVE
+    assert profile_for(15_000) is LengthProfileName.BREVE
+    assert profile_for(9_999) is LengthProfileName.NOVELA
+    assert profile_for(60_000) is LengthProfileName.NOVELA

@@ -115,3 +115,47 @@ def test_la_traza_dice_donde_se_rompe_la_cadena(
     rota = c.get("/novels/prueba-uno/trace").json()
     assert rota["chain_broken_at"] == 2
     assert len(rota["records"]) == 2
+
+
+def test_rf285_el_tiempo_de_redaccion_es_reloj_por_invocacion() -> None:
+    """RF-285. Cada invocacion, de su primer registro a su `work.cost`; la en
+    curso, hasta ahora; una caida sin `work.cost`, hasta su ultimo registro."""
+    from datetime import UTC, datetime
+
+    from commons.tracing.trace import TraceRecord
+    from orchestration.routes import writing_ms
+
+    def r(seq: int, at: str, kind: str = "call") -> TraceRecord:
+        return TraceRecord(seq=seq, at=f"2026-09-24T{at}+00:00", kind=kind)
+
+    dos = [
+        r(0, "10:00:00", "calibration"),
+        r(1, "10:05:00"),
+        r(2, "10:10:00", "work.cost"),
+        r(0, "11:00:00", "calibration"),
+        r(1, "11:01:30", "work.cost"),
+    ]
+    assert writing_ms(dos, running=False) == (600 + 90) * 1000
+
+    en_curso = [*dos, r(0, "12:00:00", "calibration"), r(1, "12:00:10")]
+    ahora = datetime(2026, 9, 24, 12, 0, 40, tzinfo=UTC)
+    assert writing_ms(en_curso, running=True, now=ahora) == (690 + 40) * 1000
+    assert writing_ms(en_curso, running=False) == (690 + 10) * 1000
+    assert writing_ms([], running=False) == 0
+
+
+def test_rf285_el_estado_trae_coste_y_tiempo_de_la_traza(tmp_path: Path) -> None:
+    """RF-285. RI-03 suma el coste de las llamadas y el reloj de la invocacion."""
+    from orchestration.routes import _state
+
+    settings = Settings(runs_dir=tmp_path)
+    create_novel(settings.novel_path("coste"), _brief())
+    traza = Trace(settings.trace_path("coste"))
+    traza.emit("calibration", model="haiku")
+    traza.emit("call", agent="escritor", cost_usd=0.5, duration_ms=1000)
+    traza.emit("call", agent="juez", cost_usd=0.25, duration_ms=1000)
+    traza.emit("work.cost", invocation="run")
+
+    estado = _state(settings, "coste")
+    assert estado.cost_usd == 0.75
+    assert estado.writing_ms >= 0

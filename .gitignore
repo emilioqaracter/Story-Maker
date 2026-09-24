@@ -32,3 +32,6 @@ backend/verification/formal/lean/Generated/
 
 # Hooks de Claude Code: audit log de desarrollo, de cada maquina (D-92)
 .claude/audit/
+
+# TLA+: estados que vuelca TLC al comprobar el modelo
+backend/orchestration/model/states/

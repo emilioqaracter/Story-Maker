@@ -361,3 +361,36 @@ def test_el_ejemplo_del_esquema_de_prueba_pasa_su_propia_verificacion() -> None:
     assert "EXACTAMENTE 3 capitulos, con 1 escena" in texto
     ejemplo = Outline.model_validate(json.loads(texto[texto.index("{") :]))
     assert check(ejemplo, word_range=(1_200, 1_800), profile=PRUEBA) == []
+
+
+def test_el_ejemplo_del_esquema_breve_pasa_su_propia_verificacion() -> None:
+    """D-132. Diez capitulos de una escena: fechas validas y el doble arco separado."""
+    import json
+
+    from commons.types.length import BREVE
+    from planning.outline import prompts
+
+    texto = prompts.schema(BREVE)
+    assert "EXACTAMENTE 10 capitulos, con 1 escena" in texto
+    ejemplo = Outline.model_validate(json.loads(texto[texto.index("{") :]))
+    assert check(ejemplo, word_range=(11_250, 13_750), profile=BREVE) == []
+    funciones = {s.function for s in ejemplo.scenes}
+    assert len(funciones) >= 5, "un ejemplo de diez capitulos iguales ensena relleno"
+
+
+def test_el_ejemplo_del_esquema_de_prueba_no_cambia() -> None:
+    """D-132. Generalizar el ejemplo fijo no mueve el de `prueba` ni su version de prompt."""
+    import json
+
+    from planning.outline import prompts
+    from planning.outline.types import PRUEBA
+
+    texto = prompts.schema(PRUEBA)
+    ejemplo = json.loads(texto[texto.index("{") :])
+    assert [s["world_time"]["stamp"] for s in ejemplo["scenes"]] == [
+        "2026-08-10",
+        "2026-08-17",
+        "2026-08-24",
+    ]
+    assert [s["function"] for s in ejemplo["scenes"]] == ["establecer", "culminar", "asimilar"]
+    assert [a["resolution_scene"] for a in ejemplo["arcs"]] == ["c2e1", "c3e1"]

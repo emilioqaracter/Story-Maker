@@ -46,7 +46,7 @@ from canon.skills import read
 from canon.skills.read import WorldState
 from canon.summaries import levels
 from commons.tracing.trace import Trace
-from commons.types.primitives import Defect, Evidence, WorldTime
+from commons.types.primitives import Defect, Evidence, Severity, WorldTime
 from commons.types.scene import SceneSpec
 from generation.sports.simulate import MatchResult
 from generation.writer import drafts
@@ -112,11 +112,13 @@ class SceneResult:
     attempts: int = 1
     match: MatchResult | None = None
     repairs: int = 0
+    #: D-136. Aceptada en modo permisivo con sus defectos, agotada su escalera.
+    forced: bool = False
 
     @property
     def blocking(self) -> bool:
-        """RF-22. La puerta de escena es cero defectos graves."""
-        return not scene_gate(self.defects).passed
+        """RF-22. La puerta de escena es cero defectos graves, salvo D-136."""
+        return not self.forced and not scene_gate(self.defects).passed
 
 
 @dataclass
@@ -455,6 +457,34 @@ def _chapter_frozen(path: Path, chapter: int) -> bool:
 # ------------------------------------------------------------------ escaleta
 
 
+#: D-136. Defectos de escaleta que en modo permisivo no bloquean: los de rango,
+#: porque la longitud escrita la mide la puerta de capitulo, y los de calidad
+#: narrativa, cuyas escenas existen. Los que dejarian la escritura sin escena,
+#: sin forma o sin reglamento siguen bloqueando.
+_SOFT_OUTLINE = frozenset(
+    {
+        "escena-fuera-de-rango",
+        "capitulo-fuera-de-rango",
+        "longitud-fuera-de-rango",
+        "doble-arco-colapsado",
+        "doble-arco-incompleto",
+        "arco-desordenado",
+        "setup-invertido",
+        "elemento-sin-cobro",
+        "tension-decreciente",
+    }
+)
+
+
+def _blocking_outline(
+    defects: Sequence[OutlineDefect], profile: LengthProfile
+) -> list[OutlineDefect]:
+    """Los defectos de escaleta que la paran: todos, salvo los de rango en D-136."""
+    if not profile.lenient:
+        return list(defects)
+    return [d for d in defects if d.kind not in _SOFT_OUTLINE]
+
+
 def _outline_rules(brief: Brief | None) -> dict[str, Any]:
     """Lo que `outline.check` necesita del brief ademas de la longitud.
 
@@ -494,7 +524,7 @@ def _plan_with_gate(brief: Brief, engine: Engine, *, chapters: int, trace: Trace
             outline=outline.model_dump_json(),
             messages=_json_list([f"{d.kind} [{d.where}]: {d.message}" for d in defectos][:10]),
         )
-        if not defectos:
+        if not _blocking_outline(defectos, brief.profile()):
             return outline
 
         # Acumulados, no solo los del ultimo intento: con solo los ultimos, el
@@ -544,6 +574,8 @@ def _write_chapter(
     """
     specs = list(specs_for(outline, numero))
     intento_capitulo = 0
+    brief = load_brief(path)
+    permisivo = brief.profile().lenient
     # RF-20. Las escenas ya cerradas de este capitulo, si la tirada se
     # interrumpio a mitad, se reutilizan en vez de regenerarse.
     cerradas = {d.scene_number: d.text for d in drafts.load_drafts(path, chapter=numero)}
@@ -569,7 +601,12 @@ def _write_chapter(
                 trace.emit("scene.resumed", chapter=numero, scene=ordinal)
             else:
                 resultado, presupuesto = _write_scene(
-                    spec, engine, presupuesto, trace, on_budget=guarda_presupuesto
+                    spec,
+                    engine,
+                    presupuesto,
+                    trace,
+                    on_budget=guarda_presupuesto,
+                    lenient=permisivo,
                 )
             resultados.append(resultado)
             cerrado_hasta_aqui = cerrado_hasta_aqui and not resultado.blocking
@@ -651,6 +688,10 @@ def _write_chapter(
             case Action.QUARANTINE_AND_RESPEC:
                 specs = list(engine.respec(specs, defectos))
             case Action.QUARANTINE_AND_REPLAN:
+                # RF-274, D-129: la replanificacion se comprueba contra el perfil
+                # y el rango de la obra, como la escaleta y las otras dos
+                # replanificaciones. Sin ellos, contra `novela`, una obra `breve`
+                # no pasaria nunca.
                 outline = _replan(
                     outline,
                     engine,
@@ -659,7 +700,9 @@ def _write_chapter(
                     (),
                     motivos,
                     trace,
-                    brief=load_brief(path),
+                    word_range=brief.word_range(),
+                    profile=brief.profile(),
+                    brief=brief,
                 )
                 # R1. La escaleta replanificada es la vigente desde ya.
                 save_outline(path, outline.model_dump_json())
@@ -692,6 +735,7 @@ def _write_scene(
     trace: Trace,
     *,
     on_budget: Callable[[Budget], None] | None = None,
+    lenient: bool = False,
 ) -> tuple[SceneResult, Budget]:
     """RF-22. Escribe hasta que pase la puerta de escena o se agote la escalera.
 
@@ -736,6 +780,7 @@ def _write_scene(
         if not resultado.blocking:
             return resultado, presupuesto
 
+        antes = presupuesto
         decision = on_failure(presupuesto, level=Level.SCENE)
         presupuesto = decision.budget
         trace.emit(
@@ -756,6 +801,17 @@ def _write_scene(
         if decision.action is Action.RETRY:
             anteriores = list(defectos)
             continue
+        if lenient:
+            # D-136. Agotados sus intentos, la escena se acepta con sus defectos:
+            # ni se reespecifica ni gasta un peldano de capitulo.
+            resultado.forced = True
+            trace.emit(
+                "scene.forced",
+                chapter=spec.identity.chapter,
+                scene=spec.identity.ordinal,
+                defects=[f"{d.severity}:{d.kind}: {d.rule[:120]}" for d in defectos],
+            )
+            return resultado, antes
         # Agotada la escena se gasta un intento de capitulo: quien llama lo
         # guarda en el punto de reanudacion antes de seguir (§7.4).
         if on_budget is not None:
@@ -793,6 +849,7 @@ def _approve_chapter(
     if any(s.blocking for s in capitulo.scenes):
         return None, presupuesto, [d for s in capitulo.scenes for d in s.defects]
 
+    permisivo = load_brief(path).profile().lenient
     nombres = _names(path)
     preguntas = quiz_build.build(capitulo.specs, nombres)
     # Los pases de reparacion tienen sus tres intentos, no los que dejo la
@@ -824,6 +881,10 @@ def _approve_chapter(
         )
         defectos: list[Defect] = [*anclados.defects, *s2_examen, *longitud]
         puerta = chapter_gate(defectos)
+        if permisivo:
+            # D-136. Solo bloquea un S1 determinista; lo del Continuista, el
+            # examen y los S2 queda en la traza.
+            puerta = puerta.model_copy(update={"passed": not _deterministic_s1(defectos)})
         trace.emit(
             "chapter.gate",
             chapter=capitulo.number,
@@ -884,11 +945,14 @@ def _approve_chapter(
                     if d.scores
                 },
             )
-            if not jurado.passed:
+            # D-136. En modo permisivo el Jurado puntua y consta, pero no bloquea.
+            if not jurado.passed and not permisivo:
                 defectos = jurado.defects()
             else:
                 _polish(path, capitulo, engine, trace)
-                proposal, validacion = _extract_and_validate(path, capitulo, engine, trace, payoffs)
+                proposal, validacion = _extract_and_validate(
+                    path, capitulo, engine, trace, payoffs, lenient=permisivo
+                )
                 if validacion.clean:
                     # RF-236, D-90. La segunda red, sobre el capitulo entero y
                     # despues de reparaciones y pase de estilo: entre esto y
@@ -906,8 +970,24 @@ def _approve_chapter(
                     capitulo.rejected_facts.extend(defectos)
 
         presupuesto, agotado = _repair_pass(capitulo, defectos, engine, presupuesto, trace)
+        if agotado and permisivo:
+            # D-136. Agotada la reparacion, se congela el ultimo intento con sus
+            # defectos declarados: ni cuarentena ni replanificacion.
+            trace.emit(
+                "chapter.forced",
+                chapter=capitulo.number,
+                defects=[f"{d.severity}:{d.kind}: {d.rule[:120]}" for d in defectos],
+            )
+            forzado = _extract_and_validate(path, capitulo, engine, trace, payoffs, lenient=True)
+            return forzado, presupuesto, []
         if agotado:
             return None, presupuesto, defectos
+
+
+def _deterministic_s1(defects: Sequence[Defect]) -> list[Defect]:
+    """D-136. Los S1 de verificadores deterministas, los unicos que bloquean en
+    modo permisivo: los de un modelo --Continuista, examen, Jurado-- no."""
+    return [d for d in defects if d.severity is Severity.S1 and d.kind.startswith("check.")]
 
 
 def _forbidden_before_freeze(path: Path, capitulo: ChapterResult, trace: Trace) -> list[Defect]:
@@ -1340,16 +1420,28 @@ def _extract_and_validate(
     engine: Engine,
     trace: Trace,
     payoffs: frozenset[str] = frozenset(),
+    *,
+    lenient: bool = False,
 ) -> tuple[DeltaProposal, entries.DeltaValidation]:
-    """El Archivero propone y el Arbitro valida (RF-55, RF-56, RF-59, RF-60)."""
+    """El Archivero propone y el Arbitro valida (RF-55, RF-56, RF-59, RF-60).
+
+    D-136. En modo permisivo un delta vacio congela sin hechos y un hecho que
+    el Arbitro rechaza se descarta, sin retcon, en vez de volver a reparacion.
+    """
     with connection.reader(path) as con:
         estado_antes = read.state_at(con, capitulo.specs[0].identity.world_time)
 
-    proposal = _extract_with_retries(engine, capitulo.specs, capitulo.texts, estado_antes, trace)
+    proposal = _extract_with_retries(
+        engine, capitulo.specs, capitulo.texts, estado_antes, trace, lenient=lenient
+    )
 
     with connection.reader(path) as con:
         declarados = {e.id for e in freeze_elements.declared(con)}
     capitulo.element_uses = _anchor_elements(proposal, capitulo, declarados, trace)
+
+    if proposal.is_empty:
+        # Solo llega vacio en modo permisivo: si no, `_extract_with_retries` lanza.
+        return proposal, entries.DeltaValidation(accepted=())
 
     with connection.reader(path) as con:
         eventos = to_events(proposal, con, chapter=capitulo.number)
@@ -1381,6 +1473,18 @@ def _extract_and_validate(
             rejected_value=rechazo.arbitration.challenger.value,
             rule=str(rechazo.arbitration.rule),
         )
+    if lenient and validacion.rejections:
+        for rechazo in validacion.rejections:
+            trace.emit(
+                "process.defect",
+                agent="arbitro",
+                chapter=capitulo.number,
+                fact=rechazo.arbitration.incumbent.fact_key,
+                quote=rechazo.defect.evidence.quote[:80],
+                reason=rechazo.defect.rule[:200],
+            )
+        capitulo.rejected_facts.extend(r.defect for r in validacion.rejections)
+        return proposal, validacion.model_copy(update={"rejections": ()})
     # RF-151. Antes de dar la razon al congelado, el Arbitro puede proponer un
     # retcon; la regla dura decide. Lo que no se retconea sigue siendo un S1.
     restantes = [
@@ -1562,8 +1666,15 @@ def _extract_with_retries(
     textos: Sequence[str],
     estado_antes: WorldState,
     trace: Trace,
+    *,
+    lenient: bool = False,
 ) -> DeltaProposal:
-    """RF-56, trampa 12. Un delta vacio consume un reintento, no congela."""
+    """RF-56, trampa 12. Un delta vacio consume un reintento, no congela.
+
+    D-136. En modo permisivo, agotados los intentos, se devuelve vacio y el
+    capitulo se congela sin hechos.
+    """
+    proposal = DeltaProposal()
     for intento in range(1, SCENE_ATTEMPTS + 1):
         proposal = engine.extract_delta(specs, textos, estado_antes)
         if not proposal.is_empty:
@@ -1574,6 +1685,14 @@ def _extract_with_retries(
             action="reintentar",
             reason=f"delta vacio en el intento {intento} de {SCENE_ATTEMPTS}",
         )
+    if lenient:
+        trace.emit(
+            "process.defect",
+            agent="archivero",
+            chapter=specs[0].identity.chapter,
+            reason=f"delta vacio {SCENE_ATTEMPTS} veces: se congela sin hechos (D-136)",
+        )
+        return proposal
     raise EmptyDeltaError(
         f"el Archivero devolvio un delta vacio {SCENE_ATTEMPTS} veces sobre un capitulo aprobado"
     )
@@ -1915,10 +2034,15 @@ def _replan(
             defects=[d.kind for d in defectos],
             outline=nueva.model_dump_json() if not defectos else None,
         )
-        if not defectos:
+        if not _blocking_outline(defectos, profile):
             return nueva
         decision = on_failure(presupuesto, level=Level.ARC)
         presupuesto = decision.budget
+        if presupuesto.arc_replans > ARC_REPLANS and profile.lenient:
+            # D-136. Agotada la replanificacion se sigue con la escaleta vigente:
+            # lo que no cobre lo recoge la condicion de cierre.
+            trace.emit("replan.kept", act=act, defects=[d.kind for d in defectos])
+            return outline
         if presupuesto.arc_replans > ARC_REPLANS:
             raise RunAbortedError(
                 f"la replanificacion del acto {act} no pasa la verificacion "
@@ -1968,6 +2092,10 @@ def _work_closes(
     if not low <= palabras <= high:
         fallos.append(f"{palabras} palabras, fuera del rango {low}-{high}")
 
+    if fallos and brief.profile().lenient:
+        # D-136. Con todos los capitulos congelados la obra cierra; lo que la
+        # condicion estricta echaria en falta consta como pendiente.
+        return True, "pendiente: " + "; ".join(fallos)
     if fallos:
         return False, "; ".join(fallos)
     return True, "deuda cero, elementos obligatorios usados, arcos resueltos y longitud en rango"

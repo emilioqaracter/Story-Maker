@@ -17,7 +17,8 @@ de veredictos en crudo (RF-65).
 from __future__ import annotations
 
 import threading
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated
 
@@ -29,6 +30,7 @@ from brief.interpret import Interpreter, model_interpreter
 from canon import manuscript
 from canon.db import connection
 from commons.settings import NOVEL_ID_PATTERN, InvalidNovelIdError, Settings
+from commons.tracing.langfuse_export import work_cost
 from commons.tracing.trace import Trace, TraceRecord
 from orchestration import amend
 from orchestration.checkpoint import load
@@ -88,6 +90,18 @@ class RunState(BaseModel):
     reason: str = ""
     quarantines: int = Field(ge=0, description="Veces que un capitulo se rehizo entero")
     error: str = ""
+    cost_usd: float | None = Field(
+        default=None,
+        ge=0,
+        description="RF-285. Coste en dolares de todas las llamadas a modelo de la novela, "
+        "tambien las de la invocacion en curso; `None` si ninguna lo declaro",
+    )
+    writing_ms: int = Field(
+        default=0,
+        ge=0,
+        description="RF-285. Tiempo de redaccion: la suma, por invocacion, del reloj de su "
+        "primer registro a su `work.cost`; la en curso, hasta ahora",
+    )
 
 
 class TracePage(BaseModel):
@@ -156,8 +170,11 @@ def _state(settings: Settings, novel_id: str) -> RunState:
             "n"
         ]
     traza = Trace(settings.trace_path(novel_id))
-    cierre = traza.records("work.close")
-    cuarentenas = sum(1 for r in traza.records("retry") if r.fields.get("level") == "capitulo")
+    registros = traza.records()
+    cierre = [r for r in registros if r.kind == "work.close"]
+    cuarentenas = sum(
+        1 for r in registros if r.kind == "retry" and r.fields.get("level") == "capitulo"
+    )
     ultimo = cierre[-1] if cierre else None
     corriendo = REGISTRY.running(novel_id)
     return RunState(
@@ -170,7 +187,42 @@ def _state(settings: Settings, novel_id: str) -> RunState:
         reason=str(ultimo.fields.get("reason", "")) if ultimo and not corriendo else "",
         quarantines=cuarentenas,
         error=REGISTRY.error(novel_id),
+        cost_usd=_cost(registros),
+        writing_ms=writing_ms(registros, running=corriendo),
     )
+
+
+def _cost(records: Sequence[TraceRecord]) -> float | None:
+    """RF-285, RF-235. El coste acumulado de la novela, el mismo que `work.cost`."""
+    coste = work_cost(records)["cost_usd"]
+    return float(coste) if isinstance(coste, int | float) else None
+
+
+def writing_ms(
+    records: Sequence[TraceRecord], *, running: bool, now: datetime | None = None
+) -> int:
+    """RF-285. Tiempo de redaccion de la novela, en milisegundos.
+
+    Cada invocacion va de su primer registro a su `work.cost`, que la cierra
+    (RF-235). Es reloj y no la suma de las llamadas, porque los jueces corren en
+    paralelo. La invocacion en curso cuenta hasta ahora; una que cayo sin
+    `work.cost`, hasta su ultimo registro. Pura, salvo el reloj.
+    """
+    total = 0.0
+    inicio: datetime | None = None
+    ultimo: datetime | None = None
+    for r in records:
+        instante = datetime.fromisoformat(r.at)
+        if inicio is None:
+            inicio = instante
+        ultimo = instante
+        if r.kind == "work.cost":
+            total += (instante - inicio).total_seconds()
+            inicio = None
+    if inicio is not None and ultimo is not None:
+        fin = (now or datetime.now(UTC)) if running else ultimo
+        total += max(0.0, (fin - inicio).total_seconds())
+    return int(total * 1000)
 
 
 @router.post(

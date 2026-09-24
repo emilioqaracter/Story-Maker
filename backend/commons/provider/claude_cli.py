@@ -84,14 +84,29 @@ _ISOLATION = (
 _STRIPPED_ENV_PREFIXES = ("LANGFUSE_", "OTEL_")
 
 
+#: D-133. Ningun agente del motor razona: el CLI activa el razonamiento por
+#: defecto y lo cobra como salida. Medido en la primera tirada `breve`: cada
+#: llamada del Juez escribia de 7.000 a 13.000 tokens para un JSON de unos
+#: 1.500 y tardaba de 70 a 130 s, dos tercios del tiempo de cada capitulo. Cero
+#: lo desactiva; se fija aunque el entorno del proceso traiga otro valor.
+_THINKING_OFF = {"MAX_THINKING_TOKENS": "0"}
+
+
 def engine_env(environ: Mapping[str, str] | None = None) -> dict[str, str]:
-    """El entorno del `claude -p` del motor: el del proceso sin `LANGFUSE_*` ni `OTEL_*`.
+    """El entorno del `claude -p` del motor: el del proceso sin `LANGFUSE_*` ni `OTEL_*`,
+    y sin razonamiento (D-133).
 
     Se compara sin distinguir mayusculas porque en Windows el entorno no las
     distingue y `langfuse_public_key` seria la misma variable.
     """
     fuente = os.environ if environ is None else environ
-    return {k: v for k, v in fuente.items() if not k.upper().startswith(_STRIPPED_ENV_PREFIXES)}
+    limpio = {
+        k: v
+        for k, v in fuente.items()
+        if not k.upper().startswith(_STRIPPED_ENV_PREFIXES)
+        and k.upper() not in _THINKING_OFF
+    }
+    return {**limpio, **_THINKING_OFF}
 
 
 #: Suelo de andamiaje medido. Se descuenta del presupuesto disponible para que

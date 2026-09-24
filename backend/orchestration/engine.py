@@ -406,7 +406,10 @@ class Composer:
                             },
                         )
                     fallos = list(validate(resultado.raw)) if validate else []
-                    if not fallos or intento == SCENE_ATTEMPTS:
+                    # D-136. En modo permisivo una cita sin anclar no gasta otra
+                    # llamada: la descarta quien la consume (RF-129). Lo que no
+                    # encaja con el esquema o el proveedor caido si reintentan.
+                    if not fallos or intento == SCENE_ATTEMPTS or self.brief.profile().lenient:
                         return resultado
                     self.trace.emit(
                         "retry",
@@ -620,7 +623,7 @@ class Composer:
                 defects=defects,
             ),
             schema=planner_prompts.schema(),
-            parse=planner_prompts.ChapterPlan,
+            parse=planner_prompts.plan_model(entries_, forbidden=proscritos),
             context={"chapter": chapter, "respec": bool(defects)},
         )
         return planner_prompts.parse(r.raw, entries_, forbidden=proscritos)
@@ -731,7 +734,9 @@ class Composer:
             "escritor",
             prefix=packet.cacheable_prefix,
             packet=packet.body(),
-            instruction=writer_prompts.instruction(spec, previous),
+            instruction=writer_prompts.instruction(
+                spec, previous, min_words=self.brief.profile().scene_words[0]
+            ),
             schema="",
             parse=None,
             context={"chapter": spec.identity.chapter, "scene": spec.identity.ordinal},

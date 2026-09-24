@@ -90,7 +90,15 @@ def test_el_entorno_del_cli_no_lleva_langfuse_ni_otel() -> None:
             "HOME": "/home/x",
         }
     )
-    assert entorno == {"PATH": "/usr/bin", "HOME": "/home/x"}
+    assert entorno == {"PATH": "/usr/bin", "HOME": "/home/x", "MAX_THINKING_TOKENS": "0"}
+
+
+def test_el_cli_del_motor_no_razona_aunque_el_entorno_lo_pida() -> None:
+    """D-133. Sin razonamiento en ningun agente: el del proceso no se hereda."""
+    assert engine_env({"PATH": "/usr/bin", "MAX_THINKING_TOKENS": "31999"}) == {
+        "PATH": "/usr/bin",
+        "MAX_THINKING_TOKENS": "0",
+    }
 
 
 class _Proc:

@@ -71,7 +71,7 @@
           "length_profile": {
             "$ref": "#/components/schemas/LengthProfileName",
             "default": "novela",
-            "description": "T53. Perfil de extension: novela, o prueba para una obra minima"
+            "description": "T53, D-132. Perfil de extension: novela; prueba, una obra minima; o breve, diez capitulos de 1.000 a 1.500 palabras"
           },
           "origin_interview": {
             "anyOf": [
@@ -1445,7 +1445,8 @@
       "LengthProfileName": {
         "enum": [
           "novela",
-          "prueba"
+          "prueba",
+          "breve"
         ],
         "title": "LengthProfileName",
         "type": "string"
@@ -1933,6 +1934,19 @@
             "description": "`None` mientras la tirada no ha terminado",
             "title": "Closed"
           },
+          "cost_usd": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "RF-285. Coste en dolares de todas las llamadas a modelo de la novela, tambien las de la invocacion en curso; `None` si ninguna lo declaro",
+            "title": "Cost Usd"
+          },
           "error": {
             "default": "",
             "title": "Error",
@@ -1972,6 +1986,13 @@
           "running": {
             "title": "Running",
             "type": "boolean"
+          },
+          "writing_ms": {
+            "default": 0,
+            "description": "RF-285. Tiempo de redaccion: la suma, por invocacion, del reloj de su primer registro a su `work.cost`; la en curso, hasta ahora",
+            "minimum": 0.0,
+            "title": "Writing Ms",
+            "type": "integer"
           }
         },
         "required": [

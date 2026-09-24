@@ -839,6 +839,10 @@ UNSCORED: frozenset[str] = frozenset(
         "retcon.proposal",
         "retry",
         "scene.resumed",
+        # D-136. Lo que el modo permisivo acepto sin pasar la puerta.
+        "chapter.forced",
+        "replan.kept",
+        "scene.forced",
         "style.fingerprint",
         "style.polish",
         "summary",

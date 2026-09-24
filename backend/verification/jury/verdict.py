@@ -27,6 +27,7 @@ que no puede ejecutarse cuenta como fallida (`AGENTS.md` §5.3).
 
 from __future__ import annotations
 
+import re
 import statistics
 from collections.abc import Callable, Mapping, Sequence
 
@@ -136,7 +137,12 @@ class JuryVerdict(BaseModel):
 
 
 def _locate(
-    scene: str, quote: str, scene_texts: Mapping[str, str], *, min_words: int
+    scene: str,
+    quote: str,
+    scene_texts: Mapping[str, str],
+    *,
+    min_words: int,
+    salvage: bool = False,
 ) -> tuple[str, Evidence] | None:
     """Donde ancla la cita: en la escena que nombra, o en la unica que la contiene.
 
@@ -157,7 +163,21 @@ def _locate(
         for sid, t in scene_texts.items()
         if sid != scene and (e := evidence.anchor(t, quote, min_words=min_words)) is not None
     ]
-    return halladas[0] if len(halladas) == 1 else None
+    if len(halladas) == 1:
+        return halladas[0]
+    if salvage:
+        # D-136. Una cita recortada con puntos suspensivos ancla por su primer
+        # tramo que este literal y una sola vez: la evidencia sigue siendo una
+        # cita localizable, solo que mas corta que la que dio el juez.
+        for tramo in _CUT.split(quote):
+            sitio = _locate(scene, tramo.strip(" .,;:"), scene_texts, min_words=min_words)
+            if sitio is not None:
+                return sitio
+    return None
+
+
+#: Los cortes con que un juez recorta una cita: `...`, `…`, `[...]` y ` / `.
+_CUT = re.compile(r"\[\s*(?:\.\.\.|…)\s*\]|\.\.\.|…|\s/\s")
 
 
 def unanchored(
@@ -200,7 +220,13 @@ def anchor(
     for instancia, (semilla, veredicto) in sorted(verdicts.items()):
         vistas: set[Dimension] = set()
         for s in veredicto.scores:
-            sitio = _locate(s.scene, s.quote, scene_texts, min_words=profile.quote_min_words)
+            sitio = _locate(
+                s.scene,
+                s.quote,
+                scene_texts,
+                min_words=profile.quote_min_words,
+                salvage=profile.lenient,
+            )
             if sitio is None or s.dimension in vistas:
                 descartes.append((instancia, s.quote))
                 continue
@@ -224,15 +250,21 @@ def judge(
     *,
     dimensions: Sequence[Dimension] = tuple(Dimension),
     threshold: int = THRESHOLD,
+    lenient: bool = False,
 ) -> list[DimensionVerdict]:
     """RF-130, RF-131. Dispersion, validez y mediana por dimension, con el umbral
-    del perfil de la obra (D-128)."""
+    del perfil de la obra (D-128).
+
+    D-136. En modo permisivo una dimension tiene nivel con una sola puntuacion
+    anclada, y la dispersion no la invalida: es la mediana de las que haya.
+    """
     out: list[DimensionVerdict] = []
     for d in dimensions:
         propias = tuple(s for s in scores if s.dimension is d)
         niveles = [s.level for s in propias]
         rango = (max(niveles) - min(niveles)) if niveles else 0
-        valido = len(niveles) >= INSTANCES and rango < INVALID_SPREAD
+        estricto = len(niveles) >= INSTANCES and rango < INVALID_SPREAD
+        valido = bool(niveles) if lenient else estricto
         out.append(
             DimensionVerdict(
                 dimension=d,
@@ -272,9 +304,11 @@ def adjudicate(
     """
     umbral = profile.jury_threshold
     validas, descartes = anchor(run(seeds), scene_texts, profile=profile)
-    dims = judge(validas, dimensions=dimensions, threshold=umbral)
+    dims = judge(validas, dimensions=dimensions, threshold=umbral, lenient=profile.lenient)
     invalidas = [d.dimension for d in dims if not d.valid]
-    if not invalidas:
+    # D-136. En modo permisivo el veredicto no bloquea, asi que repetir las
+    # dimensiones invalidas costaria tres llamadas sin cambiar nada.
+    if not invalidas or profile.lenient:
         return JuryVerdict(dimensions=tuple(dims), discarded=tuple(descartes), threshold=umbral)
 
     otras = [s + 1_000 for s in seeds]

@@ -72,6 +72,14 @@ function RunFacts({ state }: { state: RunState }) {
         <dd>{state.quarantines}</dd>
       </div>
       <div>
+        <dt>Tiempo de redacción</dt>
+        <dd>{formatDuration(state.writing_ms ?? 0)}</dd>
+      </div>
+      <div>
+        <dt>Coste</dt>
+        <dd>{formatCost(state.cost_usd ?? null)}</dd>
+      </div>
+      <div>
         <dt>Condición de cierre</dt>
         <dd>
           {cierre}
@@ -80,6 +88,24 @@ function RunFacts({ state }: { state: RunState }) {
       </div>
     </dl>
   );
+}
+
+const USD = new Intl.NumberFormat("es", { style: "currency", currency: "USD" });
+
+/** RF-285. El coste de la novela en dolares, o una raya si ninguna llamada lo declaro. Pura. */
+export function formatCost(usd: number | null): string {
+  return usd === null ? "—" : USD.format(usd);
+}
+
+/** RF-285. El tiempo de redaccion, en horas, minutos y segundos. Pura. */
+export function formatDuration(ms: number): string {
+  const total = Math.max(0, Math.round(ms / 1000));
+  const h = Math.floor(total / 3600);
+  const min = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  if (h > 0) return `${h} h ${min} min`;
+  if (min > 0) return `${min} min ${s} s`;
+  return `${s} s`;
 }
 
 /** Los campos de un registro, como texto: son datos, no marcado (RI-53). Pura. */

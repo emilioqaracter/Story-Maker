@@ -363,14 +363,27 @@ def test_con_perfil_prueba_una_mediana_de_2_aprueba_y_con_novela_no() -> None:
     assert "por debajo de 3" in novela.defects()[0].rule
 
 
-def test_con_perfil_prueba_la_dispersion_sigue_invalidando() -> None:
-    """D-128. Solo baja el umbral: rango 2 sigue sin promediarse."""
+def test_con_perfil_prueba_la_dispersion_no_invalida_ni_repite() -> None:
+    """D-136. En `prueba`, permisivo, rango 2 no invalida: la mediana vale, y no
+    hay segunda ronda."""
     from commons.types.length import PRUEBA
 
     def run(_seeds: Sequence[int]) -> dict[str, tuple[int, InstanceVerdict]]:
         return {f"j{i}": (i, _instancia(_todas(n))) for i, n in enumerate((2, 4, 4), 1)}
 
     veredicto = adjudicate(run, {"c1e1": ESCENA}, seeds=[1, 2, 3], profile=PRUEBA)
+    assert veredicto.rounds == 1 and veredicto.passed
+    assert all(d.valid and d.level == 4 for d in veredicto.dimensions)
+
+
+def test_con_perfil_novela_la_dispersion_repite_la_segunda_ronda() -> None:
+    """RF-130. El perfil estricto conserva la segunda ronda que D-136 quita."""
+    from commons.types.length import NOVELA
+
+    def run(_seeds: Sequence[int]) -> dict[str, tuple[int, InstanceVerdict]]:
+        return {f"j{i}": (i, _instancia(_todas(n))) for i, n in enumerate((2, 4, 4), 1)}
+
+    veredicto = adjudicate(run, {"c1e1": ESCENA}, seeds=[1, 2, 3], profile=NOVELA)
     assert veredicto.rounds == 2 and not veredicto.passed
     assert all(not d.valid for d in veredicto.dimensions)
 
@@ -415,3 +428,41 @@ def test_el_prompt_del_juez_dice_el_minimo_de_su_perfil() -> None:
     assert "de 8 a 25" not in prueba
     assert prompts.system(NOVELA) == prompts.SYSTEM
     assert "UNA sola" not in prompts.SYSTEM
+
+
+def test_en_modo_permisivo_una_cita_recortada_ancla_por_su_primer_tramo() -> None:
+    """D-136. La cita con puntos suspensivos ancla por un tramo literal; con
+    `novela` se descarta como siempre."""
+    from commons.types.length import BREVE, NOVELA
+
+    recortada = "Marcos entró el último y nadie levantó la vista... la camiseta del nueve"
+    veredictos = {"j1": (1, _instancia(_todas(4), cita=recortada))}
+
+    validas, descartes = anchor(veredictos, {"c1e1": ESCENA}, profile=BREVE)
+    assert descartes == [] and len(validas) == len(Dimension)
+    assert all(v.evidence.quote in ESCENA and "..." not in v.evidence.quote for v in validas)
+
+    validas, descartes = anchor(veredictos, {"c1e1": ESCENA}, profile=NOVELA)
+    assert validas == [] and len(descartes) == len(Dimension)
+
+
+def test_en_modo_permisivo_una_dimension_con_un_voto_tiene_nivel() -> None:
+    """D-136. Una sola puntuacion anclada, o tres que dispersan, dan la mediana."""
+    from commons.types.length import BREVE
+
+    def solo_uno(_seeds: Sequence[int]) -> dict[str, tuple[int, InstanceVerdict]]:
+        return {
+            "j1": (1, _instancia(_todas(4))),
+            "j2": (2, _instancia(_todas(3), cita="esto no esta en la escena de ninguna forma")),
+            "j3": (3, _instancia(_todas(3), cita="esto tampoco esta en la escena para nada")),
+        }
+
+    veredicto = adjudicate(solo_uno, {"c1e1": ESCENA}, seeds=[1, 2, 3], profile=BREVE)
+    assert all(d.valid and d.level == 4 for d in veredicto.dimensions)
+    assert veredicto.passed
+
+    def dispersan(_seeds: Sequence[int]) -> dict[str, tuple[int, InstanceVerdict]]:
+        return {f"j{i}": (i, _instancia(_todas(n))) for i, n in enumerate((1, 3, 5), 1)}
+
+    veredicto = adjudicate(dispersan, {"c1e1": ESCENA}, seeds=[1, 2, 3], profile=BREVE)
+    assert all(d.valid and d.level == 3 for d in veredicto.dimensions)

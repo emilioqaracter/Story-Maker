@@ -20,6 +20,8 @@ export const RUN_CLOSED: Schemas["RunState"] = {
   reason: "",
   quarantines: 1,
   error: "",
+  cost_usd: 1.749587,
+  writing_ms: 673_720,
 };
 
 export const RUN_WRITING: Schemas["RunState"] = {

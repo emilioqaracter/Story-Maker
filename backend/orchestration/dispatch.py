@@ -115,7 +115,8 @@ def dispatch(
 
     # RF-235. Reloj monotono alrededor de la llamada entera, bucle de
     # herramientas incluido: es la latencia que ve el ciclo, no la del proveedor.
-    inicio = time.monotonic()
+    # `perf_counter` y no `monotonic`, que en Windows va a saltos de ~15 ms.
+    inicio = time.perf_counter()
     if tools:
         assert server is not None
         completion = port.complete_with_tools(
@@ -137,7 +138,7 @@ def dispatch(
             max_output_tokens=tope,
             json_schema=esquema_json,
         )
-    duracion = max(0, round((time.monotonic() - inicio) * 1000))
+    duracion = max(0, round((time.perf_counter() - inicio) * 1000))
 
     real = completion.usage.total_input
     harness = completion.harness_tokens

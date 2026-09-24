@@ -28,6 +28,18 @@ un rango de una constante: lo lee del perfil del brief.
   sigue en 8, y los verificadores deterministas no cambian. El conjunto dorado
   del cierre juzga un caso y no cinco (D-131): sigue ejercitandose, sin que el
   cierre cueste mas que la obra.
+- `breve`: la obra del encargo de la entrega (D-132). Exactamente diez
+  capitulos de una escena, escena y capitulo de 1.000 a 1.500 palabras, obra de
+  10.000 a 15.000. La escena cae dentro de EST-08; el capitulo, por debajo de
+  EST-07. Los actos los planifica el Arquitecto. Lo periodico corre cada cinco
+  capitulos, como en `novela`, y los resumenes usan los rangos de su nivel,
+  porque una escena de 1.250 palabras ya es mas larga que cualquier resumen. El
+  Jurado aprueba con mediana 2, como en `prueba`, y ancla citas de 8 palabras,
+  como `check.evidence`; el conjunto dorado juzga un caso por pasada.
+
+`breve` y `prueba` son ademas permisivos (D-136): el encargo mide que el ciclo
+produzca una obra completa, asi que una obra con defectos declarados en la
+traza vale mas que ninguna. `novela` sigue estricta.
 """
 
 from __future__ import annotations
@@ -39,6 +51,7 @@ from enum import StrEnum
 class LengthProfileName(StrEnum):
     NOVELA = "novela"
     PRUEBA = "prueba"
+    BREVE = "breve"
 
 
 @dataclass(frozen=True)
@@ -76,6 +89,10 @@ class LengthProfile:
     #: pasada. `novela`: 5. `prueba`: 1, porque corre al cierre y cada caso
     #: son tres jueces con sus correcciones de cita.
     golden_cases: int = 5
+    #: D-136. Aceptacion permisiva: la tirada prefiere congelar con defectos
+    #: declarados en la traza a parar. Solo bloquean los S1 deterministas y, aun
+    #: asi, agotada la reparacion se congela el mejor intento. `novela`: estricta.
+    lenient: bool = False
 
     def typical_chapter(self) -> int:
         """El punto medio del rango de capitulo: lo que mide un capitulo tipico."""
@@ -115,9 +132,23 @@ PRUEBA = LengthProfile(
     jury_threshold=2,
     quote_min_words=5,
     golden_cases=1,
+    lenient=True,
 )
 
-PROFILES: dict[LengthProfileName, LengthProfile] = {p.name: p for p in (NOVELA, PRUEBA)}
+BREVE = LengthProfile(
+    name=LengthProfileName.BREVE,
+    # D-132. Un capitulo es su unica escena: su rango es el de la escena.
+    chapter_words=(1_000, 1_500),
+    scene_words=(1_000, 1_500),
+    work_words=(10_000, 15_000),
+    chapters=10,
+    scenes_per_chapter=1,
+    jury_threshold=2,
+    golden_cases=1,
+    lenient=True,
+)
+
+PROFILES: dict[LengthProfileName, LengthProfile] = {p.name: p for p in (NOVELA, PRUEBA, BREVE)}
 
 #: Los limites de escena de todos los perfiles juntos. Es lo que admite el
 #: esquema de una entrada de escaleta; el rango del perfil de la obra lo

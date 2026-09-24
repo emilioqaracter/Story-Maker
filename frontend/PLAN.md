@@ -42,7 +42,7 @@ Medido el 2026-09-23 sobre la rama `v2-oneshot`:
 |---|---|---|---|
 | `POST /novels` | RI-01 | Identificador y hechos cargados; el brief lleva destinatario, dedicatoria y prohibiciones, y uno contradictorio se rechaza con la lista (RI-41) | T29 |
 | `POST /novels/{id}/run` | RI-02 | Arranque idempotente | T29 |
-| `GET /novels/{id}` | RI-03 | `running`, `chapter_in_progress`, `last_closed_scene`, `frozen_chapters`, `closed`, `quarantines` | T27, T28 |
+| `GET /novels/{id}` | RI-03 | `running`, `chapter_in_progress`, `last_closed_scene`, `frozen_chapters`, `closed`, `quarantines`, `cost_usd` y `writing_ms` (`specs/srs-backend-v4.md` RF-285) | T27, T28 |
 | `GET /novels/{id}/chapters` | RI-04 | Número, escenas, palabras y el instante de mundo en que termina cada capítulo. **Sin título** | T27, T28 |
 | `GET /novels/{id}/chapters/{n}` | RI-05 | Escenas con `scene_number`, POV y texto. La lectura ya no la usa: lee RI-44 | — |
 | `GET /novels/{id}/state?at=` | RI-06 | Fichas de entidad y relaciones vigentes en el instante `at` (MUN-10) | T28 |
@@ -201,7 +201,7 @@ manuscript/
 backend/canon/skills/read.py  · `WorldState` lleva las relaciones vigentes en su instante (MUN-10); `Relation` con su vigencia
 backend/canon/routes.py       · RI-04 dice en qué instante termina cada capítulo, y cuenta escenas y no fragmentos
 run-health/
-├── Status.tsx                · RI-03 y los últimos registros de RI-27, sondeados mientras la obra no esté cerrada (RF-198)
+├── Status.tsx                · RI-03 y los últimos registros de RI-27, sondeados mientras la obra no esté cerrada (RF-198); tiempo de redacción y coste con `formatDuration` y `formatCost` (`srs-backend-v4.md` RF-285)
 └── Status.test.tsx           · estado y traza en lectura; sondeo a intervalo fijo que para al cerrarse (D-59)
 narrative-debt/
 ├── Debt.tsx                  · setups abiertos de RI-07 con su estado; no calcula nada (RF-197)
