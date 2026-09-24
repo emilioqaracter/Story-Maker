@@ -1,0 +1,42 @@
+{
+ "brief": {
+  "title": "La barca de Olmedal",
+  "start": {"stamp": "2026-08-01", "seq": 0},
+  "entities": [
+   {"id": "ines", "kind": "person", "name": "Inés", "attributes": [["edad", "11"]]},
+   {"id": "tito", "kind": "person", "name": "Tito"},
+   {"id": "embarcadero", "kind": "place", "name": "el embarcadero de Olmedal"}
+  ],
+  "style_guide": "Tercera persona, pasado.",
+  "target_words": 2000,
+  "dedication": "Para una lectora inventada"
+ },
+ "chapters": [
+  {
+   "chapter": 1,
+   "scenes": [
+    {
+     "id": "c1e1",
+     "text": "Inés bajó al embarcadero antes de que saliera el sol. La barca de su abuelo seguía atada al poste, con la pintura azul levantada en las esquinas. Tito la esperaba sentado en el muelle con los remos cruzados sobre las rodillas."
+    },
+    {
+     "id": "c1e2",
+     "text": "Remaron sin hablar hasta el centro del lago. El agua estaba tan quieta que la barca parecía flotar sobre un espejo. Cuando Tito por fin preguntó si tenía miedo, Inés contestó que el miedo se quedaba en la orilla."
+    }
+   ]
+  },
+  {
+   "chapter": 2,
+   "scenes": [
+    {
+     "id": "c2e1",
+     "text": "La tormenta llegó por el oeste sin avisar a nadie. Inés sujetó el remo con las dos manos y contó las olas en voz baja. Tito achicaba agua con la lata de galletas que siempre llevaban en la proa."
+    },
+    {
+     "id": "c2e2",
+     "text": "Llegaron al embarcadero empapados y riéndose de algo que ninguno de los dos recordaría después. Inés ató la barca con el nudo que le había enseñado su abuelo y lo apretó dos veces para estar segura."
+    }
+   ]
+  }
+ ]
+}

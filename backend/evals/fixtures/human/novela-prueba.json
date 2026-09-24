@@ -1,0 +1,161 @@
+{
+ "novel": "novela-prueba",
+ "reviewer": "revisor 1",
+ "manuscript_version": 1,
+ "instructions": "Lectura humana fuera del ciclo: la novela ya esta congelada y esta lectura no la cambia. Por cada capitulo y cada dimension, un nivel del 1 al 5 con la rubrica de este mismo fichero (el 3 es cumple), la escena que lo justifica, una cita literal de esa escena de al menos 8 palabras que aparezca una sola vez, y la justificacion. El revisor va por su papel, nunca por su nombre.",
+ "rubrics": {
+  "version": 1,
+  "rubrics": [
+   {
+    "dimension": "voice",
+    "skill": "voice.audit",
+    "question": "¿Cada personaje habla y piensa con su idiolecto, distinto del de los demas?",
+    "levels": [
+     "Las voces son intercambiables: cualquier linea podria decirla cualquiera.",
+     "Se distingue el narrador de los personajes, pero los personajes suenan igual entre si.",
+     "Cada POV tiene marcas propias reconocibles; hay alguna linea neutra que no las lleva.",
+     "Las voces se distinguen sin atribucion; el idiolecto se sostiene en toda la escena.",
+     "Cada linea solo podria ser de quien la dice, y la voz cambia cuando el personaje cambia."
+    ]
+   },
+   {
+    "dimension": "style_guide",
+    "skill": "voice.audit",
+    "question": "¿El texto cumple la guia de estilo de la obra en lo que no se cuenta con codigo?",
+    "levels": [
+     "Ignora la guia: valoraciones, cliches y registro contrarios en casi todos los parrafos.",
+     "Cumple la letra en algunos pasajes y la contradice en otros.",
+     "Cumple la guia; alguna frase se le escapa hacia el cliche o la valoracion.",
+     "Cumple la guia en todo el capitulo sin que se note el esfuerzo.",
+     "La guia esta interiorizada: el capitulo podria servir de ejemplo de ella."
+    ]
+   },
+   {
+    "dimension": "pacing",
+    "skill": "pacing.audit",
+    "question": "¿El capitulo sostiene la tension y cada escena cambia un valor?",
+    "levels": [
+     "Nada cambia: escenas que repiten el estado inicial o lo resumen.",
+     "Hay cambio, pero se cuenta en vez de mostrarse, o llega sin preparacion.",
+     "Cada escena cambia su valor declarado; hay algun tramo que se estanca.",
+     "El ritmo acompana al cambio: se acelera y se detiene donde la escena lo pide.",
+     "Cada parrafo empuja; el cierre obliga a seguir leyendo."
+    ]
+   },
+   {
+    "dimension": "subtext",
+    "skill": "subtext.audit",
+    "question": "¿El dialogo dice mas de lo que dice, o lo explica todo?",
+    "levels": [
+     "Los personajes enuncian lo que sienten y lo que quieren, literalmente.",
+     "Hay alguna intencion oculta, pero el narrador la explica despues.",
+     "El dialogo lleva intenciones que no se nombran; alguna se subraya de mas.",
+     "Lo importante se dice por omision o por desvio, y el lector lo entiende.",
+     "Cada intercambio tiene una capa que solo se lee al terminar la escena."
+    ]
+   },
+   {
+    "dimension": "theme",
+    "skill": "theme.audit",
+    "question": "¿El capitulo trabaja los motivos de la obra sin anunciarlos?",
+    "levels": [
+     "No hay motivo reconocible, o se enuncia como moraleja.",
+     "El motivo aparece, pero decorativo, sin relacion con lo que pasa.",
+     "El motivo acompana a la accion; en algun momento se explica de mas.",
+     "La accion y el motivo son lo mismo: lo que pasa es lo que significa.",
+     "El capitulo resignifica un motivo anterior sin nombrarlo."
+    ]
+   }
+  ]
+ },
+ "chapters": [
+  {
+   "chapter": 1,
+   "scenes": [
+    "c1e1",
+    "c1e2"
+   ],
+   "scores": [
+    {
+     "dimension": "voice",
+     "level": 3,
+     "scene": "c1e2",
+     "quote": "Cuando Tito por fin preguntó si tenía miedo, Inés contestó que el miedo se quedaba en la orilla",
+     "justification": "Tito e Inés se distinguen en lo poco que dicen."
+    },
+    {
+     "dimension": "style_guide",
+     "level": 4,
+     "scene": "c1e1",
+     "quote": "La barca de su abuelo seguía atada al poste, con la pintura azul",
+     "justification": "Pasado y tercera persona sin valoraciones del narrador."
+    },
+    {
+     "dimension": "pacing",
+     "level": 1,
+     "scene": "c1e1",
+     "quote": "La barca de su abuelo seguía atada al poste, con la pintura azul",
+     "justification": "El tramo se detiene donde la escena pide avanzar."
+    },
+    {
+     "dimension": "subtext",
+     "level": 4,
+     "scene": "c1e2",
+     "quote": "Cuando Tito por fin preguntó si tenía miedo, Inés contestó que el miedo se quedaba en la orilla",
+     "justification": "El miedo se nombra sin explicarlo."
+    },
+    {
+     "dimension": "theme",
+     "level": 3,
+     "scene": "c1e2",
+     "quote": "Cuando Tito por fin preguntó si tenía miedo, Inés contestó que el miedo se quedaba en la orilla",
+     "justification": "El nudo del abuelo vuelve sin anunciarse."
+    }
+   ]
+  },
+  {
+   "chapter": 2,
+   "scenes": [
+    "c2e1",
+    "c2e2"
+   ],
+   "scores": [
+    {
+     "dimension": "voice",
+     "level": 4,
+     "scene": "c2e1",
+     "quote": "Tito achicaba agua con la lata de galletas que siempre llevaban en la proa",
+     "justification": "Tito e Inés se distinguen en lo poco que dicen."
+    },
+    {
+     "dimension": "style_guide",
+     "level": 4,
+     "scene": "c2e2",
+     "quote": "Inés ató la barca con el nudo que le había enseñado su abuelo",
+     "justification": "Pasado y tercera persona sin valoraciones del narrador."
+    },
+    {
+     "dimension": "pacing",
+     "level": 3,
+     "scene": "c2e1",
+     "quote": "Tito achicaba agua con la lata de galletas que siempre llevaban en la proa",
+     "justification": "El tramo se detiene donde la escena pide avanzar."
+    },
+    {
+     "dimension": "subtext",
+     "level": 3,
+     "scene": "c2e2",
+     "quote": "Inés ató la barca con el nudo que le había enseñado su abuelo",
+     "justification": "El miedo se nombra sin explicarlo."
+    },
+    {
+     "dimension": "theme",
+     "level": 5,
+     "scene": "c2e2",
+     "quote": "Inés ató la barca con el nudo que le había enseñado su abuelo",
+     "justification": "El nudo del abuelo vuelve sin anunciarse."
+    }
+   ]
+  }
+ ]
+}
