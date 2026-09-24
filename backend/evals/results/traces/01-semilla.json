@@ -1,0 +1,69 @@
+{
+ "brief": "01-semilla",
+ "commit": "8deed8d",
+ "source": "t52-01.trace.jsonl",
+ "records": [
+  {
+   "seq": 3,
+   "at": "2026-09-24T14:45:48+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "arquitecto",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "e2250fb4ccf0"
+   },
+   "prev_hash": "18f2d4520276a48a2c169b7be0ef88d5e45d800d1b28c82109fc9ebccae8f5d3"
+  },
+  {
+   "seq": 5,
+   "at": "2026-09-24T14:45:48+00:00",
+   "kind": "outline.check",
+   "fields": {
+    "defects": [
+     "doble-arco-colapsado"
+    ],
+    "passed": false,
+    "messages": [
+     "doble-arco-colapsado [c3e1]: los arcos 'competitivo' y 'interno' se resuelven en la misma escena; la victoria explicaria el cambio interior y lo abarataria"
+    ]
+   },
+   "prev_hash": "50094a833001b2b88fff0b45cde6961a3fff08d769cc9fb506c7ff9201eebda3"
+  },
+  {
+   "seq": 8,
+   "at": "2026-09-24T14:46:25+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "arquitecto",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "e2250fb4ccf0"
+   },
+   "prev_hash": "8e7ad08a635241804105017ac0f0ed1f04739667060c5eb1fc1e103b65dab802"
+  },
+  {
+   "seq": 10,
+   "at": "2026-09-24T14:46:25+00:00",
+   "kind": "outline.check",
+   "fields": {
+    "defects": [],
+    "passed": true,
+    "messages": []
+   },
+   "prev_hash": "27301937ac5e3a7dc286dd810939338962cd3a0937efe73fc2bf9a36a06b611a"
+  },
+  {
+   "seq": 12,
+   "at": "2026-09-24T14:47:05+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "planificador",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "31545ca9b935"
+   },
+   "prev_hash": "f1793d4ff824ef22f3ac32c9868e16af4bf0acb3045319d51999014a4c466865"
+  }
+ ]
+}

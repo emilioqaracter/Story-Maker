@@ -1,0 +1,476 @@
+{
+ "brief": "03-temporal",
+ "commit": "8deed8d",
+ "source": "t52-03.trace.jsonl",
+ "records": [
+  {
+   "seq": 3,
+   "at": "2026-09-24T14:45:52+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "arquitecto",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "e2250fb4ccf0"
+   },
+   "prev_hash": "d1af1e7a0d4804fd968d9300aa019db92d3e7fc28bc217fae61ca4ea83f75e00"
+  },
+  {
+   "seq": 5,
+   "at": "2026-09-24T14:45:52+00:00",
+   "kind": "outline.check",
+   "fields": {
+    "defects": [
+     "doble-arco-colapsado",
+     "elemento-sin-cobro",
+     "elemento-sin-cobro",
+     "elemento-sin-cobro"
+    ],
+    "passed": false,
+    "messages": [
+     "doble-arco-colapsado [c3e1]: los arcos 'competitivo' y 'interno' se resuelven en la misma escena; la victoria explicaria el cambio interior y lo abarataria",
+     "elemento-sin-cobro [trait-1]: el elemento obligatorio trait-1 «tenaz» no tiene setup 'element.trait-1' con escena de cobro en la escaleta",
+     "elemento-sin-cobro [memory-1]: el elemento obligatorio memory-1 «el 14 de marzo de 2015 su abuelo Chema le enseñó a atarse las zapatillas en la p» no tiene setup 'element.memory-1' con escena de cobro en la escaleta",
+     "elemento-sin-cobro [memory-2]: el elemento obligatorio memory-2 «la final del 31 de junio en que el Atlético Valdeolmos ganó el relevo» no tiene setup 'element.memory-2' con escena de cobro en la escaleta"
+    ]
+   },
+   "prev_hash": "2876f276abddedf722382fefc893f1075340ddea60b6b3a4c82d32bd06e76dbc"
+  },
+  {
+   "seq": 8,
+   "at": "2026-09-24T14:46:34+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "arquitecto",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "e2250fb4ccf0"
+   },
+   "prev_hash": "291ca1c2e599a682f2e2c148597b52900df1c7ef10eba1e11e2412acb84835ae"
+  },
+  {
+   "seq": 10,
+   "at": "2026-09-24T14:46:34+00:00",
+   "kind": "outline.check",
+   "fields": {
+    "defects": [],
+    "passed": true,
+    "messages": []
+   },
+   "prev_hash": "b92244cbacfc4e310926557dd1ebcc124cfb1db71e7fb882cef17b61c5d69fbd"
+  },
+  {
+   "seq": 12,
+   "at": "2026-09-24T14:46:56+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "planificador",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "31545ca9b935"
+   },
+   "prev_hash": "b8e7389e88177fb8751c12c16144d78e844386e68007ff9733a9e07e674f9b8d"
+  },
+  {
+   "seq": 16,
+   "at": "2026-09-24T14:47:17+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "escritor",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "dbda0b47f468"
+   },
+   "prev_hash": "5c5acddb24b7de4fb608782d07827d0ac021b0928bb248a7f9c6ab026d9606c7"
+  },
+  {
+   "seq": 19,
+   "at": "2026-09-24T14:47:17+00:00",
+   "kind": "scene.attempt",
+   "fields": {
+    "chapter": 1,
+    "scene": 1,
+    "attempt": 1,
+    "words": 441,
+    "defects": [
+     "check.timeline:S1"
+    ],
+    "passed": false,
+    "is_match": false
+   },
+   "prev_hash": "d6a57fd93f080ebdc228eefa33d5d18ac20925962ed39b226708155c4db6638b"
+  },
+  {
+   "seq": 23,
+   "at": "2026-09-24T14:47:38+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "escritor",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "dbda0b47f468"
+   },
+   "prev_hash": "72279dbeb92d714c031b90d0494729826fb40640459256c54277e72cf7cfc205"
+  },
+  {
+   "seq": 26,
+   "at": "2026-09-24T14:47:38+00:00",
+   "kind": "scene.attempt",
+   "fields": {
+    "chapter": 1,
+    "scene": 1,
+    "attempt": 2,
+    "words": 452,
+    "defects": [
+     "check.format:S1",
+     "check.format:S1"
+    ],
+    "passed": false,
+    "is_match": false
+   },
+   "prev_hash": "1b7ce601d059f7b9e14c0a7f26d6b14dfd806c632e7beef5b8cb351a0d8fb1cf"
+  },
+  {
+   "seq": 30,
+   "at": "2026-09-24T14:47:56+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "escritor",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "dbda0b47f468"
+   },
+   "prev_hash": "f3c6a15d2e95dc68883f9790eaf417ed1dfda2cafc7c6f85de29e21f45d7a0da"
+  },
+  {
+   "seq": 33,
+   "at": "2026-09-24T14:47:56+00:00",
+   "kind": "scene.attempt",
+   "fields": {
+    "chapter": 1,
+    "scene": 1,
+    "attempt": 3,
+    "words": 413,
+    "defects": [
+     "check.format:S1",
+     "check.timeline:S1",
+     "check.timeline:S1"
+    ],
+    "passed": false,
+    "is_match": false
+   },
+   "prev_hash": "df46a38c56124579bdb845fcc76376f9108eedb501e799db0ada6266d8a8f4b5"
+  },
+  {
+   "seq": 36,
+   "at": "2026-09-24T14:48:28+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "planificador",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "31545ca9b935"
+   },
+   "prev_hash": "3b5b91ffd794c9121d7852b8624dc030bfa1834fba1f718962b15c514416102e"
+  },
+  {
+   "seq": 41,
+   "at": "2026-09-24T14:48:47+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "escritor",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "dbda0b47f468"
+   },
+   "prev_hash": "c05300e718854f0d56b578c076ddcce9c65ff112171a369b41a3860980757e23"
+  },
+  {
+   "seq": 44,
+   "at": "2026-09-24T14:48:47+00:00",
+   "kind": "scene.attempt",
+   "fields": {
+    "chapter": 1,
+    "scene": 1,
+    "attempt": 4,
+    "words": 484,
+    "defects": [
+     "check.format:S1"
+    ],
+    "passed": false,
+    "is_match": false
+   },
+   "prev_hash": "37cec2f5dffc97d1283fcb198f6151aa24d7bc8e92d595919d3e30d00ecb3de2"
+  },
+  {
+   "seq": 48,
+   "at": "2026-09-24T14:49:06+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "escritor",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "dbda0b47f468"
+   },
+   "prev_hash": "c4acea65c760b8cc2f282d10226e560de682c12b82f7fc2a8fb553ef6f39f889"
+  },
+  {
+   "seq": 51,
+   "at": "2026-09-24T14:49:06+00:00",
+   "kind": "scene.attempt",
+   "fields": {
+    "chapter": 1,
+    "scene": 1,
+    "attempt": 5,
+    "words": 425,
+    "defects": [],
+    "passed": true,
+    "is_match": false
+   },
+   "prev_hash": "bda0d4f4437bd344c780a9aeb4d68c0060cbec154d2becc0a1410a03795c9bdf"
+  },
+  {
+   "seq": 53,
+   "at": "2026-09-24T14:50:07+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "continuista",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "9c50294cc3c5"
+   },
+   "prev_hash": "32c7875a562bd9fd4f8d16385cb04d17ebcf5045342feb279b3b49a987f7f0bd"
+  },
+  {
+   "seq": 58,
+   "at": "2026-09-24T14:50:34+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "lector",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "cdada6a08b9d"
+   },
+   "prev_hash": "8518b70ca9b8486eda532822052de9a13caecd4059413d033bd6723732033a45"
+  },
+  {
+   "seq": 60,
+   "at": "2026-09-24T14:50:34+00:00",
+   "kind": "quiz",
+   "fields": {
+    "chapter": 1,
+    "questions": 3,
+    "wrong": 1
+   },
+   "prev_hash": "9207e9a1ca733e28795297a150cf7ea0897acb64a7354539d3085916dfc6fd67"
+  },
+  {
+   "seq": 61,
+   "at": "2026-09-24T14:50:34+00:00",
+   "kind": "chapter.gate",
+   "fields": {
+    "chapter": 1,
+    "passed": true,
+    "s1": 0,
+    "s2": 1,
+    "reason": "pasa",
+    "defects": [
+     "S2:quiz: el capitulo no transmite lo que se encargo: a «¿Que personajes estan presentes en la escena 1? Nombra a todos.» se esper «Iria bajó de las gradas con el uniforme del Atlético Valdeol»"
+    ]
+   },
+   "prev_hash": "e05c422922fa6a6ebe772182184ed968fba402b42ac6204cceb2c45cb4e85205"
+  },
+  {
+   "seq": 65,
+   "at": "2026-09-24T14:51:35+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "4f9e23e790d5"
+   },
+   "prev_hash": "2a053e13fa217f272e5811c822c1f03a9295b2a5bdd4b2b63fa8b636f9e9062a"
+  },
+  {
+   "seq": 67,
+   "at": "2026-09-24T14:51:43+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "4f9e23e790d5"
+   },
+   "prev_hash": "1789f4dc0b58ea195fbb3b4c9fe7d1246d1d1a3d1b68720cc8636129f3638ca7"
+  },
+  {
+   "seq": 71,
+   "at": "2026-09-24T14:51:53+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "4f9e23e790d5"
+   },
+   "prev_hash": "1fbf18de35f62a3d73a06f640a31c5aa4a582d05c51ed25c122038e7ba9eec1a"
+  },
+  {
+   "seq": 75,
+   "at": "2026-09-24T14:52:51+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "4f9e23e790d5"
+   },
+   "prev_hash": "d7bca081813c868386d34d68058986bfd1ce4933fdff00638ccfdc580d884785"
+  },
+  {
+   "seq": 79,
+   "at": "2026-09-24T14:53:23+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "4f9e23e790d5"
+   },
+   "prev_hash": "130d70534e1cf9bb86f08f30cbeef2af4cba55be76f63916a7eb27e978243a0b"
+  },
+  {
+   "seq": 83,
+   "at": "2026-09-24T14:53:50+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "4f9e23e790d5"
+   },
+   "prev_hash": "7e37453819b16e6346e5bae772a0f4576026c085afbcec471d3546bb8c1d8013"
+  },
+  {
+   "seq": 85,
+   "at": "2026-09-24T14:54:27+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "4f9e23e790d5"
+   },
+   "prev_hash": "b0e5d173372373dd70a13c75c86ce62e186895ea8e312a1439e08d9d0273a11e"
+  },
+  {
+   "seq": 90,
+   "at": "2026-09-24T14:55:28+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "4f9e23e790d5"
+   },
+   "prev_hash": "20ab6813ba837854905e707d07dfe506b8bbb0bdc85fb072351efba297e5a2b6"
+  },
+  {
+   "seq": 94,
+   "at": "2026-09-24T14:55:36+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "4f9e23e790d5"
+   },
+   "prev_hash": "24682d605792cf2ef4f9515c342e1349c1f3dacaa818f0c0b36383915693dc43"
+  },
+  {
+   "seq": 98,
+   "at": "2026-09-24T14:55:57+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "4f9e23e790d5"
+   },
+   "prev_hash": "4c81b73559960b998f067230bbfbbd62fe854bbe5ce50251c886ded07048a4af"
+  },
+  {
+   "seq": 102,
+   "at": "2026-09-24T14:56:32+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "4f9e23e790d5"
+   },
+   "prev_hash": "a3bfd31ff1c9c8089a30b9542b520af209bbd139c4e8fb036fb6021a1e23ff11"
+  },
+  {
+   "seq": 106,
+   "at": "2026-09-24T14:56:40+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "4f9e23e790d5"
+   },
+   "prev_hash": "1994553703231df2555cc5593cd87178b86b6e7724be6b110e8063affadc1d38"
+  },
+  {
+   "seq": 110,
+   "at": "2026-09-24T14:57:51+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "4f9e23e790d5"
+   },
+   "prev_hash": "c5808c3727a24fd0e0c4b772d5c46e1b7a8ae838f61f70db31700daf0ccfc50c"
+  },
+  {
+   "seq": 114,
+   "at": "2026-09-24T14:58:12+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": false,
+    "prompt_version": "4f9e23e790d5"
+   },
+   "prev_hash": "2703f0c9f5e9737a5a78b315374afa07a5731cb369b2a76a35b66a060b0fc0f7"
+  },
+  {
+   "seq": 117,
+   "at": "2026-09-24T14:58:44+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "4f9e23e790d5"
+   },
+   "prev_hash": "a098a6d5b65ea0485c84ecd5b26559e7da533672032ced51dacbd3f17d2cc43c"
+  },
+  {
+   "seq": 119,
+   "at": "2026-09-24T14:59:24+00:00",
+   "kind": "call",
+   "fields": {
+    "agent": "juez",
+    "model": "claude-haiku-4-5-20251001",
+    "ok": true,
+    "prompt_version": "4f9e23e790d5"
+   },
+   "prev_hash": "a2ac0db57706aa1ab2ebf0029c77c6b612146db60b748f757a4cf9980fd0949e"
+  }
+ ]
+}
