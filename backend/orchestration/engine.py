@@ -27,8 +27,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, JsonValue
 
+from brief import extract as brief_extract
+from brief import interpret as brief_interpret
 from canon.arbiter import entries, refreeze
 from canon.arbiter import retcon as retcon_rules
 from canon.arbiter.precedence import Claim
@@ -161,6 +163,19 @@ _COMMON_CAPITALS = frozenset(
 )
 
 
+#: RF-265. Los verificadores deterministas que corren sobre toda escena, y los
+#: que se anaden en una de partido. Son los `kind` de sus defectos.
+SCENE_CHECKS = (
+    "check.format",
+    "check.timeline",
+    forbidden.KIND,
+    "check.repetition",
+    "check.lexicon",
+    "check.knowledge",
+)
+MATCH_CHECKS = ("check.ledger", "check.availability")
+
+
 #: RI-34. Los modulos de prompt de cada agente: su instruccion de sistema y sus
 #: plantillas de instruccion viven ahi y en ningun otro sitio.
 PROMPT_MODULES: dict[str, tuple[Any, ...]] = {
@@ -202,6 +217,33 @@ def supervisor_summaries(
     return out
 
 
+#: RF-262. Los dos agentes del entrevistador. No llevan ancla ni invariantes:
+#: su version es el hash de su modulo, el mismo que dejan en su registro `call`.
+INTERVIEWER_MODULES: dict[str, tuple[Any, ...]] = {
+    "brief.extract": (brief_extract,),
+    "amend.interpret": (brief_interpret,),
+}
+
+
+def prompt_sources(agent: str) -> list[tuple[str, bytes]]:
+    """RI-34, RF-266. Lo que forma el prompt de un agente, en orden, con su origen.
+
+    Es lo que se hashea para `prompt_version` y lo que `prompts_sync` publica:
+    una sola lista para las dos cosas, o la etiqueta dejaria de nombrar el texto.
+    """
+    if agent in INTERVIEWER_MODULES:
+        partes: list[tuple[str, bytes]] = []
+        modulos = INTERVIEWER_MODULES[agent]
+    else:
+        partes = [("INVARIANTS", INVARIANTS.encode("utf-8"))]
+        modulos = PROMPT_MODULES.get(agent, ())
+    raiz = Path(__file__).resolve().parent.parent
+    for mod in modulos:
+        ruta = Path(mod.__file__).resolve()
+        partes.append((ruta.relative_to(raiz).as_posix(), ruta.read_bytes()))
+    return partes
+
+
 def prompt_version(agent: str) -> str:
     """RI-34. Hash del prefijo estable y de la plantilla de instruccion del agente.
 
@@ -210,9 +252,9 @@ def prompt_version(agent: str) -> str:
     el la version cambiaria sin que cambiara el prompt. Dos tiradas con la
     misma version usaron el mismo texto de instrucciones; nada mas lo asegura.
     """
-    h = hashlib.sha256(INVARIANTS.encode("utf-8"))
-    for mod in PROMPT_MODULES.get(agent, ()):
-        h.update(Path(mod.__file__).read_bytes())
+    h = hashlib.sha256()
+    for _origen, contenido in prompt_sources(agent):
+        h.update(contenido)
     return h.hexdigest()[:12]
 
 
@@ -294,6 +336,12 @@ class Composer:
                 at=at or self.brief.start,
                 estimate=self.counter,
                 model_id=self.model_id,
+                # RF-264: cada herramienta queda trazada con la llamada que la pidio.
+                trace=self.trace,
+                context={
+                    "agent": agent,
+                    **{k: v for k, v in context.items() if isinstance(v, str | int | bool | float)},
+                },
             )
         # RI-18: una salida que no encaja cuenta como llamada fallida y consume
         # un reintento. Se le devuelve al modelo que fallo, no solo que fallo:
@@ -783,7 +831,26 @@ class Composer:
                 erratas.add(w)
         return sorted({w for w, n in vistos.items() if n >= 2} | erratas)
 
+    def _checked(self, spec: SceneSpec, ran: Sequence[str], defects: list[Defect]) -> list[Defect]:
+        """RF-265. Que verificadores corrieron sobre la escena y cuales marcaron.
+
+        `check.<kind>` es un booleano por intento de escena: sin la lista de los
+        que corrieron, un verificador que pasa no se distingue de uno que no se
+        llamo.
+        """
+        self.trace.emit(
+            "scene.checks",
+            chapter=spec.identity.chapter,
+            scene=spec.identity.ordinal,
+            ran=list[JsonValue](ran),
+            failed=list[JsonValue](sorted({d.kind for d in defects})),
+        )
+        return defects
+
     def verify_scene(self, spec: SceneSpec, text: str) -> list[Defect]:
+        return self._checked(spec, SCENE_CHECKS, self._scene_defects(spec, text))
+
+    def _scene_defects(self, spec: SceneSpec, text: str) -> list[Defect]:
         with connection.reader(self.path) as con:
             # RF-236, D-91. Las prohibidas de los tres niveles van a
             # `check.forbidden`, S1; a `check.repetition` solo le queda lo de
@@ -823,7 +890,7 @@ class Composer:
 
     def verify_match(self, spec: SceneSpec, text: str, result: MatchResult) -> list[Defect]:
         nombres = self._names()
-        defectos = self.verify_scene(spec, text)
+        defectos = self._scene_defects(spec, text)
         defectos += checks.check_ledger(
             text,
             expected_score=narrate_prompts.expected_score(result),
@@ -843,7 +910,7 @@ class Composer:
             and c.entity_id not in result.injuries
         ]
         defectos += checks.check_availability(text, unavailable=indisponibles)
-        return defectos
+        return self._checked(spec, (*SCENE_CHECKS, *MATCH_CHECKS), defectos)
 
     # ------------------------------------------------------------ Continuista
 

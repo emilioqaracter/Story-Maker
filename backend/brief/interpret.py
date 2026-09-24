@@ -10,14 +10,19 @@ La peticion es texto de persona y no confiable: va en el paquete, delimitada.
 
 Presupuesto (D-80): 4.500 de la cita, 1.600 de fichas, 500 de peticion y 500 de
 instruccion; salida 500.
+
+**Traza** (RF-262). Como `brief.extract`, el interprete real recuerda cada llamada
+en `calls`, y quien crea la solicitud la escribe en la traza de la novela con el
+numero de solicitud, que todavia no existe cuando se interpreta.
 """
 
 from __future__ import annotations
 
 import json
+import time
 from collections.abc import Callable, Sequence
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, ValidationError
 
 from canon.brief_rules import fold
 from canon.manuscript import Interpretation
@@ -144,14 +149,26 @@ def check_budget(
         )
 
 
-def model_interpreter(port: ProviderPort, counter: TokenCounter, model_id: str) -> Interpreter:
-    """El interprete real sobre el puerto. Lo compone la raiz de composicion (RI-59)."""
+AGENT = "amend.interpret"
 
-    def interpret(
-        request_text: str, anchor: str, candidates: Sequence[Candidate]
+
+class ModelInterpreter:
+    """El interprete real sobre el puerto. Recuerda sus llamadas en `calls` (RF-262)."""
+
+    def __init__(self, port: ProviderPort, counter: TokenCounter, model_id: str) -> None:
+        self._port = port
+        self._counter = counter
+        self._model_id = model_id
+        self.calls: list[dict[str, JsonValue]] = []
+
+    def __call__(
+        self, request_text: str, anchor: str, candidates: Sequence[Candidate]
     ) -> RawInterpretation:
-        check_budget(counter, model_id, request_text, anchor, candidates)
-        c = port.complete_once(
+        from brief.extract import call_fields, prompt_version
+
+        check_budget(self._counter, self._model_id, request_text, anchor, candidates)
+        inicio = time.monotonic()
+        c = self._port.complete_once(
             cacheable_prefix=SYSTEM,
             packet=packet(request_text, anchor, candidates),
             instruction=INSTRUCTION,
@@ -159,9 +176,29 @@ def model_interpreter(port: ProviderPort, counter: TokenCounter, model_id: str) 
             max_output_tokens=OUTPUT_TOKENS,
             json_schema=json.dumps(RawInterpretation.model_json_schema()),
         )
-        return parse(c.text)
+        duracion = max(0, round((time.monotonic() - inicio) * 1000))
+        error: str | None = None
+        try:
+            return parse(c.text)
+        except ValueError as exc:
+            error = str(exc)[:300]
+            raise
+        finally:
+            self.calls.append(
+                call_fields(
+                    AGENT,
+                    c,
+                    duration_ms=duracion,
+                    version=prompt_version(__file__),
+                    ok=error is None,
+                    error=error,
+                )
+            )
 
-    return interpret
+
+def model_interpreter(port: ProviderPort, counter: TokenCounter, model_id: str) -> ModelInterpreter:
+    """El interprete real sobre el puerto. Lo compone la raiz de composicion (RI-59)."""
+    return ModelInterpreter(port, counter, model_id)
 
 
 def parse(raw: str) -> RawInterpretation:

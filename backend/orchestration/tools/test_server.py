@@ -17,6 +17,7 @@ from commons.provider.claude_cli import ClaudeCli
 from commons.provider.port import Completion, ToolCall, Usage
 from commons.tokens.counter import TokenCounter
 from commons.tokens.factors import ModelFactors
+from commons.tracing.trace import Trace
 from commons.types.primitives import BlockProvenance, WorldTime
 from orchestration.tools.server import (
     LOOKUP_INPUT_SCHEMA,
@@ -277,3 +278,68 @@ def test_ninguna_herramienta_escribe(con: sqlite3.Connection) -> None:
         )
     )
     assert con.execute("SELECT count(*) AS n FROM event").fetchone()["n"] == antes
+
+
+# ------------------------------------------------------------------ RF-264
+
+
+def _traced(con: sqlite3.Connection, tmp_path: Path, **kw: object) -> tuple[ToolServer, Trace]:
+    factors = ModelFactors()
+    factors.set(MODEL, 1.35)
+    traza = Trace(tmp_path / "t.trace.jsonl")
+    s = ToolServer(
+        con,
+        CallBudget(ceiling=100_000, quota=int(kw.get("quota", 10_000))),  # type: ignore[call-overload]
+        allowed=["context.budget", "canon.lookup"],
+        at=AT,
+        estimate=TokenCounter(factors),
+        model_id=MODEL,
+        trace=traza,
+        context={"agent": "escritor", "chapter": 2, "scene": 1},
+    )
+    s.bind_call("c0ffee00c0ffee00")
+    return s, traza
+
+
+def test_cada_herramienta_servida_deja_su_registro(con: sqlite3.Connection, tmp_path: Path) -> None:
+    """RF-264: nombre, argumentos resumidos, tokens, procedencia y la llamada que la pidio."""
+    s, traza = _traced(con, tmp_path)
+    r = s.serve(
+        ToolCall(
+            name="canon.lookup",
+            arguments=json.dumps({"kind": "entity", "entity_ids": ["marcos", "elena"]}),
+        )
+    )
+    (registro,) = traza.records("tool")
+    f = registro.fields
+    assert f["name"] == "canon.lookup"
+    assert f["call"] == "c0ffee00c0ffee00"
+    assert (f["agent"], f["chapter"], f["scene"]) == ("escritor", 2, 1)
+    assert f["tokens"] == r.tokens and f["provenance"] == "canon"
+    assert f["refused"] is False and f["error"] is None
+    assert isinstance(f["duration_ms"], int)
+    # El resumen no copia lo pedido: los identificadores son de la novela.
+    assert f["args"] == {"entity_ids": 2, "kind": "entity"}
+    assert "marcos" not in json.dumps(f)
+
+
+def test_una_herramienta_rechazada_tambien_deja_registro(
+    con: sqlite3.Connection, tmp_path: Path
+) -> None:
+    """RF-264: servida o rechazada. El error sube igual que antes."""
+    s, traza = _traced(con, tmp_path)
+    with pytest.raises(ToolArgumentsError):
+        s.serve(ToolCall(name="canon.lookup", arguments="{no es json"))
+    s2, traza2 = _traced(con, tmp_path / "otra", quota=1)
+    r = s2.serve(
+        ToolCall(
+            name="canon.lookup", arguments=json.dumps({"kind": "entity", "entity_ids": ["marcos"]})
+        )
+    )
+    assert r.refused
+    (fallo,) = traza.records("tool")
+    assert fallo.fields["refused"] is True
+    assert str(fallo.fields["error"]).startswith("ToolArgumentsError")
+    assert fallo.fields["args"] == {"malformed": True, "chars": 11}
+    (negada,) = traza2.records("tool")
+    assert negada.fields["refused"] is True and negada.fields["error"] is None

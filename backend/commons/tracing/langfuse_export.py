@@ -39,6 +39,14 @@ tirada que la aplica--, y el numero es lo unico que ven las dos.
 coincidencia del guardarrail viaja como sha256 recortado: puede ser el nombre de
 una persona real que el cliente prohibio. El literal queda en la traza local.
 
+**Que hay dentro de cada generacion** (RF-263 a RF-265, D-86):
+
+- un span por capitulo y otro por escena, con la escena colgada de su capitulo;
+- una generation `<rol>.<agente>` por `call`, colgada del span de su escena o de
+  su capitulo, con el prompt que uso por nombre y etiqueta (`prompt_version`);
+- una observacion `tool` por registro `tool`, hija de la generation que la pidio;
+- los scores de cada verificador, sobre la traza o el span que evaluo.
+
 **Claves.** `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY` y `LANGFUSE_BASE_URL`,
 del entorno y por nombre. Si falta alguna, o la libreria `langfuse` no esta, no
 se envia nada, queda `export.disabled` una vez y la tirada sigue (RI-60). Ningun
@@ -125,26 +133,56 @@ class LangfuseTrace(BaseModel):
     output: Mapping[str, JsonValue] | None = None
 
 
+ObservationType = Literal["generation", "event", "span", "tool"]
+
+
 class LangfuseObservation(BaseModel):
-    """Una observacion dentro de una traza: una generation por `call`, un evento por lo demas."""
+    """Una observacion dentro de una traza.
+
+    Una generation por `call`, una observacion `tool` por herramienta, un span
+    por capitulo y por escena, y un evento por lo demas (RF-263, RF-264).
+    """
 
     model_config = ConfigDict(frozen=True)
 
     id: str = Field(pattern=r"^[0-9a-f]{16}$")
     trace_id: str
-    type: Literal["generation", "event"]
+    type: ObservationType
     name: str
     start_time: str
     end_time: str | None = None
+    parent_observation_id: str | None = None
     metadata: Mapping[str, JsonValue] = Field(default_factory=dict)
     model: str | None = None
     usage_details: Mapping[str, int] | None = None
     cost_details: Mapping[str, float] | None = None
     level: Literal["DEFAULT", "WARNING", "ERROR"] = "DEFAULT"
     status_message: str | None = None
+    #: RF-266. El prompt que uso la generation: nombre igual al agente y
+    #: etiqueta igual a su `prompt_version`, la misma que publica `prompts_sync`.
+    prompt_name: str | None = None
+    prompt_label: str | None = None
 
 
-LangfuseObject = LangfuseTrace | LangfuseObservation
+ScoreType = Literal["BOOLEAN", "NUMERIC"]
+
+
+class LangfuseScore(BaseModel):
+    """RF-265. El resultado de un verificador, sobre la traza o el span que evaluo."""
+
+    model_config = ConfigDict(frozen=True)
+
+    id: str = Field(pattern=r"^[0-9a-f]{32}$")
+    trace_id: str
+    observation_id: str | None = None
+    name: str
+    value: float
+    data_type: ScoreType
+    comment: str | None = None
+    metadata: Mapping[str, JsonValue] = Field(default_factory=dict)
+
+
+LangfuseObject = LangfuseTrace | LangfuseObservation | LangfuseScore
 
 
 class _Open(BaseModel):
@@ -157,6 +195,20 @@ class _Open(BaseModel):
     output: Mapping[str, JsonValue] = Field(default_factory=dict)
 
 
+class _Span(BaseModel):
+    """Un span de capitulo o de escena abierto dentro de la generacion abierta."""
+
+    model_config = ConfigDict(frozen=True)
+
+    key: str
+    id: str
+    trace_id: str
+    name: str
+    parent: str | None
+    start: str
+    last: str
+
+
 class MapState(BaseModel):
     """Estado de la correspondencia. Inmutable: `step` devuelve uno nuevo."""
 
@@ -166,6 +218,46 @@ class MapState(BaseModel):
     session_id: str
     mode: Mode = "novel"
     open: _Open | None = None
+    spans: tuple[_Span, ...] = ()
+    #: Spans ya cerrados de la generacion abierta: un registro posterior de ese
+    #: capitulo cuelga del mismo span sin volver a abrirlo.
+    closed: frozenset[str] = frozenset()
+
+
+# ---------------------------------------------------------------- roles
+
+#: RF-263, `architecture.md` §11. El rol de cada agente en la traza exportada.
+#: No son agentes nuevos: agrupan los de §6 con los nombres de la rubrica.
+ROLES: Mapping[str, str] = {
+    "brief.extract": "interviewer",
+    "amend.interpret": "interviewer",
+    "arquitecto": "planner",
+    "planificador": "planner",
+    "escritor": "writer",
+    "especialista": "writer",
+    "continuista": "editor",
+    "juez": "editor",
+    "reparador": "editor",
+    "estilista": "editor",
+    "lector": "editor",
+    "archivero": "canon",
+    "arbitro": "canon",
+    "supervisor": "supervisor",
+}
+
+
+class UnknownAgentError(KeyError):
+    """RF-263. Un agente sin rol en la tabla: la exportacion falla, no inventa un nombre."""
+
+
+def span_name(agent: str) -> str:
+    """`<rol>.<agente>`: el nombre de la generation de una llamada (RF-263)."""
+    try:
+        return f"{ROLES[agent]}.{agent}"
+    except KeyError:
+        raise UnknownAgentError(
+            f"el agente {agent!r} no tiene rol en la tabla de `architecture.md` §11"
+        ) from None
 
 
 # ---------------------------------------------------------------- correspondencia
@@ -188,6 +280,20 @@ def generation_id(source: str, gtype: GenerationType, key: object, at: str = "")
 
 def _observation_id(trace_id: str, record: TraceRecord) -> str:
     return _hex(trace_id, record.kind, record.seq, record.at, chars=16)
+
+
+def call_observation_id(trace_id: str, call_id: str) -> str:
+    """RF-264. La generation de una llamada, por el `call_id` que `dispatch` le da.
+
+    El registro `call` se escribe al acabar la llamada, despues de las
+    herramientas que sirvio: sus hijas lo nombran por este identificador, que
+    sale del JSONL y es el mismo en los dos conductores.
+    """
+    return _hex(trace_id, "call", call_id, chars=16)
+
+
+def _span_id(trace_id: str, key: str) -> str:
+    return _hex(trace_id, "span", key, chars=16)
 
 
 def _scrub(value: JsonValue, *, hide_text: bool) -> JsonValue:
@@ -227,6 +333,10 @@ def _int(value: object) -> int | None:
     return value if isinstance(value, int) and not isinstance(value, bool) else None
 
 
+def _str(value: object) -> str | None:
+    return value if isinstance(value, str) and value else None
+
+
 def _minus_ms(at: str, ms: int) -> str:
     """`at` menos `ms` milisegundos, con precision de milisegundo en los dos extremos."""
     try:
@@ -250,22 +360,26 @@ def _usage(fields: Mapping[str, JsonValue]) -> dict[str, int]:
     }
 
 
-def _generation(trace_id: str, record: TraceRecord) -> LangfuseObservation:
-    """Un registro `call` como generation: modelo, uso, coste e inicio y fin (RF-235)."""
+def _generation(trace_id: str, record: TraceRecord, parent: str | None) -> LangfuseObservation:
+    """Un registro `call` como generation `<rol>.<agente>` (RF-235, RF-263, RF-266)."""
     f = record.fields
+    agente = str(f.get("agent") or "")
     duracion = _int(f.get("duration_ms"))
     coste = f.get("cost_usd")
     ok = f.get("ok") is not False
     error = f.get("error")
+    call_id = _str(f.get("call_id"))
+    version = _str(f.get("prompt_version"))
     return LangfuseObservation(
-        id=_observation_id(trace_id, record),
+        id=call_observation_id(trace_id, call_id) if call_id else _observation_id(trace_id, record),
         trace_id=trace_id,
         type="generation",
-        name=str(f.get("agent") or "call"),
+        name=span_name(agente),
         start_time=_minus_ms(record.at, duracion or 0),
         end_time=_minus_ms(record.at, 0),
+        parent_observation_id=parent,
         metadata=_metadata(record),
-        model=str(f["model"]) if isinstance(f.get("model"), str) and f.get("model") else None,
+        model=_str(f.get("model")),
         usage_details=_usage(f),
         cost_details=(
             {"total": float(coste)}
@@ -274,67 +388,456 @@ def _generation(trace_id: str, record: TraceRecord) -> LangfuseObservation:
         ),
         level="DEFAULT" if ok else "ERROR",
         status_message=None if ok or not isinstance(error, str) else error,
+        prompt_name=agente if version else None,
+        prompt_label=version,
     )
 
 
-def _event(trace_id: str, record: TraceRecord) -> LangfuseObservation:
+def _tool(trace_id: str, record: TraceRecord, parent: str | None) -> LangfuseObservation:
+    """RF-264. Una llamada a herramienta, hija de la generation que la pidio."""
+    f = record.fields
+    duracion = _int(f.get("duration_ms")) or 0
+    error = _str(f.get("error"))
+    call_id = _str(f.get("call"))
+    return LangfuseObservation(
+        id=_observation_id(trace_id, record),
+        trace_id=trace_id,
+        type="tool",
+        name=str(f.get("name") or "tool"),
+        start_time=_minus_ms(record.at, duracion),
+        end_time=_minus_ms(record.at, 0),
+        parent_observation_id=call_observation_id(trace_id, call_id) if call_id else parent,
+        metadata=_metadata(record),
+        level="ERROR" if error else ("WARNING" if f.get("refused") is True else "DEFAULT"),
+        status_message=error,
+    )
+
+
+def _event(trace_id: str, record: TraceRecord, parent: str | None = None) -> LangfuseObservation:
     return LangfuseObservation(
         id=_observation_id(trace_id, record),
         trace_id=trace_id,
         type="event",
         name=record.kind,
         start_time=record.at,
+        parent_observation_id=parent,
         metadata=_metadata(record),
     )
 
 
-def _observation(trace_id: str, record: TraceRecord) -> LangfuseObservation:
-    return _generation(trace_id, record) if record.kind == "call" else _event(trace_id, record)
+def _observation(trace_id: str, record: TraceRecord, parent: str | None) -> LangfuseObservation:
+    if record.kind == "call":
+        return _generation(trace_id, record, parent)
+    if record.kind == "tool":
+        return _tool(trace_id, record, parent)
+    return _event(trace_id, record, parent)
+
+
+# ---------------------------------------------------------------- spans
+
+
+def _scope(fields: Mapping[str, JsonValue]) -> tuple[int | None, int | None]:
+    """Capitulo y escena de un registro. Una escena sin capitulo no abre span."""
+    capitulo = _int(fields.get("chapter"))
+    escena = _int(fields.get("scene")) if capitulo is not None else None
+    return capitulo, escena
+
+
+def _chapter_key(chapter: int) -> str:
+    return f"chapter.{chapter}"
+
+
+def _scene_key(chapter: int, scene: int) -> str:
+    return f"scene.{chapter}.{scene}"
+
+
+def _span_object(span: _Span, end: str | None = None) -> LangfuseObservation:
+    return LangfuseObservation(
+        id=span.id,
+        trace_id=span.trace_id,
+        type="span",
+        name=span.name,
+        start_time=span.start,
+        end_time=end,
+        parent_observation_id=span.parent,
+    )
+
+
+def _touch(
+    state: MapState, trace_id: str, key: str, parent: str | None, start: str, at: str
+) -> tuple[MapState, list[LangfuseObject], str]:
+    """Que el span `key` exista: lo abre la primera vez, y si esta abierto lo alarga."""
+    sid = _span_id(trace_id, key)
+    if key in state.closed:
+        return state, [], sid
+    for i, span in enumerate(state.spans):
+        if span.key == key:
+            spans = list(state.spans)
+            spans[i] = span.model_copy(update={"last": at})
+            return state.model_copy(update={"spans": tuple(spans)}), [], sid
+    span = _Span(key=key, id=sid, trace_id=trace_id, name=key, parent=parent, start=start, last=at)
+    return state.model_copy(update={"spans": (*state.spans, span)}), [_span_object(span)], sid
+
+
+def _enter(
+    state: MapState, trace_id: str, record: TraceRecord, start: str
+) -> tuple[MapState, list[LangfuseObject], str | None]:
+    """Abre o alarga el span de capitulo y el de escena del registro; devuelve el padre."""
+    capitulo, escena = _scope(record.fields)
+    if capitulo is None:
+        return state, [], None
+    state, objetos, padre = _touch(state, trace_id, _chapter_key(capitulo), None, start, record.at)
+    if escena is not None:
+        state, mas, padre = _touch(
+            state, trace_id, _scene_key(capitulo, escena), padre, start, record.at
+        )
+        objetos += mas
+    return state, objetos, padre
+
+
+def _close(
+    state: MapState, keys: Callable[[_Span], bool], end: str | None = None
+) -> tuple[MapState, list[LangfuseObject]]:
+    """Cierra los spans que cumplen `keys`, con su ultimo instante o con `end`."""
+    quedan: list[_Span] = []
+    objetos: list[LangfuseObject] = []
+    cerrados = set(state.closed)
+    for span in state.spans:
+        if keys(span):
+            objetos.append(_span_object(span, end or span.last))
+            cerrados.add(span.key)
+        else:
+            quedan.append(span)
+    return state.model_copy(update={"spans": tuple(quedan), "closed": frozenset(cerrados)}), objetos
+
+
+# ---------------------------------------------------------------- scores
+
+#: RF-265. Lo que marca una coincidencia del guardarrail en los defectos.
+_FORBIDDEN_KIND = _FORBIDDEN_MARK
+
+
+def _create_score(
+    trace_id: str,
+    record: TraceRecord,
+    name: str,
+    value: float | bool,
+    *,
+    target: str | None,
+    comment: str | None = None,
+    key: object = "",
+    meta: Mapping[str, JsonValue] | None = None,
+) -> LangfuseScore:
+    """Un score con identificador determinista: reexportar lo actualiza, no lo duplica."""
+    tipo: ScoreType = "BOOLEAN" if isinstance(value, bool) else "NUMERIC"
+    return LangfuseScore(
+        id=_hex(trace_id, "score", record.kind, record.seq, record.at, name, key, chars=32),
+        trace_id=trace_id,
+        observation_id=target,
+        name=name,
+        value=float(value),
+        data_type=tipo,
+        comment=comment,
+        metadata={"record": record.kind, "seq": record.seq, **dict(meta or {})},
+    )
+
+
+def _targets(trace_id: str, fields: Mapping[str, JsonValue]) -> tuple[str | None, str | None]:
+    """El span de la escena y el del capitulo del registro, si los tiene."""
+    capitulo, escena = _scope(fields)
+    if capitulo is None:
+        return None, None
+    cap = _span_id(trace_id, _chapter_key(capitulo))
+    esc = _span_id(trace_id, _scene_key(capitulo, escena)) if escena is not None else None
+    return esc, cap
+
+
+def _strings(value: object) -> list[str]:
+    return [str(v) for v in value] if isinstance(value, list) else []
+
+
+def _severities(defects: Sequence[str]) -> tuple[int, int]:
+    """S1 y S2 de una lista `kind:severidad` de `scene.attempt`."""
+    return (
+        sum(1 for d in defects if d.endswith(":S1")),
+        sum(1 for d in defects if d.endswith(":S2")),
+    )
+
+
+def _attempt(fields: Mapping[str, JsonValue]) -> dict[str, JsonValue]:
+    intento = _int(fields.get("attempt"))
+    return {"attempt": intento} if intento is not None else {}
+
+
+Scorer = Callable[[str, TraceRecord], list[LangfuseScore]]
+
+
+def _score_checks(tid: str, r: TraceRecord) -> list[LangfuseScore]:
+    """`check.<kind>` de un intento de escena: cada verificador que corrio, paso o no."""
+    esc, cap = _targets(tid, r.fields)
+    fallidos = set(_strings(r.fields.get("failed")))
+    return [
+        _create_score(
+            tid, r, kind, kind not in fallidos, target=esc or cap, meta=_attempt(r.fields)
+        )
+        for kind in _strings(r.fields.get("ran"))
+    ]
+
+
+def _score_scene(tid: str, r: TraceRecord) -> list[LangfuseScore]:
+    """`gate.scene` con S1 y S2, y `guardrail.forbidden` cuando no hubo coincidencia."""
+    esc, cap = _targets(tid, r.fields)
+    objetivo = esc or cap
+    defectos = _strings(r.fields.get("defects"))
+    s1, s2 = _severities(defectos)
+    extra = _attempt(r.fields)
+    out = [
+        _create_score(
+            tid, r, "gate.scene", r.fields.get("passed") is True, target=objetivo, meta=extra
+        ),
+        _create_score(tid, r, "gate.scene.s1", s1, target=objetivo, meta=extra),
+        _create_score(tid, r, "gate.scene.s2", s2, target=objetivo, meta=extra),
+    ]
+    if not any(d.startswith(_FORBIDDEN_KIND) for d in defectos):
+        # La coincidencia tiene su propio score, con nivel y termino (`guardrail.match`).
+        out.append(_create_score(tid, r, "guardrail.forbidden", True, target=objetivo, meta=extra))
+    return out
+
+
+def _score_chapter(tid: str, r: TraceRecord) -> list[LangfuseScore]:
+    _esc, cap = _targets(tid, r.fields)
+    defectos = _strings(r.fields.get("defects"))
+    return [
+        _create_score(
+            tid,
+            r,
+            "gate.chapter",
+            r.fields.get("passed") is True,
+            target=cap,
+            comment=_str(r.fields.get("reason")),
+        ),
+        _create_score(tid, r, "gate.chapter.s1", _int(r.fields.get("s1")) or 0, target=cap),
+        _create_score(tid, r, "gate.chapter.s2", _int(r.fields.get("s2")) or 0, target=cap),
+        _create_score(
+            tid,
+            r,
+            "guardrail.forbidden",
+            not any(_FORBIDDEN_KIND in d for d in defectos),
+            target=cap,
+        ),
+    ]
+
+
+def _score_jury(tid: str, r: TraceRecord) -> list[LangfuseScore]:
+    """`jury.<dimension>`, de 1 a 5, con la dispersion y la justificacion como comentario."""
+    _esc, cap = _targets(tid, r.fields)
+    niveles = r.fields.get("levels")
+    dispersiones = r.fields.get("spreads")
+    justificaciones = r.fields.get("justifications")
+    out: list[LangfuseScore] = []
+    if not isinstance(niveles, dict):
+        return out
+    for dim, nivel in niveles.items():
+        if not isinstance(nivel, int | float) or isinstance(nivel, bool):
+            continue
+        partes = []
+        if isinstance(dispersiones, dict) and dispersiones.get(dim) is not None:
+            partes.append(f"dispersion={dispersiones[dim]}")
+        if isinstance(justificaciones, dict) and isinstance(justificaciones.get(dim), str):
+            limpio = _scrub(justificaciones[dim], hide_text=False)
+            partes.append(str(limpio))
+        out.append(
+            _create_score(
+                tid, r, f"jury.{dim}", float(nivel), target=cap, comment="; ".join(partes) or None
+            )
+        )
+    return out
+
+
+def _score_quiz(tid: str, r: TraceRecord) -> list[LangfuseScore]:
+    _esc, cap = _targets(tid, r.fields)
+    return [_create_score(tid, r, "quiz.wrong", _int(r.fields.get("wrong")) or 0, target=cap)]
+
+
+def _flag(name: str, field: str) -> Scorer:
+    """Un booleano sobre la traza: la tirada o el acto no tienen span propio."""
+
+    def score(tid: str, r: TraceRecord) -> list[LangfuseScore]:
+        act = _int(r.fields.get("act"))
+        comentario = f"acto {act}" if act is not None else _str(r.fields.get("reason"))
+        return [
+            _create_score(
+                tid, r, name, r.fields.get(field) is True, target=None, comment=comentario
+            )
+        ]
+
+    return score
+
+
+def _score_formal(tid: str, r: TraceRecord) -> list[LangfuseScore]:
+    """`formal.lean`, con el teorema que fallo como comentario (RF-254, RF-265)."""
+    esc, cap = _targets(tid, r.fields)
+    paso = r.fields.get("passed", r.fields.get("ok"))
+    comentario = None
+    if paso is not True:
+        comentario = _str(r.fields.get("theorem")) or _str(r.fields.get("rule"))
+    return [
+        _create_score(tid, r, "formal.lean", paso is True, target=esc or cap, comment=comentario)
+    ]
+
+
+def _score_match(tid: str, r: TraceRecord) -> list[LangfuseScore]:
+    """RF-265, RNF-54. Una coincidencia: el nivel y el termino como sha256 recortado."""
+    esc, cap = _targets(tid, r.fields)
+    termino = r.fields.get("term")
+    huella = term_hash(termino) if isinstance(termino, str) else None
+    nivel = _str(r.fields.get("level"))
+    return [
+        _create_score(
+            tid,
+            r,
+            "guardrail.forbidden",
+            False,
+            target=esc or cap,
+            comment=f"nivel={nivel}; termino=sha256:{huella}",
+            key=huella,
+            meta={
+                "level": nivel,
+                "term_hash": huella,
+                "decision": _str(r.fields.get("decision")),
+                "stage": _str(r.fields.get("stage")),
+                **_attempt(r.fields),
+            },
+        )
+    ]
+
+
+#: RF-265, `architecture.md` §11. Cada registro de verificador y el score que da.
+#: Un registro nuevo tiene que estar aqui o en `UNSCORED`: la prueba lo exige.
+SCORERS: Mapping[str, Scorer] = {
+    "scene.checks": _score_checks,
+    "scene.attempt": _score_scene,
+    "chapter.gate": _score_chapter,
+    "jury": _score_jury,
+    "quiz": _score_quiz,
+    "outline.check": _flag("outline.check", "passed"),
+    "act.gate": _flag("act.gate", "passed"),
+    "work.close": _flag("work.close", "closed"),
+    "formal.lean": _score_formal,
+    "guardrail.match": _score_match,
+}
+
+#: Registros que no son el resultado de un verificador: no llevan score.
+UNSCORED: frozenset[str] = frozenset(
+    {
+        "admission",
+        "amend.applied",
+        "amend.rejected",
+        "amend.request",
+        "amend.usage_mismatch",
+        "arbitration",
+        "audit",
+        "calibration",
+        "call",
+        "chapter.frozen",
+        "export.disabled",
+        "export.failed",
+        "golden",
+        "guardrail.levels",
+        "health",
+        "interview.created",
+        "interview.turn",
+        "packet",
+        "process.defect",
+        "proscription",
+        "repair",
+        "replan",
+        "respec",
+        "retcon.aborted",
+        "retcon.applied",
+        "retcon.proposal",
+        "retry",
+        "scene.resumed",
+        "style.fingerprint",
+        "style.polish",
+        "summary",
+        "tool",
+        "work.cost",
+    }
+)
+
+
+def scores_of(trace_id: str, record: TraceRecord) -> list[LangfuseScore]:
+    """RF-265. Los scores de un registro; ninguno si no es de verificador."""
+    scorer = SCORERS.get(record.kind)
+    return scorer(trace_id, record) if scorer else []
+
+
+# ---------------------------------------------------------------- generaciones
 
 
 def _request_id(record: TraceRecord) -> int | None:
-    if not record.kind.startswith("amend."):
-        return None
+    """La solicitud de cambio a la que pertenece un registro, si la nombra (RF-234, RF-262)."""
     return _int(record.fields.get("request"))
 
 
 def _change_request(
     state: MapState, record: TraceRecord, rid: int
 ) -> tuple[MapState, tuple[LangfuseObject, ...]]:
-    """RF-234. La solicitud de cambio, de `amend.request` a su aplicacion o rechazo."""
+    """RF-234. La solicitud de cambio, de `amend.request` a su aplicacion o rechazo.
+
+    Cuelga de ella todo registro que nombre su numero: la llamada de
+    `amend.interpret` que la interpreto (RF-262) y lo que la aplico.
+    """
     tid = generation_id(state.source, "change_request", rid)
     meta: dict[str, JsonValue] = {"source": state.source, "type": "change_request", "request": rid}
+    objetos: list[LangfuseObject] = []
     if record.kind == "amend.request":
-        traza = LangfuseTrace(
-            id=tid,
-            name=f"change_request.{rid}",
-            session_id=state.session_id,
-            timestamp=record.at,
-            metadata=meta,
+        objetos.append(
+            LangfuseTrace(
+                id=tid,
+                name=f"change_request.{rid}",
+                session_id=state.session_id,
+                timestamp=record.at,
+                metadata=meta,
+            )
         )
-    else:
+    elif record.kind in ("amend.applied", "amend.rejected"):
         final = "applied" if record.kind == "amend.applied" else "rejected"
         salida: dict[str, JsonValue] = {"status": final}
         for k in ("version", "reason"):
             if k in record.fields:
                 salida[k] = record.fields[k]
-        traza = LangfuseTrace(
-            id=tid,
-            name=f"change_request.{rid}",
-            session_id=state.session_id,
-            metadata=meta,
-            output=salida,
+        objetos.append(
+            LangfuseTrace(
+                id=tid,
+                name=f"change_request.{rid}",
+                session_id=state.session_id,
+                metadata=meta,
+                output=salida,
+            )
         )
-    return state, (traza, _event(tid, record))
+    objetos.append(_observation(tid, record, None))
+    objetos += scores_of(tid, record)
+    return state, tuple(objetos)
 
 
 def _opening(state: MapState, record: TraceRecord) -> tuple[_Open, LangfuseTrace]:
     """Abre la generacion que empieza en este registro."""
     if state.mode == "interview":
-        gtype: GenerationType = "interview"
-    else:
-        invocacion = record.fields.get("invocation") if record.kind == "calibration" else None
-        gtype = "amend" if invocacion == "amend" else "run"
+        # Una sola traza por fichero de entrevista: cada ruta abre su propia
+        # instancia de `Trace`, y el primer registro de cada una no la separa.
+        tid = generation_id(state.source, "interview", 0)
+        abierta = _Open(trace_id=tid, name="interview")
+        return abierta, LangfuseTrace(
+            id=tid,
+            name="interview",
+            session_id=state.session_id,
+            timestamp=record.at if record.kind == "interview.created" else None,
+            metadata={"source": state.source, "type": "interview"},
+        )
+    invocacion = record.fields.get("invocation") if record.kind == "calibration" else None
+    gtype: GenerationType = "amend" if invocacion == "amend" else "run"
     tid = generation_id(state.source, gtype, record.seq, record.at)
     abierta = _Open(trace_id=tid, name=gtype)
     traza = LangfuseTrace(
@@ -369,12 +872,19 @@ _CLOSING_FIELDS: Mapping[str, tuple[str, ...]] = {
 }
 
 
+def _start_of(record: TraceRecord) -> str:
+    """Cuando empezo lo que el registro describe: una llamada, su duracion antes."""
+    if record.kind in ("call", "tool"):
+        return _minus_ms(record.at, _int(record.fields.get("duration_ms")) or 0)
+    return record.at
+
+
 def step(state: MapState, record: TraceRecord) -> tuple[MapState, tuple[LangfuseObject, ...]]:
     """Un registro de la traza y lo que le toca en Langfuse. **Pura** (RF-233).
 
     Devuelve el estado siguiente y los objetos, en orden: una traza que se abre
-    va antes que sus observaciones, y una traza que se actualiza al cerrar va
-    despues de la observacion que la cierra.
+    va antes que sus spans, un span antes que lo que cuelga de el, y una traza
+    que se actualiza al cerrar va despues de la observacion que la cierra.
     """
     if record.kind.startswith(_OWN_PREFIX):
         return state, ()
@@ -388,10 +898,31 @@ def step(state: MapState, record: TraceRecord) -> tuple[MapState, tuple[Langfuse
     # Una `calibration` es el arranque de una invocacion nueva: si la anterior
     # no llego a su `work.cost` --una caida--, se da por terminada sin mas.
     if abierta is None or (record.kind == "calibration" and state.mode == "novel"):
+        state, cierres = _close(state, lambda _s: True)
+        objetos += cierres
         abierta, traza = _opening(state, record)
+        state = state.model_copy(update={"spans": (), "closed": frozenset()})
         objetos.append(traza)
 
-    objetos.append(_observation(abierta.trace_id, record))
+    tid = abierta.trace_id
+    padre: str | None = None
+    if record.kind != "tool":
+        # La herramienta cuelga de su generation, que llega despues y abre el span.
+        state, spans, padre = _enter(state, tid, record, _start_of(record))
+        objetos += spans
+    objetos.append(_observation(tid, record, padre))
+    objetos += scores_of(tid, record)
+
+    if record.kind == "chapter.frozen":
+        capitulo = _int(record.fields.get("chapter"))
+        if capitulo is not None:
+            prefijos = (_chapter_key(capitulo), f"scene.{capitulo}.")
+            state, cierres = _close(
+                state,
+                lambda s: s.key == prefijos[0] or s.key.startswith(prefijos[1]),
+                record.at,
+            )
+            objetos += cierres
 
     campos = _CLOSING_FIELDS.get(record.kind)
     if campos is not None:
@@ -407,6 +938,8 @@ def step(state: MapState, record: TraceRecord) -> tuple[MapState, tuple[Langfuse
             )
         )
     if record.kind == "work.cost":
+        state, cierres = _close(state, lambda _s: True)
+        objetos += cierres
         abierta = None
     return state.model_copy(update={"open": abierta}), tuple(objetos)
 
@@ -421,6 +954,11 @@ def to_langfuse(
         state, objetos = step(state, record)
         out.extend(objetos)
     return out
+
+
+def mode_of(source: str) -> Mode:
+    """La traza de una entrevista vive en `_interviews/` (RD-46)."""
+    return "interview" if source.startswith("_interviews/") else "novel"
 
 
 def session_of(trace_path: Path) -> str:
@@ -530,6 +1068,13 @@ class SdkClient:
     tiradas pasadas con sus horas reales, y el mismo `id` actualiza en vez de
     duplicar (RF-234). El SDK se importa aqui, al primer envio: sin la libreria
     el sistema funciona igual (RI-60).
+
+    **El enlace al prompt** (RF-266). Langfuse enlaza una generation con la
+    version numerada de un prompt. El numero lo asigna Langfuse al publicar, asi
+    que el cliente lo resuelve una vez por agente y etiqueta, en el hilo del
+    espejo, y lo recuerda. Nunca usa el texto: la tirada ya se hizo con el del
+    repositorio (D-86). Si la etiqueta no esta publicada, la generation sale sin
+    enlace y con nombre y etiqueta en sus metadatos.
     """
 
     def __init__(self, config: LangfuseConfig) -> None:
@@ -541,9 +1086,10 @@ class SdkClient:
             base_url=config.base_url,
             tracing_enabled=False,
         )
+        self._versions: dict[tuple[str, str], int | None] = {}
 
     def send(self, objects: Sequence[LangfuseObject]) -> None:
-        eventos = [self._event(o) for o in objects]
+        eventos = [self._event(o, self._prompt_version(o)) for o in objects]
         lote: list[Any] = []
         tam = 0
         for evento in eventos:
@@ -556,8 +1102,20 @@ class SdkClient:
         if lote:
             self._client.api.ingestion.batch(batch=lote)
 
+    def _prompt_version(self, obj: LangfuseObject) -> int | None:
+        if not isinstance(obj, LangfuseObservation) or not (obj.prompt_name and obj.prompt_label):
+            return None
+        clave = (obj.prompt_name, obj.prompt_label)
+        if clave not in self._versions:
+            try:
+                prompt = self._client.api.prompts.get(obj.prompt_name, label=obj.prompt_label)
+                self._versions[clave] = int(prompt.version)
+            except Exception:  # sin publicar o sin red: sin enlace, nunca sin exportar
+                self._versions[clave] = None
+        return self._versions[clave]
+
     @staticmethod
-    def _event(obj: LangfuseObject) -> Any:
+    def _event(obj: LangfuseObject, prompt_version: int | None = None) -> Any:
         from langfuse import api
 
         ahora = datetime.now(UTC).isoformat(timespec="milliseconds")
@@ -575,6 +1133,21 @@ class SdkClient:
                     output=dict(obj.output) if obj.output is not None else None,
                 ),
             )
+        if isinstance(obj, LangfuseScore):
+            return api.IngestionEvent_ScoreCreate(
+                id=sobre,
+                timestamp=ahora,
+                body=api.ScoreBody(
+                    id=obj.id,
+                    trace_id=obj.trace_id,
+                    observation_id=obj.observation_id,
+                    name=obj.name,
+                    value=obj.value,
+                    data_type=cast(Any, obj.data_type),
+                    comment=obj.comment,
+                    metadata=dict(obj.metadata),
+                ),
+            )
         if obj.type == "generation":
             return api.IngestionEvent_GenerationCreate(
                 id=sobre,
@@ -585,10 +1158,48 @@ class SdkClient:
                     name=obj.name,
                     start_time=_iso(obj.start_time),
                     end_time=_iso(obj.end_time) if obj.end_time else None,
-                    metadata=dict(obj.metadata),
+                    parent_observation_id=obj.parent_observation_id,
+                    metadata={
+                        **dict(obj.metadata),
+                        "prompt_name": obj.prompt_name,
+                        "prompt_label": obj.prompt_label,
+                    },
                     model=obj.model,
                     usage_details=dict(obj.usage_details) if obj.usage_details else None,
                     cost_details=dict(obj.cost_details) if obj.cost_details else None,
+                    level=cast(Any, obj.level),
+                    status_message=obj.status_message,
+                    prompt_name=obj.prompt_name if prompt_version is not None else None,
+                    prompt_version=prompt_version,
+                ),
+            )
+        if obj.type == "span":
+            return api.IngestionEvent_SpanCreate(
+                id=sobre,
+                timestamp=ahora,
+                body=api.CreateSpanBody(
+                    id=obj.id,
+                    trace_id=obj.trace_id,
+                    name=obj.name,
+                    start_time=_iso(obj.start_time),
+                    end_time=_iso(obj.end_time) if obj.end_time else None,
+                    parent_observation_id=obj.parent_observation_id,
+                    metadata=dict(obj.metadata),
+                ),
+            )
+        if obj.type == "tool":
+            return api.IngestionEvent_ObservationCreate(
+                id=sobre,
+                timestamp=ahora,
+                body=api.ObservationBody(
+                    id=obj.id,
+                    trace_id=obj.trace_id,
+                    type=cast(Any, api.ObservationType.TOOL),
+                    name=obj.name,
+                    start_time=_iso(obj.start_time),
+                    end_time=_iso(obj.end_time) if obj.end_time else None,
+                    parent_observation_id=obj.parent_observation_id,
+                    metadata=dict(obj.metadata),
                     level=cast(Any, obj.level),
                     status_message=obj.status_message,
                 ),
@@ -601,6 +1212,7 @@ class SdkClient:
                 trace_id=obj.trace_id,
                 name=obj.name,
                 start_time=_iso(obj.start_time),
+                parent_observation_id=obj.parent_observation_id,
                 metadata=dict(obj.metadata),
                 level=cast(Any, obj.level),
             ),
@@ -623,7 +1235,9 @@ class _LiveObserver:
     def __init__(self, exporter: LiveExporter, trace: Trace, source: str) -> None:
         self.exporter = exporter
         self._trace = weakref.ref(trace)
-        self._state = MapState(source=source, session_id=session_of(Path(source)))
+        self._state = MapState(
+            source=source, session_id=session_of(Path(source)), mode=mode_of(source)
+        )
 
     def __call__(self, record: TraceRecord) -> None:
         self._state, objetos = step(self._state, record)
@@ -860,8 +1474,10 @@ def attach_live_export(trace: Trace, env: Mapping[str, str] | None = None) -> Li
 
 
 def interview_trace_path(runs_dir: Path, interview_id: str) -> Path:
-    """La traza de una entrevista (`specs/srs-backend-v4.md` RD-46)."""
-    return runs_dir / "_interviews" / f"{interview_id}{TRACE_SUFFIX}"
+    """La traza de una entrevista (`specs/srs-backend-v4.md` RD-46), por `commons/settings.py`."""
+    from commons.settings import Settings
+
+    return Settings(runs_dir=runs_dir).interview_trace_path(interview_id)
 
 
 def origin_interviews(novel_path: Path) -> list[str]:
@@ -889,27 +1505,68 @@ def origin_interviews(novel_path: Path) -> list[str]:
         origen = json.loads(fila[0]).get("origin_interview")
     except (ValueError, AttributeError):
         return []
-    return [origen] if isinstance(origen, str) and origen else []
+    from commons.settings import INTERVIEW_ID
+
+    # El brief llega por RI-01 y el campo es texto: solo un identificador de
+    # entrevista valido se convierte en ruta.
+    return [origen] if isinstance(origen, str) and INTERVIEW_ID.match(origen) else []
 
 
 def novel_objects(
     novel_id: str, runs_dir: Path, *, interviews: Sequence[str] | None = None
 ) -> list[LangfuseObject]:
     """RI-61. Los objetos de una novela: su traza y la de sus entrevistas, sesion `novel_id`."""
-    objetos: list[LangfuseObject] = []
     iids = (
         list(interviews)
         if interviews is not None
         else origin_interviews(runs_dir / f"{novel_id}.sqlite")
     )
-    for iid in iids:
+    objetos = interview_objects(novel_id, runs_dir, iids)
+    ruta = runs_dir / f"{novel_id}{TRACE_SUFFIX}"
+    objetos += to_langfuse(_read(ruta), source=_source_of(ruta), session_id=novel_id)
+    return objetos
+
+
+def interview_objects(
+    novel_id: str, runs_dir: Path, interviews: Sequence[str]
+) -> list[LangfuseObject]:
+    """RF-262. Las trazas de las entrevistas de una novela, con la novela como sesion."""
+    objetos: list[LangfuseObject] = []
+    for iid in interviews:
         ruta = interview_trace_path(runs_dir, iid)
         objetos += to_langfuse(
             _read(ruta), source=_source_of(ruta), session_id=novel_id, mode="interview"
         )
-    ruta = runs_dir / f"{novel_id}{TRACE_SUFFIX}"
-    objetos += to_langfuse(_read(ruta), source=_source_of(ruta), session_id=novel_id)
     return objetos
+
+
+def link_interviews(novel_id: str, runs_dir: Path) -> int:
+    """RF-262. Al crear la novela, su entrevista pasa a la sesion de la novela.
+
+    Mientras dura, la entrevista va al espejo con su propio identificador como
+    sesion: todavia no hay novela. Al crearla con `origin_interview`, se reenvia
+    con el de la novela, y como los identificadores de sus objetos no cambian,
+    se actualizan y no se duplican. Sin espejo no hace nada. Nunca lanza: un
+    fallo queda como `export.failed` en la traza de la novela.
+    """
+    live = live_exporter()
+    if live is None:
+        return 0
+    from commons.settings import Settings
+
+    settings = Settings(runs_dir=runs_dir)
+    try:
+        iids = origin_interviews(settings.novel_path(novel_id))
+        objetos = interview_objects(novel_id, runs_dir, iids)
+    except Exception as exc:  # RNF-53: el espejo observa y no gobierna
+        with contextlib.suppress(Exception):
+            Trace(settings.trace_path(novel_id)).emit(
+                "export.failed", error=f"{type(exc).__name__}: {exc}"[:300], objects=0
+            )
+        return 0
+    if objetos:
+        live.enqueue(Trace(settings.trace_path(novel_id)), tuple(objetos))
+    return len(objetos)
 
 
 def _read(path: Path) -> list[TraceRecord]:

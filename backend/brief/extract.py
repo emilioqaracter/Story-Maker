@@ -13,17 +13,25 @@ instruye al modelo y no entra en el brief por si solo. Por eso:
 Presupuesto (D-80): 8.000 del texto libre, 500 del borrador y 500 de
 instruccion; salida 2.000. Un texto que no cabe se rechaza antes de llamar,
 nunca se trunca.
+
+**Traza** (RF-262). El extractor real recuerda cada llamada como los campos de un
+registro `call` --agente, tokens, `prompt_version`, coste y duracion--, y la
+ruta de la entrevista los escribe en su traza. No escribe el mismo: `brief/` no
+sabe de que entrevista es el texto que recibe.
 """
 
 from __future__ import annotations
 
+import hashlib
 import json
+import time
 from collections.abc import Callable, Sequence
+from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, ValidationError
 
-from commons.provider.port import ProviderPort
+from commons.provider.port import Completion, ProviderPort
 from commons.tokens.counter import TokenCounter
 
 #: D-80. Todos salen de `architecture.md` §4.2.
@@ -119,12 +127,63 @@ def check_budget(counter: TokenCounter, model_id: str, free_text: str, draft_sum
         raise TooLongError(f"La extracción ocuparía {total} tokens y el techo es {INPUT_TOKENS}.")
 
 
-def model_extractor(port: ProviderPort, counter: TokenCounter, model_id: str) -> Extractor:
-    """El extractor real sobre el puerto. Lo compone la raiz de composicion (RI-59)."""
+AGENT = "brief.extract"
 
-    def extract(free_text: str, draft_summary: str) -> Extraction:
-        check_budget(counter, model_id, free_text, draft_summary)
-        c = port.complete_once(
+
+def prompt_version(module_file: str = __file__) -> str:
+    """RI-34, RF-262. Hash del modulo que tiene el prompt: cambia con un byte de el.
+
+    Es el mismo que calcula `orchestration.engine.prompt_version` para los dos
+    agentes del entrevistador, y la etiqueta con que `prompts_sync` lo publica.
+    """
+    return hashlib.sha256(Path(module_file).read_bytes()).hexdigest()[:12]
+
+
+def call_fields(
+    agent: str,
+    completion: Completion,
+    *,
+    duration_ms: int,
+    version: str,
+    ok: bool,
+    error: str | None,
+) -> dict[str, JsonValue]:
+    """RF-262. Los campos del registro `call` de una llamada del entrevistador.
+
+    Los mismos nombres que deja `dispatch` (RF-235), para que el espejo trate
+    igual una llamada de la entrevista que una de la tirada.
+    """
+    u = completion.usage
+    return {
+        "agent": agent,
+        "prompt_version": version,
+        "real_input": u.total_input,
+        "input_tokens": u.input_tokens,
+        "cache_creation_tokens": u.cache_creation_tokens,
+        "cache_read_tokens": u.cache_read_tokens,
+        "output_tokens": u.output_tokens,
+        "harness_tokens": completion.harness_tokens,
+        "model": completion.model or None,
+        "cost_usd": completion.cost_usd,
+        "duration_ms": duration_ms,
+        "ok": ok,
+        "error": error,
+    }
+
+
+class ModelExtractor:
+    """El extractor real sobre el puerto. Recuerda sus llamadas en `calls` (RF-262)."""
+
+    def __init__(self, port: ProviderPort, counter: TokenCounter, model_id: str) -> None:
+        self._port = port
+        self._counter = counter
+        self._model_id = model_id
+        self.calls: list[dict[str, JsonValue]] = []
+
+    def __call__(self, free_text: str, draft_summary: str) -> Extraction:
+        check_budget(self._counter, self._model_id, free_text, draft_summary)
+        inicio = time.monotonic()
+        c = self._port.complete_once(
             cacheable_prefix=SYSTEM,
             packet=packet(free_text, draft_summary),
             instruction=INSTRUCTION,
@@ -132,9 +191,29 @@ def model_extractor(port: ProviderPort, counter: TokenCounter, model_id: str) ->
             max_output_tokens=OUTPUT_TOKENS,
             json_schema=json.dumps(RawFacts.model_json_schema()),
         )
-        return parse(c.text)
+        duracion = max(0, round((time.monotonic() - inicio) * 1000))
+        error: str | None = None
+        try:
+            return parse(c.text)
+        except ValueError as exc:
+            error = str(exc)[:300]
+            raise
+        finally:
+            self.calls.append(
+                call_fields(
+                    AGENT,
+                    c,
+                    duration_ms=duracion,
+                    version=prompt_version(),
+                    ok=error is None,
+                    error=error,
+                )
+            )
 
-    return extract
+
+def model_extractor(port: ProviderPort, counter: TokenCounter, model_id: str) -> ModelExtractor:
+    """El extractor real sobre el puerto. Lo compone la raiz de composicion (RI-59)."""
+    return ModelExtractor(port, counter, model_id)
 
 
 def first_json_object(raw: str) -> object:
