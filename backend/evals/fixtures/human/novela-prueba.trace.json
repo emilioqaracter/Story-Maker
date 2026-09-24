@@ -49,14 +49,22 @@
      "style_guide": 4,
      "pacing": 2,
      "subtext": 4,
-     "theme": 4
+     "theme": 4,
+     "continuity": 3,
+     "tone": 3,
+     "arc": 2,
+     "personalization": 3
     },
     "spreads": {
      "voice": 0,
      "style_guide": 0,
      "pacing": 0,
      "subtext": 0,
-     "theme": 0
+     "theme": 0,
+     "continuity": 0,
+     "tone": 0,
+     "arc": 0,
+     "personalization": 0
     },
     "discarded": 0,
     "scores": []
@@ -75,14 +83,22 @@
      "style_guide": 4,
      "pacing": 3,
      "subtext": 4,
-     "theme": 4
+     "theme": 4,
+     "continuity": 3,
+     "tone": 4,
+     "arc": 3,
+     "personalization": 4
     },
     "spreads": {
      "voice": 0,
      "style_guide": 0,
      "pacing": 0,
      "subtext": 0,
-     "theme": 0
+     "theme": 0,
+     "continuity": 0,
+     "tone": 0,
+     "arc": 0,
+     "personalization": 0
     },
     "discarded": 0,
     "scores": []
@@ -100,13 +116,21 @@
      "voice": 4,
      "style_guide": 4,
      "pacing": 4,
-     "subtext": 5
+     "subtext": 5,
+     "continuity": 4,
+     "tone": 4,
+     "arc": 4,
+     "personalization": 5
     },
     "spreads": {
      "voice": 0,
      "style_guide": 0,
      "pacing": 0,
-     "subtext": 0
+     "subtext": 0,
+     "continuity": 0,
+     "tone": 0,
+     "arc": 0,
+     "personalization": 0
     },
     "discarded": 0,
     "scores": []

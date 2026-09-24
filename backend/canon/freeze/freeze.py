@@ -27,7 +27,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from canon.events import log
 from canon.events.types import Event
-from canon.freeze import rows
+from canon.freeze import elements, rows
 from canon.projections import rebuild
 from canon.prose_index import usage
 from canon.prose_index.chunk import Chunk, chunk_scene
@@ -75,6 +75,8 @@ class PreparedChapter(BaseModel):
     verdicts: tuple[rows.SceneVerdictRow, ...] = Field(default_factory=tuple)
     fingerprint: rows.FingerprintRow | None = None
     metrics: tuple[rows.MetricRow, ...] = Field(default_factory=tuple)
+    #: RF-261. Los elementos del brief que el capitulo usa, ya anclados.
+    element_uses: tuple[elements.ElementUse, ...] = Field(default_factory=tuple)
 
 
 def prepare(
@@ -89,6 +91,7 @@ def prepare(
     verdicts: Sequence[rows.SceneVerdictRow] = (),
     fingerprint: rows.FingerprintRow | None = None,
     metrics: Sequence[rows.MetricRow] = (),
+    element_uses: Sequence[elements.ElementUse] = (),
 ) -> PreparedChapter:
     """Primera mitad: todo lo caro, **fuera** de la transaccion.
 
@@ -118,6 +121,7 @@ def prepare(
         verdicts=tuple(verdicts),
         fingerprint=fingerprint,
         metrics=tuple(metrics),
+        element_uses=tuple(element_uses),
     )
 
 
@@ -139,6 +143,9 @@ def commit_chapter(con: sqlite3.Connection, prepared: PreparedChapter) -> None:
     # RF-241. Despues del delta y del indice, que es lo que lee: las escenas
     # nuevas contra todo lo vigente, y lo que el delta hace vigente contra todas.
     usage.refresh(con, scenes=[s.id for s in prepared.scenes], before=antes)
+    # RF-261. Los usos anclados de los elementos del brief, detras del indice:
+    # su clave ajena es la escena que se acaba de escribir.
+    elements.record(con, prepared.element_uses, chapter=prepared.chapter)
     _write_summaries(con, prepared)
     _write_proscribed(con, prepared)
     rows.write_verdicts(con, prepared.verdicts)

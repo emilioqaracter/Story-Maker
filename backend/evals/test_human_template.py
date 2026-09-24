@@ -217,6 +217,6 @@ def test_un_capitulo_sin_leer_o_con_otras_rubricas(novela: Path) -> None:
     cuerpo["chapters"] = cuerpo["chapters"][:1]
     cuerpo["rubrics"]["version"] = 7
     assert problems(_reading(cuerpo), novela) == [
-        "las rubricas del fichero (version 7) no son las vigentes de la novela (version 1)",
+        "las rubricas del fichero (version 7) no son las vigentes de la novela (version 2)",
         "capitulo 2: congelado y sin leer",
     ]

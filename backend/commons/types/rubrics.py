@@ -8,6 +8,13 @@ el juez lee la version del fichero y no esta constante.
 
 Cinco niveles con ejemplo cada uno, que es lo que hace que dos evaluadores
 coincidan (CAL-02). El nivel 3 es "cumple" y es el umbral (D-39).
+
+Version 2 (`specs/srs-backend-v4.md` RF-257, D-94): nueve dimensiones, las cinco
+de la version 1 --con `voice` ampliada a la coherencia de la caracterizacion,
+voz y decisiones-- y cuatro nuevas: `continuity` (la de lectura; la factual es
+del Continuista), `tone`, `arc` y `personalization`. Un fichero creado con la
+version 1 la sigue guardando y su Jurado sigue juzgando cinco: las dimensiones
+las da el conjunto que lee el juez (`RubricSet.dimensions`), no este enumerado.
 """
 
 from __future__ import annotations
@@ -26,6 +33,10 @@ class Dimension(StrEnum):
     PACING = "pacing"  # 4
     SUBTEXT = "subtext"  # 8
     THEME = "theme"  # 9
+    CONTINUITY = "continuity"  # 1, la continuidad de lectura
+    TONE = "tone"  # 5, frente al tono pedido (POE-04)
+    ARC = "arc"  # 3, EST-06 y PER-06
+    PERSONALIZATION = "personalization"  # 10, en su parte de juicio
 
 
 class Rubric(BaseModel):
@@ -46,20 +57,28 @@ class RubricSet(BaseModel):
     def get(self, dimension: Dimension) -> Rubric:
         return next(r for r in self.rubrics if r.dimension is dimension)
 
+    @property
+    def dimensions(self) -> tuple[Dimension, ...]:
+        """Las dimensiones de este conjunto, en su orden. Son las que se juzgan."""
+        return tuple(r.dimension for r in self.rubrics)
+
 
 DEFAULT_RUBRICS = RubricSet(
-    version=1,
+    version=2,
     rubrics=(
         Rubric(
             dimension=Dimension.VOICE,
             skill="voice.audit",
-            question="¿Cada personaje habla y piensa con su idiolecto, distinto del de los demas?",
+            question=(
+                "¿Cada personaje es coherente consigo mismo: habla y piensa con su idiolecto, "
+                "distinto del de los demas, y decide como decidiria el?"
+            ),
             levels=(
-                "Las voces son intercambiables: cualquier linea podria decirla cualquiera.",
-                "Se distingue el narrador de los personajes, pero los personajes suenan igual entre si.",
-                "Cada POV tiene marcas propias reconocibles; hay alguna linea neutra que no las lleva.",
-                "Las voces se distinguen sin atribucion; el idiolecto se sostiene en toda la escena.",
-                "Cada linea solo podria ser de quien la dice, y la voz cambia cuando el personaje cambia.",
+                "Voces intercambiables, o un personaje decide lo contrario de lo que es sin motivo.",
+                "Se distingue el narrador, pero los personajes suenan igual o deciden por la trama.",
+                "Cada POV tiene marcas propias y decide segun su ficha; alguna linea queda neutra.",
+                "Las voces se distinguen sin atribucion, y cada decision se explica por quien la toma.",
+                "Cada linea y cada decision solo podrian ser de quien las tiene, y cambian con el.",
             ),
         ),
         Rubric(
@@ -108,6 +127,60 @@ DEFAULT_RUBRICS = RubricSet(
                 "El motivo acompana a la accion; en algun momento se explica de mas.",
                 "La accion y el motivo son lo mismo: lo que pasa es lo que significa.",
                 "El capitulo resignifica un motivo anterior sin nombrarlo.",
+            ),
+        ),
+        Rubric(
+            dimension=Dimension.CONTINUITY,
+            skill="continuity.audit",
+            question=(
+                "¿El capitulo se lee como continuacion de lo anterior: transiciones, elipsis "
+                "y ecos? No si los hechos cuadran, que eso lo comprueba el Continuista."
+            ),
+            levels=(
+                "Se lee suelto: nada enlaza con lo anterior y el salto no se explica.",
+                "Enlaza por los hechos, pero las transiciones chirrian o repiten lo ya contado.",
+                "Se lee como continuacion; alguna elipsis se nota mas de lo que deberia.",
+                "Las transiciones son limpias y las elipsis se entienden sin explicarlas.",
+                "Retoma un eco de lo anterior que da sentido nuevo a lo que viene.",
+            ),
+        ),
+        Rubric(
+            dimension=Dimension.TONE,
+            skill="tone.audit",
+            question="¿El tono es el que pide el encargo y se sostiene en todo el capitulo?",
+            levels=(
+                "El tono contradice el pedido: grave donde se pidio ligero, o al reves.",
+                "El tono pedido aparece a ratos y se pierde en otros pasajes.",
+                "El tono es el pedido; algun pasaje se sale sin motivo dramatico.",
+                "El tono pedido se sostiene y modula con la escena sin romperse.",
+                "El tono pedido es la manera de mirar del capitulo, no un barniz.",
+            ),
+        ),
+        Rubric(
+            dimension=Dimension.ARC,
+            skill="arc.audit",
+            question="¿El capitulo hace avanzar los arcos que le tocaba mover?",
+            levels=(
+                "Ningun arco se mueve: el personaje y el conflicto acaban como empezaron.",
+                "Algo cambia, pero por accidente de trama y no por el arco.",
+                "El arco del capitulo avanza un paso reconocible; otro queda quieto.",
+                "Los arcos avanzan y el paso se gana con lo que ocurre en escena.",
+                "El avance del arco reordena lo anterior y hace inevitable lo siguiente.",
+            ),
+        ),
+        Rubric(
+            dimension=Dimension.PERSONALIZATION,
+            skill="personalization.audit",
+            question=(
+                "¿El destinatario, sus rasgos y sus recuerdos aparecen integrados en la historia "
+                "de forma natural, y no pegados?"
+            ),
+            levels=(
+                "Los rasgos o recuerdos aparecen como lista o dedicatoria, fuera de la historia.",
+                "Aparecen, pero forzados: la escena se detiene para colocarlos.",
+                "Estan integrados; alguno se nota puesto para cumplir.",
+                "Nacen de la escena: quitarlos cambiaria lo que pasa.",
+                "Son el corazon de la escena sin que se note que alguien los pidio.",
             ),
         ),
     ),

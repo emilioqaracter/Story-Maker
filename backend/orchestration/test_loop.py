@@ -183,7 +183,15 @@ def _jury_ok(specs: Sequence[SceneSpec], textos: Sequence[str]) -> JuryVerdict:
     sid = specs[0].identity.scene_id
     ev = Evidence(quote=textos[0][:40] or "x", offset=0)
     scores = [
-        AnchoredScore(instance=f"j{i}", seed=i, dimension=d, level=4, scene=sid, evidence=ev)
+        AnchoredScore(
+            justification="justificada en la cita",
+            instance=f"j{i}",
+            seed=i,
+            dimension=d,
+            level=4,
+            scene=sid,
+            evidence=ev,
+        )
         for i in range(3)
         for d in Dimension
     ]
@@ -722,9 +730,11 @@ def test_una_escena_de_encuentro_se_resuelve_antes_de_narrarse(novela: Path) -> 
         vistos.append(r)
         return []
 
+    # RF-273: un encuentro necesita reglamento, o `outline.check` lo rechaza.
+    con_reglamento = _brief().model_copy(update={"rulebook": "Gana quien marca mas goles."})
     informe = run(
         novela,
-        _brief(),
+        con_reglamento,
         _engine(plan_outline=lambda _b, _c, _d: con_partido, verify_match=verifica_partido),
         novel_id="p",
         chapters=2,
@@ -891,6 +901,7 @@ def test_un_jurado_bajo_umbral_manda_a_reparar_y_vuelve_a_juzgar(novela: Path) -
         ev = Evidence(quote=textos[0][:40], offset=0)
         scores = [
             AnchoredScore(
+                justification="justificada en la cita",
                 instance=f"j{i}",
                 seed=i,
                 dimension=d,
@@ -953,7 +964,10 @@ def test_la_congelacion_guarda_veredictos_y_huella(novela: Path) -> None:
         huellas = con.execute(
             "SELECT chapter, is_reference FROM chapter_fingerprint ORDER BY chapter"
         ).fetchall()
-    assert veredictos == 30, "5 dimensiones x 3 instancias x 2 capitulos"
+    from commons.types.rubrics import DEFAULT_RUBRICS
+
+    # RF-257: nueve dimensiones x 3 instancias x 2 capitulos.
+    assert veredictos == len(DEFAULT_RUBRICS.dimensions) * 3 * 2 == 54
     assert [(h["chapter"], h["is_reference"]) for h in huellas] == [(1, 1), (2, 1)]
 
 

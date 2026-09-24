@@ -40,13 +40,18 @@ INVALID_SPREAD = 2
 THRESHOLD = 3
 
 #: CAL-06. Una dimension bajo umbral danana el arco o la caracterizacion (S2) o
-#: el estilo y el ritmo (S3).
+#: el estilo y el ritmo (S3). D-94: `continuity`, `arc` y `personalization` S2,
+#: donde CAL-06 dice arco o caracterizacion; `tone` S3, donde dice estilo.
 SEVERITY: dict[Dimension, Severity] = {
     Dimension.VOICE: Severity.S2,
     Dimension.SUBTEXT: Severity.S2,
     Dimension.THEME: Severity.S2,
     Dimension.PACING: Severity.S3,
     Dimension.STYLE_GUIDE: Severity.S3,
+    Dimension.CONTINUITY: Severity.S2,
+    Dimension.ARC: Severity.S2,
+    Dimension.PERSONALIZATION: Severity.S2,
+    Dimension.TONE: Severity.S3,
 }
 
 
@@ -59,6 +64,8 @@ class AnchoredScore(BaseModel):
     level: int
     scene: str
     evidence: Evidence
+    #: RF-259. La de la puntuacion de la instancia, que llega entera a la traza.
+    justification: str = Field(min_length=1)
 
 
 class DimensionVerdict(BaseModel):
@@ -188,6 +195,7 @@ def anchor(
                     level=s.level,
                     scene=sitio[0],
                     evidence=sitio[1],
+                    justification=s.justification,
                 )
             )
     return validas, descartes
@@ -218,16 +226,25 @@ def judge(
 Run = Callable[[Sequence[int]], Mapping[str, tuple[int, InstanceVerdict]]]
 
 
-def adjudicate(run: Run, scene_texts: Mapping[str, str], *, seeds: Sequence[int]) -> JuryVerdict:
+def adjudicate(
+    run: Run,
+    scene_texts: Mapping[str, str],
+    *,
+    seeds: Sequence[int],
+    dimensions: Sequence[Dimension] = tuple(Dimension),
+) -> JuryVerdict:
     """El Jurado entero, con su segunda ronda (RF-130).
 
     `run` recibe las semillas y devuelve el veredicto de cada instancia. Si
     alguna dimension sale invalida, se repite **solo esa** con las semillas
     cambiadas; si vuelve a dispersar, queda invalida y cuenta como bajo umbral.
     Nunca hay tercera ronda: seria buscar el acuerdo hasta encontrarlo.
+
+    `dimensions` son las del conjunto de rubricas que leyeron los jueces: un
+    fichero de la version 1 se juzga en cinco, uno de la 2 en nueve (RF-257).
     """
     validas, descartes = anchor(run(seeds), scene_texts)
-    dims = judge(validas)
+    dims = judge(validas, dimensions=dimensions)
     invalidas = [d.dimension for d in dims if not d.valid]
     if not invalidas:
         return JuryVerdict(dimensions=tuple(dims), discarded=tuple(descartes))

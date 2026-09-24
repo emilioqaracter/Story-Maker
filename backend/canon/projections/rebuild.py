@@ -27,6 +27,7 @@ from canon.events.types import (
     AttributeSet,
     CompetenceSet,
     DocumentVersion,
+    ElementDeclared,
     EntityCreated,
     EntityRenamed,
     KnowledgeGained,
@@ -38,6 +39,7 @@ from commons.types.primitives import WorldTime
 #: Tablas que son proyeccion pura. Se vacian antes de reconstruir; nada que no
 #: derive de un evento puede vivir aqui, o RF-05 dejaria de cumplirse.
 PROJECTED_TABLES = (
+    "brief_element",
     "document_version",
     "competence",
     "knowledge",
@@ -186,6 +188,21 @@ def _apply(con: sqlite3.Connection, stored: StoredEvent) -> None:
                     payload.level,
                     at.stamp,
                     payload.valid_to.stamp if payload.valid_to else None,
+                    stored.id,
+                ),
+            )
+
+        case ElementDeclared():
+            # RD-47. Lo que el brief pidio que aparezca, consultable en SQLite.
+            con.execute(
+                "INSERT OR REPLACE INTO brief_element "
+                "(id, kind, text, mandatory, entity_id, source_event) VALUES (?, ?, ?, ?, ?, ?)",
+                (
+                    payload.element_id,
+                    payload.element_kind,
+                    payload.text,
+                    int(payload.mandatory),
+                    payload.entity_id,
                     stored.id,
                 ),
             )

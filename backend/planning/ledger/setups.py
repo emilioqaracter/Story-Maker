@@ -8,6 +8,14 @@ La deuda narrativa es la metrica de salud estructural mas util del sistema: es
 lo que mide la puerta de cierre de acto y una de las cuatro condiciones de
 cierre de obra. Si esto esta mal, la novela puede terminar debiendo cosas sin
 que nada lo señale.
+
+**Los elementos del brief** (RF-260, RF-261, D-95) son setups de procedencia
+`brief`: el Arquitecto planifica uno por rasgo o recuerdo obligatorio con el
+identificador `element.<id>`, y se cobran de otra manera. Que la escena de cobro
+este congelada no basta: el registro solo lo da por cobrado si hay un **uso
+anclado** del elemento --la cita del Archivero que `check.evidence` encontro
+literal--. Asi la puerta de acto y la de cierre de obra lo exigen por la deuda
+narrativa, sin mecanismo nuevo.
 """
 
 from __future__ import annotations
@@ -16,7 +24,13 @@ from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from planning.outline.types import Outline
+from canon.brief import ELEMENT_PREFIX
+from planning.outline.types import Outline, Setup
+
+
+def element_of(setup: Setup) -> str | None:
+    """El elemento del brief que planifica este setup, o `None` si es de la trama."""
+    return setup.id.removeprefix(ELEMENT_PREFIX) if setup.id.startswith(ELEMENT_PREFIX) else None
 
 
 class SetupState(StrEnum):
@@ -69,17 +83,32 @@ class Debt(BaseModel):
         return not self.open_setups and not self.planned
 
 
-def status(outline: Outline, frozen_scenes: frozenset[str]) -> list[SetupStatus]:
+def status(
+    outline: Outline,
+    frozen_scenes: frozenset[str],
+    *,
+    used_elements: frozenset[str] = frozenset(),
+) -> list[SetupStatus]:
     """Estado de cada setup dado lo que hay congelado.
 
     `frozen_scenes` son las escenas ya congeladas. Se pasa como argumento en vez
     de consultarlo aqui para que esta funcion sea pura: es lo que permite
     comprobarla generando casos, y lo que impide que `planning/` abra la base.
+
+    `used_elements` son los elementos del brief con uso anclado (RF-261). Un
+    setup de elemento esta cobrado si y solo si su elemento esta ahi; sin el
+    uso, con la escena de cobro ya congelada, sigue abierto: se debe. Por
+    omision no hay ninguno, que es el fallo cerrado: no saber si se uso es no
+    haberlo usado.
     """
     out: list[SetupStatus] = []
     for setup in outline.setups:
         planted = setup.planted_scene in frozen_scenes
         paid = setup.payoff_scene in frozen_scenes
+        elemento = element_of(setup)
+        if elemento is not None:
+            paid = elemento in used_elements
+            planted = planted or setup.payoff_scene in frozen_scenes
         state = SetupState.PAID if paid else (SetupState.PLANTED if planted else SetupState.PLANNED)
         plant = outline.scene(setup.planted_scene)
         pay = outline.scene(setup.payoff_scene)
@@ -97,9 +126,14 @@ def status(outline: Outline, frozen_scenes: frozenset[str]) -> list[SetupStatus]
     return out
 
 
-def debt(outline: Outline, frozen_scenes: frozenset[str]) -> Debt:
-    """La deuda narrativa vigente."""
-    todos = status(outline, frozen_scenes)
+def debt(
+    outline: Outline,
+    frozen_scenes: frozenset[str],
+    *,
+    used_elements: frozenset[str] = frozenset(),
+) -> Debt:
+    """La deuda narrativa vigente, con los elementos del brief como promesas."""
+    todos = status(outline, frozen_scenes, used_elements=used_elements)
     return Debt(
         open_setups=tuple(s for s in todos if s.state is SetupState.PLANTED),
         planned=tuple(s for s in todos if s.state is SetupState.PLANNED),

@@ -13,6 +13,12 @@ si la comparacion leyera el que no es, la voz y el ritmo saldrian distintos.
 | pacing | 1, 3 | 3, 4 | -2, -1 |
 | subtext | 4, 3 | 4, 5 | 0, -2 |
 | theme | 3, 5 | 4, sin nivel | -1 |
+| continuity | 3, 4 | 3, 4 | 0, 0 |
+| tone | 4, 3 | 4, 4 | 0, -1 |
+| arc | 2, 4 | 3, 4 | -1, 0 |
+| personalization | 4, 3 | 4, 5 | 0, -2 |
+
+Las cuatro ultimas son las de la version 2 de las rubricas (RF-257).
 """
 
 from __future__ import annotations

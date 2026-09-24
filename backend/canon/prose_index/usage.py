@@ -53,6 +53,10 @@ class Fact(NamedTuple):
         return fact_key(self.entity_id, self.attribute)
 
 
+#: RF-261. Las claves de hecho x escena de los elementos del brief.
+_ELEMENT_LIKE = "element.%"
+
+
 def fact_key(entity_id: str, attribute: str) -> str:
     """La clave del hecho, la misma que usa el `RetconPlan` de una enmienda."""
     return f"{entity_id}.{attribute}"
@@ -142,9 +146,15 @@ def refresh(con: sqlite3.Connection, *, scenes: Iterable[str], before: frozenset
     """
     ahora = vigente(con)
     claves = {(f.key, f.source_event) for f in ahora}
+    # RF-261. Las filas `element.<id>` no son valores de atributo: las escribe
+    # la congelacion con su cita anclada (`canon/freeze/elements.py`) y solo
+    # caen si la cita deja de estar en la escena.
     viejas = [
         (r[0], r[1])
-        for r in con.execute("SELECT DISTINCT fact_key, source_event FROM fact_usage")
+        for r in con.execute(
+            "SELECT DISTINCT fact_key, source_event FROM fact_usage WHERE fact_key NOT LIKE ?",
+            (_ELEMENT_LIKE,),
+        )
         if (r[0], r[1]) not in claves
     ]
     con.executemany("DELETE FROM fact_usage WHERE fact_key = ? AND source_event = ?", viejas)
@@ -152,16 +162,26 @@ def refresh(con: sqlite3.Connection, *, scenes: Iterable[str], before: frozenset
     tocadas = sorted(set(scenes))
     if tocadas:
         marks = ",".join("?" * len(tocadas))
-        con.execute(f"DELETE FROM fact_usage WHERE scene_id IN ({marks})", tocadas)  # nosec B608
+        con.execute(
+            f"DELETE FROM fact_usage WHERE scene_id IN ({marks}) AND fact_key NOT LIKE ?",  # nosec B608
+            (*tocadas, _ELEMENT_LIKE),
+        )
         _scan(con, ahora, tocadas)
+        # Import tardio: `canon/freeze` importa este modulo.
+        from canon.freeze import elements
+
+        elements.reanchor(con, tocadas)
     nuevos = ahora - before
     if nuevos:
         _scan(con, nuevos, None)
 
 
 def rebuild(con: sqlite3.Connection) -> None:
-    """El registro desde cero. Lo usa la migracion 5 para lo ya congelado."""
-    con.execute("DELETE FROM fact_usage")
+    """El registro desde cero. Lo usa la migracion 5 para lo ya congelado.
+
+    Los usos de elementos se conservan: no se derivan del texto, llevan cita.
+    """
+    con.execute("DELETE FROM fact_usage WHERE fact_key NOT LIKE ?", (_ELEMENT_LIKE,))
     _scan(con, vigente(con), None)
 
 
