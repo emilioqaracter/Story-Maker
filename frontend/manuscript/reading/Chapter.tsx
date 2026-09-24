@@ -6,6 +6,7 @@ import { Failed } from "../../commons/shell/Failed";
 import { NotFound } from "../../commons/shell/NotFound";
 import { saveLastVersion, saveReadingPosition } from "../../commons/storage/local";
 import { Prose } from "../../commons/text/Prose";
+import { Loading } from "../../commons/ui/State";
 import { parseVersion, useChapterAt, useManifest, type SceneAt } from "../data";
 import { anchorFromSelection, type FragmentAnchor } from "../requests/anchor";
 import { SCENE_ATTRIBUTE } from "./attribute";
@@ -106,7 +107,7 @@ function ChapterView({ novel, version, number }: { novel: string; version: numbe
     setAnchor(anchorFromSelection(document.getSelection(), texts, version, number));
   }, [texts, version, number]);
 
-  if (chapter.state === "loading") return <p className="loading">Cargando el capítulo…</p>;
+  if (chapter.state === "loading") return <Loading>Cargando el capítulo…</Loading>;
   if (chapter.state === "failed") return <Failed failure={chapter.failure} reload={chapter.reload} />;
 
   const before =
@@ -122,8 +123,11 @@ function ChapterView({ novel, version, number }: { novel: string; version: numbe
         <Link to={`/novels/${novel}/v/${version}`}>Índice</Link> · Versión {version}
         {current ? " · vigente" : " · no es la vigente"}
       </p>
-      <h2>Capítulo {number}</h2>
-      <Scenes scenes={chapter.data.scenes} previous={before} />
+      {/* La hoja: papel y tinta en los dos temas, con la medida de lectura (BRAND.md §5). */}
+      <div className="sheet">
+        <h2>Capítulo {number}</h2>
+        <Scenes scenes={chapter.data.scenes} previous={before} />
+      </div>
       <Navigation novel={novel} version={version} current={number} chapters={numbers} />
       {anchor && !asking && (
         <div className="selection-bar">

@@ -5,6 +5,7 @@ import { api, type Schemas } from "../commons/api/client";
 import { settle } from "../commons/api/errors";
 import { useResource } from "../commons/api/resource";
 import { NetworkError } from "../commons/shell/NetworkError";
+import { Empty, Loading } from "../commons/ui/State";
 import { layout, SIZE } from "./layout";
 
 type ChapterSummary = Schemas["ChapterSummary"];
@@ -45,11 +46,11 @@ export function Graph({ novel }: { novel: string }) {
     const reload = chapters.state === "failed" ? chapters.reload : state.reload;
     body = failure?.kind === "network" ? <NetworkError reload={reload} /> : <p className="hint">El grafo no se pudo leer.</p>;
   } else if (chapters.state === "ok" && instant === null) {
-    body = <p>Sin capítulos congelados todavía: no hay instante del que dibujar el grafo.</p>;
+    body = <Empty>Sin capítulos congelados todavía: no hay instante del que dibujar el grafo.</Empty>;
   } else if (state.state === "ok") {
     body = <GraphSvg novel={novel} world={state.data} />;
   } else {
-    body = <p className="loading">Cargando el grafo…</p>;
+    body = <Loading>Cargando el grafo…</Loading>;
   }
 
   return (
@@ -66,7 +67,7 @@ function GraphSvg({ novel, world }: { novel: string; world: World }) {
   const relations = world.relations ?? [];
   const names = new Map(cards.map((c) => [c.entity_id, c.name]));
   const points = layout(cards.map((c) => c.entity_id));
-  if (cards.length === 0) return <p>El canon no tiene entidades todavía.</p>;
+  if (cards.length === 0) return <Empty>El canon no tiene entidades todavía.</Empty>;
 
   return (
     <>

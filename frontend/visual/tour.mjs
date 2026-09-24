@@ -188,7 +188,9 @@ async function tour(browser, base, c, date) {
   const evidence = [];
   const checks = [];
   const data = await served(base, c.novel);
-  const context = await browser.newContext({ viewport: { width: 1100, height: 900 }, locale: "es-ES" });
+  // Con movimiento reducido la pagina pinta su estado final sin la entrada de 320 ms de la marca: la captura es
+  // lo que se lee, no un fotograma a medio aparecer. Los selectores no dependen de ello.
+  const context = await browser.newContext({ viewport: { width: 1100, height: 900 }, locale: "es-ES", reducedMotion: "reduce" });
   const page = await context.newPage();
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));

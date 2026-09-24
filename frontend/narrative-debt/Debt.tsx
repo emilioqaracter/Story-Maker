@@ -3,6 +3,7 @@ import { api, type Schemas } from "../commons/api/client";
 import { settle } from "../commons/api/errors";
 import { useResource } from "../commons/api/resource";
 import { NetworkError } from "../commons/shell/NetworkError";
+import { Loading } from "../commons/ui/State";
 
 type Setup = Schemas["SetupStatus"];
 
@@ -18,7 +19,7 @@ export function Debt({ novel }: { novel: string }) {
   return (
     <section className="debt">
       <h2>Deuda narrativa</h2>
-      {debt.state === "loading" && <p className="loading">Cargando la deuda…</p>}
+      {debt.state === "loading" && <Loading>Cargando la deuda…</Loading>}
       {debt.state === "failed" &&
         (debt.failure.kind === "network" ? (
           <NetworkError reload={debt.reload} />

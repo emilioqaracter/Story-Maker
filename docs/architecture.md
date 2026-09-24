@@ -933,7 +933,7 @@ Una **skill** es una capacidad reutilizable con contrato fijo de entrada y salid
 | `check.lexicon` | Nombres, alias y léxico del mundo, y erratas de un nombre del canon | Defectos con evidencia |
 | `check.formal` | Genera la cronología en Lean desde el canon más lo pendiente y la compila con `lake build` (`verification.md` §4.4) | Teoremas demostrados, o defecto S1 con el teorema y las filas de origen |
 | `check.knowledge` | Menciones de hechos canónicos por personajes cuyo PER-10 no los incluye en ese instante (PER-I1) | Defectos con evidencia |
-| `check.evidence` | Comprueba que la cita de un veredicto existe literal y una sola vez en la escena citada, con 8 palabras o más (`verification.md` §5.11) | Cita anclada con su posición, o veredicto descartado |
+| `check.evidence` | Comprueba que la cita de un veredicto existe literal y una sola vez en la escena citada, con 8 palabras o más, o 5 las del Jurado en el perfil `prueba` (`verification.md` §5.11) | Cita anclada con su posición, o veredicto descartado |
 | `quiz.build` | Genera preguntas y solucionario desde la especificación de escena y el canon vigente: lo que el capítulo **debía** transmitir | Examen con su clave de corrección |
 | `quiz.grade` | Corrige las respuestas contra el solucionario | Defectos S2 por cada respuesta errónea |
 | `outline.check` | Verificador estructural de la escaleta: cobertura de arcos, doble arco resuelto en momentos distintos (DEP-20), curva de tensión monótona por acto, todo setup con payoff planificado, reparto de palabras por capítulo | Defectos con evidencia |
@@ -1493,6 +1493,7 @@ Tres instancias con las mismas rúbricas y semillas distintas: la semilla fija e
 - Contexto mínimo, el de §4.9: el capítulo entero, las rúbricas, las fichas de voz de los POV y el encargo del destinatario como dato. Nunca la especificación ni el paquete del Escritor.
 - Dispersión alta entre instancias invalida el veredicto y fuerza una verificación adicional en lugar de promediar. Promediar jueces que no se ponen de acuerdo produce un número sin significado.
 - Toda puntuación lleva justificación además de la cita, y las dos llegan a la traza.
+- El umbral y el mínimo de palabras de la cita salen del perfil de extensión de la obra (PRO-15): mediana 3 y 8 palabras en `novela`, 2 y 5 en `prueba`, con la misma regla de dispersión (`specs/srs-backend-v4.md` D-115).
 
 **Qué criterio de la rúbrica de la entrega mide cada dimensión.** Las rúbricas van en su versión 2 (`specs/srs-backend-v4.md` RF-257), con nueve dimensiones:
 
@@ -1655,7 +1656,7 @@ La API de ingestión solo admite generation, span y event, así que `retriever`,
 1. Tamaño óptimo del bloque de prosa literal (4.500 tokens actuales) frente a su coste por escena.
 2. ~~Si el Continuista debe operar por capítulo o por par de capítulos al crecer la obra.~~ **Cerrada: por capítulo.** Los resúmenes de arco de §4.5 son lo que lo mantiene dentro; `specs/srs-backend-v2.md` RNF-29 lo mide y la reabre si no cabe.
 3. ~~Número de instancias de jurado: tres es el mínimo para medir dispersión, pero triplica coste.~~ **Cerrada: tres.** Es el mínimo que mide dispersión y el coste se paga una vez por capítulo, no por escena.
-4. ~~Umbral de dispersión que invalida un veredicto.~~ **Cerrada: rango ≥ 2 niveles sobre una rúbrica de cinco**, con la mediana como nivel resultante y umbral de aceptación en 3 (`specs/srs-backend-v2.md` D-39).
+4. ~~Umbral de dispersión que invalida un veredicto.~~ **Cerrada: rango ≥ 2 niveles sobre una rúbrica de cinco**, con la mediana como nivel resultante y umbral de aceptación en 3 (`specs/srs-backend-v2.md` D-39); en el perfil de extensión `prueba`, en 2 (`specs/srs-backend-v4.md` D-115).
 5. Si `match.simulate` debe modelar el encuentro minuto a minuto o solo sus hitos.
 6. Punto a partir del cual conviene reescribir un capítulo en vez de repararlo.
 7. ~~Con qué modelo de embedding se puebla el índice de prosa.~~ **Cerrada: `intfloat/multilingual-e5-large`** (§4.8). Cambiarlo más adelante es reindexar, no rediseñar, porque el esquema guarda modelo y dimensión.

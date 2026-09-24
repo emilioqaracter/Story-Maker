@@ -216,3 +216,19 @@ def test_desde_la_traza_del_bucle_con_dobles(tmp_path: Path) -> None:
     esperados: Sequence[str] = ("outline.check", "check.format", "continuity", "quiz", "work.close")
     assert all(fila[c] == PASSED for c in esperados), fila
     assert all(fila[f"jury.{d.value}"] == PASSED for d in Dimension)
+
+
+def test_la_columna_del_jurado_usa_el_umbral_registrado_con_el_veredicto() -> None:
+    """D-115. En `prueba` un 2 aprueba; una traza sin umbral lleva el de `novela`."""
+    from pydantic import JsonValue
+
+    from commons.tracing.trace import TraceRecord
+
+    def jurado(nivel: int, **extra: int) -> TraceRecord:
+        campos: dict[str, JsonValue] = {"levels": {"voice": nivel}, **extra}
+        return TraceRecord(seq=0, at="2026-09-24T00:00:00Z", kind="jury", fields=campos)
+
+    celda = brief_table._jury(Dimension.VOICE).cell
+    assert celda([jurado(2, threshold=2)], []).render() == PASSED
+    assert celda([jurado(2)], []).render() == "falló (1)"
+    assert celda([jurado(1, threshold=2)], []).render() == "falló (1)"

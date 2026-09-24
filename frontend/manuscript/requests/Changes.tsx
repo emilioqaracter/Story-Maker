@@ -6,6 +6,7 @@ import { usePolled } from "../../commons/api/poll";
 import { useFollow, inFlight, type ChangeRequest } from "../../commons/change-request/follow";
 import { RequestStatus } from "../../commons/change-request/RequestForm";
 import { Failed } from "../../commons/shell/Failed";
+import { Empty, Loading } from "../../commons/ui/State";
 
 /**
  * `/novels/{id}/changes` (RF-189): las solicitudes de RI-48 con su estado y su
@@ -20,14 +21,14 @@ export function Changes() {
     () => settle(() => api.GET("/novels/{novel_id}/change-requests", { params: { path: { novel_id: novel } } })),
     (data) => data.requests.some(inFlight),
   );
-  if (list.state === "loading") return <p className="loading">Cargando las solicitudes…</p>;
+  if (list.state === "loading") return <Loading>Cargando las solicitudes…</Loading>;
   if (list.state === "failed") return <Failed failure={list.failure} reload={list.reload} />;
   return (
     <section className="changes">
       <h1>Solicitudes de cambio</h1>
       <p className="hint">Se piden desde la lectura, seleccionando un fragmento, o desde la ficha de un personaje o lugar.</p>
       {list.data.requests.length === 0 ? (
-        <p>Todavía no se ha pedido ningún cambio.</p>
+        <Empty>Todavía no se ha pedido ningún cambio.</Empty>
       ) : (
         <ol className="request-list">
           {[...list.data.requests].reverse().map((r) => (
@@ -47,7 +48,7 @@ function Row({ novel, request }: { novel: string; request: ChangeRequest }) {
   return (
     <article className="request-row">
       <p>
-        <strong>nº {current.request_id}</strong> · «{current.text}»
+        <strong className="request-id">nº {current.request_id}</strong> · «{current.text}»
       </p>
       <RequestStatus novel={novel} request={current} />
     </article>
