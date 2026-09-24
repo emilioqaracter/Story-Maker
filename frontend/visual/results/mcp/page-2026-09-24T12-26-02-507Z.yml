@@ -1,0 +1,19 @@
+- generic [ref=f2e3]:
+  - link "Saltar al contenido" [ref=f2e4] [cursor=pointer]:
+    - /url: "#contenido"
+  - banner [ref=f2e5]:
+    - generic [ref=f2e6]:
+      - img "Qaracter"
+      - link "Story Maker" [ref=f2e7] [cursor=pointer]:
+        - /url: /app
+    - navigation "Novela" [ref=f2e8]:
+      - link "Lectura" [ref=f2e9] [cursor=pointer]:
+        - /url: /app/novels/faro
+      - link "Personajes y lugares" [ref=f2e10] [cursor=pointer]:
+        - /url: /app/novels/faro/bible
+      - link "Cambios" [ref=f2e11] [cursor=pointer]:
+        - /url: /app/novels/faro/changes
+      - link "Estado" [ref=f2e12] [cursor=pointer]:
+        - /url: /app/novels/faro/status
+  - main [ref=f2e13]:
+    - status [ref=f2e14]: Cargando la novela…
