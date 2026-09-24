@@ -67,10 +67,12 @@ def test_cada_brief_valida_contra_el_esquema_tal_cual(name: str) -> None:
     assert brief.contradictions() == []
     # Nada de lo escrito se ha perdido al validar: ningun campo de mas ni ignorado.
     assert set(crudo) <= set(brief.model_dump(exclude_unset=True))
-    # T53: perfil `prueba`, de 300 a 500 palabras, para que una tirada con
-    # modelo real se pruebe en minutos y no en una sesion entera.
+    # T53: perfil `prueba`, de 1.200 a 1.800 palabras, para que una tirada con
+    # modelo real se pruebe en minutos y no en una sesion entera (D-113).
     assert brief.length_profile == "prueba"
-    assert 300 <= brief.target_words <= 500
+    assert 1_200 <= brief.target_words <= 1_800
+    # La tolerancia recortada al perfil sigue dentro de su rango de obra.
+    assert 1_200 <= brief.word_range()[0] < brief.word_range()[1] <= 1_800
 
 
 @pytest.mark.parametrize("name", sorted(CASOS))

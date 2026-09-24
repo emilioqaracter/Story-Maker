@@ -13,10 +13,13 @@ un rango de una constante: lo lee del perfil del brief.
 - `novela`: los rangos de EST-07 y EST-08. El numero de capitulos sale de la
   extension pedida. Es el perfil por defecto, y un brief sin el campo se
   comporta exactamente como antes de que existiera.
-- `prueba`: una obra minima para probar el ciclo entero en minutos. De 300 a
-  500 palabras, exactamente tres capitulos de una escena, y cada escena de 100 a
-  170 palabras: un parrafo corto por capitulo. Tres actos de un capitulo, asi
-  que la puerta de acto corre tras cada capitulo. Los resumenes de escena y de
+- `prueba`: una obra minima para probar el ciclo entero sin el coste de una
+  novela. De 1.200 a 1.800 palabras, exactamente tres capitulos de una escena, y
+  cada escena de 400 a 600 palabras, unas 500 por capitulo: lo minimo para que
+  las citas del Jurado, de 8 a 25 palabras literales y unicas, anclen en todas
+  sus dimensiones (D-113). Cae dentro de EST-08; el capitulo, por debajo de
+  EST-07. Tres actos de un capitulo, asi que la puerta de acto corre tras cada
+  capitulo. Los resumenes de escena y de
   capitulo miden como mucho la mitad de lo que resumen, y lo que en una novela
   corre cada cinco capitulos --conjunto dorado, resumen de obra-- corre una vez
   al cierre, para que la tirada de prueba tambien lo ejercite.
@@ -84,9 +87,9 @@ NOVELA = LengthProfile(
 PRUEBA = LengthProfile(
     name=LengthProfileName.PRUEBA,
     # Un capitulo es su unica escena: su rango es el de la escena.
-    chapter_words=(100, 170),
-    scene_words=(100, 170),
-    work_words=(300, 500),
+    chapter_words=(400, 600),
+    scene_words=(400, 600),
+    work_words=(1_200, 1_800),
     chapters=3,
     scenes_per_chapter=1,
     acts=3,

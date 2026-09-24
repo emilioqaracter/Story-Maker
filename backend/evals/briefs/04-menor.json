@@ -12,7 +12,7 @@
     {"source": "tomasa", "target": "nico", "kind": "abuela"}
   ],
   "style_guide": "Premisa: Nico sigue los faroles que su abuela cuelga en el bosque para encontrar el camino de vuelta antes de que anochezca.\nGénero: aventura. Tono: tierno.\nTercera persona, tiempo pasado, frases cortas y palabras que un niño de siete años entiende.",
-  "target_words": 350,
+  "target_words": 1500,
   "word_tolerance": 0.35,
   "length_profile": "prueba",
   "genre": "aventura",
