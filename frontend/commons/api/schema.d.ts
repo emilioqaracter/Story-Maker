@@ -1032,17 +1032,33 @@ export interface components {
         };
         /**
          * Interpretation
-         * @description Lo que el sistema entendio: exactamente una entidad y un atributo (RI-52).
+         * @description Lo que el sistema entendio (RI-52, RI-67).
+         *
+         *     Un `fact` es exactamente una entidad y un atributo. Un `forbid` es un termino
+         *     que no debe aparecer en la novela (RF-256): entidad, atributo y valores van
+         *     vacios, y el termino en `term`.
          */
         Interpretation: {
             /** Attribute */
             attribute: string;
             /** Entity Id */
             entity_id: string;
+            /**
+             * Kind
+             * @description `fact` o `forbid` (RI-67)
+             * @default fact
+             * @enum {string}
+             */
+            kind?: "fact" | "forbid";
             /** New Value */
             new_value: string;
             /** Previous Value */
             previous_value: string;
+            /**
+             * Term
+             * @description Nulo salvo en `forbid`
+             */
+            term?: string | null;
         };
         /**
          * InterviewState

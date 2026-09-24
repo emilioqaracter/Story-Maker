@@ -148,13 +148,18 @@ export class RequestsDouble {
   versions = 1;
 
   create(body: Schemas["ChangeRequestIn"]): ChangeRequest {
-    const ok = /nala/i.test(body.text);
+    const forbid = /no aparezca/i.test(body.text);
+    const ok = forbid || /nala/i.test(body.text);
     const r: ChangeRequest = {
       request_id: this.requests.length + 1,
       text: body.text,
       anchor: body.anchor as unknown as ChangeRequest["anchor"],
       status: ok ? "queued" : "rejected",
-      interpretation: ok ? { entity_id: "rex", attribute: "nombre", previous_value: "Rex", new_value: "Nala" } : null,
+      interpretation: forbid
+        ? { entity_id: "", attribute: "", previous_value: "", new_value: "", kind: "forbid", term: "nubes" }
+        : ok
+          ? { entity_id: "rex", attribute: "nombre", previous_value: "Rex", new_value: "Nala" }
+          : null,
       reason: ok ? "" : "La petición es ambigua: no dice qué cambiar. Reformúlala.",
       version: null,
       changed_chapters: [],

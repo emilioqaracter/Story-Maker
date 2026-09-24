@@ -48,3 +48,33 @@ def test_la_interpretacion_se_lee_aunque_venga_con_texto_alrededor() -> None:
 
     crudo = 'Claro:\n```json\n{"entity_id": "rex", "attribute": "nombre", "new_value": "Nala"}\n```\nNota de privacidad.'
     assert parse(crudo).new_value == "Nala"
+
+
+def test_una_prohibicion_valida_es_forbid_con_su_termino() -> None:
+    """RF-256, RI-67. Entidad y atributo no hacen falta: el termino es lo pedido."""
+    from brief.interpret import RawInterpretation, validate
+
+    r = validate(RawInterpretation(kind="forbid", term="  silencio   sepulcral "), [], ["sangre"])
+    assert not isinstance(r, str)
+    assert (r.kind, r.term, r.entity_id, r.attribute) == ("forbid", "silencio sepulcral", "", "")
+
+
+def test_una_prohibicion_vacia_o_repetida_se_rechaza() -> None:
+    """RF-256: no vacia y no prohibida ya, comparando normalizado (RF-237)."""
+    from brief.interpret import RawInterpretation, validate
+
+    assert isinstance(validate(RawInterpretation(kind="forbid", term=" ¿? "), []), str)
+    assert isinstance(validate(RawInterpretation(kind="forbid"), []), str)
+    repetida = validate(RawInterpretation(kind="forbid", term="CABRÓN"), [], ["cabron"])
+    assert isinstance(repetida, str) and "ya está prohibida" in repetida
+    assert "CABRÓN" not in repetida and "cabron" not in repetida.lower()
+
+
+def test_una_interpretacion_sin_kind_es_un_hecho() -> None:
+    """RI-67: el campo es un anadido con valor por defecto `fact`."""
+    from brief.interpret import parse
+
+    raw = parse('{"entity_id": "rex", "attribute": "nombre", "new_value": "Nala"}')
+    assert raw.kind == "fact" and raw.term is None
+    prohibe = parse('{"kind": "forbid", "term": "nubes"}')
+    assert (prohibe.kind, prohibe.term) == ("forbid", "nubes")

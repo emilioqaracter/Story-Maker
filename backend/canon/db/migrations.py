@@ -31,7 +31,7 @@ from collections.abc import Callable
 from canon.prose_index import chronology
 
 #: Version que este codigo escribe.
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 7
 
 Step = str | Callable[[sqlite3.Connection], None]
 
@@ -73,6 +73,18 @@ def _add_run_state_resume(con: sqlite3.Connection) -> None:
             "ALTER TABLE wm_run_state ADD COLUMN outline TEXT "
             "CHECK (outline IS NULL OR json_valid(outline))"
         )
+
+
+def _add_change_request_kind(con: sqlite3.Connection) -> None:
+    """RD-49. `change_request` gana `kind` y `term`; una solicitud anterior es `fact`."""
+    tiene = _columns(con, "change_request")
+    if "kind" not in tiene:
+        con.execute(
+            "ALTER TABLE change_request ADD COLUMN kind TEXT NOT NULL DEFAULT 'fact' "
+            "CHECK (kind IN ('fact', 'forbid'))"
+        )
+    if "term" not in tiene:
+        con.execute("ALTER TABLE change_request ADD COLUMN term TEXT")
 
 
 MIGRATIONS: dict[int, tuple[Step, ...]] = {
@@ -321,6 +333,10 @@ MIGRATIONS: dict[int, tuple[Step, ...]] = {
     # una tirada a medias de un fichero anterior reanuda con la cuenta a cero y
     # replanifica una vez, como hacia hasta ahora.
     6: (_add_run_state_resume,),
+    # `specs/srs-backend-v4.md` RD-49, T46: la solicitud de cambio que prohibe un
+    # termino (RF-256). Solo anade: lo anterior migra como `fact` por el valor por
+    # defecto, y `term` queda nulo.
+    7: (_add_change_request_kind,),
 }
 
 

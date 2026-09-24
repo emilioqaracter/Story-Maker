@@ -38,6 +38,7 @@ from planning.scene_spec.spec import from_entry
 from supervision.prompts import HealthVerdict
 from verification.checks import forbidden
 from verification.continuity.review import Anchored
+from verification.formal.check import LeanResult, Origin, Violation, find_lake, run_lean
 from verification.jury.verdict import JuryVerdict
 from verification.quiz.build import Question
 from verification.style.fingerprint import Fingerprint
@@ -199,8 +200,18 @@ def _fp(texto: str) -> Fingerprint:
     )
 
 
+def _lean_ok(_path: Path, _pending: object) -> LeanResult:
+    """Doble de Lean que demuestra: las pruebas del bucle miden el orden, no Lean.
+
+    Las que ejercitan la puerta formal pasan `formal_check=` propio o el
+    `run_lean` de verdad (RF-254).
+    """
+    return LeanResult(passed=True, reason="")
+
+
 def _engine(**kw: object) -> Engine:
     base: dict[str, object] = {
+        "formal_check": _lean_ok,
         "plan_outline": lambda _b, _c, _d: _outline(),
         "replan_act": lambda outline, _a, _f, _u, _r: outline,
         "respec": lambda specs, _d: specs,
@@ -1388,3 +1399,216 @@ def test_con_la_longitud_en_rango_los_mismos_dos_s2_pasan(novela: Path) -> None:
     )
     primera = traza.records("chapter.gate")[0]
     assert primera.fields["passed"] is True and primera.fields["s2"] == 2
+
+
+# ------------------------------------------------------- puerta formal · T46
+
+
+#: I4 roto por Marcos en la primera escena: presente despues de su `excluded`.
+_I4 = Violation(
+    invariant="I4",
+    theorem="i4_absent_after_exclusion",
+    sources=(
+        Origin(table="chronology", key=("c1e1", "marcos"), pending=True),
+        Origin(table="attribute", key=("marcos", "excluded", "2026-08-01")),
+    ),
+)
+_I4_ROTO = LeanResult(
+    passed=False,
+    reason="falla i4_absent_after_exclusion",
+    failed_theorems=("i4_absent_after_exclusion",),
+    violations=(_I4,),
+)
+
+
+def _con_marcos(spec: SceneSpec, _p: Sequence[Defect]) -> str:
+    return "Nadie hablaba. Marcos entra en el vestuario. " + _prosa(spec)
+
+
+def test_un_fallo_de_lean_impide_congelar_hasta_que_la_reparacion_lo_arregla(
+    novela: Path,
+) -> None:
+    """RF-254, D-88, puerta de T46. El S1 `check.formal` vuelve al Reparador con su cita.
+
+    Mientras Lean no demuestra la cronologia, el capitulo no se congela; en
+    cuanto la reparacion la arregla, si.
+    """
+    reparado: list[bool] = []
+    congeladas_al_fallar: list[int] = []
+
+    def lean(path: Path, _pending: object) -> LeanResult:
+        if reparado:
+            return LeanResult(passed=True, reason="")
+        with connection.reader(path) as con:
+            congeladas_al_fallar.append(
+                con.execute("SELECT count(*) AS n FROM prose_scene").fetchone()["n"]
+            )
+        return _I4_ROTO
+
+    recibidos: list[Defect] = []
+
+    def repara(_s: SceneSpec, texto: str, defectos: Sequence[Defect]) -> str:
+        recibidos.extend(defectos)
+        reparado.append(True)
+        return texto
+
+    traza = Trace(novela.with_suffix(".trace.jsonl"))
+    informe = run(
+        novela,
+        _brief(),
+        _engine(write_scene=_con_marcos, formal_check=lean, repair_scene=repara),
+        novel_id="p",
+        chapters=2,
+        specs_for=_specs,
+        trace=traza,
+    )
+
+    assert informe.chapters[0].frozen and informe.closed, informe.reason
+    assert congeladas_al_fallar == [0], "con Lean en rojo no se congela nada"
+    [formal] = [d for d in recibidos if d.kind == "check.formal"]
+    assert formal.severity is Severity.S1
+    assert "i4_absent_after_exclusion" in formal.rule
+    assert 'pending.chronology["c1e1", "marcos"]' in formal.rule
+    assert 'attribute["marcos", "excluded", "2026-08-01"]' in formal.rule
+    # La primera frase de la escena implicada que nombra a la entidad.
+    assert formal.evidence.quote == "Marcos entra en el vestuario."
+
+    registros = traza.records("formal.lean")
+    assert [r.fields["passed"] for r in registros] == [False, True, True]
+    primero = registros[0].fields
+    assert (primero["stage"], primero["decision"], primero["theorem"]) == (
+        "congelacion",
+        "reparar",
+        "i4_absent_after_exclusion",
+    )
+    assert (primero["chapter"], primero["scene"]) == (1, 1)
+    assert "i4_absent_after_exclusion" in str(primero["rule"])
+    orden = [r.kind for r in traza.read() if r.kind in ("formal.lean", "repair", "chapter.frozen")]
+    assert orden[:3] == ["formal.lean", "repair", "formal.lean"]
+    assert orden.index("chapter.frozen") > orden.index("repair")
+
+
+def test_con_lean_siempre_en_rojo_la_tirada_se_para_y_no_congela(novela: Path) -> None:
+    """RF-254, fallo cerrado: agotada la escalera, el motivo nombra `check.formal`."""
+    with pytest.raises(RunAbortedError, match=r"check\.formal"):
+        run(
+            novela,
+            _brief(),
+            _engine(write_scene=_con_marcos, formal_check=lambda _p, _q: _I4_ROTO),
+            novel_id="p",
+            chapters=2,
+            specs_for=_specs,
+        )
+    with connection.reader(novela) as con:
+        assert con.execute("SELECT count(*) AS n FROM prose_scene").fetchone()["n"] == 0
+
+
+def test_un_hecho_que_no_se_exporta_es_s1_con_la_fila_como_evidencia(novela: Path) -> None:
+    """RF-245, D-103: sin filas de origen no hay escena que citar; la evidencia es el motivo."""
+    from canon.arbiter.entries import DeltaValidation
+    from orchestration.loop import ChapterResult, SceneResult, _formal_before_freeze
+
+    motivo = "no se pudo exportar la cronologia: instante que no es ISO 8601: 'ayer'"
+    specs = _specs(_outline(), 1)
+    capitulo = ChapterResult(
+        number=1, scenes=[SceneResult(spec=s, text=_con_marcos(s, ())) for s in specs]
+    )
+    traza = Trace(novela.with_suffix(".trace.jsonl"))
+    [defecto] = _formal_before_freeze(
+        novela,
+        capitulo,
+        DeltaValidation(accepted=()),
+        _engine(formal_check=lambda _p, _q: LeanResult(passed=False, reason=motivo)),
+        traza,
+    )
+    assert (defecto.kind, defecto.severity) == ("check.formal", Severity.S1)
+    assert defecto.evidence.quote == motivo and defecto.rule == f"check.formal: {motivo}"
+    [registro] = traza.records("formal.lean")
+    assert registro.fields["passed"] is False and registro.fields["theorem"] == ""
+
+
+def test_un_retcon_que_rompe_la_cronologia_no_se_aplica(novela: Path) -> None:
+    """RF-254 en el retcon: sin demostracion gana el congelado y el rechazo vuelve a reparar."""
+
+    def reescribe(specs: Sequence[SceneSpec], textos: Sequence[str], _e: object) -> DeltaProposal:
+        cap = specs[0].identity.chapter
+        reparado = textos[0].startswith("REPARADO")
+        stamp = "2026-08-01" if cap == 2 and not reparado else specs[0].identity.world_time.stamp
+        return DeltaProposal(
+            events=(
+                ProposedEvent(
+                    world_time=WorldTime(stamp=stamp, seq=0),
+                    payload=AttributeSet(entity_id="marcos", name="estado", value=f"v{cap}"),
+                    quote=CITA,
+                ),
+            )
+        )
+
+    def lean(_path: Path, pending: object) -> LeanResult:
+        # El retcon llega sin escenas: solo su evento. Esa es la que falla.
+        if getattr(pending, "scenes", ()):
+            return LeanResult(passed=True, reason="")
+        return _I4_ROTO
+
+    traza = Trace(novela.with_suffix(".trace.jsonl"))
+    informe = run(
+        novela,
+        _brief(),
+        _engine(
+            extract_delta=reescribe,
+            propose_retcon=lambda _r, _p: RetconProposal(propose=True),
+            repair_scene=lambda _s, t, _d: "REPARADO " + t,
+            formal_check=lean,
+        ),
+        novel_id="p",
+        chapters=2,
+        specs_for=_specs,
+        trace=traza,
+    )
+    assert informe.chapters[1].frozen
+    assert not traza.records("retcon.applied")
+    [abortado] = [r for r in traza.records("retcon.aborted") if r.fields.get("formal")]
+    assert "i4_absent_after_exclusion" in str(abortado.fields["reason"])
+    retcon = [r for r in traza.records("formal.lean") if r.fields["stage"] == "retcon"]
+    assert retcon and retcon[0].fields["decision"] == "gana-el-congelado"
+    with connection.reader(novela) as con:
+        assert con.execute("SELECT count(*) AS n FROM retcon").fetchone()["n"] == 0
+
+
+@pytest.mark.skipif(find_lake() is None, reason="sin lake: la puerta de Lean la exige, fallando")
+def test_con_lean_de_verdad_un_excluido_en_escena_es_s1_con_teorema_y_filas(
+    tmp_path: Path,
+) -> None:
+    """RF-254 con `run_lean` real: I4 cae y la cita es la frase que nombra a Marcos."""
+    from canon.arbiter.entries import DeltaValidation
+    from orchestration.loop import ChapterResult, SceneResult, _formal_before_freeze
+
+    entidades = (
+        BriefEntity(
+            id="marcos",
+            kind="person",
+            name="Marcos",
+            attributes=(("estado", "sano"), ("excluded", "se marcho del club")),
+        ),
+        BriefEntity(id="tecnico", kind="person", name="Aurelio"),
+    )
+    brief = _brief().model_copy(update={"entities": entidades})
+    path = tmp_path / "excluido.sqlite"
+    create_novel(path, brief)
+    specs = _specs(_outline(), 1)
+    capitulo = ChapterResult(
+        number=1, scenes=[SceneResult(spec=s, text=_con_marcos(s, ())) for s in specs]
+    )
+    traza = Trace(tmp_path / "t.jsonl")
+
+    [defecto] = _formal_before_freeze(
+        path, capitulo, DeltaValidation(accepted=()), _engine(formal_check=run_lean), traza
+    )
+
+    assert defecto.kind == "check.formal" and defecto.severity is Severity.S1
+    assert "i4_absent_after_exclusion" in defecto.rule
+    assert 'pending.chronology["c1e1", "marcos"]' in defecto.rule
+    assert 'attribute["marcos", "excluded"' in defecto.rule
+    assert defecto.evidence.quote == "Marcos entra en el vestuario."
+    [registro] = traza.records("formal.lean")
+    assert registro.fields["theorem"] == "i4_absent_after_exclusion"

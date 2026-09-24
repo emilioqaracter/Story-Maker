@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import time
-from collections.abc import Iterator, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from pathlib import Path
 
 import pytest
@@ -13,7 +13,7 @@ from brief.interpret import Candidate, RawInterpretation
 from canon import manuscript
 from canon.arbiter.refreeze import RefrozenScene
 from canon.arbiter.retcon import RetconPlan
-from canon.brief import create_novel
+from canon.brief import BriefEntity, create_novel
 from canon.db import connection
 from canon.test_manuscript import _brief, _congelar, _escena
 from commons.settings import Settings
@@ -22,6 +22,8 @@ from commons.types.primitives import Defect, Evidence, Severity
 from orchestration import amend
 from orchestration.amend import FactAnchor, FragmentAnchor
 from orchestration.test_loop import _engine
+from verification.checks import forbidden
+from verification.formal.check import find_lake, run_lean
 
 
 @pytest.fixture
@@ -442,3 +444,233 @@ def test_que_defectos_cuentan_contra_la_enmienda() -> None:
     assert not amend.counts("con Nala", "Nala", "antes")
     assert not amend.counts("Alcorcón", "Mateo", "vivía en Alcorcón")
     assert amend.counts("Alcorcón", "Mateo", "vivía en Madrid")
+
+
+def test_rf225_perdona_cada_palabra_del_nombre_nuevo_como_palabra_completa() -> None:
+    """RF-225, D-78: en un nombre de dos palabras, `check.lexicon` cita la palabra suelta."""
+    from canon.manuscript import Interpretation
+
+    renombre = Interpretation(
+        entity_id="marcos", attribute="nombre", previous_value="Marcos Vela", new_value="Mateo Ruiz"
+    )
+    formas = amend.new_forms(renombre)
+    assert formas == ["Mateo Ruiz", "Mateo", "Ruiz"]
+    assert not amend.counts("Ruiz", formas, "")
+    assert not amend.counts("Mateo", formas, "")
+    assert amend.counts("Ruizales", formas, ""), "la forma se busca como palabra completa"
+    assert amend.counts("Toby", formas, "")
+    color = Interpretation(
+        entity_id="rex", attribute="color", previous_value="negro", new_value="gris perla"
+    )
+    assert amend.new_forms(color) == ["gris perla"]
+    assert amend.counts("perla", amend.new_forms(color), ""), "un atributo no se parte"
+
+
+# ---------------------------------------------------- puerta formal · T46
+
+
+@pytest.mark.skipif(find_lake() is None, reason="sin lake: la puerta de Lean la exige, fallando")
+def test_una_enmienda_que_rompe_un_invariante_se_rechaza_sin_crear_version(
+    tmp_path: Path,
+) -> None:
+    """RF-254, D-88, puerta de T46. Con `run_lean` de verdad: nacer en 2030 rompe I1.
+
+    Se rechaza con el teorema en el motivo, no se reescribe ninguna escena y la
+    version sigue siendo la 1. Una fecha que cuadra si se aplica.
+    """
+    brief = _brief().model_copy(
+        update={
+            "entities": (
+                BriefEntity(
+                    id="lucia",
+                    kind="person",
+                    name="Lucía",
+                    attributes=(("birth_date", "2016-03-01"),),
+                ),
+                BriefEntity(id="rex", kind="object", name="Rex", attributes=(("color", "negro"),)),
+                BriefEntity(id="parque", kind="place", name="el parque"),
+            )
+        }
+    )
+    path = tmp_path / "lean.sqlite"
+    create_novel(path, brief)
+    _congelar(path, 1, [_escena(1, 1, "Lucía llegó al parque con Rex.", ("lucia", "rex"))])
+    traza = Trace(tmp_path / "lean.trace.jsonl")
+
+    def pide(fecha: str) -> None:
+        s = amend.create_request(
+            path,
+            f"Lucía nació en {fecha}",
+            FactAnchor(entity_id="lucia", attribute="birth_date"),
+            lambda *_: RawInterpretation(
+                entity_id="lucia", attribute="birth_date", new_value=fecha
+            ),
+            traza,
+        )
+        assert s.status == "queued", s.reason
+
+    espia = _Espia()
+    pide("2030-01-01")
+    motor = _engine(retcon_rewrite=espia, formal_check=run_lean)
+    assert amend.apply_pending(path, motor, traza) == []
+    with connection.reader(path) as con:
+        s = manuscript.request(con, 1)
+        assert manuscript.current_version(con) == 1
+        nacimiento = con.execute(
+            "SELECT value FROM attribute WHERE entity_id = 'lucia' AND name = 'birth_date' "
+            "AND valid_to IS NULL"
+        ).fetchone()[0]
+    assert s is not None and s.status == "rejected"
+    assert "i1_born_before_present" in s.reason and "cronología" in s.reason
+    assert nacimiento == "2016-03-01" and espia.escenas == []
+    [registro] = traza.records("formal.lean")
+    assert registro.fields["request"] == 1 and registro.fields["passed"] is False
+    assert (registro.fields["stage"], registro.fields["decision"]) == ("enmienda", "rechazar")
+    assert registro.fields["theorem"] == "i1_born_before_present"
+
+    pide("2015-06-01")
+    assert amend.apply_pending(path, motor, traza) == [2]
+
+
+def test_un_fallo_de_lean_inyectado_rechaza_la_enmienda_antes_de_reescribir(novela: Path) -> None:
+    """RF-254 con un doble: el motivo lleva la regla, y el Reparador ni se llama."""
+    from verification.formal.check import LeanResult
+
+    _pedir(novela)
+    espia = _Espia()
+    roto = LeanResult(
+        passed=False,
+        reason="falla i2_one_place_at_a_time",
+        failed_theorems=("i2_one_place_at_a_time",),
+    )
+    motor = _engine(retcon_rewrite=espia, formal_check=lambda _p, _q: roto)
+    assert amend.apply_pending(novela, motor, Trace.disabled()) == []
+    with connection.reader(novela) as con:
+        s = manuscript.request(con, 1)
+        assert manuscript.current_version(con) == 1
+    assert s is not None and s.status == "rejected" and "check.formal" in s.reason
+    assert espia.escenas == []
+
+
+# ----------------------------------------------- prohibicion por solicitud · RF-256
+
+
+def _prohibir(term: str) -> Callable[..., RawInterpretation]:
+    return lambda *_: RawInterpretation(kind="forbid", term=term)
+
+
+def test_pedir_que_no_aparezca_una_palabra_publica_la_version_siguiente_sin_ella(
+    novela: Path, tmp_path: Path
+) -> None:
+    """RF-256, D-91, puerta de T46. «Que no aparezca nubes»: nivel `novela` y version 2 sin ella.
+
+    Solo se reescribe la escena que la contiene; la version 1 se sigue leyendo igual,
+    y desde ahora `check.forbidden` la ve para lo que quede por escribir.
+    """
+    s = amend.create_request(
+        novela,
+        "que no aparezcan nubes en la novela",
+        FragmentAnchor(version=1, chapter=1, scene_id="c1e2", quote="las nubes"),
+        _prohibir("nubes"),
+        Trace.disabled(),
+    )
+    assert s.status == "queued" and s.interpretation is not None
+    assert (s.interpretation.kind, s.interpretation.term) == ("forbid", "nubes")
+
+    reescritas: list[str] = []
+
+    def sin_nubes(sid: str, texto: str, plan: RetconPlan) -> tuple[RefrozenScene, list[Defect]]:
+        reescritas.append(sid)
+        assert "nubes" not in plan.new_value, "el valor nuevo no repite el termino"
+        return RefrozenScene(
+            scene_id=sid, text=texto.replace("las nubes", "el cielo"), summary="r"
+        ), []
+
+    traza = Trace(tmp_path / "prohibe.trace.jsonl")
+    antes = _textos(novela, 1)
+    assert amend.apply_pending(novela, _engine(retcon_rewrite=sin_nubes), traza) == [2]
+
+    assert reescritas == ["c1e2"]
+    assert _textos(novela, 1) == antes
+    assert _textos(novela, 2) == [
+        "Lucía llegó al parque con Rex.",
+        "Lucía miró el cielo sola.",
+        "Rex ladró al ver la pelota.",
+    ]
+    with connection.reader(novela) as con:
+        solicitud = manuscript.request(con, 1)
+        terminos = {t.term: t.level for t in forbidden.read_terms(con)}
+        cap1 = manuscript.chapter_at(con, 1, 2) or []
+    assert solicitud is not None and solicitud.status == "applied"
+    assert (solicitud.version, solicitud.changed_chapters) == (2, (1,))
+    assert terminos["nubes"] == "novela"
+    assert [e.changed for e in cap1] == [False, True]
+    [aplicada] = traza.records("amend.applied")
+    assert (aplicada.fields["request_kind"], aplicada.fields["level"]) == ("forbid", "novela")
+    assert aplicada.fields["collapsed"] == []
+
+
+def test_una_prohibicion_casa_por_palabra_y_con_sus_variantes(novela: Path) -> None:
+    """RF-237 en RF-256: «nube» toca «nubes»; «parque» no toca nada que no sea «parque»."""
+    assert amend.forbidden_scenes(novela, "nube") == ["c1e2"]
+    assert amend.forbidden_scenes(novela, "REX") == ["c1e1", "c2e1"]
+    assert amend.forbidden_scenes(novela, "par") == []
+
+
+def test_si_la_reescritura_deja_la_palabra_la_prohibicion_se_rechaza(novela: Path) -> None:
+    """RF-256, RNF-50: `check.forbidden` con el termino ya dentro, y no se toca nada."""
+    amend.create_request(
+        novela,
+        "que no salga Rex",
+        FactAnchor(entity_id="rex", attribute="nombre"),
+        _prohibir("Rex"),
+        Trace.disabled(),
+    )
+
+    def deja_uno(sid: str, texto: str, _p: object) -> tuple[RefrozenScene, list[Defect]]:
+        nuevo = texto if sid == "c2e1" else texto.replace("Rex", "el perro")
+        return RefrozenScene(scene_id=sid, text=nuevo, summary="r"), []
+
+    antes = _textos(novela, 1)
+    assert amend.apply_pending(novela, _engine(retcon_rewrite=deja_uno), Trace.disabled()) == []
+    with connection.reader(novela) as con:
+        s = manuscript.request(con, 1)
+        assert manuscript.current_version(con) == 1
+        terminos = [t.term for t in forbidden.read_terms(con)]
+    assert s is not None and s.status == "rejected" and "c2e1" in s.reason
+    assert "Rex" not in s.reason, "el motivo viaja en la traza: no repite el termino (RNF-54)"
+    assert "rex" not in terminos
+    assert _textos(novela, 1) == antes
+
+
+def test_una_prohibicion_vacia_o_ya_prohibida_se_rechaza_al_crearla(tmp_path: Path) -> None:
+    """RF-256: el codigo valida el termino --no vacio, no prohibido ya-- en cualquier nivel."""
+    path = tmp_path / "ya.sqlite"
+    create_novel(path, _brief().model_copy(update={"forbidden_words": ("Sangre",)}))
+    _congelar(path, 1, [_escena(1, 1, "Lucía llegó al parque con Rex.", ("lucia", "rex"))])
+    ancla = FactAnchor(entity_id="rex", attribute="nombre")
+
+    ya = amend.create_request(
+        path, "que no salga sangre", ancla, _prohibir("sangre"), Trace.disabled()
+    )
+    assert ya.status == "rejected" and "ya está prohibida" in ya.reason
+    vacia = amend.create_request(path, "que no salga", ancla, _prohibir("  ¡! "), Trace.disabled())
+    assert vacia.status == "rejected" and "qué palabra" in vacia.reason
+
+
+def test_por_la_ruta_la_solicitud_de_prohibir_lleva_kind_y_term(
+    client: TestClient, novela: Path
+) -> None:
+    """RI-49, RI-67: la interpretacion lleva `kind` y `term`; un hecho, `fact` y `term` nulo."""
+    amend.create_request(
+        novela,
+        "que no aparezcan nubes",
+        FactAnchor(entity_id="rex", attribute="nombre"),
+        _prohibir("nubes"),
+        Trace.disabled(),
+    )
+    _pedir(novela)
+    uno = client.get("/novels/rex-uno/change-requests/1").json()
+    assert uno["interpretation"]["kind"] == "forbid" and uno["interpretation"]["term"] == "nubes"
+    dos = client.get("/novels/rex-uno/change-requests/2").json()
+    assert dos["interpretation"]["kind"] == "fact" and dos["interpretation"]["term"] is None

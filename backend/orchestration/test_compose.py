@@ -174,3 +174,77 @@ def test_sin_claves_la_tirada_lo_dice_una_vez_y_sigue(tmp_path: Path) -> None:
         "LANGFUSE_BASE_URL",
     ]
     assert traza.records("work.cost")
+
+
+# ------------------------------------------------------- lake al arrancar · T46
+
+
+def test_sin_lake_la_tirada_no_empieza_y_dice_por_que(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """RF-255, D-88. Sin `lake` no se compone el motor: ni embeddings ni una sola llamada."""
+    from orchestration import compose
+    from verification.formal import check
+
+    def no_cargues() -> object:
+        raise AssertionError("sin lake no se llega a cargar el modelo de embeddings")
+
+    monkeypatch.setattr(check, "find_lake", lambda: None)
+    monkeypatch.setattr(compose, "load_backend", no_cargues)
+    path = tmp_path / "n.sqlite"
+    create_novel(path, _brief())
+
+    with pytest.raises(compose.LeanUnavailableError, match=r"lake no esta instalado.*RF-255"):
+        compose.compose_engine(path, Trace(tmp_path / "t.jsonl"))
+
+
+def test_sin_lake_lo_pendiente_se_rechaza_con_el_motivo(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """RF-255 en la aplicacion de enmiendas: sin Lean no se aplica nada ni queda en cola."""
+    from brief.interpret import RawInterpretation
+    from canon import manuscript
+    from canon.db import connection
+    from orchestration import amend, compose
+    from verification.formal import check
+
+    monkeypatch.setattr(check, "find_lake", lambda: None)
+    path = tmp_path / "n.sqlite"
+    create_novel(path, _brief())
+    amend.create_request(
+        path,
+        "Marcos se llama Mateo",
+        amend.FactAnchor(entity_id="marcos", attribute="nombre"),
+        lambda *_: RawInterpretation(entity_id="marcos", attribute="nombre", new_value="Mateo"),
+        Trace.disabled(),
+    )
+    with pytest.raises(compose.LeanUnavailableError):
+        compose.amend_novel(path, "n", Trace(tmp_path / "t.jsonl"))
+    with connection.reader(path) as con:
+        s = manuscript.request(con, 1)
+    assert s is not None and s.status == "rejected" and "lake" in s.reason
+
+
+@pytest.mark.skipif(
+    __import__("verification.formal.check", fromlist=["x"]).find_lake() is None,
+    reason="sin lake: la comprobacion de arranque la exige, fallando",
+)
+def test_con_lake_los_tipos_y_los_invariantes_compilan() -> None:
+    """RF-255: lo que se compila al arrancar pasa con el proyecto versionado."""
+    from orchestration.compose import check_lean
+    from verification.formal.check import check_toolchain
+
+    resultado = check_toolchain()
+    assert resultado.passed, resultado.output
+    check_lean()
+
+
+def test_un_lake_que_no_compila_para_el_arranque(tmp_path: Path) -> None:
+    """RF-255: compilar y fallar tambien es no poder correr (fallo cerrado)."""
+    import sys
+
+    from verification.formal.check import check_toolchain
+
+    roto = [sys.executable, "-c", "import sys; sys.exit(1)"]
+    resultado = check_toolchain(project=tmp_path, lake=roto)
+    assert resultado.passed is False and "no compilan" in resultado.reason

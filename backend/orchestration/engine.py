@@ -21,8 +21,10 @@ from __future__ import annotations
 
 import hashlib
 import re
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -94,6 +96,9 @@ from verification.checks import forbidden
 from verification.continuity import prompts as continuity_prompts
 from verification.continuity import review
 from verification.continuity.review import Anchored
+from verification.formal import check as formal
+from verification.formal.check import LeanResult
+from verification.formal.generate import Pending
 from verification.jury import golden as jury_golden
 from verification.jury import prompts as jury_prompts
 from verification.jury.prompts import InstanceVerdict
@@ -258,6 +263,24 @@ def prompt_version(agent: str) -> str:
     return h.hexdigest()[:12]
 
 
+#: D-100. Campos que cada llamada de modelo lleva en su contexto mientras dura
+#: un bloque `call_context`. Hoy, el numero de solicitud de `amend._apply`: es lo
+#: que cuelga sus llamadas de la traza de su solicitud en el espejo (RF-234).
+_CALL_CONTEXT: ContextVar[Mapping[str, str | int | bool | float] | None] = ContextVar(
+    "call_context", default=None
+)
+
+
+@contextmanager
+def call_context(**fields: str | int | bool | float) -> Iterator[None]:
+    """D-100. Anade `fields` al contexto de toda llamada de modelo del bloque."""
+    token = _CALL_CONTEXT.set({**(_CALL_CONTEXT.get() or {}), **fields})
+    try:
+        yield
+    finally:
+        _CALL_CONTEXT.reset(token)
+
+
 @dataclass
 class Composer:
     """El estado que el motor real necesita entre llamadas.
@@ -323,6 +346,8 @@ class Composer:
         motivo. En el ultimo intento la salida se devuelve igual, porque lo que
         no ancle lo descarta quien la consume (RF-129), no la llamada.
         """
+        # D-100: lo que el bloque en curso anade, sin pisar lo que la llamada declara.
+        context = {**(_CALL_CONTEXT.get() or {}), **context}
         budget = recipes.BUDGETS[agent]
         estimado = self.counter.estimate_many([prefix, packet, instruction], self.model_id)
         version = prompt_version(agent)
@@ -1406,6 +1431,12 @@ class Composer:
         )
         return supervision_prompts.parse(r.raw)
 
+    # ------------------------------------------------------------ Lean
+
+    def formal_check(self, path: Path, pending: Pending) -> LeanResult:
+        """RF-254, D-88. `run_lean` sobre el canon mas lo que va a entrar."""
+        return formal.run_lean(path, pending)
+
     # ------------------------------------------------------------------ motor
 
     def engine(self) -> Engine:
@@ -1434,6 +1465,7 @@ class Composer:
             supervise=self.supervise,
             propose_retcon=self.propose_retcon,
             retcon_rewrite=self.retcon_rewrite,
+            formal_check=self.formal_check,
         )
 
 
