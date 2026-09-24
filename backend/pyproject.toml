@@ -73,7 +73,7 @@ ignore_missing_imports = true
 # ---------------------------------------------------------------- pytest
 
 [tool.pytest.ini_options]
-testpaths = ["commons", "orchestration", "planning", "context", "generation", "verification", "canon", "evals", "supervision"]
+testpaths = ["commons", "orchestration", "planning", "context", "generation", "verification", "canon", "evals", "supervision", "test_coherence.py"]
 python_files = ["test_*.py"]
 asyncio_mode = "auto"
 
