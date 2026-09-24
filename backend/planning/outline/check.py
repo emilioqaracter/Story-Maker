@@ -16,8 +16,9 @@ Si te ves pidiendole a un modelo que valide la escaleta, has cruzado la regla de
 from __future__ import annotations
 
 from planning.outline.types import (
-    CHAPTER_WORDS,
+    NOVELA,
     ArcKind,
+    LengthProfile,
     Outline,
 )
 
@@ -51,8 +52,14 @@ class OutlineDefect:
         return hash((self.kind, self.where, self.message))
 
 
-def check(outline: Outline, *, word_range: tuple[int, int]) -> list[OutlineDefect]:
-    """Devuelve los defectos estructurales. Lista vacia significa que pasa."""
+def check(
+    outline: Outline, *, word_range: tuple[int, int], profile: LengthProfile = NOVELA
+) -> list[OutlineDefect]:
+    """Devuelve los defectos estructurales. Lista vacia significa que pasa.
+
+    `profile` es el perfil de extension del brief (T53): de el salen los rangos
+    de escena y de capitulo, y la forma de la obra si el perfil la fija.
+    """
     defects: list[OutlineDefect] = []
     defects += _check_scene_ids(outline)
     defects += _check_arcs(outline)
@@ -60,7 +67,9 @@ def check(outline: Outline, *, word_range: tuple[int, int]) -> list[OutlineDefec
     defects += _check_setups(outline)
     defects += _check_tension(outline)
     defects += _check_words(outline, word_range)
-    defects += _check_chapters(outline)
+    defects += _check_scenes(outline, profile)
+    defects += _check_chapters(outline, profile)
+    defects += _check_shape(outline, profile)
     return defects
 
 
@@ -276,10 +285,24 @@ def _check_words(outline: Outline, word_range: tuple[int, int]) -> list[OutlineD
     return []
 
 
-def _check_chapters(outline: Outline) -> list[OutlineDefect]:
+def _check_scenes(outline: Outline, profile: LengthProfile) -> list[OutlineDefect]:
+    """Cada escena cae en el rango de EST-08 del perfil."""
+    low, high = profile.scene_words
+    fuera = [s for s in outline.scenes if not low <= s.target_words <= high]
+    return [
+        OutlineDefect(
+            "escena-fuera-de-rango",
+            s.id,
+            f"planifica {s.target_words} palabras y el rango de escena es {low} a {high}",
+        )
+        for s in fuera[:_MAX_DETAIL]
+    ]
+
+
+def _check_chapters(outline: Outline, profile: LengthProfile) -> list[OutlineDefect]:
     """Cada capitulo cae en el rango de EST-07, y no hay huecos en la numeracion."""
     out: list[OutlineDefect] = []
-    low, high = CHAPTER_WORDS
+    low, high = profile.chapter_words
     chapters = outline.chapters()
 
     for number, scenes in sorted(chapters.items()):
@@ -302,5 +325,55 @@ def _check_chapters(outline: Outline) -> list[OutlineDefect]:
                 "obra",
                 f"faltan los capitulos {faltan[:_MAX_DETAIL]}",
             )
+        )
+    return out
+
+
+def _check_shape(outline: Outline, profile: LengthProfile) -> list[OutlineDefect]:
+    """T53. Cuantos capitulos, escenas por capitulo y actos, si el perfil lo fija."""
+    out: list[OutlineDefect] = []
+    chapters = outline.chapters()
+    if profile.chapters is not None and len(chapters) != profile.chapters:
+        out.append(
+            OutlineDefect(
+                "capitulos-descuadrados",
+                "obra",
+                f"planifica {len(chapters)} capitulos y el perfil {profile.name!s} "
+                f"pide exactamente {profile.chapters}",
+            )
+        )
+    if profile.scenes_per_chapter is not None:
+        out.extend(
+            OutlineDefect(
+                "escenas-descuadradas",
+                f"capitulo {number}",
+                f"tiene {len(scenes)} escenas y el perfil {profile.name!s} pide "
+                f"exactamente {profile.scenes_per_chapter} por capitulo",
+            )
+            for number, scenes in sorted(chapters.items())
+            if len(scenes) != profile.scenes_per_chapter
+        )
+    capitulos_por_acto: dict[int, set[int]] = {}
+    for scene in outline.scenes:
+        capitulos_por_acto.setdefault(scene.act, set()).add(scene.chapter)
+    if profile.acts is not None and len(capitulos_por_acto) != profile.acts:
+        out.append(
+            OutlineDefect(
+                "actos-descuadrados",
+                "obra",
+                f"planifica {len(capitulos_por_acto)} actos y el perfil {profile.name!s} "
+                f"pide exactamente {profile.acts}",
+            )
+        )
+    if profile.chapters_per_act is not None:
+        out.extend(
+            OutlineDefect(
+                "actos-descuadrados",
+                f"acto {act}",
+                f"tiene {len(caps)} capitulos y el perfil {profile.name!s} pide "
+                f"exactamente {profile.chapters_per_act} por acto",
+            )
+            for act, caps in sorted(capitulos_por_acto.items())
+            if len(caps) != profile.chapters_per_act
         )
     return out

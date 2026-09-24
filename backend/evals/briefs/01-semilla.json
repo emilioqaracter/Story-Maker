@@ -28,6 +28,7 @@
   ],
   "style_guide": "Tercera persona, tiempo pasado, un solo punto de vista por escena. Frases cortas y concretas; nada de adjetivos de valoración. El fútbol se cuenta desde el cuerpo: cansancio, frío, dolor, ruido. Los diálogos con raya. Nada de moralejas ni de resúmenes al cierre de escena: la escena termina cuando algo ha cambiado y el lector lo ve. Se evita el cliché deportivo: ni «dejarse el alma» ni «el gol de la esperanza».",
   "rulebook": "Fútbol. Dos tiempos de 45 minutos. Once contra once; cinco cambios. Un jugador lesionado no puede volver al campo en ese encuentro ni en los siguientes hasta que el canon lo dé por disponible. Un jugador sancionado no se alinea. La clasificación se calcula desde los resultados: tres puntos por victoria, uno por empate.",
-  "target_words": 5500,
-  "word_tolerance": 0.35
+  "target_words": 450,
+  "word_tolerance": 0.35,
+  "length_profile": "prueba"
 }

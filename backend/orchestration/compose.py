@@ -33,17 +33,20 @@ from commons.tracing.trace import Trace
 from orchestration.admission import Admission
 from orchestration.engine import Composer, specs_provider
 from orchestration.loop import RunReport, run
-from planning.outline.types import CHAPTER_WORDS
 
 
 def chapters_for(brief: Brief) -> int:
-    """Cuantos capitulos planificar: la extension pedida sobre el capitulo tipico.
+    """Cuantos capitulos planificar: los que fije el perfil de extension, o la
+    extension pedida sobre el capitulo tipico.
 
-    El capitulo tipico es el punto medio de EST-07. No es un numero nuevo: es
-    la unica lectura del rango que el brief no fija y la escaleta necesita.
+    El capitulo tipico es el punto medio de EST-07 del perfil (T53). No es un
+    numero nuevo: es la unica lectura del rango que el brief no fija y la
+    escaleta necesita.
     """
-    tipico = (CHAPTER_WORDS[0] + CHAPTER_WORDS[1]) // 2
-    return max(1, round(brief.target_words / tipico))
+    perfil = brief.profile()
+    if perfil.chapters is not None:
+        return perfil.chapters
+    return max(1, round(brief.target_words / perfil.typical_chapter()))
 
 
 def real_counter(port: ClaudeCli, sample: str, model_id: str) -> int:
