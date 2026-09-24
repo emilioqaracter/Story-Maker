@@ -82,7 +82,11 @@ def test_cada_coincidencia_queda_en_el_audit_log_y_en_langfuse(tmp_path: Path) -
     assert len(scores) == 2
     assert all(s.value == 0.0 and s.data_type == "BOOLEAN" for s in scores)
     escena = next(
-        o for o in cliente.sent if isinstance(o, lf.LangfuseObservation) and o.name == "scene.1.2"
+        o
+        for o in cliente.sent
+        if isinstance(o, lf.LangfuseObservation)
+        and o.name == "scene"
+        and dict(o.metadata) == {"chapter": 1, "scene": 2}
     )
     assert {s.observation_id for s in scores} == {escena.id}
     assert [s.metadata["level"] for s in scores] == ["cliente", "novela"]
