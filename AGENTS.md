@@ -61,7 +61,8 @@ Es un **monorepo**: backend y frontend viven en la misma raíz, junto a la espec
 │   ├── definitions.md        ← ontología: qué existe en el dominio
 │   ├── domain-knowledge.md   ← modelos visuales de esa ontología
 │   ├── architecture.md       ← cómo se construye el sistema
-│   └── verification.md       ← cómo se verifica el código y la salida de los agentes
+│   ├── verification.md       ← cómo se verifica el código y la salida de los agentes
+│   └── process/              ← documentación de proceso: spec inicial, trade-offs, explainers, diagramas, iteraciones y red-team
 ├── .mcp.json                 ← MCP de navegador de la validación visual; su guion repetible es frontend/visual/
 ├── .claude/settings.json     ← hooks de Claude Code del trabajo de desarrollo
 ├── .claude/hooks/            ← sus guiones: validación de capítulo y política, con audit log en .claude/audit/
@@ -151,6 +152,12 @@ Reparto físico del monorepo, capa de memoria en cinco almacenes, ingeniería de
 20 métodos con ID `VER-NN`, repartidos en dos ejes: verificación de **producto**, que el código hace lo que dice, y de **proceso**, que el agente se comporta de forma fiable. Cada uno clasificado en TAIDU, con herramienta, límite y puerta. Incluye el registro de riesgo aceptado.
 
 **Consúltalo cuando**: vayas a escribir código o un test, o necesites saber con qué método se comprueba un artefacto y qué garantía da.
+
+### [`docs/process/`](docs/process/README.md) · Proceso
+
+No es un quinto documento de diseño: cuenta cómo se llegó a los cuatro anteriores. Contiene la spec inicial, los trade-offs de cada decisión relevante, un explainer por concepto aplicado, los diagramas de harness, TLA+, SQLite y validadores, el registro de iteraciones y el red-team log. Si contradice a `docs/`, `specs/` o el código, se corrige esta carpeta.
+
+**Consúltalo cuando**: necesites saber por qué se eligió una opción y no otra, o qué eval, contraejemplo o caso adversarial motivó un cambio.
 
 ### 4.1 Qué leer según la tarea
 
