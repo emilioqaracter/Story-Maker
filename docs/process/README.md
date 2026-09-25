@@ -17,6 +17,7 @@ Regla de fondo: **no se corrige el resultado, se corrige el razonamiento que lle
 | [04-diagramas.md](04-diagramas.md) | Arquitectura del harness, máquina de estados de TLA+, esquema SQLite y tabla de validadores con su punto de ejecución |
 | [05-iteraciones.md](05-iteraciones.md) | Qué cambió tras cada eval, tirada o contraejemplo de TLC o Lean, y por qué |
 | [06-red-team.md](06-red-team.md) | Casos adversariales probados, qué validador los detectó o no, y cómo se resolvió |
+| [proyecto_echague.pdf](proyecto_echague.pdf) | Presentación del proyecto a cliente: problema y mercado, flujo de entrevista a novela, harness de 13 agentes, validadores, resultados por brief, guardrails y coste |
 
 ## Reglas de esta carpeta
 
