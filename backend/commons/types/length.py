@@ -133,10 +133,6 @@ PRUEBA = LengthProfile(
     chapters_per_act=1,
     summary_ratio=0.5,
     periodic_at_close=True,
-    jury_threshold=2,
-    quote_min_words=5,
-    golden_cases=1,
-    lenient=True,
 )
 
 BREVE = LengthProfile(
@@ -147,9 +143,6 @@ BREVE = LengthProfile(
     work_words=(10_000, 15_000),
     chapters=10,
     scenes_per_chapter=1,
-    jury_threshold=2,
-    golden_cases=1,
-    lenient=True,
 )
 
 CORTA = LengthProfile(
@@ -160,9 +153,6 @@ CORTA = LengthProfile(
     work_words=(5_000, 7_500),
     chapters=5,
     scenes_per_chapter=1,
-    jury_threshold=2,
-    golden_cases=1,
-    lenient=True,
 )
 
 PROFILES: dict[LengthProfileName, LengthProfile] = {

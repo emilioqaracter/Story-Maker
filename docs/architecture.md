@@ -1356,9 +1356,9 @@ La segunda fila es la que hay que tener clara, porque la lectura contraria parec
 
 **La tirada avanza igual**, que es lo que CAL-13 protege: no hay espera, no hay a quién preguntar y el ciclo sigue solo. Lo que no hay es avance *hacia delante* mientras queda algo sin cerrar detrás.
 
-#### Modo permisivo (`specs/srs-backend-v4.md` D-136)
+#### Modo permisivo (`specs/srs-backend-v4.md` D-136, revertida por D-142)
 
-Los perfiles de extensión `breve`, `corta` y `prueba` (PRO-15) llevan `lenient`. Con él, agotar un presupuesto acepta o congela en vez de escalar o parar. La escena que agota sus 3 intentos se acepta con sus defectos y no vuelve al Planificador. Si tras los 3 pases de reparación siguen S1 deterministas, el capítulo se congela con su mejor intento, así que la escalera de capítulo y la replanificación por cuarentena no se alcanzan. Una replanificación de arco agotada conserva la escaleta vigente en vez de parar la tirada. Cada degradación deja su registro en la traza: `scene.forced`, `chapter.forced` y `replan.kept` (RF-284). Es una regla fija por perfil, así que nadie aprueba nada. El perfil `novela` no lleva `lenient` y sigue la escalera de arriba sin cambios.
+Ningún perfil de extensión (PRO-15) lleva `lenient`: el sistema es estricto en todos, y toda obra sigue la escalera de arriba. El campo y su camino siguen en el código sin perfil que los active; esto es lo que harían. Con él, agotar un presupuesto acepta o congela en vez de escalar o parar. La escena que agota sus 3 intentos se acepta con sus defectos y no vuelve al Planificador. Si tras los 3 pases de reparación siguen S1 deterministas, el capítulo se congela con su mejor intento, así que la escalera de capítulo y la replanificación por cuarentena no se alcanzan. Una replanificación de arco agotada conserva la escaleta vigente en vez de parar la tirada. Cada degradación deja su registro en la traza: `scene.forced`, `chapter.forced` y `replan.kept` (RF-284). Es una regla fija por perfil, así que nadie aprueba nada.
 
 ### 7.4 Ejecución: el Orquestador como código
 
@@ -1491,7 +1491,7 @@ Cuatro tipos: programático, semántico, formal de la historia y formal del sist
 
 La puerta de CI contrasta las filas `check.*` de esta tabla con el código (`specs/srs-backend-v4.md` RF-268): una tabla que describe validadores que no existen es peor que ninguna. Un validador existe en el código de dos formas: como `kind` que el código asigna, `kind="check.x"` o `KIND = "check.x"`; o como módulo validador, un `verification/checks/<x>.py` cuyo docstring abre con `` `check.<x>` ``, que es como existe `check.evidence`, que descarta citas y no marca defectos con `kind` propio. Toda fila dice dónde corre, y la tabla por brief de `evals/brief_table.py` tiene una columna fija por cada validador que esta tabla pone en la puerta de escena o en la escena de encuentro.
 
-En los perfiles `breve`, `corta` y `prueba` todos los validadores corren igual; lo que cambia es la columna «Si falla», según el modo permisivo de §7.3 y §9.3.
+En todos los perfiles de extensión los validadores corren igual y la columna «Si falla» es la misma: ninguno lleva el modo permisivo de §7.3 y §9.3 (`specs/srs-backend-v4.md` D-142).
 
 ### 9.2 Jurado
 
@@ -1501,7 +1501,7 @@ Tres instancias con las mismas rúbricas y semillas distintas: la semilla fija e
 - Contexto mínimo, el de §4.9: el capítulo entero, las rúbricas, las fichas de voz de los POV y el encargo del destinatario como dato. Nunca la especificación ni el paquete del Escritor.
 - Dispersión alta entre instancias invalida el veredicto y fuerza una verificación adicional en lugar de promediar. Promediar jueces que no se ponen de acuerdo produce un número sin significado.
 - Toda puntuación lleva justificación además de la cita, y las dos llegan a la traza.
-- El umbral y el mínimo de palabras de la cita salen del perfil de extensión de la obra (PRO-15): mediana 3 y 8 palabras en `novela`, 2 y 5 en `prueba`, 2 y 8 en `breve` y en `corta`, con la misma regla de dispersión (`specs/srs-backend-v4.md` D-128, D-132, D-139).
+- El umbral y el mínimo de palabras de la cita salen del perfil de extensión de la obra (PRO-15): mediana 3 y 8 palabras en todos, `novela`, `prueba`, `breve` y `corta`, con la misma regla de dispersión (`specs/srs-backend-v4.md` D-142, que revierte D-128).
 
 **Qué criterio de la rúbrica de la entrega mide cada dimensión.** Las rúbricas van en su versión 2 (`specs/srs-backend-v4.md` RF-257), con nueve dimensiones:
 
@@ -1525,7 +1525,7 @@ Tres instancias con las mismas rúbricas y semillas distintas: la semilla fija e
 | Cierre de acto | Deuda narrativa dentro del margen planificado; curva de tensión conforme. Ver abajo |
 | Cierre de obra | Deuda narrativa cero, elementos obligatorios incluidos; todos los arcos resueltos; longitud en rango |
 
-**Modo permisivo (`specs/srs-backend-v4.md` D-136).** Con `lenient`, que llevan `breve`, `corta` y `prueba`, las puertas se relajan así, y cada relajación queda en la traza (RF-284):
+**Modo permisivo (`specs/srs-backend-v4.md` D-136, revertida por D-142).** Ningún perfil lleva `lenient`, así que las puertas de todos son las de la tabla. Con `lenient` se relajarían así, y cada relajación queda en la traza (RF-284):
 
 - **Capítulo verificado.** Solo bloquean los S1 de verificadores deterministas, los de `kind` `check.*`. Los S1 y S2 del Continuista, las respuestas erróneas del examen de comprensión y la longitud de capítulo quedan en `chapter.gate` sin bloquear, y el máximo de 2 S2 no se aplica.
 - **Jurado.** Puntúa las nueve dimensiones y su veredicto va a la traza y a Langfuse, pero no bloquea ni manda al Reparador. No hay segunda ronda por dispersión, y cada juez hace una sola llamada: las citas que no anclan se descartan como defecto de proceso. Los reintentos por salida que no encaja o por fallo del proveedor no cambian. Una cita recortada con puntos suspensivos ancla por su primer tramo literal y único, y una dimensión tiene nivel con una sola puntuación anclada, sin que la dispersión la invalide: la mediana de las que haya.
@@ -1533,7 +1533,7 @@ Tres instancias con las mismas rúbricas y semillas distintas: la semilla fija e
 - **Escaleta.** Los defectos de rango de `outline.check` y los de calidad narrativa —`doble-arco-colapsado`, `doble-arco-incompleto`, `arco-desordenado`, `setup-invertido`, `elemento-sin-cobro` y `tension-decreciente`— no bloquean la escaleta inicial ni una replanificación: sus escenas existen. Los estructurales —una escena que no existe, duplicada o con huecos, la tensión descuadrada con los capítulos, un encuentro sin reglamento— siguen bloqueando.
 - **Cierre de obra.** La obra cierra cuando todos sus capítulos están congelados; lo que la condición de arriba echaría en falta va en el motivo de `work.close`, que empieza por «pendiente: » y sigue con lo que falta.
 
-Los rangos del perfil no cambian. El perfil `novela` no lleva `lenient` y sus puertas son las de la tabla.
+Los rangos del perfil no cambian.
 
 #### La puerta de cierre de acto
 
@@ -1676,7 +1676,7 @@ La API de ingestión solo admite generation, span y event, así que `retriever`,
 1. Tamaño óptimo del bloque de prosa literal (4.500 tokens actuales) frente a su coste por escena.
 2. ~~Si el Continuista debe operar por capítulo o por par de capítulos al crecer la obra.~~ **Cerrada: por capítulo.** Los resúmenes de arco de §4.5 son lo que lo mantiene dentro; `specs/srs-backend-v2.md` RNF-29 lo mide y la reabre si no cabe.
 3. ~~Número de instancias de jurado: tres es el mínimo para medir dispersión, pero triplica coste.~~ **Cerrada: tres.** Es el mínimo que mide dispersión y el coste se paga una vez por capítulo, no por escena.
-4. ~~Umbral de dispersión que invalida un veredicto.~~ **Cerrada: rango ≥ 2 niveles sobre una rúbrica de cinco**, con la mediana como nivel resultante y umbral de aceptación en 3 (`specs/srs-backend-v2.md` D-39); en el perfil de extensión `prueba`, en 2 (`specs/srs-backend-v4.md` D-128).
+4. ~~Umbral de dispersión que invalida un veredicto.~~ **Cerrada: rango ≥ 2 niveles sobre una rúbrica de cinco**, con la mediana como nivel resultante y umbral de aceptación en 3 (`specs/srs-backend-v2.md` D-39), en todos los perfiles de extensión (`specs/srs-backend-v4.md` D-142).
 5. Si `match.simulate` debe modelar el encuentro minuto a minuto o solo sus hitos.
 6. Punto a partir del cual conviene reescribir un capítulo en vez de repararlo.
 7. ~~Con qué modelo de embedding se puebla el índice de prosa.~~ **Cerrada: `intfloat/multilingual-e5-large`** (§4.8). Cambiarlo más adelante es reindexar, no rediseñar, porque el esquema guarda modelo y dimensión.

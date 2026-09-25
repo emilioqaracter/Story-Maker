@@ -19,9 +19,11 @@ __pycache__/
 # Frontend: dependencias y sitio construido
 frontend/node_modules/
 frontend/dist/
+frontend/.vite/
 
 # Claves y ajustes locales de cada maquina, en cualquier carpeta: nunca se versionan
 .env.local
+.env
 
 # auditoria-entrega: informe generado, no es codigo
 .claude/auditoria-entrega/
@@ -32,6 +34,7 @@ backend/verification/formal/lean/Generated/
 
 # Hooks de Claude Code: audit log de desarrollo, de cada maquina (D-92)
 .claude/audit/
+.claude/goal/*.log
 
 # TLA+: estados que vuelca TLC al comprobar el modelo
 backend/orchestration/model/states/
